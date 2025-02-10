@@ -79,9 +79,9 @@ static void print_xmss_params(const char *_impl, const xmss_params *p, uint32_t 
 
     print_param(f, "XMSS_OID_LEN", 4);
 
-    print_param(f, "XMSS_SHA2", 0);
-    print_param(f, "XMSS_SHAKE128", 1);
-    print_param(f, "XMSS_SHAKE256", 2);
+    // print_param(f, "XMSS_SHA2", 0);
+    // print_param(f, "XMSS_SHAKE128", 1);
+    // print_param(f, "XMSS_SHAKE256", 2);
 
     print_param(f, "XMSS_ADDR_TYPE_OTS", 0);
     print_param(f, "XMSS_ADDR_TYPE_LTREE", 1);

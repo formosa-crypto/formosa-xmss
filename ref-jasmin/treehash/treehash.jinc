@@ -1,5 +1,5 @@
 from XMSS require "hash_address/hash_address.jinc"
-from XMSS require "xmss_commons/xmss_commons.jtmpl"
+from XMSS require "xmss_commons/xmss_commons.jinc"
 
 param int TRUE = 1;
 param int FALSE = 0;

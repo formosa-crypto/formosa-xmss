@@ -1,0 +1,3 @@
+[submodule "submodules/xmss-reference"]
+	path = submodules/xmss-reference
+	url = git@github.com:XMSS/xmss-reference.git

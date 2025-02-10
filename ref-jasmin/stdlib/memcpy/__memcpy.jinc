@@ -1,0 +1,115 @@
+// Obs: The two underscores at the beginning of the filename mean that the
+//      code in this file is to be requires in the body of a namespace
+
+inline
+fn __nbytes_copy_offset(
+    reg ptr u8[OUTLEN] out,
+    reg u64 offset_out,
+    reg ptr u8[INLEN] in,
+    reg u64 offset_in
+) -> reg ptr u8[OUTLEN]
+{
+    inline int i;
+
+    for i=0 to XMSS_N {
+        out[offset_out + i] = in[offset_in + i];
+    }
+
+    return out;
+}
+
+inline
+fn __nbytes_copy_inplace(
+    reg ptr u8[OUTLEN] out,
+    reg u64 offset_out,
+    reg u64 offset_in
+) -> reg ptr u8[OUTLEN]
+{
+    inline int i;
+
+    for i=0 to XMSS_N {
+        out[offset_out + i] = out[offset_in + i];
+    }
+
+    return out;
+}
+
+inline
+fn __memcpy_u8u8(
+    reg ptr u8[OUTLEN] out,
+    reg ptr u8[INLEN] in
+) -> reg ptr u8[OUTLEN]
+{
+    reg u64 i;
+    
+    i = 0;
+    while (i < INLEN) {
+        out[i] = in[i];
+        i += 1;
+    }
+
+    return out;
+}
+
+#[returnaddress="stack"]
+fn _memcpy_u8u8(
+    reg ptr u8[OUTLEN] out,
+    reg ptr u8[INLEN] in
+) -> reg ptr u8[OUTLEN]
+{
+    out = __memcpy_u8u8(out, in);
+    return out;
+}
+
+inline
+fn _x_memcpy_u8u8(
+    reg ptr u8[OUTLEN] out,
+    reg ptr u8[INLEN] in
+) -> reg ptr u8[OUTLEN]
+{
+    out = out;
+    in = in;
+
+    out = _memcpy_u8u8(out, in);
+
+    out = out;
+
+    return out;
+}
+
+inline
+fn __memcpy_u8u8_2(
+    reg ptr u8[OUTLEN] out,
+    reg ptr u8[INLEN] in,
+    reg u64 in_offset,
+    reg u64 bytes
+) -> reg ptr u8[OUTLEN], reg u64
+{
+    reg u64 i;
+
+    i = 0;
+    while (i < bytes) {
+        out[i] = in[in_offset];
+        i += 1;
+        in_offset += 1;
+    }
+
+    return out, in_offset;
+}
+
+inline
+fn __memcpy_u8u8_3(
+    reg ptr u8[OUTLEN] out,
+    reg ptr u8[INLEN] in,
+    reg u64 out_offset,
+    inline int bytes
+) -> reg ptr u8[OUTLEN]
+{
+    inline int i;
+
+    for i=0 to bytes {
+        out[out_offset + i] = in[i];
+    }
+
+    return out;
+}

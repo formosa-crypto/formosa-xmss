@@ -1,0 +1,54 @@
+from XMSS require "sha256/sha256_in_ptr/sha256_in_ptr.jinc"
+
+namespace hash_plen_n_32 {
+    param int INLEN = XMSS_PADDING_LEN + XMSS_N + 32;
+    from XMSS require "sha256/sha256_array/sha256_array.jinc"
+}
+
+namespace hash_plen_2n_32 {
+    param int INLEN = XMSS_PADDING_LEN + 2*XMSS_N + 32;
+    from XMSS require "sha256/sha256_array/sha256_array.jinc"
+}
+
+namespace hash_plen_2n {
+    param int INLEN = XMSS_PADDING_LEN + 2*XMSS_N;
+    from XMSS require "sha256/sha256_array/sha256_array.jinc"
+}
+
+namespace hash_plen_3n {
+    param int INLEN = XMSS_PADDING_LEN + 3*XMSS_N;
+    from XMSS require "sha256/sha256_array/sha256_array.jinc"
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+inline
+fn __core_hash_in_ptr(
+    reg ptr u8[XMSS_N] out, 
+    reg u64 in_ptr inlen
+) -> reg ptr u8[XMSS_N] {
+    out = __sha256_in_ptr(out, in_ptr, inlen);
+    return out;
+}//<>
+
+fn _core_hash_in_ptr(
+    reg ptr u8[XMSS_N] out,
+    reg u64 in_ptr inlen
+) -> reg ptr u8[XMSS_N]
+{
+    out = __core_hash_in_ptr(out, in_ptr, inlen);
+    return out;
+}//<>
+
+inline
+fn __core_hash_in_ptr_(
+    reg ptr u8[XMSS_N] out,
+    reg u64 in_ptr inlen
+) -> reg ptr u8[XMSS_N]
+{  
+    out = out;
+    in_ptr = in_ptr;
+    inlen = inlen;
+    out = _core_hash_in_ptr(out, in_ptr, inlen);
+    return out;
+}//<>

@@ -1,0 +1,20 @@
+// Obs: The two underscores at the beginning of the filename mean that the
+//      code in this file is to be requires in the body of a namespace
+
+inline
+fn ull_to_bytes(
+  reg ptr u8[OUTLEN] out,
+  reg u64 in
+) -> reg ptr u8[OUTLEN]
+{
+  inline int i;
+
+  in = in;
+
+  for i=OUTLEN-1 downto -1 {
+    out[i] = (8u) in;
+    in >>= 8;
+  }
+
+  return out;
+}

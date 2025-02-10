@@ -2,7 +2,6 @@
 
 # --------------------------------------------------------------------------------------------------
 
-AS       ?= as
 CC       ?= clang
 CFLAGS   ?= -Wall -g -O3 -Wextra -Wpedantic
 LDLIBS   = -lcrypto
@@ -23,6 +22,9 @@ bin/gen_params: | bin/
 
 bin/gen_params.out: bin/gen_params
 	@./$<
+	# We only consider the implementations that use sha-2 as the underlying hash function
+	-$(RM) -r ../params-xmss-shake*
+	-$(RM) -r ../params-xmssmt-shake*
 
 # --------------------------------------------------------------------------------------------------
 
