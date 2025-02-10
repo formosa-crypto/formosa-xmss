@@ -80,16 +80,16 @@ conseq (: _ ==>
       rewrite /chunk nth_mkseq /=.
          * rewrite size_nbytes_flatten /#.        
       apply nbytes_eq.
-      rewrite insubdK.
+      rewrite NBytes.insubdK.
          * rewrite n_val /P size_take // size_drop 1:/# size_nbytes_flatten /#.
       apply (eq_from_nth witness).
-         * rewrite valP n_val size_take // size_drop 1:/# size_nbytes_flatten /#. 
-      rewrite valP n_val => i?.
+         * rewrite NBytes.valP n_val size_take // size_drop 1:/# size_nbytes_flatten /#. 
+      rewrite NBytes.valP n_val => i?.
       rewrite nth_take // 1:/# nth_drop 1,2:/# nth_nbytes_flatten /#.
  
 conseq ( :
-  to_list sk_seed{1} = val sk_seed{2} /\
-  to_list pub_seed{1} = val pub_seed{2} /\
+  to_list sk_seed{1} = NBytes.val sk_seed{2} /\
+  to_list pub_seed{1} = NBytes.val pub_seed{2} /\
   sub addr{1} 0 3 = sub address{2} 0 3 /\
   addr{1}.[4] = W32.zero /\
   ={j} /\ j{1} = 0 /\
@@ -100,16 +100,16 @@ conseq ( :
   _
 ).
     + auto => /> *; split.
-        * apply (eq_from_nth witness); first by rewrite valP size_to_list n_val.
+        * apply (eq_from_nth witness); first by rewrite NBytes.valP size_to_list n_val.
           rewrite size_to_list => j?.
-          by rewrite insubdK // /P size_to_list n_val.
-        * apply (eq_from_nth witness); first by rewrite valP size_to_list n_val.
+          by rewrite NBytes.insubdK // /P size_to_list n_val.
+        * apply (eq_from_nth witness); first by rewrite NBytes.valP size_to_list n_val.
           rewrite size_to_list => j?.
-          by rewrite insubdK // /P size_to_list n_val.
+          by rewrite NBytes.insubdK // /P size_to_list n_val.
  
 while (
-  to_list sk_seed{1} = val sk_seed{2} /\
-  to_list pub_seed{1} = val pub_seed{2} /\
+  to_list sk_seed{1} = NBytes.val sk_seed{2} /\
+  to_list pub_seed{1} = NBytes.val pub_seed{2} /\
   sub addr{1} 0 3 = sub address{2} 0 3 /\
   i{1} = idx{2} /\
   ={j} /\ 0 <= j{2} <= h %/ d /\ 
@@ -162,7 +162,7 @@ seq 1 0 : (
 
 conseq /> => [/# |]. 
   
-seq 2 1 : (#pre /\ to_list node{1} = val t{2}).
+seq 2 1 : (#pre /\ to_list node{1} = NBytes.val t{2}).
     + inline {1} 2.
       inline {1} 14.
       wp; sp. 
@@ -287,34 +287,34 @@ seq 1 0 : (
 
 seq 0 2 : (
   #pre /\
-  val sk_seed{2} = to_list sk_seed{1} /\
-  val pub_seed{2} = to_list pub_seed{1}
+  NBytes.val sk_seed{2} = to_list sk_seed{1} /\
+  NBytes.val pub_seed{2} = to_list pub_seed{1}
 ).
     + auto => /> &1 ??? -> -> *; split; rewrite /DecodeSkNoOID.
-       * apply (eq_from_nth witness); first by rewrite valP size_sub.
-         rewrite valP n_val => i?.
+       * apply (eq_from_nth witness); first by rewrite NBytes.valP size_sub.
+         rewrite NBytes.valP n_val => i?.
          rewrite nth_sub // get_of_list 1:/#.
          rewrite nth_cat ifT.
-             - rewrite !size_cat !valP n_val size_EncodeIdx /#. 
+             - rewrite !size_cat !NBytes.valP n_val size_EncodeIdx /#. 
          rewrite nth_cat ifT.
-             - rewrite !size_cat !valP n_val size_EncodeIdx /#. 
+             - rewrite !size_cat !NBytes.valP n_val size_EncodeIdx /#. 
          rewrite nth_cat ifT.
-             - rewrite !size_cat valP n_val size_EncodeIdx /#.
+             - rewrite !size_cat NBytes.valP n_val size_EncodeIdx /#.
          rewrite nth_cat ifF size_EncodeIdx /#.
-       * apply (eq_from_nth witness); first by rewrite valP n_val size_sub.
-         rewrite valP n_val => i?.
+       * apply (eq_from_nth witness); first by rewrite NBytes.valP n_val size_sub.
+         rewrite NBytes.valP n_val => i?.
          rewrite nth_sub // get_of_list 1:/# nth_cat ifF.
-             - rewrite !size_cat !valP n_val size_EncodeIdx /#.
-         rewrite !size_cat !valP n_val size_EncodeIdx. 
+             - rewrite !size_cat !NBytes.valP n_val size_EncodeIdx /#.
+         rewrite !size_cat !NBytes.valP n_val size_EncodeIdx. 
          congr => /#.
  
 (* Rewrite #pre *)
 conseq (:
-  M{2} = (insubd (to_list m{1}))%NBytes /\
+  M{2} = (NBytes.insubd (to_list m{1}))%NBytes /\
   idx{2} = idx_sig{1} /\
   sub address{2} 0 3 = sub addr{1} 0 3 /\
-  val sk_seed{2} = to_list sk_seed{1} /\
-  val pub_seed{2} = to_list pub_seed{1} /\
+  NBytes.val sk_seed{2} = to_list sk_seed{1} /\
+  NBytes.val pub_seed{2} = to_list pub_seed{1} /\
   addr{1}.[4] = W32.zero /\
   sub addr{1} 0 3 = sub a1 0 3 /\
   0 <= to_uint idx_sig{1} < 2 ^ XMSS_FULL_HEIGHT 
@@ -346,7 +346,7 @@ seq 1 1 : (
       elim * => P0 P1 P2 P3 P4.
       call {1} (wots_sign_seed_addr P0 P1 P2 P3 P4) => [/# |].
       skip => /> &1 &2 H0 <- <- H1 H2 *; do split.
-           - by rewrite insubdK /P // size_to_list n_val.
+           - by rewrite NBytes.insubdK /P // size_to_list n_val.
            - smt(@NBytes).
            - smt(@NBytes).
            - move => *; apply (eq_from_nth witness); rewrite !size_sub // => ??; rewrite !nth_sub //; smt(sub_k).
@@ -373,7 +373,7 @@ seq 2 0 : (#pre /\ sub sig{1} 0 XMSS_WOTS_SIG_BYTES = to_list sig_ots{1}).
 seq 3 0 : (#pre /\ sub sig{1} XMSS_WOTS_SIG_BYTES 320 = to_list auth_path{1}).
     + while {1} 
       (#pre /\ 
-       aux{1} = 320 /\
+       inc{1} = 320 /\
        0 <= i{1} <= 320 /\
        forall (k : int), 0 <= k < i{1} => sig{1}.[XMSS_WOTS_SIG_BYTES + k] = auth_path{1}.[k])
       (320 - i{1}); last first.

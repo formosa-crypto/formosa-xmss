@@ -167,23 +167,24 @@ op nbytes_flatten (x : nbytes list) : W8.t list =
 
 lemma nth_nbytes_flatten (x : nbytes list, i : int):
     0 <= i %/ n < size x =>
-    nth witness (nbytes_flatten x) i = nth witness (val (nth witness x (i %/ n))) (i %% n).
+    nth witness (nbytes_flatten x) i = nth witness (NBytes.val (nth witness x (i %/ n))) (i %% n).
 move => H.
 rewrite /nbytes_flatten (nth_flatten witness n).
     - pose P := (fun (s0 : W8.t list) => size s0 = n).
       pose L := (map NBytes.val x).
       rewrite -(all_nthP P L witness) /P /L size_map => j?. 
-      by rewrite (nth_map witness) // valP.
+      by rewrite (nth_map witness) // NBytes.valP.
 by rewrite (nth_map witness).
 qed.
 
 (** -------------------------------------------------------------------------------------------- **)
 
+
 op DecodeWotsSk (sk : wots_sk) : W8.t Array2144.t = 
-  Array2144.of_list witness (nbytes_flatten (val sk)).
+  Array2144.of_list witness (nbytes_flatten (LenNBytes.val sk)).
 
 op DecodeWotsPk (pk : wots_pk) : W8.t Array2144.t = 
-  Array2144.of_list witness (nbytes_flatten (val pk)).
+  Array2144.of_list witness (nbytes_flatten (LenNBytes.val pk)).
 
 op EncodeWotsPk (pk : W8.t Array2144.t) : wots_pk = 
   LenNBytes.insubd (map NBytes.insubd (chunk n (to_list pk))).
@@ -201,19 +202,19 @@ rewrite /EncodeWotsSignature /EncodeWotsSignatureList.
 by congr.
 qed.
 
-op DecodeWotsSignature_List (s : wots_signature) : W8.t list = nbytes_flatten (val s).
+op DecodeWotsSignature_List (s : wots_signature) : W8.t list = nbytes_flatten (LenNBytes.val s).
 
 lemma size_DecodeWotsSignature_List (x : wots_signature) :
     size (DecodeWotsSignature_List x) = n * len.
 proof.
-by rewrite /DecodeWotsSignature_List size_nbytes_flatten valP.
+by rewrite /DecodeWotsSignature_List size_nbytes_flatten LenNBytes.valP.
 qed.
 
 
 (** -------------------------------------------------------------------------------------------- **)
 
 op DecodePkNoOID (x : xmss_pk) : W8.t Array64.t = 
-  Array64.of_list witness (val x.`pk_root ++ val x.`pk_pub_seed).
+  Array64.of_list witness (NBytes.val x.`pk_root ++ NBytes.val x.`pk_pub_seed).
 
 op EncodePkNoOID (x : W8.t Array64.t) : xmss_pk = {| pk_oid      = witness;
                                                      pk_root     = NBytes.insubd (sub x 0 32); 
@@ -321,10 +322,10 @@ qed.
 op DecodeSkNoOID (x : xmss_sk) : W8.t Array131.t = 
   Array131.of_list witness (
           EncodeIdx x.`idx ++ 
-          val x.`sk_seed ++ 
-          val x.`sk_prf ++ 
-          val x.`sk_root ++ 
-          val  x.`pub_seed_sk
+          NBytes.val x.`sk_seed ++ 
+          NBytes.val x.`sk_prf ++ 
+          NBytes.val x.`sk_root ++ 
+          NBytes.val  x.`pub_seed_sk
   ).
 
 (** -------------------------------------------------------------------------------------------- **)
@@ -336,31 +337,29 @@ proof.
 rewrite /XMSS_N /XMSS_WOTS_LEN => [#] n_val len_val.
 rewrite /EncodeWotsPk /DecodeWotsPk.
 apply len_n_bytes_eq.
-apply (eq_from_nth witness); first by rewrite !valP.
-rewrite valP => j?.
-rewrite insubdK.
+apply (eq_from_nth witness); first by rewrite !LenNBytes.valP.
+rewrite LenNBytes.valP => j?.
+rewrite LenNBytes.insubdK.
   + by rewrite /P size_map size_chunk 1:/# size_to_list n_val len_val.
 rewrite (nth_map witness).
   + rewrite size_chunk 1:/# size_to_list n_val /#.
 rewrite /chunk nth_mkseq.
   + rewrite size_to_list n_val /#.
 apply nbytes_eq.
-rewrite insubdK.
+rewrite NBytes.insubdK.
   + rewrite /P size_take 1:/# size_drop 1:/# size_to_list /#.
 simplify.
-apply (eq_from_nth witness); first by rewrite size_take 1:/# size_drop 1:/# size_to_list valP /#.
-rewrite valP n_val => i?.
+apply (eq_from_nth witness); first by rewrite size_take 1:/# size_drop 1:/# size_to_list NBytes.valP /#.
+rewrite NBytes.valP n_val => i?.
 rewrite nth_take // 1:/# nth_drop 1,2:/# get_to_list get_of_list 1:/#.
 rewrite /nbytes_flatten (nth_flatten witness n).
   + pose P := (fun (s : W8.t list) => size s = n).
-    pose L := (map NBytes.val (val pk)).
-    rewrite -(all_nthP P L witness) /P /L size_map valP n_val => l Hl. 
+    pose L := (map NBytes.val (LenNBytes.val pk)).
+    rewrite -(all_nthP P L witness) /P /L size_map LenNBytes.valP n_val => l Hl. 
     rewrite (nth_map witness).
-       - by rewrite valP.
-    by rewrite valP.
-rewrite (nth_map witness).
-  + rewrite valP /#.
-smt().
+       - by rewrite LenNBytes.valP.
+    by rewrite NBytes.valP.
+by rewrite (nth_map witness) 2:/# LenNBytes.valP /#.
 qed.
 
 (** -------------------------------------------------------------------------------------------- **)
@@ -368,12 +367,12 @@ qed.
 op EncodeAuthPath (x : W8.t list) : auth_path = 
   AuthPath.insubd (map NBytes.insubd (chunk n x)).
 
-op DecodeAuthPath_List (ap : auth_path) : W8.t list = nbytes_flatten (val ap).
+op DecodeAuthPath_List (ap : auth_path) : W8.t list = nbytes_flatten (AuthPath.val ap).
 
 lemma size_DecodeAuthPath_List (x : auth_path) :
     size (DecodeAuthPath_List x) = n * (h %/ d).
 proof.
-by rewrite /DecodeAuthPath_List size_nbytes_flatten valP.
+by rewrite /DecodeAuthPath_List size_nbytes_flatten AuthPath.valP.
 qed.
 
 op wots_sig_bytes : int = len * n.

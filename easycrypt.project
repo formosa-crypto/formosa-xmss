@@ -11,3 +11,5 @@ rdirs = proof/extraction
 rdirs = proof/spec
 rdirs = proof/spec/xmss
 rdirs = proof/spec/xmss_mt
+rdirs = proof/security
+

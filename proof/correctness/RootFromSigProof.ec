@@ -154,12 +154,12 @@ proc compute_root (_seed nodes0 : nbytes, address0 : adrs, idx_sig0 : W32.t, aut
             if (floor ((to_uint idx_sig0)%r / (2 ^ k)%r) %% 2 = 0) {                               
                 index <- get_tree_index address0;         
                 address0 <- set_tree_index address0 (index %/ 2);
-                auth_k <- nth witness (val auth0) k;
+                auth_k <- nth witness (AuthPath.val auth0) k;
                 nodes1 <@ Hash.rand_hash(nodes0, auth_k, _seed, address0);
             } else {                                   
                 index <- get_tree_index address0;         
                 address0 <- set_tree_index address0 ((index - 1) %/ 2);
-                auth_k <- nth witness (val auth0) k;
+                auth_k <- nth witness (AuthPath.val auth0) k;
                 nodes1 <@ Hash.rand_hash(auth_k, nodes0, _seed,  address0);
             }                                          
             nodes0 <- nodes1;
@@ -199,7 +199,7 @@ lemma compute_root_equiv (_l _pub_seed : W8.t Array32.t, _idx : W32.t, path_ptr 
       get_tree_index a2 = to_uint _idx /\
       0 <= to_uint _idx < 2^XMSS_FULL_HEIGHT
       ==>
-      to_list res{1}.`1 = val res{2} /\
+      to_list res{1}.`1 = NBytes.val res{2} /\
       sub res{1}.`2 0 5 = sub a1 0 5 
     ].
 proof.
@@ -209,7 +209,7 @@ wp; seq 6 0 : #pre; 1:auto; inline {1} 1; wp.
 seq 6 0 : (
   leaf0{1} = _l /\
   addr0{1} = a1 /\
-  _seed{2} = (insubd (to_list pub_seed0{1}))%NBytes /\
+  _seed{2} = (NBytes.insubd (to_list pub_seed0{1}))%NBytes /\
   address0{2} = a2 /\
   idx_sig0{2} = leaf_idx0{1} /\
   auth0{2} = EncodeAuthPath (load_buf Glob.mem{1} auth_path_ptr0{1} XMSS_AUTH_PATH_BYTES) /\
@@ -222,7 +222,7 @@ seq 6 0 : (
   get_tree_index a2 = to_uint _idx /\
   0 <= to_uint _idx < 2^XMSS_FULL_HEIGHT /\
   idx_sig0{2} = _idx /\
-  nodes0{2} = (insubd (to_list leaf0{1}))%NBytes
+  nodes0{2} = (NBytes.insubd (to_list leaf0{1}))%NBytes
 ); first by auto.
 
 inline {1} 1.
@@ -230,7 +230,7 @@ inline {1} 1.
 seq 8 0 : (
   leaf1{1} = _l /\
   addr1{1} = a1 /\
-  _seed{2} = (insubd (to_list pub_seed1{1}))%NBytes /\
+  _seed{2} = (NBytes.insubd (to_list pub_seed1{1}))%NBytes /\
   address0{2} = a2 /\
   idx_sig0{2} = leaf_idx1{1} /\
   auth0{2} =
@@ -244,7 +244,7 @@ seq 8 0 : (
   get_tree_index a2 = to_uint _idx /\
   0 <= to_uint _idx < 2^XMSS_FULL_HEIGHT /\
   idx_sig0{2} = _idx /\
-  nodes0{2} = (insubd (to_list leaf1{1}))%NBytes
+  nodes0{2} = (NBytes.insubd (to_list leaf1{1}))%NBytes
 ); first by auto.
 
 wp.
@@ -267,12 +267,12 @@ while (
   idx_sig0{2} = leaf_idx1{1} /\
   get_tree_index address0{2} = to_uint (idx_sig0{2} `>>` (of_int k{2})%W8) /\
 
-  ((k{2} = 0) => nodes0{2} = (insubd (to_list leaf1{1}))%NBytes) /\
+  ((k{2} = 0) => nodes0{2} = (NBytes.insubd (to_list leaf1{1}))%NBytes) /\
 
   ={k} /\
   0 <= k{1} <= h %/ d /\
-  ((0 < k{1} < h %/d) => to_list node{1} = val nodes0{2}) /\
-  ((k{1} = h %/d) => to_list root1{1} = val nodes0{2})
+  ((0 < k{1} < h %/d) => to_list node{1} = NBytes.val nodes0{2}) /\
+  ((k{1} = h %/d) => to_list root1{1} = NBytes.val nodes0{2})
 ); last by auto => /> &1 H0 H1 H2 H3 H4 H5 H6 H7 H8 -> H9 H10; rewrite to_uint_shr // /#.
 
 seq 1 1 : (
@@ -330,33 +330,33 @@ rcondt{1} 4.
   rewrite and_1_mod_2_W32_2; last by rewrite -H18 foo_i of_uintK /#. 
   rewrite shr_div !of_uintK /= ; smt(@IntDiv).
 
-seq 3 1 : (#pre /\ auth_k{2} = nth witness (val auth0{2}) k{2}); first by auto.
+seq 3 1 : (#pre /\ auth_k{2} = nth witness (AuthPath.val auth0{2}) k{2}); first by auto.
  
-seq 1 0 : (#pre /\ sub thash_in{1} 0 n = val nodes0{2}).
+seq 1 0 : (#pre /\ sub thash_in{1} 0 n = NBytes.val nodes0{2}).
 - if{1}; conseq />; auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 *; 
-  apply (eq_from_nth witness); rewrite ?valP ?n_val size_sub // => i?; 
+  apply (eq_from_nth witness); rewrite ?NBytes.valP ?n_val size_sub // => i?; 
   rewrite nth_sub // initiE 1:/# /= ifT 1:/# initiE // /get8 /init64 initiE //= /copy_64 /= initiE 1:/# /= get64E bits8E wordP => w?; 
   rewrite initiE //= pack8E /= initiE 1:/# /= initiE 1:/# /= /init8 initiE 1:/#; 
   [ 
-    rewrite H11 insubdK /P ?size_to_list 1:/# get_to_list /# |
+    rewrite H11 NBytes.insubdK /P ?size_to_list 1:/# get_to_list /# |
     rewrite -H14 1:/# get_to_list /#
   ].
 
-seq 4 0 : (#pre /\ to_list thash_in{1} = val nodes0{2} ++ val auth_k{2}).
+seq 4 0 : (#pre /\ to_list thash_in{1} = NBytes.val nodes0{2} ++ NBytes.val auth_k{2}).
 - wp; sp; conseq />; ecall {1} (p_memcpy_ptr_correct _ptr{1}); auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19 H20 H21; do split; 1..3: by smt(@W64 pow2_64).
 move => ???; split.
-    + apply (eq_from_nth witness); rewrite ?valP size_sub ?n_val // => i?. 
+    + apply (eq_from_nth witness); rewrite ?NBytes.valP size_sub ?n_val // => i?. 
       by rewrite nth_sub // initiE 1:/# /= ifF 1:/# -H21 nth_sub //= n_val.
-    + apply (eq_from_nth witness); rewrite size_to_list ?size_cat ?valP ?n_val // => i?.
+    + apply (eq_from_nth witness); rewrite size_to_list ?size_cat ?NBytes.valP ?n_val // => i?.
       rewrite get_to_list initiE 1:/# /=.
       case (0 <= i < 32) => [Hfst | Hsnd].
         * rewrite ifF 1:/#. 
           have ->: thash_in{1}.[i] = nth witness (sub thash_in{1} 0 n) i by rewrite nth_sub /#.
-          by rewrite H21 nth_cat valP ifT 1:/# /EncodeAuthPath.
-        * rewrite ifT 1:/# initiE 1:/# /= nth_cat valP ifF 1:/# /EncodeAuthPath insubdK.
+          by rewrite H21 nth_cat NBytes.valP ifT 1:/# /EncodeAuthPath.
+        * rewrite ifT 1:/# initiE 1:/# /= nth_cat NBytes.valP ifF 1:/# /EncodeAuthPath AuthPath.insubdK.
             - rewrite /P size_map size_chunk 1:/# size_load_buf /#.
           rewrite (nth_map witness); first by rewrite size_chunk 1:/# size_load_buf /#.
-          rewrite insubdK; first by rewrite /P nth_chunk 1:/# ?size_load_buf 1,2:/# size_take 1:/# size_drop 1:/# size_load_buf /#.
+          rewrite NBytes.insubdK; first by rewrite /P nth_chunk 1:/# ?size_load_buf 1,2:/# size_take 1:/# size_drop 1:/# size_load_buf /#.
           rewrite nth_chunk 1:/# ?size_load_buf 1,2:/# nth_take 1,2:/# nth_drop 1,2:/# nth_load_buf 1:/# /loadW8.
           congr; smt(@W64 pow2_64).
 
@@ -366,7 +366,7 @@ if{1}.
   do split.
     * rewrite tP => i?.
       rewrite -get_to_list H19 /merge_nbytes_to_array initiE //=.
-      case (0 <= i < 32) => ?; rewrite nth_cat valP /#.
+      case (0 <= i < 32) => ?; rewrite nth_cat NBytes.valP /#.
     * smt(sub_k).
     * move => *; (do split; 3..: by smt()); apply (eq_from_nth witness); rewrite !size_sub // => i?; rewrite !nth_sub //; smt(sub_k). 
 
@@ -375,7 +375,7 @@ if{1}.
   do split.
     * rewrite tP => i?.
       rewrite -get_to_list H22 /merge_nbytes_to_array initiE //=.
-      case (0 <= i < 32) => ?; rewrite nth_cat valP /#.
+      case (0 <= i < 32) => ?; rewrite nth_cat NBytes.valP /#.
     * smt(sub_k).
     * move => *; (do split; 3..: by smt()); apply (eq_from_nth witness); rewrite !size_sub // => i?; rewrite !nth_sub //; smt(sub_k). 
 
@@ -428,32 +428,32 @@ rcondf{1} 4.
   rewrite /XMSS_FULL_HEIGHT /= => H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19 H20*.
   rewrite and_1_mod_2_W32 foo_i of_uintK /#. 
 
-seq 3 1 : (#pre /\ auth_k{2} = nth witness (val auth0{2}) k{2}); first by auto.
+seq 3 1 : (#pre /\ auth_k{2} = nth witness (AuthPath.val auth0{2}) k{2}); first by auto.
 
-seq 1 0 : (#pre /\ sub thash_in{1} n n = val nodes0{2}).
+seq 1 0 : (#pre /\ sub thash_in{1} n n = NBytes.val nodes0{2}).
 - if{1}; conseq />; auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 *; 
-  apply (eq_from_nth witness); rewrite ?valP ?n_val size_sub // => i?; 
+  apply (eq_from_nth witness); rewrite ?NBytes.valP ?n_val size_sub // => i?; 
   rewrite nth_sub // initiE 1:/# /= ifT 1:/# initiE // /get8 /init64 initiE //= /copy_64 /= initiE 1:/# /= get64E bits8E wordP => w?; 
   rewrite initiE //= pack8E /= initiE 1:/# /= initiE 1:/# /= /init8 initiE 1:/#; 
   [ 
-    rewrite H11 insubdK /P ?size_to_list 1:/# get_to_list /# |
+    rewrite H11 NBytes.insubdK /P ?size_to_list 1:/# get_to_list /# |
     rewrite -H14 1:/# get_to_list /#
   ].
 
-seq 4 0 : (#pre /\ to_list thash_in{1} = val auth_k{2} ++ val nodes0{2}).
+seq 4 0 : (#pre /\ to_list thash_in{1} = NBytes.val auth_k{2} ++ NBytes.val nodes0{2}).
 - wp; sp; conseq />; ecall {1} (p_memcpy_ptr_correct _ptr{1}); auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19 H20 H21; do split; 1..3: by smt(@W64 pow2_64).
 move => ???; split.
-    + apply (eq_from_nth witness); rewrite ?valP size_sub ?n_val // => i?. 
+    + apply (eq_from_nth witness); rewrite ?NBytes.valP size_sub ?n_val // => i?. 
       by rewrite nth_sub // initiE 1:/# /= ifF 1:/# -H21 nth_sub //= n_val.
-    + apply (eq_from_nth witness); rewrite size_to_list ?size_cat ?valP ?n_val // => i?.
+    + apply (eq_from_nth witness); rewrite size_to_list ?size_cat ?NBytes.valP ?n_val // => i?.
       rewrite get_to_list initiE 1:/# /=.
       case (0 <= i < 32) => [Hfst | Hsnd]; last first.
         * have ->: thash_in{1}.[i] = nth witness (sub thash_in{1} n n) (i - n) by rewrite nth_sub /#.
-          by rewrite H21 nth_cat valP ifF 1:/# /EncodeAuthPath.
-        * rewrite initiE 1:/# /= nth_cat valP ifT 1:/# /EncodeAuthPath insubdK.
+          by rewrite H21 nth_cat NBytes.valP ifF 1:/# /EncodeAuthPath.
+        * rewrite initiE 1:/# /= nth_cat NBytes.valP ifT 1:/# /EncodeAuthPath AuthPath.insubdK.
             - rewrite /P size_map size_chunk 1:/# size_load_buf /#.
           rewrite (nth_map witness); first by rewrite size_chunk 1:/# size_load_buf /#.
-          rewrite insubdK; first by rewrite /P nth_chunk 1:/# ?size_load_buf 1,2:/# size_take 1:/# size_drop 1:/# size_load_buf /#.
+          rewrite NBytes.insubdK; first by rewrite /P nth_chunk 1:/# ?size_load_buf 1,2:/# size_take 1:/# size_drop 1:/# size_load_buf /#.
           rewrite nth_chunk 1:/# ?size_load_buf 1,2:/# nth_take 1,2:/# nth_drop 1,2:/# nth_load_buf 1:/# /loadW8.
           congr; smt(@W64 pow2_64).
 
@@ -463,7 +463,7 @@ if{1}.
   do split.
     * rewrite tP => i?.
       rewrite -get_to_list H19 /merge_nbytes_to_array initiE //=.
-      case (0 <= i < 32) => ?; rewrite nth_cat valP /#.
+      case (0 <= i < 32) => ?; rewrite nth_cat NBytes.valP /#.
     * smt(sub_k).
     * move => *; (do split; 3..: by smt()); apply (eq_from_nth witness); rewrite !size_sub // => i?; rewrite !nth_sub //; smt(sub_k). 
 
@@ -472,7 +472,7 @@ if{1}.
   do split.
     * rewrite tP => i?.
       rewrite -get_to_list H22 /merge_nbytes_to_array initiE //=.
-      case (0 <= i < 32) => ?; rewrite nth_cat valP /#.
+      case (0 <= i < 32) => ?; rewrite nth_cat NBytes.valP /#.
     * smt(sub_k).
     * move => *; (do split; 3..: by smt()); apply (eq_from_nth witness); rewrite !size_sub // => i?; rewrite !nth_sub //; smt(sub_k). 
 qed.

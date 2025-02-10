@@ -315,19 +315,19 @@ lemma disjoint_ptr_offset (p1 l1 p2 l2 o : int) :
 require import Params.
 
 lemma nbytes_eq:
-  forall (s1 s2 : nbytes), val s1 = val s2 <=> s1 = s2
+  forall (s1 s2 : nbytes), NBytes.val s1 = NBytes.val s2 <=> s1 = s2
     by smt(@NBytes).
 
 lemma auth_path_eq:
-  forall (s1 s2 : auth_path), val s1 = val s2 <=> s1 = s2
+  forall (s1 s2 : auth_path), AuthPath.val s1 = AuthPath.val s2 <=> s1 = s2
     by smt(@AuthPath).
 
 lemma len_n_bytes_eq : 
-  forall (s1 s2 : len_nbytes), val s1 = val s2 <=> s1 = s2
+  forall (s1 s2 : len_nbytes), LenNBytes.val s1 = LenNBytes.val s2 <=> s1 = s2
     by smt(@LenNBytes).
 
 lemma three_nbytes_eq :
-  forall (s1 s2 : threen_bytes), val s1 = val s2 <=> s1 = s2 
+  forall (s1 s2 : threen_bytes), ThreeNBytesBytes.val s1 = ThreeNBytesBytes.val s2 <=> s1 = s2 
     by smt(@ThreeNBytesBytes).
 
 (** -------------------------------------------------------------------------------------------- **)
@@ -341,7 +341,7 @@ lemma size_nbytes_flatten (x : nbytes list) :
 proof.
 rewrite size_flatten sumzE BIA.big_map /(\o) //= -(StdBigop.Bigint.BIA.eq_big_seq (fun _ => n)) /=. 
   + move => *.
-    have ?: forall (k : int), 0 <= k < size x => size (nth witness (map NBytes.val x) k) = n by move => *; rewrite (nth_map witness) 1:/# valP.
+    have ?: forall (k : int), 0 <= k < size x => size (nth witness (map NBytes.val x) k) = n by move => *; rewrite (nth_map witness) 1:/# NBytes.valP.
     smt(@List).
 by rewrite big_constz count_predT size_map.
 qed.

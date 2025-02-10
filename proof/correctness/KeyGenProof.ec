@@ -32,7 +32,7 @@ lemma random_bytes_equiv :
       Syscall.randombytes_96 ~ XMSS_MT_PRF.sample_randomness :
       true 
       ==>
-      to_list res{1} = val res{2}.`1 ++ val res{2}.`2 ++ val res{2}.`3
+      to_list res{1} = NBytes.val res{2}.`1 ++ NBytes.val res{2}.`2 ++ NBytes.val res{2}.`3
     ].    
 proof.
 rewrite /XMSS_N => n_val.
@@ -42,7 +42,7 @@ transitivity {2} { pub_seed <$ dlist W8.dword 96; }
 (true ==> pub_seed{1} = (sk_seed{2} ++ sk_prf{2} ++ pub_seed{2}) /\ 
           size sk_seed{2} = n /\ size sk_prf{2} = n /\ size pub_seed{2} = n) => //.
   + auto => /> &1 &2  -> ???.
-    congr; [congr |]; by rewrite insubdK // /P.
+    congr; [congr |]; by rewrite NBytes.insubdK // /P.
 
   + rnd Array96.to_list (Array96.of_list W8.zero): *0 *0.
     auto => />; split => [l | ?].
@@ -123,7 +123,7 @@ proc => /=.
 sp 3 4.
 seq 1 1 : (
   address{2} = set_layer_addr zero_address (d - 1) /\ 
-  to_list seed_p{1} = val sk_seed{2} ++ val sk_prf{2} ++ val pub_seed{2}
+  to_list seed_p{1} = NBytes.val sk_seed{2} ++ NBytes.val sk_prf{2} ++ NBytes.val pub_seed{2}
 ); first by call random_bytes_equiv. 
 
 inline {1} M(Syscall).__xmssmt_core_seed_keypair. 
@@ -134,26 +134,19 @@ conseq (:
   sk0{1} = sk{1} /\
   seed0{1} = seed_p{1} /\
   address{2} = set_layer_addr zero_address (d - 1) /\
-  to_list seed_p{1} = val sk_seed{2} ++ val sk_prf{2} ++ val pub_seed{2} /\
-  val sk_seed{2}  = sub seed_p{1} 0 n /\
-  val sk_prf{2}   = sub seed_p{1} n n /\
-  val pub_seed{2} = sub seed_p{1} (2*n) n
+  to_list seed_p{1} = NBytes.val sk_seed{2} ++ NBytes.val sk_prf{2} ++ NBytes.val pub_seed{2} /\
+  NBytes.val sk_seed{2}  = sub seed_p{1} 0 n /\
+  NBytes.val sk_prf{2}   = sub seed_p{1} n n /\
+  NBytes.val pub_seed{2} = sub seed_p{1} (2*n) n
   ==>
   _
 ).
-    + auto => /> &1 &2 H; do split.
-           * apply (eq_from_nth witness); first by rewrite valP size_sub n_val.
-             rewrite valP n_val => i?.
-             rewrite nth_sub // -get_to_list H nth_cat ifT; [by rewrite size_cat !valP n_val /= /# |].
-             rewrite nth_cat ifT // valP n_val /#. 
-           * apply (eq_from_nth witness); first by rewrite valP size_sub n_val.
-             rewrite valP n_val => i?.
-             rewrite nth_sub // -get_to_list H nth_cat ifT; [by rewrite size_cat !valP n_val /= /# |].
-             rewrite nth_cat ifF // valP n_val /#. 
-           * apply (eq_from_nth witness); first by rewrite valP size_sub n_val.
-             rewrite valP n_val => i?.
-             rewrite nth_sub // -get_to_list H nth_cat ifF; [by rewrite size_cat !valP n_val /= /# |].
-             by rewrite size_cat !valP n_val.
+    + auto => /> &1 &2 H; do split; apply (eq_from_nth witness); (rewrite NBytes.valP ?size_sub n_val // => i?); rewrite nth_sub // -get_to_list H nth_cat.
+      
+           * rewrite ifT; [by rewrite size_cat !NBytes.valP n_val /= /# |]; rewrite nth_cat ifT // NBytes.valP n_val /#. 
+           * rewrite ifT; [by rewrite size_cat !NBytes.valP n_val /= /# |]; rewrite nth_cat ifF // NBytes.valP n_val /#. 
+           * rewrite ifF; [by rewrite size_cat !NBytes.valP n_val /= /# |].
+             by rewrite size_cat !NBytes.valP n_val.
 
 seq 2 0 : (
     #{/~address{2} = set_layer_addr zero_address (d - 1)}pre /\
@@ -182,8 +175,8 @@ seq 1 0 : (#pre /\ buf0{1} = buf1{1}); first by ecall {1} (_x_memcpy_u8u8_64_pos
 seq 1 0 : (
   #{/~forall (k : int), 0 <= k && k < 64 => buf1{1}.[k] = seed_p{1}.[k]}
    {/~buf0{1} = buf1{1}}pre /\
-   (forall (k : int), 0 <= k < 32 => sk0{1}.[XMSS_INDEX_BYTES + k] = nth witness (val sk_seed{2}) k) /\
-   (forall (k : int), 0 <= k < 32 => sk0{1}.[XMSS_INDEX_BYTES + n + k] = nth witness (val sk_prf{2}) k)
+   (forall (k : int), 0 <= k < 32 => sk0{1}.[XMSS_INDEX_BYTES + k] = nth witness (NBytes.val sk_seed{2}) k) /\
+   (forall (k : int), 0 <= k < 32 => sk0{1}.[XMSS_INDEX_BYTES + n + k] = nth witness (NBytes.val sk_prf{2}) k)
 ).
     + auto => /> &1 &2 ?H0 H1 ??? H2 H3 *; do split => *.
         * rewrite initiE 1:/#; auto => />; rewrite ifF /#.
@@ -196,7 +189,7 @@ seq 1 0 : (#pre /\ bufn0{1} = bufn1{1}); first by ecall {1} (_x_memcpy_u8u8_post
 seq 2 0 : (
   #{/~forall (k : int), 0 <= k && k < 32 => bufn1{1}.[k] = seed_p{1}.[64 + k]}
    {/~bufn0{1} = bufn1{1}}pre /\
-   (forall (k : int), 0 <= k < n => sk0{1}.[XMSS_INDEX_BYTES + 3 * n + k] = nth witness (val pub_seed{2}) k)
+   (forall (k : int), 0 <= k < n => sk0{1}.[XMSS_INDEX_BYTES + 3 * n + k] = nth witness (NBytes.val pub_seed{2}) k)
 ).
     + auto => /> &1 &2 ???->?????H *. 
     (* A seta refere-se a hipotese val pub_seed{2} = sub seed_p{1} (2 * n) n *)
@@ -212,7 +205,7 @@ seq 1 0 : (
   #{/~forall (k : int), 0 <= k && k < 32 => bufn1{1}.[k] = sk0{1}.[100 + k]}
    {/~bufn0{1} = bufn1{1}}
    {/~pk0{1} = pk{1}}pre /\
-   (forall (k : int), 0 <= k < 32 => pk0{1}.[32 + k] = nth witness (val pub_seed{2}) k)
+   (forall (k : int), 0 <= k < 32 => pk0{1}.[32 + k] = nth witness (NBytes.val pub_seed{2}) k)
 ).
     + auto => /> &1 &2 ???->???? H0 H1 H2 => *.
       (* A seta refere se a hipotese val pub_seed{2} = sub seed_p{1} (2 * n) n *)
@@ -223,27 +216,27 @@ seq 1 0 : (
 
 seq 2 0 : (
   #pre /\
-  to_list bufn0{1} = val sk_seed{2} /\
-  to_list bufn1{1} = val pub_seed{2}
+  to_list bufn0{1} = NBytes.val sk_seed{2} /\
+  to_list bufn1{1} = NBytes.val pub_seed{2}
 ).
     + auto => /> &1 &2 ?????? H0 ? H1 H4 H2 H3 *.
       rewrite n_val /= in H1.
       do split.
         - move => k??.
           rewrite initiE //= H3 // /#. 
-        - apply (eq_from_nth witness); [by rewrite valP size_to_list n_val |].
+        - apply (eq_from_nth witness); [by rewrite NBytes.valP size_to_list n_val |].
           rewrite size_to_list => i?.
           by rewrite get_to_list initiE 1:/# /= /#.
-        - apply (eq_from_nth witness); [by rewrite valP size_to_list n_val |].
+        - apply (eq_from_nth witness); [by rewrite NBytes.valP size_to_list n_val |].
           rewrite size_to_list => i?.
           by rewrite get_to_list initiE 1:/# /= /#.
  
 seq 0 1 : (
     #pre /\ 
     toByte sk{2}.`idx XMSS_INDEX_BYTES = sub sk0{1} 0  XMSS_INDEX_BYTES  /\ 
-    val sk{2}.`sk_seed                 = sub sk0{1} XMSS_INDEX_BYTES n /\
-    val sk{2}.`sk_prf                  = sub sk0{1} (XMSS_INDEX_BYTES + n) n /\
-    val sk{2}.`pub_seed_sk             = sub sk0{1} (XMSS_INDEX_BYTES + 3*n) n 
+    NBytes.val sk{2}.`sk_seed          = sub sk0{1} XMSS_INDEX_BYTES n /\
+    NBytes.val sk{2}.`sk_prf           = sub sk0{1} (XMSS_INDEX_BYTES + n) n /\
+    NBytes.val sk{2}.`pub_seed_sk      = sub sk0{1} (XMSS_INDEX_BYTES + 3*n) n 
     (* NOTA: a pub seed e a root estao trocadas => Na spec a root vem no fim mas na impl no fim esta a pub seed => a root esta entre a sk prf e a pub seed *)
 ).
 
@@ -258,18 +251,18 @@ seq 0 1 : (
         rewrite get_unpack8 1:/# bits8E.
         rewrite wordP => i?.
         rewrite initiE //.
-      * apply (eq_from_nth witness); first by rewrite valP n_val size_sub //.
-        rewrite valP n_val => ??.
+      * apply (eq_from_nth witness); first by rewrite NBytes.valP n_val size_sub //.
+        rewrite NBytes.valP n_val => ??.
         by rewrite -H7 // nth_sub.
-      * apply (eq_from_nth witness); first by rewrite valP n_val size_sub //.   
-        rewrite valP n_val => ??.
+      * apply (eq_from_nth witness); first by rewrite NBytes.valP n_val size_sub //.   
+        rewrite NBytes.valP n_val => ??.
         by rewrite -H8 // nth_sub // /XMSS_INDEX_BYTES n_val. 
-      * apply (eq_from_nth witness); first by rewrite valP n_val size_sub //.   
-        rewrite valP n_val => ??.
+      * apply (eq_from_nth witness); first by rewrite NBytes.valP n_val size_sub //.   
+        rewrite NBytes.valP n_val => ??.
         rewrite n_val in H9.
         by rewrite nth_sub //= H9.
          
-seq 1 1 : (#pre /\ val root{2} = to_list root{1}).
+seq 1 1 : (#pre /\ NBytes.val root{2} = to_list root{1}).
     + inline M(Syscall).__treehash_ M(Syscall)._treehash.
       sp. 
       exists * sk_seed0{1}, pub_seed0{1}, s0{1}, t0{1}, subtree_addr0{1}, address{2}.
@@ -284,7 +277,7 @@ seq 1 1 : (#pre /\ val root{2} = to_list root{1}).
 
 seq 1 0  : ( 
   #pre /\
-  (forall (k : int), 0 <= k < n => pk0{1}.[k] = nth witness (val root{2}) k)
+  (forall (k : int), 0 <= k < n => pk0{1}.[k] = nth witness (NBytes.val root{2}) k)
 ).
     + exists * pk0{1}, root{1}.
       elim * => P0 P1.
@@ -300,7 +293,7 @@ seq 1 0  : (
    
 seq 1 0 : (
   #pre /\
-  (forall (k : int), 0 <= k < 32 => sk0{1}.[XMSS_INDEX_BYTES + 2 * 32 + k] = nth witness (val root{2}) k)
+  (forall (k : int), 0 <= k < 32 => sk0{1}.[XMSS_INDEX_BYTES + 2 * 32 + k] = nth witness (NBytes.val root{2}) k)
 ).
     + exists * sk0{1}, root{1}; elim * => P0 P1. 
       call {1} (nbytes_copy_131_32_p P0 P1). (* Here, we need the phoare version of the lemma *)
@@ -356,19 +349,19 @@ auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H
       rewrite get_of_list //=.
       case (0 <= i < 32).
         + move => ?.
-         rewrite nth_cat valP n_val ifT /#.
+         rewrite nth_cat NBytes.valP n_val ifT /#.
     + move => ?. 
-          rewrite nth_cat valP n_val ifF /#.
+          rewrite nth_cat NBytes.valP n_val ifF /#.
 
     + rewrite /DecodeSkNoOID => />; rewrite tP => i Hi. 
       rewrite -!get_to_list.
       case (0 <= i < XMSS_INDEX_BYTES).
         + move => ?. 
-          rewrite of_listK; first by rewrite !size_cat !valP n_val size_EncodeIdx /#. 
-          rewrite nth_cat !size_cat !valP n_val size_EncodeIdx ifT 1:/#.
-          rewrite nth_cat !size_cat size_EncodeIdx !valP /= ifT 1:/#.
+          rewrite of_listK; first by rewrite !size_cat !NBytes.valP n_val size_EncodeIdx /#. 
+          rewrite nth_cat !size_cat !NBytes.valP n_val size_EncodeIdx ifT 1:/#.
+          rewrite nth_cat !size_cat size_EncodeIdx !NBytes.valP /= ifT 1:/#.
           rewrite nth_cat ifT.
-             * rewrite size_cat size_EncodeIdx valP 1:/#.
+             * rewrite size_cat size_EncodeIdx NBytes.valP 1:/#.
           rewrite nth_cat size_EncodeIdx ifT 1:/#.
           rewrite H6 // /EncodeIdx. 
           rewrite /W32toBytes_ext nth_rev; first by rewrite size_mkseq /#.
@@ -380,12 +373,12 @@ auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H
      case (XMSS_INDEX_BYTES <= i < XMSS_INDEX_BYTES + n).
         + simplify => ? *. 
           rewrite get_of_list //=.
-          rewrite nth_cat !size_cat !valP n_val /= ifT.
+          rewrite nth_cat !size_cat !NBytes.valP n_val /= ifT.
              * rewrite size_EncodeIdx /#.
           rewrite nth_cat ifT.
-             * rewrite !size_cat !valP n_val /= size_EncodeIdx /#.
+             * rewrite !size_cat !NBytes.valP n_val /= size_EncodeIdx /#.
           rewrite nth_cat ifT.
-             * rewrite !size_cat !valP n_val /= size_EncodeIdx /#.
+             * rewrite !size_cat !NBytes.valP n_val /= size_EncodeIdx /#.
           rewrite nth_cat ifF.
              * rewrite size_EncodeIdx /#. 
           rewrite size_EncodeIdx.
@@ -395,25 +388,25 @@ auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H
         + simplify => ?*.
           rewrite get_of_list //=.
           rewrite nth_cat !size_cat ifT.
-             * rewrite !valP n_val /= size_EncodeIdx /#.
+             * rewrite !NBytes.valP n_val /= size_EncodeIdx /#.
           rewrite nth_cat !size_cat ifT.
-             * rewrite !valP n_val /= size_EncodeIdx /#.
+             * rewrite !NBytes.valP n_val /= size_EncodeIdx /#.
           rewrite nth_cat !size_cat ifF.
-             * rewrite !valP n_val /= size_EncodeIdx /#.
-          rewrite valP size_EncodeIdx 1:/#.
+             * rewrite !NBytes.valP n_val /= size_EncodeIdx /#.
+          rewrite NBytes.valP size_EncodeIdx 1:/#.
 
       case (XMSS_INDEX_BYTES + 2*n <= i < XMSS_INDEX_BYTES + 3*n).
         + simplify => ?*.
           rewrite get_of_list //=.
           rewrite nth_cat !size_cat ifT.
-            * rewrite !valP n_val /= size_EncodeIdx /#.
+            * rewrite !NBytes.valP n_val /= size_EncodeIdx /#.
           rewrite nth_cat !size_cat ifF.
-            * rewrite !valP n_val /= size_EncodeIdx /#.
-          rewrite !valP n_val size_EncodeIdx 1:/#.
+            * rewrite !NBytes.valP n_val /= size_EncodeIdx /#.
+          rewrite !NBytes.valP n_val size_EncodeIdx 1:/#.
 
       move => ???? *.      
       rewrite get_to_list of_listK.
-            * rewrite !size_cat !valP n_val /= size_EncodeIdx /#.  
-      rewrite nth_cat !size_cat !valP n_val size_EncodeIdx /#.
+            * rewrite !size_cat !NBytes.valP n_val /= size_EncodeIdx /#.  
+      rewrite nth_cat !size_cat !NBytes.valP n_val size_EncodeIdx /#.
 qed.
 

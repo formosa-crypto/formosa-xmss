@@ -21,32 +21,27 @@ axiom ge0_h : 0 <= h.
 axiom ge0_len  : 0 <= len.
 axiom ge0_len1 : 0 <= len1.
 
+subtype nbytes as NBytes = { l : W8.t list | size l = n}.
+realize inhabited.
+proof.
+by (exists (nseq n W8.zero);smt(size_nseq ge0_n)).
+qed.
 
-clone export Subtype as NBytes with 
-   type T = W8.t list,
-   op P = fun l => size l = n
-   rename "sT" as "nbytes"
-   proof inhabited by (exists (nseq n W8.zero);smt(size_nseq ge0_n))
-   proof *.
+subtype len_nbytes as LenNBytes = { l : nbytes list | size l = len }.
+realize inhabited.
+proof.
+by (exists (nseq len witness); smt(size_nseq ge0_len)).
+qed.
 
-clone export Subtype as LenNBytes with 
-   type T = nbytes list,
-   op P = fun l => size l = len
-   rename "sT" as "len_nbytes"
-   proof inhabited by (exists (nseq len witness); smt(size_nseq ge0_len))
-   proof *.
+subtype onebyte as OneByte = { l : W8.t list | size l = 1 }.
+realize inhabited.
+proof.
+by (exists (nseq 1 witness); smt(size_nseq)).
+qed.
 
-clone export Subtype as OneByte with 
-   type T = W8.t list,
-   op P = fun l => size l = 1
-   rename "sT" as "onebyte"
-   proof inhabited by (exists (nseq 1 witness); smt(size_nseq))
-   proof *.
-
-clone export Subtype as ThreeNBytesBytes with 
-   type T = W8.t list,
-   op P = fun l => size l = 3 * n
-   rename "sT" as "threen_bytes"
-   proof inhabited by (exists (nseq (3*n) W8.zero);smt(size_nseq ge0_n))
-   proof *.
+subtype threen_bytes as ThreeNBytesBytes = { l : W8.t list | size l = 3 * n }.
+realize inhabited.
+proof.
+by (exists (nseq (3*n) W8.zero);smt(size_nseq ge0_n)).
+qed.
 

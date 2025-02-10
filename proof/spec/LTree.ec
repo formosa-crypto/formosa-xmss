@@ -12,13 +12,13 @@ op H_msg_padding_val : W64.t.
 
 op H_msg (t : threen_bytes) (M : W8.t list) : nbytes =
   let padding : W8.t list = toByte_64 H_msg_padding_val n in
-  Hash (padding ++ val t ++ M).
+  Hash (padding ++ ThreeNBytesBytes.val t ++ M).
 
-clone export Subtype as WOTSKeys with 
-   type T = wots_sk list,
-   op P = fun l => size l = 2^h
-   rename "sT" as "wots_keys".
-
+subtype wots_keys as WOTSKeys = { l : wots_sk list | size l = 2^h }.
+realize inhabited.
+proof.
+exists (nseq (2^h) witness); rewrite size_nseq; smt(@IntDiv).
+qed.
 
 (* 4.1.5 L-Trees *)
 (* takes as input a WOTS+ public key pk and compresses it to a single 
@@ -34,7 +34,7 @@ module LTree = {
     var tree_height : int;
 
     address <- set_tree_height address 0;
-    pks <- val pk;
+    pks <- LenNBytes.val pk;
 
     _len <- len;
     while (1 < _len) { (* Same as _len > 1 *)

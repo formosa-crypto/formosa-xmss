@@ -20,13 +20,14 @@ type wots_sk = len_nbytes.
 type wots_keypair = wots_pk * wots_sk.
 
 (******************************************************************************)
+ 
+subtype wots_ots_keys as OTSKeys = { l : wots_sk list | size l = 2^h }.
+realize inhabited.
+proof.
+by exists (nseq (2^h) witness); rewrite size_nseq; smt(ge0_h @IntDiv).
+qed.
 
-clone import Subtype as OTSKeys with 
-   type T = wots_sk list,
-   op P = fun l => size l = 2^h
-   rename "sT" as "wots_ots_keys".
-
-op nbytexor(a b : nbytes) : nbytes = NBytes.insubd (bytexor (val a) (val b)).
+op nbytexor(a b : nbytes) : nbytes = NBytes.insubd (bytexor (NBytes.val a) (NBytes.val b)).
 
 module Chain = {
    proc chain(X : nbytes, i s : int, _seed : seed, address : adrs) : nbytes = {
@@ -83,7 +84,7 @@ module WOTS = {
       i <- i + 1;
     }
 
-    return insubd (map NBytes.insubd sk);
+    return LenNBytes.insubd (map NBytes.insubd sk);
   }
 
   (* 
@@ -116,12 +117,12 @@ module WOTS = {
     while (i < len) {
       address <- set_chain_addr address i;
       addr_bytes <- addr_to_bytes address;
-      sk_i <@ Hash.prf_keygen (val seed ++ val addr_bytes, sk_seed);
+      sk_i <@ Hash.prf_keygen (NBytes.val seed ++ NBytes.val addr_bytes, sk_seed);
       sk <- put sk i sk_i;
       i <- i + 1;
     }
 
-    return insubd sk;
+    return LenNBytes.insubd sk;
   }
 
   (* The len n-byte strings in the private key each define the start node for one hash chain. The public
@@ -136,13 +137,13 @@ module WOTS = {
 
     while (i < len) {
       address <- set_chain_addr address i;
-      sk_i <- nth witness (val sk) i;
+      sk_i <- nth witness (LenNBytes.val sk) i;
       pk_i <@ Chain.chain (sk_i, 0, (w - 1), _seed, address);
       pk <- put pk i pk_i;
       i <- i + 1;
     }
 
-    return insubd pk;
+    return LenNBytes.insubd pk;
   }
 
   (* Generates the key from the seed *)
@@ -159,13 +160,13 @@ module WOTS = {
     wots_skey <@ pseudorandom_genSK(sk_seed, _seed, address); (* Generate sk from the secret key *)
     while (i < len) {
       address <- set_chain_addr address i;
-      sk_i <- nth witness (val wots_skey) i;
+      sk_i <- nth witness (LenNBytes.val wots_skey) i;
       pk_i <@ Chain.chain (sk_i, 0, (w - 1), _seed, address);
       pk <- put pk i pk_i;
       i <- i + 1;
     }
 
-    return insubd pk;
+    return LenNBytes.insubd pk;
   }
 
   proc kg(sk_seed : nbytes, _seed : seed, address : adrs) : wots_keypair = {
@@ -228,7 +229,7 @@ module WOTS = {
     sig <- nseq len witness;
 
     (* Convert message to base w *)
-    msg <@ BaseW.base_w(val M, len1);
+    msg <@ BaseW.base_w(NBytes.val M, len1);
 
     (* Compute checksum *)
     csum <@ checksum(msg);
@@ -247,13 +248,13 @@ module WOTS = {
     while (i < len) {
       address <- set_chain_addr address i;
       msg_i <- nth witness msg i;
-      sk_i <- nth witness (val sk) i;
+      sk_i <- nth witness (LenNBytes.val sk) i;
       sig_i <@ Chain.chain (sk_i, 0, msg_i, _seed, address);
       sig <- put sig i sig_i;
       i <- i + 1;
     }
 
-    return insubd sig;
+    return LenNBytes.insubd sig;
   }
 
   proc sign_seed (M : W8.t list, sk_seed : seed, pub_seed : seed, address : adrs) : wots_signature = {
@@ -295,13 +296,13 @@ module WOTS = {
     while (i < len) {
       address <- set_chain_addr address i;
       msg_i <- nth witness msg i;
-      sk_i <- nth witness (val wots_skey) i;
+      sk_i <- nth witness (LenNBytes.val wots_skey) i;
       sig_i <@ Chain.chain (sk_i, 0, msg_i, pub_seed, address);
       sig <- put sig i sig_i;
       i <- i + 1;
     }
 
-    return insubd sig;
+    return LenNBytes.insubd sig;
   }
 
   proc pkFromSig(M : wots_message, sig : wots_signature, _seed : seed, address : adrs) : wots_pk = {
@@ -319,7 +320,7 @@ module WOTS = {
 
     tmp_pk <-  nseq len witness;
     (* Convert message to base w *)
-    msg <@ BaseW.base_w(val M, len1);
+    msg <@ BaseW.base_w(NBytes.val M, len1);
 
     (* Compute checksum *)
     csum <@ checksum(msg);
@@ -338,13 +339,13 @@ module WOTS = {
     while (i < len) {
       address <- set_chain_addr address i;
       msg_i <- nth witness msg i;
-      sig_i <- nth witness (val sig) i;
+      sig_i <- nth witness (LenNBytes.val sig) i;
       pk_i <@ Chain.chain (sig_i, msg_i, (w - 1 - msg_i), _seed, address);
       tmp_pk <- put tmp_pk i pk_i; 
       i <- i + 1;
     }
 
-    return insubd tmp_pk;
+    return LenNBytes.insubd tmp_pk;
   }
 
   proc verify(pk : wots_pk, M : wots_message, sig : wots_signature, _seed : seed, address : adrs) : bool = {

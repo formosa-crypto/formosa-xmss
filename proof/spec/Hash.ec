@@ -31,7 +31,7 @@ module Hash = {
     var buf : W8.t list;
 
     padding <- toByte_64 prf_padding_val padding_len;
-    buf <- padding ++ val key ++ val in_0;
+    buf <- padding ++ NBytes.val key ++ NBytes.val in_0;
 
     r <- Hash buf;
 
@@ -45,7 +45,7 @@ module Hash = {
     var buf : W8.t list;
 
     padding <- toByte_64 prf_kg_padding_val padding_len;
-    buf <- padding ++ val key ++ in_0;
+    buf <- padding ++ NBytes.val key ++ in_0;
 
     r <- Hash buf;
     
@@ -60,7 +60,7 @@ module Hash = {
     var padding : W8.t list;
 
     padding <- toByte_64 F_padding_val padding_len;
-    buf <- padding ++ val key ++ val t;
+    buf <- padding ++ NBytes.val key ++ NBytes.val t;
 
     r <- Hash buf;
 
@@ -89,8 +89,8 @@ module Hash = {
       addr_bytes <- addr_to_bytes address;
       bitmask_1 <@ prf (addr_bytes,  _seed);
     
-      t <- bytexor (val _left ++ val _right) (val bitmask_0 ++ val bitmask_1);
-      buf <- padding ++ val key ++ t;
+      t <- bytexor (NBytes.val _left ++ NBytes.val _right) (NBytes.val bitmask_0 ++ NBytes.val bitmask_1);
+      buf <- padding ++ NBytes.val key ++ t;
   
       return Hash buf;
   }

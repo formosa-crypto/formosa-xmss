@@ -88,28 +88,28 @@ swap {2} 8 -7.
 
 seq 1 1 : (
   #pre /\ 
-  to_list pub_root{1} = val root{2} /\
+  to_list pub_root{1} = NBytes.val root{2} /\
   to_list pub_root{1} = sub pk{1} 0 n
 ).
     + auto => /> &1 *; split.
-       - apply (eq_from_nth witness); [by rewrite size_to_list valP /# |]; rewrite size_to_list => j?.          
+       - apply (eq_from_nth witness); [by rewrite size_to_list NBytes.valP /# |]; rewrite size_to_list => j?.          
          rewrite get_to_list initiE // /EncodePkNoOID => />.
-         rewrite insubdK; [by rewrite /P size_sub /# | by rewrite nth_sub /#].
+         rewrite NBytes.insubdK; [by rewrite /P size_sub /# | by rewrite nth_sub /#].
        - apply (eq_from_nth witness); [by rewrite size_to_list size_sub /# |]; rewrite size_to_list => j?.          
          rewrite get_to_list initiE // /EncodePkNoOID => />.
          rewrite nth_sub /#.
 
 seq 1 1 : (
   #pre /\ 
-  to_list pub_seed{1} = val seed{2} /\
+  to_list pub_seed{1} = NBytes.val seed{2} /\
   to_list pub_seed{1} = sub pk{1} n n
 ).
     + auto => /> *.
       do split.
-       - apply (eq_from_nth witness); first by rewrite valP size_to_list n_val.
+       - apply (eq_from_nth witness); first by rewrite NBytes.valP size_to_list n_val.
          rewrite size_to_list => j?.
          rewrite get_to_list initiE // /EncodePkNoOID => />.
-         rewrite insubdK; first by rewrite /P size_sub // n_val. 
+         rewrite NBytes.insubdK; first by rewrite /P size_sub // n_val. 
          by rewrite nth_sub.
        - apply (eq_from_nth witness); first by rewrite n_val size_sub // size_to_list.
          rewrite size_to_list => j?.
@@ -149,8 +149,8 @@ seq 3 0 : (
 (* ------------------------------------------------------------------------------- *)
 
 seq 19 13 : (
-  to_list root{1} = val node{2} /\
-  to_list pub_root{1} = val root{2} /\
+  to_list root{1} = NBytes.val node{2} /\
+  to_list pub_root{1} = NBytes.val root{2} /\
   0 <= to_uint mlen_ptr{1} < W64.max_uint /\
   0 <= to_uint (loadW64 Glob.mem{1} (to_uint mlen_ptr{1})) < W64.max_uint
 ); last first.
@@ -160,8 +160,8 @@ case (node{2} = root{2}).
 (* ==== valid signature ========================================================= *)
 
     + conseq (: 
-         to_list root{1} = val node{2} /\ 
-         to_list pub_root{1} = val root{2} /\
+         to_list root{1} = NBytes.val node{2} /\ 
+         to_list pub_root{1} = NBytes.val root{2} /\
          node{2} = root{2} /\ 
          root{1} = pub_root{1} /\
          0 <= to_uint mlen_ptr{1} < W64.max_uint /\
@@ -193,8 +193,8 @@ case (node{2} = root{2}).
 (* ==== invalid signature ======================================================= *)
 
     + conseq (: 
-         to_list root{1} = val node{2} /\ 
-         to_list pub_root{1} = val root{2} /\
+         to_list root{1} = NBytes.val node{2} /\ 
+         to_list pub_root{1} = NBytes.val root{2} /\
          node{2} <> root{2} /\ 
          root{1} <> pub_root{1} /\
          0 <= to_uint mlen_ptr{1} < W64.max_uint /\
@@ -317,22 +317,22 @@ seq 4 0 : (
 
 seq 3 2 : (
   #pre /\ 
-  to_list buf{1} = val _R{2} /\
+  to_list buf{1} = NBytes.val _R{2} /\
   _R{2} = s{2}.`r /\
-  idx_bytes{2} = (insubd (toByte idx_sig{2} n))%NBytes  
+  idx_bytes{2} = (NBytes.insubd (toByte idx_sig{2} n))%NBytes  
 ).
 - sp; exists * t64{1}; elim * => P.
   call {1} (p_memcpy_ptr_correct P).
   auto => /> &1 &2 *; do split => *; 1..3: by smt(@W64 pow2_64).
-  apply (eq_from_nth witness); rewrite size_to_list ?valP ?n_val // => i?.
+  apply (eq_from_nth witness); rewrite size_to_list ?NBytes.valP ?n_val // => i?.
   rewrite get_to_list initiE //= /EncodeSignature => />.
-  rewrite /XMSS_INDEX_BYTES /XMSS_N insubdK; first by rewrite /P size_sub_list /#.
+  rewrite /XMSS_INDEX_BYTES /XMSS_N NBytes.insubdK; first by rewrite /P size_sub_list /#.
   rewrite nth_sub_list // nth_load_buf 1:/# /loadW8.
   congr; rewrite to_uintD /#.
 
 outline {2} [1-2] { 
     _M' <@ M_Hash.hash (
-          (insubd (val _R ++ val root ++ val idx_bytes))%ThreeNBytesBytes, 
+          (ThreeNBytesBytes.insubd (NBytes.val _R ++ NBytes.val root ++ NBytes.val idx_bytes))%ThreeNBytesBytes, 
           m); 
 }.
 
@@ -359,7 +359,7 @@ seq 0 0 : (
  
 seq 1 1 : (
   #pre /\ 
-  to_list root{1} = val _M'{2}
+  to_list root{1} = NBytes.val _M'{2}
 ).
 - exists * Glob.mem{1}, buf{1}, (init (fun (i_0 : int) => pk{1}.[0 + i_0]))%Array32, idx{1}, t64{1}, bytes{1}. 
   elim * => P0 P1 P2 P3 P4 P5.
@@ -372,23 +372,18 @@ seq 1 1 : (
    + rewrite to_uintB ?uleE of_uintK /= /#. 
    + smt(@W64 pow2_64).
    + smt().
-   + apply three_nbytes_eq; apply (eq_from_nth witness); rewrite !valP ?n_val // => i?.
-     rewrite !insubdK.
-        * by rewrite /P size_toByte_32 // n_val.
-        * by rewrite /P !size_cat !valP size_toByte_32 // n_val /=.    
-        * by rewrite /P !size_cat !size_to_list size_toByte_64 // n_val /=.
-        * by rewrite /P size_toByte_32 // n_val.
-     rewrite H32; do congr.
-        * apply (eq_from_nth witness); rewrite valP n_val ?size_to_list // => j?.
+   + apply three_nbytes_eq; apply (eq_from_nth witness); rewrite !ThreeNBytesBytes.valP ?n_val // => i?. 
+     rewrite !ThreeNBytesBytes.insubdK ?size_cat ?size_toByte_32 // ?n_val ?size_to_list ?size_toByte_64 //= ?NBytes.valP ?n_val //=.
+     rewrite H32; do congr. 
+        * apply (eq_from_nth witness); rewrite NBytes.valP n_val ?size_to_list // => j?.
           rewrite get_to_list initiE //.
           have ->: _pk.[j] = nth witness (sub _pk 0 n) j by rewrite nth_sub /#. 
           smt().
-        * apply (eq_from_nth witness); rewrite size_toByte_32 ?size_toByte_64 // => j?.
+        * apply (eq_from_nth witness); first by rewrite size_toByte_64 //= NBytes.valP n_val.
+          rewrite NBytes.valP n_val => j?.
           rewrite toByte_32_64 //.
           have ->: toByte_64 P3 32 = Bytes.W64toBytes_ext P3 32 by smt(Bytes.W64toBytes_ext_toByte_64). 
-          rewrite /W64toBytes_ext !nth_rev ?size_mkseq ?size_mkseq 1,2:/# nth_mkseq 1:/# /= nth_mkseq 1:/# /=.
-          rewrite (: max 0 32 = 32) //=; do congr.
-          smt(@W32 @W64).
+          rewrite /W64toBytes_ext !nth_rev ?size_mkseq ?size_mkseq 1,2:/#.
    + smt().
    + move => H35 H36 H37 H38 H39 H40 resL resR memT H41 H42 H43.
      have ->: load_sig_mem memT ptr_sm = load_sig_mem P0 ptr_sm
@@ -412,14 +407,14 @@ seq 28 6 : (
       0 <= k && k < 8 => k <> 3 => ltree_addr{1}.[k] = W32.zero)}
    {/~(forall (k : int),
       0 <= k && k < 8 => k <> 3 => node_addr{1}.[k] = W32.zero)}
-   {/~ to_list root{1} = val _M'{2}}pre /\
+   {/~ to_list root{1} = NBytes.val _M'{2}}pre /\
   to_uint sm_offset{1} = 35 /\
   ots_addr{1}.[3] = W32.zero /\
   ltree_addr{1}.[3] = W32.one /\
   node_addr{1}.[3] = (of_int 2)%W32 /\
   ={idx_leaf} /\
   to_uint idx{1} = to_uint idx_tree{2} /\
-  to_list root{1} = val node{2} /\
+  to_list root{1} = NBytes.val node{2} /\
   i{1} = W32.zero /\
   sub ots_addr{1} 0 4 = sub address{2} 0 4 /\
   sub ltree_addr{1} 0 3 = sub address{2} 0 3 /\
@@ -430,7 +425,7 @@ seq 28 6 : (
 
   to_uint sm_offset{1} = 35 + j{2} * XMSS_REDUCED_SIG_BYTES /\
 
-  to_list root{1} = val node{2}
+  to_list root{1} = NBytes.val node{2}
 ); last first.
 
 (* ======================================================================================= *)
@@ -449,9 +444,9 @@ while (
   ={idx_leaf} /\
   to_uint idx{1} = to_uint idx_tree{2} /\
 
-    to_list pub_root{1} = val root{2} /\
+    to_list pub_root{1} = NBytes.val root{2} /\
     to_list pub_root{1} = sub pk{1} 0 n /\
-    to_list pub_seed{1} = val seed{2} /\
+    to_list pub_seed{1} = NBytes.val seed{2} /\
     to_list pub_seed{1} = sub pk{1} n n /\
 
 
@@ -540,8 +535,8 @@ seq 3 0 : (
   rewrite size_load_sig /XMSS_SIG_BYTES /=.
   rewrite nth_chunk 1:/# ?size_sub_list ?size_load_sig 1,2:/#.
   rewrite /EncodeReducedSignature => />.
-  apply len_n_bytes_eq; apply (eq_from_nth witness); rewrite !valP // => j?.
-  rewrite /EncodeWotsSignatureList /EncodeWotsSignature !insubdK; 1,2: by rewrite /P size_map size_chunk 1:/# ?size_sub_list ?size_to_list /#.
+  apply len_n_bytes_eq; apply (eq_from_nth witness); rewrite !LenNBytes.valP // => j?.
+  rewrite /EncodeWotsSignatureList /EncodeWotsSignature !LenNBytes.insubdK; 1,2: by rewrite /P size_map size_chunk 1:/# ?size_sub_list ?size_to_list /#.
   congr; congr; congr.
   apply (eq_from_nth witness); first by rewrite size_to_list size_sub_list /#.
   rewrite size_sub_list 1:/# => k?.
@@ -588,7 +583,7 @@ seq 1 2 : (
 
 wp; conseq />.
 
-seq 1 1 : (#pre /\ to_list leaf{1} = val nodes0{2}).
+seq 1 1 : (#pre /\ to_list leaf{1} = NBytes.val nodes0{2}).
 - exists * wots_pk{1}, pub_seed{1}, ltree_addr{1}, address0{2}.
   elim * => P0 P1 P2 P3.
   call (ltree_correct P0 P1 P2 P3) => [/#|]. 
@@ -735,7 +730,7 @@ seq 1 2 : (
 
 wp; conseq />.
  
-seq 1 1 : (#pre /\ to_list leaf{1} = val nodes0{2}).
+seq 1 1 : (#pre /\ to_list leaf{1} = NBytes.val nodes0{2}).
 - exists * wots_pk{1}, pub_seed{1}, ltree_addr{1}, address0{2}.
   elim * => P0 P1 P2 P3.
   call (ltree_correct P0 P1 P2 P3) => [/#|]. 

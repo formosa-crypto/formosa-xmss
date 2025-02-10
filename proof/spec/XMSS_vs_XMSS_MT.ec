@@ -36,8 +36,8 @@ while (#pre).
 - auto.
 qed.
 
-pred eq_auth_path (a : XMSS_Types.AuthPath.auth_path) (a_mt : auth_path)  = 
-    val a_mt = val a.
+pred eq_auth_path (a : XMSS_Types.auth_path) (a_mt : auth_path)  = 
+    AuthPath.val a_mt = XMSS_Types.AuthPath.val a.
 
 equiv root_from_sig_equiv : 
     XMSS_TreeHash.RootFromSig.rootFromSig ~ XMSS_MT_TreeHash.RootFromSig.rootFromSig :
@@ -72,7 +72,7 @@ seq 6 6 : (#pre /\ ={pub_seed, sk_seed, address, sk_seed, sk_prf, pub_seed}).
 call (treehash_equiv); auto => /> /#.
 qed.
 
-pred eq_r_sigs (x : wots_signature * XMSS_Types.AuthPath.auth_path)
+pred eq_r_sigs (x : wots_signature * XMSS_Types.auth_path)
                (y : (wots_signature * auth_path) list) = 
                size y = 1 /\ 
                x.`1 = (nth witness y 0).`1 /\ 
@@ -120,7 +120,7 @@ call(:
   while (#pre); auto => />.
      - call (treehash_equiv); auto => /> *; split => //; rewrite ?size_put /#. 
      - move => &2 d_val *; split => [/# |]. 
-       by move => authpathR ?????; rewrite /eq_auth_path !insubdK // /P.
+       move => authpathR ?????; rewrite /eq_auth_path !AuthPath.insubdK // XMSS_Types.AuthPath.insubdK //.
 wp ; call(: true); 1: by sim.
 auto => /> &1 ? -> /= *; do split. 
 + rewrite and_mod;1:smt(ge0_h).

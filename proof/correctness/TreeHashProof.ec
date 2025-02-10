@@ -69,7 +69,7 @@ lemma gen_leaf_equiv (_sk_seed _pub_seed : W8.t Array32.t, x y : W32.t, oa lta a
       arg{2}.`5 = to_uint y
       ==> 
 
-      to_list res{1}.`1 = val res{2} /\
+      to_list res{1}.`1 = NBytes.val res{2} /\
       sub res{1}.`2 0 5 = sub lta 0 5 /\
       sub res{1}.`3 0 5 = sub oa 0 5 
     ].
@@ -83,8 +83,8 @@ inline {1} 11.
 wp.
 
 seq 17 0 : (
-        sk_seed{2} = (insubd (to_list sk_seed1{1}))%NBytes /\
-        pub_seed{2} = (insubd (to_list pub_seed1{1}))%NBytes /\
+        sk_seed{2} = (NBytes.insubd (to_list sk_seed1{1}))%NBytes /\
+        pub_seed{2} = (NBytes.insubd (to_list pub_seed1{1}))%NBytes /\
         s{2} = to_uint x /\ 
         i{2} = to_uint y /\
         ltree_addr1{1}.[3] = W32.one /\
@@ -158,7 +158,7 @@ lemma treehash_correct ( _sk_seed _pub_seed : W8.t Array32.t, _s _t: W32.t, a1 a
       a1.[4] = node_addr_padding_val
 
       ==>
-      to_list res{1} = val res{2}
+      to_list res{1} = NBytes.val res{2}
     ]. 
 proof. 
 rewrite /XMSS_N /XMSS_D /XMSS_TREE_HEIGHT /XMSS_FULL_HEIGHT /XMSS_D /XMSS_WOTS_W /XMSS_WOTS_LEN /= .
@@ -233,17 +233,17 @@ seq 2 0 : (#pre /\ to_uint upper_bound{1} = 2^t{2}).
       smt(@IntDiv @RealExp).
 
 
-seq 2 2 : (sub _stack{1} 0 n = val (nth witness stack{2} 0)); last first.
+seq 2 2 : (sub _stack{1} 0 n = NBytes.val (nth witness stack{2} 0)); last first.
     + while {1}
     (#pre /\
      0 <= j{1} <= 32 /\ 
      node{2} = nth witness stack{2} 0 /\
-     forall (k : int), 0 <= k < j{1} => root{1}.[k] = nth witness (val (nth witness stack{2} 0)) k) 
+     forall (k : int), 0 <= k < j{1} => root{1}.[k] = nth witness (NBytes.val (nth witness stack{2} 0)) k) 
     (32 - j{1}); last first.
         * auto => /> &1 &2 ?; split => [/# | j?]; split => [/# |???].
           have ->: j = 32 by smt().
           move => H.
-          apply (eq_from_nth witness); first by rewrite valP n_val size_to_list.
+          apply (eq_from_nth witness); first by rewrite NBytes.valP n_val size_to_list.
           rewrite size_to_list => ??.
           by rewrite get_to_list H.
         * auto => /> &hr H0 ?? H1 *; do split; 1,2,4: by smt().
@@ -291,7 +291,7 @@ seq 0 0 : (#pre /\ sub ltree_addr{1} 0 3 = sub address{2} 0 3).
 seq 1 1 : (
   #{/~sub ots_addr{1} 0 5 = sub address{2} 0 5} 
    {/~ltree_addr{1}.[4] = (of_int s{2})%W32}pre /\
-   val node{2} = to_list buf{1} /\ 
+   NBytes.val node{2} = to_list buf{1} /\ 
    sub ots_addr{1} 0 5 = sub address{2} 0 5
 ).
     + exists * sk_seed{1}, pub_seed{1}, (of_int s{2})%W32, (of_int i{2})%W32, ots_addr{1}, ltree_addr{1}, address{2}.
@@ -380,8 +380,8 @@ while (
       size stack{2} = h %/ d + 1 /\ 
       size heights{2} = h %/ d + 1 /\
 
-      sk_seed{2} = (insubd (to_list sk_seed{1}))%NBytes /\
-      pub_seed{2} = (insubd (to_list pub_seed{1}))%NBytes /\ 
+      sk_seed{2} = (NBytes.insubd (to_list sk_seed{1}))%NBytes /\
+      pub_seed{2} = (NBytes.insubd (to_list pub_seed{1}))%NBytes /\ 
       
       sub ots_addr{1} 0 3 = sub address{2} 0 3 /\
       sub ltree_addr{1} 0 3 = sub address{2} 0 3 /\
@@ -409,7 +409,7 @@ while (
         * rewrite ultE /#.
         * move => stackL heightsL iL ltree_addrL node_addrL ots_addrL addressR heightsR offsetR stackR.      
           rewrite ultE => H15 H16 H17 H18 H19 H20 H21 H22 H23 H24 H25 H26 H27 H28 H29 H30 H31 H32 *.
-          apply (eq_from_nth witness); first by rewrite size_sub 1:/# valP n_val.
+          apply (eq_from_nth witness); first by rewrite size_sub 1:/# NBytes.valP n_val.
           rewrite size_sub 1:/# n_val => j?.
           have ?: 0 < to_uint iL by smt(pow2_neq_0).
           have := H32.
@@ -460,7 +460,7 @@ wp; conseq />.
 seq 1 1 : (
   #{/~sub ots_addr{1} 0 5 = sub address{2} 0 5} 
    {/~ltree_addr{1}.[4] = (of_int s{2})%W32}pre /\
-   val node{2} = to_list buf{1} /\ 
+   NBytes.val node{2} = to_list buf{1} /\ 
    sub ots_addr{1} 0 5 = sub address{2} 0 5
 ).
     + exists * sk_seed{1}, pub_seed{1}, (of_int s{2})%W32, (of_int i{2})%W32, ots_addr{1}, ltree_addr{1}, address{2}.
@@ -621,8 +621,8 @@ while (
   size stack{2} = h %/ d + 1 /\
   size heights{2} = h %/ d + 1 /\
 
-  sk_seed{2} = (insubd (to_list sk_seed{1}))%NBytes /\
-  pub_seed{2} = (insubd (to_list pub_seed{1}))%NBytes /\
+  sk_seed{2} = (NBytes.insubd (to_list sk_seed{1}))%NBytes /\
+  pub_seed{2} = (NBytes.insubd (to_list pub_seed{1}))%NBytes /\
 
   sub ltree_addr{1} 0 3 = sub address{2} 0 3 /\
   sub node_addr{1} 0 5 = sub address{2} 0 5 /\
@@ -778,7 +778,7 @@ seq 2 2 : (#pre /\ sub node_addr{1} 0 7 = sub address{2} 0 7).
             rewrite get_out; first by smt(@W64 pow2_64).
             reflexivity.
 
-seq 4 2 : (#pre /\ to_list buf2{1} = val node0{2} ++ val node1{2}).
+seq 4 2 : (#pre /\ to_list buf2{1} = NBytes.val node0{2} ++ NBytes.val node1{2}).
     + sp.
       exists * _stack{1}, offset{1}, stack{2}.
       elim * => P0 P1 P2.
@@ -795,7 +795,7 @@ skip => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H
           smt(@StdOrder.IntOrder).
         - smt().
 
-seq 1 1 : (#pre /\ to_list buf{1} = val new_node{2}).
+seq 1 1 : (#pre /\ to_list buf{1} = NBytes.val new_node{2}).
           + inline M(Syscall).__thash_h_ M(Syscall)._thash_h.
             wp; sp.
             exists * node0{2}, node1{2}, pub_seed1{1}, addr0{1}, address{2}.
@@ -804,7 +804,7 @@ seq 1 1 : (#pre /\ to_list buf{1} = val new_node{2}).
             auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19 H20 H21 H22 H23 H24 H25 H26 *.
             do split. 
                  - rewrite /merge_nbytes_to_array tP => i?.
-                   rewrite  -get_to_list H26 initiE // nth_cat valP n_val.
+                   rewrite  -get_to_list H26 initiE // nth_cat NBytes.valP n_val.
                    case (0 <= i < 32) => ?; [by rewrite ifT 1:/# ifT 1:/# | by  rewrite ifF 1:/# ifF 1:/#].
                  - smt(sub_k).           
                  - move => ?? resL resR ? H.
@@ -865,14 +865,14 @@ seq 1 1 : #pre.
 
              * rewrite nth_put //. 
                case (to_uint offset{2} - 2 = j %/ n) => [H_a | H_b].
-                   + rewrite H27 insubdK; first by rewrite /P valP.
+                   + rewrite H27 NBytes.insubdK; first by rewrite /P NBytes.valP.
                      have ->: result.[j] =
                               nth witness 
                               (sub result 0 (32 * min (to_uint (offset{2} - (of_int 2)%W64) + 2) (size P1)))   
                               j by rewrite E /= nth_sub // /#.
                     
                      rewrite Hr E nth_mkseq /= 1:/# nth_nbytes_flatten; first by rewrite size_put /#.
-                     by rewrite nth_put 1:/# ifT 1:/# H27 insubdK // /P valP.
+                     by rewrite nth_put 1:/# ifT 1:/# H27 NBytes.insubdK // /P NBytes.valP.
                    + case (0 <= j && j < 32 * min (to_uint offset{2} - 1) (size P1)) => [Hba | Hbb].
                       * have ->: result.[j] = nth witness
                                  (sub result 0 (32 * min (to_uint (offset{2} - (of_int 2)%W64) + 2) (size P1))) 

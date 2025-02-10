@@ -78,7 +78,7 @@ proc sign(sk : xmss_sk, m : msg_t) : sig_t * xmss_sk = {
     _R <@ Hash.prf(idx_bytes, sk_prf);
 
     root <- sk.`sk_root;
-    t <- ThreeNBytesBytes.insubd (val _R ++ val root ++ val idx_bytes);
+    t <- ThreeNBytesBytes.insubd (NBytes.val _R ++ NBytes.val root ++ NBytes.val idx_bytes);
     _M' <- H_msg t m;
 
     (ots_sig, auth) <@ TreeSig.treesig(_M', sk, idx, address);
@@ -107,7 +107,7 @@ proc sign(sk : xmss_sk, m : msg_t) : sig_t * xmss_sk = {
 
     root <- pk.`pk_root;
     _R <- s.`r;
-    t <- ThreeNBytesBytes.insubd (val _R ++ val root ++ val idx_bytes);
+    t <- ThreeNBytesBytes.insubd (NBytes.val _R ++ NBytes.val root ++ NBytes.val idx_bytes);
     _M' <- H_msg t m;
     
     node <@ RootFromSig.rootFromSig(idx_sig, sig_ots, auth, _M', _seed, address);

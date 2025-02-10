@@ -1,14 +1,11 @@
 # -*- Makefile -*-
 
 EASYCRYPT  ?= easycrypt
-EC_INCLUDE ?= -I common -I extraction -I spec -I correctness
+EC_INCLUDE ?= -I common -I extraction -I spec -I correctness -I security
 EC_FLAGS   ?= -timeout 20 $(EC_INCLUDE) ${ECADDFLAGS}
 
-JASMIN    ?= jasminc
-JASMIN2EC ?= jasmin2ec
-JINCLUDE  ?= -I XMSS:../ref-jasmin/ -I Stdlib:../ref-jasmin/stdlib
-
-TEST_DIR := ../test
+JASMIN2EC        ?= jasmin2ec
+JASMIN2EC_FLAGS  ?= --array-model=old
 
 JPP          := ../submodules/jasmin-preprocessor/jpp
 PREPROCESSOR := ../submodules/jasmin-preprocessor/preprocessor
@@ -21,20 +18,20 @@ extract: extraction/XMSS_IMPL.ec
 
 # --------------------------------------------------------------------------------------------------
 
-$(TEST_DIR)/xmss/bin/test_xmss_xmssmt-sha2_20_2_256.jazz:
-	$(MAKE) -C $(TEST_DIR)/xmss/ clean bin/test_xmss_xmssmt-sha2_20_2_256.jazz
-
-
-extraction/XMSS_IMPL.ec: $(TEST_DIR)/xmss/bin/test_xmss_xmssmt-sha2_20_2_256.jazz | extraction/ common/
-	cp $(TEST_DIR)/xmss/bin/test_xmss_xmssmt-sha2_20_2_256.jazz $(@:.ec=.jazz)
-	$(JASMIN2EC) $(@:.ec=.jazz) --output-array common/ > $@
+.PHONY: check_spec check_proofs check_extraction check_xmss_spec check_xmss_mt_spec \
+        check_correctness_proof check_security_proof check_xmss_xmssmt_proof
 
 # --------------------------------------------------------------------------------------------------
 
-.PHONY: check_spec check_proofs check_extraction check_xmss_spec check_xmss_mt_spec
-
 common/Array8.ec: | common/
 	echo "from Jasmin require import JArray.\n\nclone export PolyArray as Array8  with op size <- 8.\n" > $@
+
+extraction/XMSS_IMPL.ec: extraction/XMSS_IMPL.jazz | common/
+	$(JASMIN2EC) $(JASMIN2EC_FLAGS) $< -o $@
+	mv extraction/WArray* common/
+	mv extraction/Array* common/
+
+# --------------------------------------------------------------------------------------------------
 
 check_xmss_spec: common/Array8.ec
 	$(EASYCRYPT) $(EC_INCLUDE) spec/Address.ec
@@ -79,10 +76,38 @@ check_correctness_proof: extraction/XMSS_IMPL.ec $(CORRECTNESS_PROOF_FILES)
 
 ####################################################################################################
 
+# TODO: This could be improved by doing something similar to the the target check_correctness_proof
+check_security_proof:
+	$(EASYCRYPT) $(EC_FLAGS) security/acai/DigitalSignatures.eca   
+	$(EASYCRYPT) $(EC_FLAGS) security/acai/DigitalSignaturesROM.eca
+	$(EASYCRYPT) $(EC_FLAGS) security/acai/EUFRMA_Interactive_Equiv.ec  
+	$(EASYCRYPT) $(EC_FLAGS) security/acai/FL_XMSS_TW.ec                
+	$(EASYCRYPT) $(EC_FLAGS) security/acai/HashAddresses.eca
+	$(EASYCRYPT) $(EC_FLAGS) security/acai/HashThenSign.eca 
+	$(EASYCRYPT) $(EC_FLAGS) security/acai/KeyedHashFunctions.eca  
+	$(EASYCRYPT) $(EC_FLAGS) security/acai/Reprogramming.ec        
+	$(EASYCRYPT) $(EC_FLAGS) security/acai/TweakableHashFunctions.eca  
+	$(EASYCRYPT) $(EC_FLAGS) security/acai/WOTS_TW_Checksum.ec         
+	$(EASYCRYPT) $(EC_FLAGS) security/acai/WOTS_TW.ec
+	$(EASYCRYPT) $(EC_FLAGS) security/acai/XMSS_TW.ec
+	$(EASYCRYPT) $(EC_FLAGS) security/fsai/DigitalSignatures.eca        
+	$(EASYCRYPT) $(EC_FLAGS) security/fsai/DigitalSignaturesROM.eca     
+	$(EASYCRYPT) $(EC_FLAGS) security/fsai/EUFRMA_Interactive_Equiv.ec  
+	$(EASYCRYPT) $(EC_FLAGS) security/fsai/FL_XMSS_TW.ec                
+	$(EASYCRYPT) $(EC_FLAGS) security/fsai/HashThenSign.eca             
+	$(EASYCRYPT) $(EC_FLAGS) security/fsai/KeyedHashFunctions.eca
+	$(EASYCRYPT) $(EC_FLAGS) security/fsai/Reprogramming.ec
+	$(EASYCRYPT) $(EC_FLAGS) security/fsai/TweakableHashFunctions.eca
+	$(EASYCRYPT) $(EC_FLAGS) security/fsai/WOTS_TW_Checksum.ec
+	$(EASYCRYPT) $(EC_FLAGS) security/fsai/WOTS_TW.ec
+	$(EASYCRYPT) $(EC_FLAGS) security/fsai/XMSS_TW.ec
+
+####################################################################################################
+
 check_xmss_xmssmt_proof: common/Array8.ec
 	$(EASYCRYPT) $(EC_FLAGS) spec/XMSS_vs_XMSS_MT.ec
 
-check_proofs: check_xmss_xmssmt_proof check_correctness_proof
+check_proofs: check_xmss_xmssmt_proof check_correctness_proof check_security_proof
 
 # --------------------------------------------------------------------------------------------------
 
@@ -100,6 +125,7 @@ clean:
 	-$(RM) -r correctness/*.eco
 	-$(RM) -r correctness/*~ 
 	-$(RM) -r correctness/\#*\#
+	-$(RM) -r security/*/*.eco
 
 
 .PHONY: distclean

@@ -36,7 +36,7 @@ lemma memcpy_offset_ltree (wotspkImpl : W8.t Array2144.t)
       arg.`2 = (of_int _idx_)%W64 * (of_int 32)%W64 /\  
       arg.`3 =  _in_ /\
 
-      wotspkSpec = val (EncodeWotsPk wotspkImpl) /\
+      wotspkSpec = LenNBytes.val (EncodeWotsPk wotspkImpl) /\
       0 <= _idx_ < len
       ==>
       res = DecodeWotsPk (
@@ -61,21 +61,21 @@ conseq (:
         - apply (eq_from_nth witness); first by rewrite size_to_list size_sub.
           rewrite size_sub // => j?.
           rewrite get_to_list nth_sub // /DecodeWotsPk get_of_list 1:/#.
-          rewrite nth_nbytes_flatten; first by rewrite valP /#.
-          rewrite insubdK; first by rewrite /P size_put valP.
-          rewrite nth_put; first by rewrite /P valP /#.
+          rewrite nth_nbytes_flatten; first by rewrite LenNBytes.valP /#.
+          rewrite LenNBytes.insubdK; first by rewrite /P size_put LenNBytes.valP.
+          rewrite nth_put; first by rewrite /P LenNBytes.valP /#.
           rewrite ifT 1:/#.
-          rewrite insubdK; first by rewrite /P size_to_list /#.
+          rewrite NBytes.insubdK; first by rewrite /P size_to_list /#.
           by rewrite get_to_list /#.
         - move => k?? Hk.
           rewrite /DecodeWotsPk get_of_list 1:/#.
-          rewrite nth_nbytes_flatten; first by rewrite valP /#.
-          rewrite insubdK; first by rewrite /P size_put valP.
-          rewrite nth_put; first by rewrite /P valP /#.
+          rewrite nth_nbytes_flatten; first by rewrite LenNBytes.valP /#.
+          rewrite LenNBytes.insubdK; first by rewrite /P size_put LenNBytes.valP.
+          rewrite nth_put; first by rewrite /P LenNBytes.valP /#.
           rewrite ifF 1:/#.       
-          rewrite /EncodeWotsPk insubdK; first by rewrite /P size_map size_chunk 1:/# size_to_list /#.
+          rewrite /EncodeWotsPk LenNBytes.insubdK; first by rewrite /P size_map size_chunk 1:/# size_to_list /#.
           rewrite (nth_map witness); first by rewrite size_chunk 1:/# size_to_list /#.       
-          rewrite insubdK. 
+          rewrite NBytes.insubdK. 
             * rewrite /P /chunk nth_mkseq /=; first by rewrite size_to_list /#.
               rewrite size_take 1:/#.
               rewrite size_drop 1:/# size_to_list /#.
@@ -86,16 +86,16 @@ conseq (:
           rewrite tP => j?.
           rewrite /DecodeWotsPk get_of_list //.
           rewrite nth_nbytes_flatten.
-            * rewrite valP /#. 
-          rewrite insubdK; first by rewrite /P size_put valP.
-          rewrite nth_put; first by rewrite /P valP /#.
+            * rewrite LenNBytes.valP /#. 
+          rewrite LenNBytes.insubdK; first by rewrite /P size_put LenNBytes.valP.
+          rewrite nth_put; first by rewrite /P LenNBytes.valP /#.
           case (_idx_ = j %/ n) => ?.
-              + rewrite -H2 insubdK; first by rewrite /P size_sub // /#.
+              + rewrite -H2 NBytes.insubdK; first by rewrite /P size_sub // /#.
                 by rewrite nth_sub /#.
               + rewrite H3 // 1:/#.             
-                rewrite /EncodeWotsPk insubdK; first by rewrite /P size_map size_chunk 1:/# size_to_list /#.
+                rewrite /EncodeWotsPk LenNBytes.insubdK; first by rewrite /P size_map size_chunk 1:/# size_to_list /#.
                 rewrite (nth_map witness); first by rewrite size_chunk 1:/# size_to_list /#.       
-                rewrite insubdK. 
+                rewrite NBytes.insubdK. 
                 * rewrite /P /chunk nth_mkseq /=; first by rewrite size_to_list /#.
                   rewrite size_take 1:/#.
                   rewrite size_drop 1:/# size_to_list /#.
@@ -180,7 +180,7 @@ lemma ltree_correct (_pk : W8.t Array2144.t, _pub_seed : W8.t Array32.t, a0 a1 :
 
       sub a0 0 5 = sub a1 0 5
       ==>
-      to_list res{1}.`1 = val res{2} /\
+      to_list res{1}.`1 = NBytes.val res{2} /\
       sub res{1}.`3 0 5 = sub a0 0 5
     ].
 proof. 
@@ -193,8 +193,8 @@ seq 1 5 : #post; last by auto.
 swap 2 -1.
 
 seq 0 1 : (
-  pks{2} = val (EncodeWotsPk wots_pk{1}) /\
-  _seed{2} = (insubd (to_list pub_seed{1}))%NBytes /\
+  pks{2} = LenNBytes.val (EncodeWotsPk wots_pk{1}) /\
+  _seed{2} = (NBytes.insubd (to_list pub_seed{1}))%NBytes /\
   sub addr{1} 0 5 = sub address{2} 0 5 /\
   sub addr{1} 0 5 = sub a0 0 5
 ); first by auto.
@@ -203,8 +203,8 @@ seq 0 1 : (
 inline  M(Syscall)._l_tree M(Syscall).__l_tree.
  
 seq 11 0 : (
-  pks{2} = val (EncodeWotsPk wots_pk1{1}) /\
-  _seed{2} = (insubd (to_list pub_seed1{1}))%NBytes /\
+  pks{2} = LenNBytes.val (EncodeWotsPk wots_pk1{1}) /\
+  _seed{2} = (NBytes.insubd (to_list pub_seed1{1}))%NBytes /\
   sub addr1{1} 0 5 = sub address{2} 0 5 /\
   sub addr1{1} 0 5 = sub a0 0 5
 ); first by auto.
@@ -230,7 +230,7 @@ seq 3 2: (
             * rewrite !nth_sub // !get_setE //= ifF 1:/#; smt(sub_k).
  
 seq 1 1 : (
- sub wots_pk1{1} 0 n = val (nth witness pks{2} 0) /\
+ sub wots_pk1{1} 0 n = NBytes.val (nth witness pks{2} 0) /\
  sub addr1{1} 0 5 = sub a0 0 5
 ); last first.
     + wp; sp.
@@ -241,8 +241,8 @@ seq 1 1 : (
       by rewrite get_to_list n_val nth_sub // initiE.
   
 while (
-  pks{2} = val (EncodeWotsPk wots_pk1{1}) /\
-  val _seed{2} = to_list pub_seed1{1} /\
+  pks{2} = LenNBytes.val (EncodeWotsPk wots_pk1{1}) /\
+  NBytes.val _seed{2} = to_list pub_seed1{1} /\
   to_uint l{1} = _len{2} /\
   1 <= _len{2} <= 67 /\
   sub addr1{1} 0 5 = sub a0 0 5 /\ 
@@ -252,25 +252,24 @@ while (
 ); last first.
     + auto => /> &1 &2 H0 H1 H2 *.
       do split.
-        - by rewrite insubdK // /P size_to_list n_val.
+        - by rewrite NBytes.insubdK // /P size_to_list n_val.
         - by rewrite H2.
         - by rewrite H2.
         - by rewrite ultE.
         - by rewrite ultE. 
         - move => addrL lL pkL addrR.
           rewrite ultE => H4 H5 H6 H7 H8 H9 H10 H11.
-          apply (eq_from_nth witness); first by rewrite valP n_val size_sub.
+          apply (eq_from_nth witness); first by rewrite NBytes.valP n_val size_sub.
           rewrite size_sub n_val // => j?.
-          rewrite /EncodeWotsPk insubdK.
+          rewrite /EncodeWotsPk LenNBytes.insubdK.
             * rewrite /P size_map size_chunk 1:/# size_to_list /#.
           rewrite nth_sub //= (nth_map witness).
             * rewrite size_chunk 1:/# size_to_list /#.
-          rewrite insubdK.
+          rewrite NBytes.insubdK.
             * rewrite /P /chunk nth_mkseq /=; first by rewrite size_to_list /#.
               rewrite size_take 1:/# /= size_drop // size_to_list /#.
           rewrite /chunk nth_mkseq /=; first by rewrite size_to_list /#.
-          rewrite nth_take 1..2:/# nth_drop 1..2:/# get_to_list.
-          trivial.
+          by rewrite nth_take 1..2:/# nth_drop 1..2:/# get_to_list.
 
 seq 2 0 : (#pre /\ to_uint parent_nodes{1} = _len{2} %/ 2).
     + by auto => /> *; rewrite truncate_1_and_63 to_uint_shr.
@@ -317,7 +316,7 @@ seq 2 1 : (#pre /\ sub addr1{1} 0 7 = sub address{2} 0 7).
 
 seq 4 2 : (
   #pre /\
-  to_list buf1{1} = val pk_i{2} ++ val tmp{2}
+  to_list buf1{1} = NBytes.val pk_i{2} ++ NBytes.val tmp{2}
 ).
     + sp.
       ecall {1} (memcpy_u8u8_2_64_2144_post wots_pk1{1} offset_in{1}).
@@ -326,13 +325,13 @@ seq 4 2 : (
         - smt(@W64 pow2_64 @IntDiv).
         - move => ???? result H.
           rewrite H.
-          apply (eq_from_nth witness); first by rewrite size_cat !valP n_val size_sub.
+          apply (eq_from_nth witness); first by rewrite size_cat !NBytes.valP n_val size_sub.
           rewrite size_sub // => j?.
-          rewrite /EncodeWotsPk insubdK.
+          rewrite /EncodeWotsPk LenNBytes.insubdK.
              * rewrite /P size_map size_chunk 1:/# size_to_list /#.
           rewrite nth_sub //=.
           rewrite (nth_map witness); first by rewrite size_chunk 1:/# size_to_list /#.
-          rewrite insubdK.
+          rewrite NBytes.insubdK.
              * rewrite /P /chunk nth_mkseq /=; first by rewrite size_to_list /#.
                rewrite size_take 1:/# size_drop 1:/# size_to_list /#.
           rewrite /chunk nth_mkseq /=; first by rewrite size_to_list /#.
@@ -343,14 +342,14 @@ seq 4 2 : (
                by rewrite get_to_list; congr; smt(@W64 pow2_64).
              * rewrite nth_cat size_take 1:/# size_drop 1:/# size_to_list ifF 1:/#.
                rewrite (nth_map witness); first by rewrite size_mkseq /#.
-               rewrite insubdK; first by rewrite /P nth_mkseq 1:/# /= size_take 1:/# size_drop 1:/# size_to_list /#.
+               rewrite NBytes.insubdK; first by rewrite /P nth_mkseq 1:/# /= size_take 1:/# size_drop 1:/# size_to_list /#.
                rewrite nth_mkseq 1:/# /= ifT 1:/#.
                rewrite nth_take 1,2:/# nth_drop 1,2:/#.
                by rewrite get_to_list; congr; smt(@W64 pow2_64).
 
 seq 1 1 : (
-    #{/~to_list buf1{1} = val pk_i{2} ++ val tmp{2}}pre /\
-    to_list buf0{1} = val pk_i{2}
+    #{/~to_list buf1{1} = NBytes.val pk_i{2} ++ NBytes.val tmp{2}}pre /\
+    to_list buf0{1} = NBytes.val pk_i{2}
 ).
     + exists * pk_i{2}, tmp{2}, pub_seed1{1}, addr1{1}, address{2}.
       elim * => P0 P1 P2 P3 P4.
@@ -360,9 +359,9 @@ seq 1 1 : (
         - rewrite tP => j?.
           rewrite -get_to_list H14.
           case (0 <= j < 32) => [Hfst | Hsnd].
-            * rewrite nth_cat valP ifT 1:/# /merge_nbytes_to_array.
+            * rewrite nth_cat NBytes.valP ifT 1:/# /merge_nbytes_to_array.
               by rewrite initiE //= ifT.
-            * rewrite nth_cat valP ifF 1:/# /merge_nbytes_to_array.
+            * rewrite nth_cat NBytes.valP ifF 1:/# /merge_nbytes_to_array.
               rewrite initiE //= ifF /#.
         - rewrite -H0; smt(@NBytes).
         - smt(sub_k).
@@ -382,15 +381,15 @@ do split.
 - smt().
 - move => H15 H16.
   do split; 2..6: by smt(@W64 pow2_64).
-  apply (eq_from_nth witness); first by rewrite size_put !valP.
-  rewrite size_put valP len_val => j?.
-  rewrite nth_put; first by rewrite valP /#.
-  rewrite /EncodeWotsPk insubdK.
+  apply (eq_from_nth witness); first by rewrite size_put !LenNBytes.valP.
+  rewrite size_put LenNBytes.valP len_val => j?.
+  rewrite nth_put; first by rewrite LenNBytes.valP /#.
+  rewrite /EncodeWotsPk LenNBytes.insubdK.
     + rewrite /P size_map size_chunk 1:/# size_to_list /#.
-  rewrite insubdK.
+  rewrite LenNBytes.insubdK.
     + rewrite /P size_map size_chunk 1:/# size_to_list /#.
   rewrite /DecodeWotsPk.
-  rewrite insubdK.
+  rewrite LenNBytes.insubdK.
     + rewrite /P size_put size_map size_chunk 1:/# size_to_list /#.
   rewrite (nth_map witness); first by rewrite size_chunk 1:/# size_to_list /#.
   rewrite (nth_map witness) /=; first by rewrite size_iota size_to_list /#.
@@ -399,23 +398,23 @@ do split.
   rewrite /chunk nth_mkseq /=; first by rewrite size_to_list /#.
   case (to_uint i{1} = j) => [<- | ?].
     + apply nbytes_eq.
-      apply (eq_from_nth witness); first by rewrite !valP.
-      rewrite valP n_val => k?.
-      rewrite H14 insubdK.
+      apply (eq_from_nth witness); first by rewrite !NBytes.valP.
+      rewrite NBytes.valP n_val => k?.
+      rewrite H14 NBytes.insubdK.
         * rewrite /P size_take // size_drop 1:/# size_to_list /#.
       rewrite size_to_list nth_take // 1:/#.   
       rewrite nth_drop 1,2:/# get_to_list get_of_list 1:/#.
       rewrite nth_nbytes_flatten; first by rewrite size_put size_map size_mkseq /#.
       rewrite nth_put; first by rewrite size_map size_mkseq /#.
       rewrite ifT 1:/#.
-      by rewrite insubdK 2:/# /P valP.
+      by rewrite NBytes.insubdK 2:/# /P NBytes.valP.
     + apply nbytes_eq.
-      apply (eq_from_nth witness); first by rewrite !valP.
-      rewrite valP n_val => k?.
-      rewrite H14 insubdK.
+      apply (eq_from_nth witness); first by rewrite !NBytes.valP.
+      rewrite NBytes.valP n_val => k?.
+      rewrite H14 NBytes.insubdK.
         * rewrite /P size_take // size_drop 1:/# size_to_list /#.
       rewrite size_to_list nth_take // 1:/#.   
-      rewrite nth_drop 1,2:/# get_to_list insubdK.
+      rewrite nth_drop 1,2:/# get_to_list NBytes.insubdK.
         * rewrite /P size_take // size_drop // 1:/# size_to_list /#.
       rewrite nth_take // 1:/#.   
       rewrite nth_drop 1,2:/# get_to_list get_of_list 1:/#.
@@ -423,7 +422,7 @@ do split.
       rewrite nth_put; first by rewrite size_map size_mkseq /#.
       rewrite ifF 1:/#.
       rewrite (nth_map witness); first by rewrite /P size_mkseq /#.
-      rewrite insubdK; first by  rewrite /P nth_mkseq 1:/# /= size_take // size_drop // 1:/# size_to_list /#.
+      rewrite NBytes.insubdK; first by  rewrite /P nth_mkseq 1:/# /= size_take // size_drop // 1:/# size_to_list /#.
       rewrite nth_mkseq 1:/# /= nth_take // 1:/# nth_drop 1,2:/# get_to_list /#.
 
 (* ------------------------------------------------------------------------------- *)
@@ -431,8 +430,8 @@ do split.
 (* ------------------------------------------------------------------------------- *)
 
 seq 2 0 : (
-  pks{2} = val (EncodeWotsPk wots_pk1{1}) /\
-  val _seed{2} = to_list pub_seed1{1} /\
+  pks{2} = LenNBytes.val (EncodeWotsPk wots_pk1{1}) /\
+  NBytes.val _seed{2} = to_list pub_seed1{1} /\
   to_uint l{1} = _len{2} /\
   1 <= _len{2} <= 67 /\
   sub addr1{1} 0 5 = sub a0 0 5 /\
@@ -509,12 +508,12 @@ inline {1}.
 sp 3 0.
 conseq />.
 
-seq 2 2 : (pks{2} = val (EncodeWotsPk out{1})); last by auto.
+seq 2 2 : (pks{2} = LenNBytes.val (EncodeWotsPk out{1})); last by auto.
 wp.
  
 while {1} 
 (
-  pks{2} = val (EncodeWotsPk wots_pk1{1}) /\
+  pks{2} = LenNBytes.val (EncodeWotsPk wots_pk1{1}) /\
   0 <= i0{1} <= 32 /\ 
   to_uint offset_out0{1} = (_len{2} %/ 2 * 32) /\
   to_uint offset_in0{1} = (_len{2} - 1) * 32 /\
@@ -524,7 +523,7 @@ while {1}
   1 <= _len{2} <= 67 /\
 
   sub out{1} (to_uint offset_out{1}) i0{1} = 
-  sub_list (val (nth witness pks{2} (_len{2} - 1))) 0 i0{1} /\
+  sub_list (NBytes.val (nth witness pks{2} (_len{2} - 1))) 0 i0{1} /\
   
   forall (k : int), 0 <= k < 2144 => 
     !(to_uint offset_out{1} <= k < to_uint offset_out{1} + i0{1}) =>
@@ -536,12 +535,12 @@ while {1}
       - apply (eq_from_nth witness); first by rewrite size_sub // size_sub_list.
         rewrite size_sub /#.
       - move => k???.
-        rewrite nth_nbytes_flatten; first by rewrite valP /#.
-        rewrite /EncodeWotsPk insubdK.
+        rewrite nth_nbytes_flatten; first by rewrite LenNBytes.valP /#.
+        rewrite /EncodeWotsPk LenNBytes.insubdK.
           * rewrite /P size_map size_chunk 1:/# size_to_list /#.
         rewrite (nth_map witness).
           * rewrite size_chunk 1:/# size_to_list /#.
-        rewrite insubdK.
+        rewrite NBytes.insubdK.
           * rewrite /P /chunk nth_mkseq /=; first by rewrite size_to_list /#.
             rewrite size_take 1:/# size_drop 1:/# size_to_list /#.
         rewrite /chunk nth_mkseq /=; first by rewrite size_to_list /#.
@@ -551,10 +550,10 @@ while {1}
         move => H11 H12 H13.
         have E: i0L = 32 by smt().
         rewrite E => H14 H15.
-        apply (eq_from_nth witness); first by rewrite size_put !valP.
-        rewrite size_put valP len_val => j?.
-        rewrite nth_put; first by rewrite valP /#.
-        rewrite /EncodeWotsPk !insubdK.
+        apply (eq_from_nth witness); first by rewrite size_put !LenNBytes.valP.
+        rewrite size_put LenNBytes.valP len_val => j?.
+        rewrite nth_put; first by rewrite LenNBytes.valP /#.
+        rewrite /EncodeWotsPk !LenNBytes.insubdK.
           * rewrite /P size_map size_chunk 1:/# size_to_list /#.
           * rewrite /P size_map size_chunk 1:/# size_to_list /#.
         case (j = to_uint l{1} %/ 2) => [Ha | Hb].
@@ -562,9 +561,9 @@ while {1}
               + rewrite size_chunk 1:/# size_to_list /#.
             rewrite /chunk nth_mkseq /=; first by rewrite size_to_list /#.
             apply nbytes_eq.
-            rewrite insubdK; first by rewrite /P size_take 1:/# size_drop 1:/# size_to_list /#.
+            rewrite NBytes.insubdK; first by rewrite /P size_take 1:/# size_drop 1:/# size_to_list /#.
             rewrite (nth_map witness); first by rewrite size_mkseq size_to_list /#.
-            rewrite insubdK.
+            rewrite NBytes.insubdK.
               + rewrite /P size_to_list nth_mkseq /= 1:/# size_take 1:/# size_drop 1:/# size_to_list /#.
             rewrite nth_mkseq /=;first by rewrite size_to_list /#.
             apply (eq_from_nth witness); first by rewrite !size_take 1,2:/# !size_drop 1,2:/# !size_to_list /#.
@@ -575,10 +574,10 @@ while {1}
             have ->: outL.[32 * (to_uint l{1} %/ 2) + k] = nth witness (sub outL (to_uint offset_out{1}) 32) k.
               + rewrite nth_sub /#.              
             rewrite H14 /sub_list nth_mkseq /= 1:/# /EncodeWotsPk.
-            rewrite insubdK.
+            rewrite LenNBytes.insubdK.
               + rewrite /P size_map size_chunk 1:/# size_to_list /#.
             rewrite (nth_map witness); first by rewrite size_chunk 1:/# size_to_list /#.
-            rewrite insubdK.
+            rewrite NBytes.insubdK.
               + rewrite /P /chunk nth_mkseq /=; first by rewrite size_to_list /#.
                 rewrite size_take 1:/# /= size_drop 1:/# size_to_list /#.
             rewrite /chunk nth_mkseq /=; first by rewrite size_to_list /#.
@@ -590,10 +589,10 @@ while {1}
               + rewrite size_chunk 1:/# size_to_list /#.
             rewrite /chunk nth_mkseq /=; first by rewrite size_to_list /#.
             apply nbytes_eq.
-            rewrite insubdK.
+            rewrite NBytes.insubdK.
               + rewrite /P size_take 1:/# size_drop 1:/# size_to_list /#.
             rewrite (nth_map witness); first by rewrite size_mkseq size_to_list /#.
-            rewrite insubdK.
+            rewrite NBytes.insubdK.
               + rewrite /P nth_mkseq /=; first by rewrite size_to_list /#.
                 rewrite size_take 1:/# size_drop 1:/# size_to_list /#.
             rewrite nth_mkseq /=; first by rewrite size_to_list /#.
@@ -606,11 +605,11 @@ while {1}
             rewrite !get_to_list.
             rewrite H15 1,2:/#.
             rewrite nth_nbytes_flatten.
-              + rewrite valP /#.
-            rewrite /EncodeWotsPk insubdK.
+              + rewrite LenNBytes.valP /#.
+            rewrite /EncodeWotsPk LenNBytes.insubdK.
               + rewrite /P size_map size_chunk 1:/# size_to_list /#.
             rewrite (nth_map witness); first by rewrite size_chunk 1:/# size_to_list /#.
-            rewrite insubdK.
+            rewrite NBytes.insubdK.
               + rewrite /P /chunk nth_mkseq /=; first by rewrite size_to_list /#.
                 rewrite size_take 1:/# /= size_drop 1:/# size_to_list /#.
             rewrite /chunk nth_mkseq /=; first by rewrite size_to_list /#.
@@ -630,7 +629,7 @@ while {1}
             have ->: to_uint (offset_in0{hr} + (of_int i0{hr})%W64) = 
                      to_uint offset_in0{hr} + i0{hr} by smt(@W64 pow2_64).
             rewrite H9 1,2:/#.
-            rewrite nth_nbytes_flatten; first by rewrite valP /#.
+            rewrite nth_nbytes_flatten; first by rewrite LenNBytes.valP /#.
             rewrite /EncodeWotsPk /#.
           * rewrite ifF; first by smt(@W64 pow2_64).
             have ->: out{hr}.[to_uint offset_out{hr} + j] = 
@@ -642,6 +641,4 @@ while {1}
         rewrite ifF; first by smt(@W64 pow2_64).
         by rewrite H9 1,2:/#.
 qed.
-
-
 

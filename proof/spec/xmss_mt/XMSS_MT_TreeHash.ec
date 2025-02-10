@@ -125,7 +125,7 @@ module TreeSig = {
     address <- set_type address 0;
     address <- set_ots_addr address (W32.to_uint idx);
 
-    sig_ots <@ WOTS.sign_seed(val M, sk_seed, pub_seed, address);
+    sig_ots <@ WOTS.sign_seed(NBytes.val M, sk_seed, pub_seed, address);
     
     return (sig_ots, auth);
   }
@@ -164,13 +164,13 @@ module RootFromSig = {
         index <- get_tree_index address;
         address <- set_tree_index address (index %/ 2);
 
-        auth_k <- nth witness (val auth) k;
+        auth_k <- nth witness (AuthPath.val auth) k;
         nodes1 <@ Hash.rand_hash (nodes0, auth_k, _seed, address);
       } else {
         index <- get_tree_index address;
         address <- set_tree_index address ((index - 1) %/ 2);
 
-        auth_k <- nth witness (val auth) k;
+        auth_k <- nth witness (AuthPath.val auth) k;
         nodes1 <@ Hash.rand_hash (auth_k, nodes0, _seed, address);
       }
 

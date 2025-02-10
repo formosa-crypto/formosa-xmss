@@ -59,7 +59,7 @@ lemma thash_f_equiv (_out_ _seed_ : W8.t Array32.t) (a : W32.t Array8.t) :
       arg{2}.`2 = NBytes.insubd (to_list _seed_) /\
       arg{2}.`3 = a
       ==>
-      to_list res{1}.`1 = val res{2}.`1 /\
+      to_list res{1}.`1 = NBytes.val res{2}.`1 /\
       res{1}.`2 = res{2}.`2 /\
       res{1}.`2.[7] = W32.one /\
       sub res{1}.`2 0 7 = sub a 0 7
@@ -70,7 +70,8 @@ move => [#] n_val ???.
 proc => /=.
 seq 4 0 : #pre; first by auto.
 
-seq 1 1 : (#pre /\ to_list addr_as_bytes{1} = val addr_bytes{2}).
+seq 1 1 : (#pre /\ to_list addr_as_bytes{1} = NBytes.val addr_bytes{2}).
+
   + exists * addr{1}; elim * => P.
     call {1} (addr_to_bytes_correctness P); auto => /> ?->.
     have E : size (flatten (map Bytes.W32toBytes (to_list a))) = 32.
@@ -78,9 +79,10 @@ seq 1 1 : (#pre /\ to_list addr_as_bytes{1} = val addr_bytes{2}).
            * rewrite in_nth size_map size_to_list /= => i?.
              rewrite (nth_map witness); by rewrite ?size_to_list // /W32toBytes size_rev size_to_list. 
         by rewrite big_constz count_predT size_map size_to_list /=.
-    apply (eq_from_nth witness); rewrite ?valP ?n_val E // => i?.
+
+    apply (eq_from_nth witness); rewrite ?NBytes.valP ?n_val E // => i?.
     rewrite /addr_to_bytes => />.
-    rewrite insubdK.
+    rewrite NBytes.insubdK.
       - rewrite /P size_flatten sumzE BIA.big_map /(\o) //= -(StdBigop.Bigint.BIA.eq_big_seq (fun _ => 4)) /=.
            * rewrite in_nth size_map size_to_list /= => j?.
              rewrite (nth_map witness); by rewrite ?size_to_list // /W32toBytes size_rev size_to_list. 
@@ -102,20 +104,20 @@ seq 1 0 : (#pre /\ sub buf{1} 0 n = padding{2}).
     rewrite n_val size_sub // => j?.
     by rewrite get_to_list nth_sub // initiE 1:/# /= ifT.
 
-seq 1 1 : (#pre /\ to_list aux{1} = val key{2}).
+seq 1 1 : (#pre /\ to_list aux{1} = NBytes.val key{2}).
   + inline {1} M(Syscall).__prf_ M(Syscall)._prf; wp; sp.
     exists * in_00{1}, key0{1}; elim * => _P1 _P2.
     call {1} (prf_correctness _P1 _P2) => [/# |]. 
     skip => /> &1 &2 H0 H1.
-    split; [smt(@NBytes) | smt()].
+    split => [| /#]; smt(@NBytes).
 
-seq 1 0 : (#pre /\ sub buf{1} n n = val key{2}).
+seq 1 0 : (#pre /\ sub buf{1} n n = NBytes.val key{2}).
   + auto => /> &1 &2 H0 H1 H2. 
     split.
       - apply (eq_from_nth witness); first by rewrite n_val size_to_list size_sub.
         rewrite n_val size_sub // => j?.
         by rewrite -H1 nth_sub //= initiE 1:/# /= ifF 1:/# nth_sub // n_val .
-      - apply (eq_from_nth witness); first by rewrite valP n_val size_sub.
+      - apply (eq_from_nth witness); first by rewrite NBytes.valP n_val size_sub.
         rewrite n_val size_sub // => j?.
         by rewrite nth_sub // initiE 1:/# /= ifT 1:/# -get_to_list H2. 
 
@@ -130,7 +132,7 @@ seq 1 1 : (
     rewrite size_sub // => j?.
     by rewrite !nth_sub //= get_setE //= ifF 1:/#.
 
-seq 1 1 : (#pre /\ to_list addr_as_bytes{1} = val addr_bytes{2}).
+seq 1 1 : (#pre /\ to_list addr_as_bytes{1} = NBytes.val addr_bytes{2}).
   + exists * addr{1}; elim * => P1; call {1} (addr_to_bytes_correctness P1).
 auto => /> ?????????->.
     have E : size (flatten (map Bytes.W32toBytes (to_list P1))) = 32.
@@ -140,9 +142,9 @@ auto => /> ?????????->.
         by rewrite big_constz count_predT size_map size_to_list /=.
     split.
 
-    apply (eq_from_nth witness); rewrite ?valP ?n_val E // => i?.
+    apply (eq_from_nth witness); rewrite ?NBytes.valP ?n_val E // => i?.
     rewrite /addr_to_bytes => />.
-    rewrite insubdK.
+    rewrite NBytes.insubdK.
       - rewrite /P size_flatten sumzE BIA.big_map /(\o) //= -(StdBigop.Bigint.BIA.eq_big_seq (fun _ => 4)) /=.
            * rewrite in_nth size_map size_to_list /= => j?.
              rewrite (nth_map witness); by rewrite ?size_to_list // /W32toBytes size_rev size_to_list. 
@@ -150,16 +152,16 @@ auto => /> ?????????->.
     do congr => /#.
 
 
-    apply (eq_from_nth witness); rewrite ?valP ?n_val E // => i?.
+    apply (eq_from_nth witness); rewrite ?NBytes.valP ?n_val E // => i?.
     rewrite /addr_to_bytes => />.
-    rewrite insubdK.
+    rewrite NBytes.insubdK.
       - rewrite /P size_flatten sumzE BIA.big_map /(\o) //= -(StdBigop.Bigint.BIA.eq_big_seq (fun _ => 4)) /=.
            * rewrite in_nth size_map size_to_list /= => j?.
              rewrite (nth_map witness); by rewrite ?size_to_list // /W32toBytes size_rev size_to_list. 
         rewrite big_constz count_predT size_map size_to_list /= /#.
     do congr => /#.
 
-seq 1 1 : (#pre /\ to_list bitmask{1} = val bitmask{2}).
+seq 1 1 : (#pre /\ to_list bitmask{1} = NBytes.val bitmask{2}).
   + inline {1} M(Syscall).__prf_ M(Syscall)._prf; wp; sp.
     exists * in_00{1}, key0{1}; elim * => _P1 _P2.
     call {1} (prf_correctness _P1 _P2) => [/# |]. 
@@ -184,34 +186,34 @@ while {1}
   addr{1}.[7] = W32.one /\
   sub addr{1} 0 7 = sub a 0 7 /\
   0 <= to_uint i{1} <= 32 /\
-  to_list bitmask{1} = val bitmask{2} /\
-  to_list out{1} = val t{2} /\
+  to_list bitmask{1} = NBytes.val bitmask{2} /\
+  to_list out{1} = NBytes.val t{2} /\
   sub buf{1} 0 n = padding{2} /\
-  sub buf{1} n n = val key{2} /\
-  sub buf{1} (n + n) (to_uint i{1}) = sub_list (val (nbytexor t{2} bitmask{2})) 0 (to_uint i{1}) 
+  sub buf{1} n n = NBytes.val key{2} /\
+  sub buf{1} (n + n) (to_uint i{1}) = sub_list (NBytes.val (nbytexor t{2} bitmask{2})) 0 (to_uint i{1}) 
 )
 (32 - to_uint i{1}); last first.
   + auto => /> &1 &2 H0 H1 H2 H3 H4 H5 *.
     do split. 
-      - by rewrite  insubdK // /P size_to_list n_val.
+      - by rewrite NBytes.insubdK // /P size_to_list n_val.
       - apply (eq_from_nth witness); first by rewrite size_sub_list // size_sub.
         rewrite size_sub // => j? /#.
       - move => bufL iL.
         split => [* |]; first by rewrite ultE /#.
         rewrite ultE of_uintK n_val /= => ??? H6 H7 H8 H9 *.
-        apply (eq_from_nth witness); first by by rewrite !size_cat !size_to_list !valP n_val.
+        apply (eq_from_nth witness); first by by rewrite !size_cat !size_to_list !NBytes.valP n_val.
         rewrite size_to_list => j?.
         case (0 <= j < 32) => ?.
            + rewrite get_to_list.
              have ->: bufL.[j] = nth witness (sub bufL 0 32) j by rewrite nth_sub.
-             by rewrite H6 !nth_cat !size_cat !size_to_list !valP n_val /= ifT 1:/# ifT 1:/# H7 get_to_list.
+             by rewrite H6 !nth_cat !size_cat !size_to_list !NBytes.valP n_val /= ifT 1:/# ifT 1:/# H7 get_to_list.
         case (32 <= j < 64) => ?.
            + rewrite get_to_list.
              have ->: bufL.[j] = nth witness (sub bufL 32 32) (j - 32) by rewrite nth_sub /#.
-             by rewrite H8 !nth_cat !size_cat !size_to_list !valP n_val /= ifT 1:/# ifF 1:/#.
+             by rewrite H8 !nth_cat !size_cat !size_to_list !NBytes.valP n_val /= ifT 1:/# ifF 1:/#.
         rewrite get_to_list.
         have ->: bufL.[j] = nth witness (sub bufL 64 (to_uint iL)) (j - 64) by rewrite nth_sub /#.
-        rewrite H9 !nth_cat !size_cat !size_to_list !valP n_val /= ifF 1:/#.
+        rewrite H9 !nth_cat !size_cat !size_to_list !NBytes.valP n_val /= ifF 1:/#.
         by rewrite /sub_list nth_mkseq 1:/#.
 
 auto => /> &hr H0 H1 H2 H3 H4 H5 H6 H7 H8 *.
@@ -220,7 +222,7 @@ do split; 1,2,6: by smt(@W64 pow2_64).
     rewrite size_sub 1:/# => j?.        
     rewrite !nth_sub //= get_setE; first by smt(@W64 pow2_64).
     rewrite ifF // to_uintD of_uintK /=/#.
-  - apply (eq_from_nth witness); first by rewrite valP size_sub /#.
+  - apply (eq_from_nth witness); first by rewrite NBytes.valP size_sub /#.
     rewrite size_sub 1:/# => j?.        
     rewrite !nth_sub //= get_setE; first by smt(@W64 pow2_64).
     rewrite ifF; first by rewrite to_uintD of_uintK /=/#.
@@ -232,11 +234,11 @@ do split; 1,2,6: by smt(@W64 pow2_64).
         + rewrite n_val /=.
           have ->: buf{hr}.[64 + j] = nth witness (sub buf{hr} (n + n) (to_uint i{hr})) j by rewrite nth_sub 2:/#; smt(@W64 pow2_64).
           rewrite H7 /sub_list nth_mkseq 2:/#; smt(@W64 pow2_64).
-        + rewrite /nbytexor insubdK /bytexor; first by rewrite /P size_map size_zip !valP.
+        + rewrite /nbytexor NBytes.insubdK /bytexor; first by rewrite /P size_map size_zip !NBytes.valP.
           rewrite (nth_map witness) /=. 
-             - rewrite size_zip !valP n_val (: min 32 32 = 32) 1:/#; smt(@W64 pow2_64).
-               rewrite zip_fst; first by rewrite !valP n_val /=; smt(@W64 pow2_64).
-               rewrite zip_snd; first by rewrite !valP n_val /=; smt(@W64 pow2_64).
+             - rewrite size_zip !NBytes.valP n_val (: min 32 32 = 32) 1:/#; smt(@W64 pow2_64).
+               rewrite zip_fst; first by rewrite !NBytes.valP n_val /=; smt(@W64 pow2_64).
+               rewrite zip_snd; first by rewrite !NBytes.valP n_val /=; smt(@W64 pow2_64).
                rewrite -H4 -!get_to_list H; congr. (* this gets rid of the rhs *)
                congr.               
 qed.
@@ -257,7 +259,7 @@ lemma gen_chain_correct (_buf_ : W8.t Array32.t, _start_ _steps_ : W32.t, _pub_s
       0 <= to_uint (_start_ + _steps_) <= w - 1 /\
       sub a1 0 6 = sub a2 0 6
       ==> 
-      val res{2} = to_list res{1}.`1 /\
+      NBytes.val res{2} = to_list res{1}.`1 /\
       sub res{1}.`2 0 6 = sub a1 0 6 
     ].
 proof.
@@ -270,17 +272,17 @@ seq 2 1 : (
   0 <= to_uint start{1} <= w - 1/\
   0 <= to_uint steps{1} <= w - 1 /\
   0 <= to_uint (start{1} + steps{1}) <= w - 1 /\
-  val t{2} = to_list out{1} /\
+  NBytes.val t{2} = to_list out{1} /\
   i{2} = to_uint start{1} /\
   s{2} = to_uint steps{1} /\
-  val _seed{2} = to_list pub_seed{1} /\
-  val t{2} = to_list out{1} /\  
+  NBytes.val _seed{2} = to_list pub_seed{1} /\
+  NBytes.val t{2} = to_list out{1} /\  
   t{1} = start{1} + steps{1} /\
   sub addr{1} 0 6 = sub address{2} 0 6 /\ 
   sub addr{1} 0 6 = sub a1 0 6 /\
   start{1} = _start_ /\
   steps{1} = _steps_ 
-); first by auto => /> *; do split => [/# | /# | | |]; by rewrite insubdK /P // size_to_list n_val.
+); first by auto => /> *; do split => [/# | /# | | |]; by rewrite NBytes.insubdK /P // size_to_list n_val.
 
 while (
   sub addr{1} 0 6 = sub address{2} 0 6 /\ 
@@ -290,8 +292,8 @@ while (
   0 <= to_uint steps{1} <= w - 1 /\ 
   0 <= to_uint (start{1} + steps{1}) <= w - 1 /\
 
-  val t{2} = to_list out{1} /\
-  val _seed{2} = to_list pub_seed{1} /\
+  NBytes.val t{2} = to_list out{1} /\
+  NBytes.val _seed{2} = to_list pub_seed{1} /\
   
   0 <= chain_count{2} <= s{2} /\
   s{2} = to_uint steps{1} /\ 
