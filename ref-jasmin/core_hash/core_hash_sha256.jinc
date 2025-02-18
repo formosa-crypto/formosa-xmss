@@ -29,7 +29,7 @@ fn __core_hash_in_ptr(
 ) -> reg ptr u8[XMSS_N] {
     out = __sha256_in_ptr(out, in_ptr, inlen);
     return out;
-}//<>
+}
 
 fn _core_hash_in_ptr(
     reg ptr u8[XMSS_N] out,
@@ -38,7 +38,7 @@ fn _core_hash_in_ptr(
 {
     out = __core_hash_in_ptr(out, in_ptr, inlen);
     return out;
-}//<>
+}
 
 inline
 fn __core_hash_in_ptr_(
@@ -51,4 +51,4 @@ fn __core_hash_in_ptr_(
     inlen = inlen;
     out = _core_hash_in_ptr(out, in_ptr, inlen);
     return out;
-}//<>
+}
