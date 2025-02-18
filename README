@@ -1,0 +1,7 @@
+This currently runs with the following tool versions:
+
+EasyCrypt (security) version: r2025.02
+EasyCrypt (correctness) version: d03e63d21618db2a0cb09d0a0770f5e774dd6c74 
+
+Jasmin version: 02b3858611e172fdd42679079d34be690b1f257c
+ECLib commit: 46ef1f3af0ab5b988a2149f2d384ed1f2f4d18d9
