@@ -1,0 +1,10 @@
+[general]
+timeout = 20
+
+provers = Z3@4.12.4
+provers = CVC4@1.8
+provers = Alt-Ergo@2.5.2
+
+idirs   = ../common
+idirs   = ../extraction
+rdirs   = ../spec
