@@ -22,7 +22,6 @@ fn __xmssmt_core_seed_keypair(
     reg ptr u8[XMSS_N] bufn0 bufn1;
 
     top_tree_addr = __zero_address_(top_tree_addr);
-
     top_tree_addr =  __set_layer_addr(top_tree_addr, XMSS_D - 1);
     
     // memset(sk, 0, params->index_bytes);
@@ -33,33 +32,33 @@ fn __xmssmt_core_seed_keypair(
     // memcpy(sk, seed, 2 * params->n);
     buf0 = sk[XMSS_INDEX_BYTES : 2 * XMSS_N]; 
     buf1 = seed[0 : 2 * XMSS_N];
-    buf0 = _x_memcpy_u8u8<2*XMSS_N, 2*XMSS_N>(buf0, buf1);
+    buf0 = memcpy_u8u8_2N::_x_memcpy_u8u8(buf0, buf1);
     sk[XMSS_INDEX_BYTES : 2 * XMSS_N] = buf0;
 
     // memcpy(sk + 3 * params->n, seed + 2 * params->n, params->n);
     bufn0 = sk[XMSS_INDEX_BYTES + 3*XMSS_N : XMSS_N]; 
     bufn1 = seed[2*XMSS_N : XMSS_N];
-    bufn0 = _x_memcpy_u8u8<XMSS_N, XMSS_N>(bufn0, bufn1);
+    bufn0 = memcpy_u8u8_N::_x_memcpy_u8u8(bufn0, bufn1);
     sk[XMSS_INDEX_BYTES + 3*XMSS_N : XMSS_N] = bufn0;
 
     // memcpy(pk + params->n, sk + 3*params->n, params->n);
     bufn0 = pk[XMSS_N : XMSS_N]; 
     bufn1 = sk[XMSS_INDEX_BYTES + 3*XMSS_N : XMSS_N];
-    bufn0 = _x_memcpy_u8u8<XMSS_N, XMSS_N>(bufn0, bufn1);
+    bufn0 = memcpy_u8u8_N::_x_memcpy_u8u8(bufn0, bufn1);
     pk[XMSS_N : XMSS_N] = bufn0;
 
     // treehash(params, pk, auth_path, sk, pk + params->n, 0, top_tree_addr);
     bufn0 = sk[XMSS_INDEX_BYTES : XMSS_N];
     bufn1 = pk[XMSS_N : XMSS_N];
     () = #spill(pk, sk);
-    root = __treehash_(root, bufn0, bufn1, 0, XMSS_TREE_HEIGHT, top_tree_addr);
+    root = __treehash(root, bufn0, bufn1, 0, XMSS_TREE_HEIGHT, top_tree_addr);
     
     // memcpy(sk + 2*params->n, pk, params->n);
     () = #unspill(pk, sk);
 
     // set the field root
-    pk = __nbytes_copy_offset<XMSS_PK_BYTES, XMSS_N>(pk, 0, root, 0);
-    sk = __nbytes_copy_offset<XMSS_SK_BYTES, XMSS_N>(sk, XMSS_INDEX_BYTES + 2 * XMSS_N, root, 0);
+    pk = nbytes_copy_offset_pk::__nbytes_copy_offset(pk, 0, root, 0);
+    sk = nbytes_copy_offset_sk::__nbytes_copy_offset(sk, XMSS_INDEX_BYTES + 2 * XMSS_N, root, 0);
 
     return pk, sk;
 }
@@ -157,12 +156,12 @@ fn __xmssmt_core_sign(
     // If not, return -2
     if (idx >= ((1 << XMSS_FULL_HEIGHT) - 1)) {
         // memset(sk, 0xFF, params->index_bytes);
-        idx_bytes =  __memset_u8<XMSS_INDEX_BYTES>(idx_bytes, 0xFF);
+        idx_bytes =  memset_idx_bytes::__memset_u8(idx_bytes, 0xFF);
         sk[0 : XMSS_INDEX_BYTES] = idx_bytes;
 
         // memset(sk + params->index_bytes, 0, (params->sk_bytes - params->index_bytes));
         sk[XMSS_INDEX_BYTES : XMSS_SK_BYTES - XMSS_INDEX_BYTES] = 
-            __memset_u8<XMSS_SK_BYTES - XMSS_INDEX_BYTES>(sk[XMSS_INDEX_BYTES : XMSS_SK_BYTES - XMSS_INDEX_BYTES], 0);
+            memset_i::__memset_u8(sk[XMSS_INDEX_BYTES : XMSS_SK_BYTES - XMSS_INDEX_BYTES], 0);
 
         if (idx > ((1 << XMSS_FULL_HEIGHT) - 1)) { 
             exit = TRUE; 
@@ -183,11 +182,11 @@ fn __xmssmt_core_sign(
         // Increment the index
         // ull_to_bytes(sk, params->index_bytes, idx + 1);
         t64 = idx; t64 += 1;
-        sk[0 : XMSS_INDEX_BYTES] = __ull_to_bytes<XMSS_INDEX_BYTES>(sk[0 : XMSS_INDEX_BYTES], t64);
+        sk[0 : XMSS_INDEX_BYTES] = bytes_idx::ull_to_bytes(sk[0 : XMSS_INDEX_BYTES], t64);
         () = #spill(sk);
 
         // ull_to_bytes(idx_bytes_32, 32, idx);
-        index_bytes = __ull_to_bytes<32>(index_bytes, idx);
+        index_bytes = bytes_32::ull_to_bytes(index_bytes, idx);
 
             // Message compression
             // byte[n] r = PRF(SK_PRF, toByte(idx_sig, 32));
@@ -232,6 +231,7 @@ fn __xmssmt_core_sign(
             () = #unspill(sk);
             sk_seed = sk[XMSS_INDEX_BYTES : XMSS_N];
             pub_seed = sk[XMSS_INDEX_BYTES + 3*XMSS_N : XMSS_N];
+            
             ots_addr[4] = 0; // set the padding. This is already 0 but having this assignment here simplifies the proof 
             root = __treehash_(root, sk_seed, pub_seed, 0, XMSS_TREE_HEIGHT, ots_addr);
 

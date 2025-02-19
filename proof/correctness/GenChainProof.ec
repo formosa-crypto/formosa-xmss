@@ -95,6 +95,7 @@ swap {2} 7 -6.
 
 seq 2 1 : (#pre /\ to_list padding{1} = padding{2}).
   + auto.
+    outline {1} [2] { padding <@ M(Syscall).bytes_32__ull_to_bytes (padding, W64.zero); }.
     ecall {1} (ull_to_bytes_32_correct W64.zero).
     auto => /> &1 &2 ??->; smt(W64toBytes_ext_toByte_64).
 
@@ -175,8 +176,7 @@ seq 2 3 : (
   to_list buf{1} = buf{2}
 ); last first.
   + auto.
-    inline {1} M(Syscall).__core_hash__96 M(Syscall)._core_hash_96.
-    by wp; sp; ecall {1} (hash_96 in_00{1}); auto => />. 
+    by wp; sp; ecall {1} (hash_96 buf{1}); auto => />. 
 
 wp; sp.
  

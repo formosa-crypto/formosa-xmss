@@ -54,15 +54,15 @@ check_extraction: extraction/XMSS_IMPL.ec
 
 ################################### correctness proof ##############################################
 
-check_correctness_proof: extraction/XMSS_IMPL.ec
+check_correctness_proof: extraction/XMSS_IMPL.ec common/Array8.ec
 	$(ECRUNTEST) config/tests.config correctness
 
 ####################################################################################################
 
 # FIXME: Only one of these is needed
 check_security_proof:
-	$(ECRUNTEST) config/tests.config xmss-acai
-	$(ECRUNTEST) config/tests.config xmss-fsai
+	$(ECRUNTEST) config/tests.config acai
+	$(ECRUNTEST) config/tests.config fsai
 
 ####################################################################################################
 

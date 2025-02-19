@@ -18,21 +18,6 @@ fn __nbytes_copy_offset(
     return out;
 }
 
-inline
-fn __nbytes_copy_inplace(
-    reg ptr u8[OUTLEN] out,
-    reg u64 offset_out,
-    reg u64 offset_in
-) -> reg ptr u8[OUTLEN]
-{
-    inline int i;
-
-    for i=0 to XMSS_N {
-        out[offset_out + i] = out[offset_in + i];
-    }
-
-    return out;
-}
 
 inline
 fn __memcpy_u8u8(

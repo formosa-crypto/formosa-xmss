@@ -56,7 +56,7 @@ fn __l_tree(
             () = #unspill(wots_pk);
             offset_in = (i * 2); offset_in *= XMSS_N;
             bytes = 2 * XMSS_N;
-            buf1, _ = __memcpy_u8u8_2<2 * XMSS_N, XMSS_WOTS_SIG_BYTES>(buf1, wots_pk, offset_in, bytes);
+            buf1, _ = memcpy_u8u8_2_ltree::__memcpy_u8u8_2(buf1, wots_pk, offset_in, bytes);
 
             () = #unspill(pub_seed);
             buf0, addr = __thash_h(buf0, buf1, pub_seed, addr);
@@ -82,7 +82,7 @@ fn __l_tree(
             () = #unspill(wots_pk);
             offset_out = l; offset_out >>= (1 & 63); offset_out *= XMSS_N;
             offset_in = l; offset_in -= 1; offset_in *= XMSS_N;
-            wots_pk = __nbytes_copy_inplace<XMSS_WOTS_SIG_BYTES>(wots_pk, offset_out, offset_in);
+            wots_pk = __nbytes_copy_inplace(wots_pk, offset_out, offset_in);
             () = #spill(wots_pk);
 
             // l = (l >> 1) + 1;
@@ -107,7 +107,7 @@ fn __l_tree(
     () = #unspill(leaf, wots_pk);
 
     tmp = wots_pk[0: XMSS_N];
-    leaf =  _x_memcpy_u8u8<XMSS_N, XMSS_N>(leaf, tmp);
+    leaf =  memcpy_u8u8_N::_x_memcpy_u8u8(leaf, tmp);
 
     return leaf, wots_pk, addr;
 }
@@ -176,7 +176,7 @@ fn __compute_root(
         // memcpy(buffer + params->n, leaf, params->n);
         // memcpy(buffer, auth_path, params->n);
         // i.e. buffer = auth path || leaf
-        buffer[XMSS_N : XMSS_N] = _x_memcpy_u8u8<XMSS_N, XMSS_N>(buffer[XMSS_N : XMSS_N], leaf);
+        buffer[XMSS_N : XMSS_N] = memcpy_u8u8_N::_x_memcpy_u8u8(buffer[XMSS_N : XMSS_N], leaf);
 
         buffer[0 : XMSS_N] = _x_memcpy_u8u8p(buffer[0 : XMSS_N], auth_path_ptr);
     } else {
@@ -184,7 +184,7 @@ fn __compute_root(
         // memcpy(buffer + params->n, auth_path, params->n);
         // i.e. buffer = leaf || auth path
 
-        buffer = _x_memcpy_u8u8<2 * XMSS_N, XMSS_N>(buffer, leaf);
+        buffer = memcpy_u8u8_2N_N::_x_memcpy_u8u8(buffer, leaf);
 
         buffer[XMSS_N : XMSS_N] = 
             _x_memcpy_u8u8p(buffer[XMSS_N : XMSS_N], auth_path_ptr);
@@ -326,7 +326,6 @@ fn __new_compute_root(
         t = leaf_idx; t >>= (k + 1);
         addr = __set_tree_index(addr, t);
 
-        /* OBS: TODO: Aqui posso fazer so um shift left em vez de fazer isto */
         t = leaf_idx; t >>= k;
         t &= 1;
 

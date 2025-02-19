@@ -27,7 +27,7 @@ import W8u8.Pack.
 
 lemma ull_to_bytes2_post (x : W64.t, y : W32.t) :
   phoare[
-    M(Syscall).__ull_to_bytes_2 : 
+    M(Syscall).bytes_wots_checksum__ull_to_bytes : 
     arg.`2 = x 
     ==>
     to_list res = W64toBytes_ext x 2
@@ -52,7 +52,7 @@ qed.
 
 lemma ull_to_bytes_32_correct (x : W64.t) : 
     phoare [
-      M(Syscall).__ull_to_bytes_32 :
+      M(Syscall).bytes_32__ull_to_bytes :
       arg.`2 = x /\ 
       0 <= to_uint x < W64.max_uint
       ==> 
@@ -299,7 +299,7 @@ qed.
 
 lemma ull_to_bytes_3_correct (x : W64.t) : 
     phoare [
-      M(Syscall).__ull_to_bytes_3 :
+      M(Syscall).bytes_idx__ull_to_bytes :
       0 <= to_uint x <= 2^XMSS_FULL_HEIGHT /\
       arg.`2 = x 
       ==> 

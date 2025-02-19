@@ -36,7 +36,6 @@ fn __expand_seed(
     addr = __set_key_and_mask(addr, 0);
 
     // memcpy(buf, pub_seed, params->n);
-    // old: buf[0 : XMSS_N] = _x_memcpy_u8u8<XMSS_N, XMSS_N>(buf[0 : XMSS_N], pub_seed);
     buf[0 : XMSS_N] = #copy_8(pub_seed);
 
     for i = 0 to XMSS_WOTS_LEN {
@@ -77,7 +76,7 @@ fn _expand_seed(
 inline 
 fn __expand_seed_(
     reg ptr u8[XMSS_WOTS_LEN * XMSS_N] outseeds,
-    reg ptr u8[XMSS_N] inseed,
+    reg ptr u8[XMSS_N] inseed, /* sk seed */
     reg ptr u8[XMSS_N] pub_seed,
     reg ptr u32[8] addr
 ) -> reg ptr u8[XMSS_WOTS_LEN * XMSS_N], reg ptr u32[8]

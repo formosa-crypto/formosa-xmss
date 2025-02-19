@@ -57,7 +57,7 @@ lemma base_w_results_64 ( _in_ : W8.t Array32.t) :
     floor (log2 w%r) = XMSS_WOTS_LOG_W /\ 
     w = XMSS_WOTS_W => 
     equiv[
-      M(Syscall).__base_w_64_32 ~ BaseW.base_w :
+      M(Syscall).basew_chain_lengths____base_w ~ BaseW.base_w :
       arg{1}.`2 = _in_ /\
       arg{2} = (to_list _in_, 64) 
       ==>
@@ -151,7 +151,7 @@ lemma base_w_results_3 ( _in_ : W8.t Array2.t) :
     floor (log2 w%r) = XMSS_WOTS_LOG_W /\ 
     w = XMSS_WOTS_W => 
     equiv[
-      M(Syscall).__base_w_3_2 ~ BaseW.base_w :
+      M(Syscall).basew_checksum____base_w ~ BaseW.base_w :
       arg{1}.`2 = _in_ /\
       arg{2} = (to_list _in_, 3) 
       ==>

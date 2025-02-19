@@ -199,7 +199,7 @@ lemma memcpy_treehash_node_2 (_stack_impl : W8.t Array352.t, o : W64.t) (stack_s
     n = XMSS_N /\
     h = XMSS_FULL_HEIGHT =>
     phoare [
-      M(Syscall).__memcpy_u8u8_2_64_352 :
+      M(Syscall).memcpy_u8u8_2_treehash____memcpy_u8u8_2:
 
       size stack_spec = 11 /\ 
 
@@ -406,11 +406,10 @@ do split; 1,2,5: by smt(@W64 pow2_64).
    rewrite H6 1:/#; congr; smt(@W64 pow2_64).
 qed.
 
-(* Este lemma so se aplica a primeira iteracao *)
 lemma p_treehash_memcpy_0 (node : W8.t Array32.t) (stack : nbytes list) (_stack : W8.t Array352.t) (offset : W64.t) : 
     n = XMSS_N => 
     phoare [
-      M(Syscall).__memcpy_u8u8_3_352_32 :
+      M(Syscall).memcpy_u8u8_3_treehash____memcpy_u8u8_3 :
       0 <= to_uint offset <= 2^20 /\
       size stack = 11 /\
       
@@ -542,7 +541,7 @@ lemma p_treehash_memcpy (_node : W8.t Array32.t) (stackSpec : nbytes list)
                         (stackImpl : W8.t Array352.t) (o : W64.t) : 
     n = XMSS_N => 
     phoare [
-      M(Syscall).__memcpy_u8u8_3_352_32 :
+      M(Syscall).memcpy_u8u8_3_treehash____memcpy_u8u8_3 :
 
       0 <= to_uint o <= 2^20 /\
       size stackSpec = 11 /\
@@ -646,7 +645,7 @@ qed.
 
 lemma _memcpy_u8u8_2_64_2144_post (_in : W8.t Array2144.t, oi : W64.t):
     hoare [
-      M(Syscall).__memcpy_u8u8_2_64_2144 : 
+      M(Syscall).memcpy_u8u8_2_ltree____memcpy_u8u8_2 : 
       arg.`2 = _in /\
       arg.`3 = oi /\
       arg.`4 = W64.of_int 64 /\
@@ -691,7 +690,7 @@ qed.
 
 lemma memcpy_u8u8_2_64_2144_post (_in : W8.t Array2144.t, oi : W64.t):
     phoare [
-      M(Syscall).__memcpy_u8u8_2_64_2144 : 
+      M(Syscall).memcpy_u8u8_2_ltree____memcpy_u8u8_2 : 
       arg.`2 = _in /\
       arg.`3 = oi /\
       arg.`4 = W64.of_int 64 /\
@@ -762,7 +761,7 @@ lemma xor_eq (w0 w1 : W8.t) :
 (******************************************************************************)
 
 lemma memset_4_post (input : W8.t Array3.t, v : W8.t) :
-    hoare [M(Syscall).__memset_u8_3 : arg=(input, v) ==> 
+    hoare [M(Syscall).memset_idx_bytes____memset_u8 : arg=(input, v) ==> 
      (forall (k : int), 0 <= k < 3 => (res.[k] = v))].
 proof.
 proc.
@@ -780,14 +779,14 @@ while (
 qed.
 
 lemma p_memset_4_post (input : W8.t Array3.t, v : W8.t) :
-    phoare [M(Syscall).__memset_u8_3 : arg=(input, v) ==> 
+    phoare [M(Syscall).memset_idx_bytes____memset_u8 : arg=(input, v) ==> 
      (forall (k : int), 0 <= k < 3 => (res.[k] = v))] = 1%r.
 proof.
 by conseq memset_4_ll (memset_4_post input v); auto => />.
 qed.
 
 lemma memset_128_post (input : W8.t Array128.t, v : W8.t) :
-    hoare [M(Syscall).__memset_u8_128 : arg=(input, v) ==> 
+    hoare [M(Syscall).memset_i____memset_u8 : arg=(input, v) ==> 
      (forall (k : int), 0 <= k < 128 => (res.[k] = v))].
 proof.
 proc.
@@ -805,7 +804,7 @@ while (
 qed.
 
 lemma p_memset_128_post (input : W8.t Array128.t, v : W8.t) :
-    phoare [M(Syscall).__memset_u8_128 : arg=(input, v) ==> 
+    phoare [M(Syscall).memset_i____memset_u8 : arg=(input, v) ==> 
      (forall (k : int), 0 <= k < 128 => (res.[k] = v))] = 1%r.
 proof.
 conseq memset_128_ll (memset_128_post input v); auto => />.
@@ -964,7 +963,7 @@ by conseq memcpy_ptr_ll (memcpy_ptr_correct ptr).
 qed.
 
 lemma _x_memcpy_u8u8_p (x : W8.t Array32.t) :
-hoare [M(Syscall)._x_memcpy_u8u8_32_32 : arg.`2 = x ==> res = x].
+hoare [M(Syscall).memcpy_u8u8_N___x_memcpy_u8u8 : arg.`2 = x ==> res = x].
 proof.
 proc.
 inline.
@@ -991,12 +990,12 @@ qed.
 
 lemma _x_memcpy_u8u8_post (x : W8.t Array32.t) :
     phoare [
-        M(Syscall)._x_memcpy_u8u8_32_32 : 
+        M(Syscall).memcpy_u8u8_N___x_memcpy_u8u8 : 
           arg.`2 = x ==> res = x] = 1%r
             by conseq _x_memcpy_u8u8_32_32_ll (_x_memcpy_u8u8_p x).
 
 lemma _x_memcpy_u8u8_64_ (x : W8.t Array64.t) :
-    hoare [M(Syscall)._x_memcpy_u8u8_64_64 : arg.`2 = x ==> res = x].
+    hoare [M(Syscall).memcpy_u8u8_2N___x_memcpy_u8u8 : arg.`2 = x ==> res = x].
 proof.
 proc. 
 inline; wp; sp. 
@@ -1020,7 +1019,7 @@ qed.
 
 
 lemma _x_memcpy_u8u8_64_post (x : W8.t Array64.t) :
-    phoare [M(Syscall)._x_memcpy_u8u8_64_64 : arg.`2 = x ==> res = x] = 1%r
+    phoare [M(Syscall).memcpy_u8u8_2N___x_memcpy_u8u8 : arg.`2 = x ==> res = x] = 1%r
       by conseq _x_memcpy_u8u8_64_64_ll (_x_memcpy_u8u8_64_ x).
 
 
@@ -1159,7 +1158,7 @@ while (
 qed.
 
 lemma _x_memcpy_u8u8_64_32_p (o : W8.t Array64.t) (x : W8.t Array32.t) :
-  hoare [M(Syscall)._x_memcpy_u8u8_64_32 :
+  hoare [M(Syscall).memcpy_u8u8_2N_N___x_memcpy_u8u8 :
     arg.`1 = o /\
     arg.`2 = x 
     ==> 
@@ -1213,7 +1212,7 @@ while (
 qed.
 
 lemma _x_memcpy_u8u8_64_32_post (o : W8.t Array64.t) (x : W8.t Array32.t) :
-  phoare [M(Syscall)._x_memcpy_u8u8_64_32 :
+  phoare [M(Syscall).memcpy_u8u8_2N_N___x_memcpy_u8u8 :
     arg.`1 = o /\
     arg.`2 = x 
     ==> 
@@ -1224,7 +1223,7 @@ lemma _x_memcpy_u8u8_64_32_post (o : W8.t Array64.t) (x : W8.t Array32.t) :
 
 lemma nbytes_copy_64_32 (o : W8.t Array64.t, _in : W8.t Array32.t)  : 
     hoare[
-      M(Syscall).__nbytes_copy_offset_64_32 :
+      M(Syscall).memcpy_u8u8_2N_N____nbytes_copy_offset :
       arg = (o, W64.zero, _in, W64.zero) 
       ==> 
       sub res 0  32 = to_list _in /\
@@ -1263,12 +1262,12 @@ split => k??.
 qed.
 
       
-lemma nbytes_copy_64_32_ll : islossless M(Syscall).__nbytes_copy_offset_64_32
+lemma nbytes_copy_64_32_ll : islossless M(Syscall).memcpy_u8u8_2N_N____nbytes_copy_offset
     by proc; while (true) (32 - i); auto => /> /#.
 
 lemma nbytes_copy_64_32_p (o : W8.t Array64.t, _in : W8.t Array32.t)  : 
     phoare[
-      M(Syscall).__nbytes_copy_offset_64_32 :
+      M(Syscall).memcpy_u8u8_2N_N____nbytes_copy_offset :
       arg = (o, W64.zero, _in, W64.zero) 
       ==> 
       sub res 0  32 = to_list _in /\
@@ -1282,7 +1281,7 @@ require import Array131.
 
 lemma nbytes_copy_131_32 (o : W8.t Array131.t, _in : W8.t Array32.t)  : 
     hoare[
-      M(Syscall).__nbytes_copy_offset_131_32 :
+      M(Syscall).nbytes_copy_offset_sk____nbytes_copy_offset :
       arg = (o, (W64.of_int 67), _in, W64.zero) 
       ==> 
       sub res 67 32 = to_list _in /\
@@ -1327,12 +1326,12 @@ do split.
       congr; apply H1.
 qed.
       
-lemma nbytes_copy_131_32_ll : islossless M(Syscall).__nbytes_copy_offset_131_32
+lemma nbytes_copy_131_32_ll : islossless M(Syscall).nbytes_copy_offset_sk____nbytes_copy_offset
     by proc; while (true) (32 - i); auto => /> /#.
 
 lemma nbytes_copy_131_32_p (o : W8.t Array131.t, _in : W8.t Array32.t)  : 
     phoare[
-      M(Syscall).__nbytes_copy_offset_131_32 :
+      M(Syscall).nbytes_copy_offset_sk____nbytes_copy_offset :
       arg = (o, W64.of_int 67, _in, W64.zero) 
       ==> 
       sub res 67 32 = to_list _in /\
@@ -1345,7 +1344,7 @@ lemma nbytes_copy_131_32_p (o : W8.t Array131.t, _in : W8.t Array32.t)  :
 
 lemma memcpy_u8u8_2_64_352_post (o : W8.t Array64.t) (_in : W8.t Array352.t) (off : W64.t):
     phoare [
-       M(Syscall).__memcpy_u8u8_2_64_352 :
+       M(Syscall).memcpy_u8u8_2_treehash____memcpy_u8u8_2 :
        arg = (o, _in, off, W64.of_int 64) /\
        0 <= to_uint off < 353 - 64      
        ==>

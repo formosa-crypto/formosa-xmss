@@ -116,6 +116,22 @@ fn _x__memcpy_u8pu8p(
     _memcpy_u8pu8p(out_ptr, out_offset, in_ptr, in_offset, bytes);
 }
 
+inline
+fn __nbytes_copy_inplace(
+    reg ptr u8[XMSS_WOTS_SIG_BYTES] out,
+    reg u64 offset_out,
+    reg u64 offset_in
+) -> reg ptr u8[XMSS_WOTS_SIG_BYTES]
+{
+    inline int i;
+
+    for i=0 to XMSS_N {
+        out[offset_out + i] = out[offset_in + i];
+    }
+
+    return out;
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 namespace memcpy_u8pu8_n {
@@ -123,7 +139,55 @@ namespace memcpy_u8pu8_n {
     require "__memcpyu8pu8.jinc"
 }
 
+namespace memcpy_u8u8_N {
+    param int OUTLEN = XMSS_N;
+    param int INLEN  = XMSS_N;
+    require "__memcpy.jinc"
+}
+
+namespace memcpy_u8u8_2N {
+    param int OUTLEN = 2 * XMSS_N;
+    param int INLEN  = 2 * XMSS_N;
+    require "__memcpy.jinc"
+}
+
+namespace memcpy_u8u8_2N_N {
+    param int OUTLEN = 2 * XMSS_N;
+    param int INLEN  = XMSS_N;
+    require "__memcpy.jinc"
+}
+
 namespace memcpy_u8pu8_plen {
     param int INLEN = XMSS_PADDING_LEN;
     require "__memcpyu8pu8.jinc"
+}
+
+namespace memcpy_u8u8_2_ltree {
+    param int OUTLEN = 2 * XMSS_N;
+    param int INLEN  = XMSS_WOTS_SIG_BYTES;
+    require "__memcpy.jinc"
+}
+
+namespace memcpy_u8u8_3_treehash {
+    param int OUTLEN  = (XMSS_TREE_HEIGHT + 1) * XMSS_N;
+    param int INLEN   =  XMSS_N;
+    require "__memcpy.jinc"
+}
+
+namespace memcpy_u8u8_2_treehash {
+    param int OUTLEN  = 2 * XMSS_N;
+    param int INLEN   = (XMSS_TREE_HEIGHT + 1) * XMSS_N;
+    require "__memcpy.jinc"
+}
+
+namespace nbytes_copy_offset_pk {
+    param int OUTLEN = XMSS_PK_BYTES;
+    param int INLEN  = XMSS_N;
+    require "__memcpy.jinc"
+}
+
+namespace nbytes_copy_offset_sk {
+    param int OUTLEN = XMSS_SK_BYTES;
+    param int INLEN  = XMSS_N;
+    require "__memcpy.jinc"
 }

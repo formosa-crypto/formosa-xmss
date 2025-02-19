@@ -1,0 +1,14 @@
+// __ at the begining: idem
+
+inline
+fn __memset_u8(reg ptr u8[INLEN] a, reg u8 value) -> reg ptr u8[INLEN] {
+    reg u64 i;
+
+    i = 0;
+    while (i < INLEN) {
+        a[i] = value;
+        i += 1;
+    }
+
+    return a;
+}

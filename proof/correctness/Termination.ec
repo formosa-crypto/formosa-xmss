@@ -18,7 +18,7 @@ lemma zero_addr_ll : islossless M(Syscall).__zero_address_
 (*** MEMCPY, MEMSET & MEMCMP ***)
 (*****************************************************************************************************)
 
-lemma _x_memcpy_u8u8_32_32_ll : islossless M(Syscall)._x_memcpy_u8u8_32_32.
+lemma _x_memcpy_u8u8_32_32_ll : islossless M(Syscall).memcpy_u8u8_N___x_memcpy_u8u8.
 proof.
 proc; inline*.
 auto => />.
@@ -27,14 +27,14 @@ while (0 <= to_uint i <= 32) (32 - to_uint i).
   + auto => />; smt(@W64).
 qed.
 
-lemma _x_memcpy_u8u8_64_64_ll : islossless M(Syscall)._x_memcpy_u8u8_64_64.
+lemma _x_memcpy_u8u8_64_64_ll : islossless M(Syscall).memcpy_u8u8_2N___x_memcpy_u8u8.
 proof.
 proc; inline*.
 wp.
 while (0 <= to_uint i <= 64) (64 - to_uint i); auto => /> *; smt(@W64 pow2_64).
 qed.
 
-lemma _x_memcpy_u8u8_64_32_ll: islossless M(Syscall)._x_memcpy_u8u8_64_32.
+lemma _x_memcpy_u8u8_64_32_ll: islossless M(Syscall).memcpy_u8u8_2N_N___x_memcpy_u8u8.
 proof.
 proc; inline*.
 wp.
@@ -53,13 +53,13 @@ proc.
 while (0 <= to_uint i <= 4) (4 - to_uint i) ; auto => /> *; smt(@W64 pow2_64).
 qed.
 
-lemma memset_4_ll : islossless M(Syscall).__memset_u8_3.
+lemma memset_4_ll : islossless M(Syscall).memset_idx_bytes____memset_u8.
 proof.
 proc.
 while (0 <= to_uint i <= 3) (3 - to_uint i); auto => /> *; smt(@W64 pow2_64).
 qed.
 
-lemma memset_128_ll : islossless M(Syscall).__memset_u8_128.
+lemma memset_128_ll : islossless M(Syscall).memset_i____memset_u8.
 proof.
 proc.
 while (0 <= to_uint i <= 128) (128 - to_uint i); auto => /> *; smt(@W64 pow2_64).

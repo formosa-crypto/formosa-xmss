@@ -8,25 +8,38 @@ import BitEncoding.BitChunking.
 from Jasmin require import JModel.
 
 require import XMSS_IMPL Parameters.
-require import Params Address BaseW Hash LTree.
+require import Params Address BaseW Hash LTree Bytes.
 require import Correctness_Bytes Correctness_Mem Correctness_Address.
 require import Utils Repr.
 
-require import Array8 Array32 Array64 Array96 Array128.
+require import Array4 Array8 Array32 Array64 Array96 Array128.
+
+require import WArray32 WArray64.
 
 (*---*) import StdBigop.Bigint.
 
 axiom hash_96 (x : W8.t Array96.t) :
   phoare[
-      M(Syscall).__core_hash_96 : 
+      M(Syscall).hash_plen_2n____sha256 : 
       arg.`2 = x 
       ==>  
       to_list res = NBytes.val (Hash (to_list x))
     ] = 1%r.
 
+axiom hash_96_ (x : W8.t Array96.t) :
+  phoare[M(Syscall).hash_plen_n_32____sha256 : arg.`2 = x ==> to_list res = NBytes.val (Hash (to_list x))] = 1%r.
+
 axiom hash_128 (x : W8.t Array128.t) :
   phoare[
-      M(Syscall).__core_hash_128 : 
+      M(Syscall).hash_plen_2n_32____sha256 : 
+      arg.`2 = x 
+      ==> 
+      to_list res = NBytes.val (Hash (to_list x))
+    ] = 1%r.
+
+axiom hash_128_ (x : W8.t Array128.t) :
+  phoare[
+      M(Syscall).hash_plen_3n____sha256 : 
       arg.`2 = x 
       ==> 
       to_list res = NBytes.val (Hash (to_list x))
@@ -72,14 +85,11 @@ lemma prf_correctness (a b : W8.t Array32.t) :
 proof.
 rewrite /XMSS_N /XMSS_HASH_PADDING_PRF /XMSS_PADDING_LEN => [#] n_val pval plen.
 proc => /=.
-seq 9 2 : (buf{2} = to_list buf{1}); last first.
-  + inline M(Syscall).__core_hash__96 M(Syscall)._core_hash_96; wp; sp.
-    ecall {1} (hash_96 buf{1}); auto => /> /#.
-
+seq 7 2 : (buf{2} = to_list buf{1}); last by ecall {1} (hash_96_ buf{1}); auto => /> /#.
 seq 3 0 : #pre; 1:auto. 
-
 seq 1 1 : (#pre /\ padding{2} = to_list padding_buf{1}).
-  + call {1} (ull_to_bytes_32_correct (of_int 3)%W64). 
+  + outline {1} [1] { padding_buf <@ M(Syscall).bytes_32__ull_to_bytes (padding_buf, W64.of_int 3); }.
+    call {1} (ull_to_bytes_32_correct (of_int 3)%W64). 
     auto => /> ? ->. 
     by rewrite /toByte_64 /W64toBytes_ext pval plen.
 
@@ -94,62 +104,25 @@ seq 1 0 : (
       rewrite initiE 1:/# => />.  
       by rewrite ifT. 
 
-seq 1 0 : (#pre /\ aux{1} = key{1}); first by ecall {1} (_x_memcpy_u8u8_post key{1}); auto => />.
+auto => /> &1 &2 H0 H1 H2 *; apply (eq_from_nth witness); rewrite !size_cat !size_to_list !NBytes.valP n_val //= => j?.
 
-seq 1 0 : (#pre /\ forall (k : int), 32 <= k < 64 => buf{1}.[k] = nth witness (NBytes.val key{2}) (k - 32)).
-    + auto => /> &1 &2 H0 H1 H2; split => k??.  
-         - rewrite initiE 1:/# => />.     
-           rewrite ifF 1:/#. 
-           apply H2 => //. 
-         - rewrite initiE 1:/# => />. 
-           rewrite ifT //= H0 get_to_list //=.
-
-seq 1 0 : (
-  NBytes.val key{2} = to_list key{1} /\
-  NBytes.val in_0{2} = to_list in_0{1} /\
-  padding{2} = to_list padding_buf{1} /\ 
-  (forall (k : int), 0 <= k < 32 => buf{1}.[k] = nth witness padding{2} k) /\
-  (forall (k : int), 32 <= k < 64 => buf{1}.[k] = nth witness (NBytes.val key{2}) (k - 32)) /\
-  aux{1} = in_0{1}
-); first by ecall {1} (_x_memcpy_u8u8_post in_0{1}); auto => /> /#.
-
-seq 1 0 : (
-  NBytes.val key{2} = to_list key{1} /\
-  NBytes.val in_0{2} = to_list in_0{1} /\ 
-  padding{2} = to_list padding_buf{1} /\ 
-  size padding{2} = 32 /\
-  (forall (k : int), 0 <= k < 32 => buf{1}.[k] = nth witness padding{2} k) /\
-  (forall (k : int), 32 <= k < 64 => buf{1}.[k] = nth witness (NBytes.val key{2}) (k - 32)) /\
-  (forall (k : int), 64 <= k < 96 => buf{1}.[k] = nth witness (NBytes.val in_0{2}) (k - 64))
-).
-    + auto => /> &1 &2 H0 H1 H2 H3 *.
-      do split; first by rewrite size_to_list. 
-         - move => k??. 
-           rewrite initiE 1:/# => />.
-           rewrite ifF 1:/#. 
-           apply H2 => //. 
-         - move => k??. 
-           rewrite initiE 1:/# => />.
-           rewrite ifF 1:/#. 
-           apply H3 => //. 
-         - move => k??. 
-           rewrite initiE 1:/# => />.
-           rewrite ifT // -get_to_list -H1 //.        
-
-auto => /> &1 &2 H0 H1 H2 H3 H4 H5. 
-
-apply (eq_from_nth witness).
-    + rewrite !size_cat !size_to_list !NBytes.valP n_val //. 
-
-rewrite !size_cat H0 !size_to_list //= NBytes.valP n_val  //= => i?. 
-case (0 <= i < 32).
+case (0 <= j < 32).
     + move => ?.
-      rewrite nth_cat size_cat !size_to_list ifT 1:/# nth_cat !size_to_list ifT 1:/# get_to_list /#. 
-case (32 <= i < 64).
+      rewrite nth_cat size_cat !size_to_list NBytes.valP ifT 1:/# nth_cat !size_to_list ifT 1:/# get_to_list. 
+      by rewrite -H2 // initiE //= ifF 1:/# initiE //= ifF 1:/#.
+
+case (32 <= j < 64).
     + move => ?_.
-      rewrite nth_cat size_cat !size_to_list ifT 1:/# nth_cat size_to_list ifF 1:/# -H0 /#. 
+      rewrite nth_cat size_cat !size_to_list NBytes.valP n_val //= ifT 1:/#.
+      rewrite nth_cat size_to_list ifF 1:/#.
+      by rewrite H0 get_to_list initiE //= ifF 1:/# initiE //= ifT 1:/# /copy_8. 
 move => ??.
-rewrite nth_cat size_cat !size_to_list ifF 1:/# H5 // /#. 
+rewrite nth_cat size_cat !size_to_list NBytes.valP ifF 1:/# H1 get_to_list initiE //= ifT 1:/# //=.
+rewrite initiE 1:/# /get8 /init64 /= /copy_64 initiE 1:/# /=.
+rewrite initiE 1:/# /=.
+rewrite bits8E wordP => i?.
+rewrite initiE //=.
+rewrite/init8 get64E pack8E //= initiE 1:/# /= initiE 1:/# /= initiE /#.
 qed.
 
 lemma prf_keygen_correctness (a : W8.t Array64.t, b : W8.t Array32.t) :
@@ -167,16 +140,15 @@ lemma prf_keygen_correctness (a : W8.t Array64.t, b : W8.t Array32.t) :
 proof.
 rewrite /XMSS_N /XMSS_HASH_PADDING_PRF_KEYGEN /XMSS_PADDING_LEN => [#] n_val pval plen.
 proc => //=.
-seq 9 2 : (buf{2} = to_list buf{1}); last first.
-  + inline M(Syscall).__core_hash__128 M(Syscall)._core_hash_128; wp; sp.
-    ecall {1} (hash_128 buf{1}); auto => /> /#.
+seq 7 2 : (buf{2} = to_list buf{1}); last by ecall {1} (hash_128 buf{1}); auto => /> /#.
 
 seq 3 0 : #pre; 1:auto.
 
 seq 1 1 : (#pre /\ padding{2} = to_list padding_buf{1}).
-  + call {1} (ull_to_bytes_32_correct (of_int 4)%W64). 
+  + outline {1} [1] { padding_buf <@ M(Syscall).bytes_32__ull_to_bytes (padding_buf, W64.of_int 4); }.
+    call {1} (ull_to_bytes_32_correct (of_int 4)%W64). 
     auto => /> ? ->. 
-    by rewrite pval plen. 
+    by rewrite /toByte_64 /W64toBytes_ext pval plen.
 
 seq 1 0 : (
   NBytes.val key{2} = to_list key{1} /\
@@ -190,69 +162,20 @@ seq 1 0 : (
            rewrite initiE 1:/# => />. 
            by rewrite ifT.
 
-seq 1 0 : (#pre /\ aux{1} = key{1}); first by ecall {1} (_x_memcpy_u8u8_post key{1}); auto => />.
-
-seq 1 0 : (
-    #pre /\ 
-    forall (k : int), 32 <= k < 64 => buf{1}.[k] = nth witness (NBytes.val key{2}) (k - 32)
-).
-    + auto => /> &1 &2 H0 H1; split => k??.
-         * rewrite initiE 1:/# => />. 
-           rewrite ifF 1:/#.
-           apply H1 => //.
-         * rewrite initiE 1:/# => />.
-           by rewrite ifT 1:/# H0 get_to_list.           
-
-seq 1 0 : (
-  NBytes.val key{2} = to_list key{1} /\
-  in_0{2} = to_list in_0{1} /\
-  padding{2} = to_list padding_buf{1} /\ 
-  (forall (k : int), 0 <= k < 32 => buf{1}.[k] = nth witness padding{2} k) /\
-  (forall (k : int), 32 <= k < 64 => buf{1}.[k] = nth witness (NBytes.val key{2}) (k - 32)) /\
-  aux_0{1} = in_0{1}
-).
-
-    + ecall {1} (_x_memcpy_u8u8_64_post in_0{1}); auto => /> /#.
-seq 1 0 : (
-  NBytes.val key{2} = to_list key{1} /\
-  in_0{2} = to_list in_0{1} /\ 
-  size in_0{2} = 64 /\
-  padding{2} = to_list padding_buf{1} /\
-  (forall (k : int), 0 <= k < 32 => buf{1}.[k] = nth witness padding{2} k) /\
-  (forall (k : int), 32 <= k < 64 => buf{1}.[k] = nth witness (NBytes.val key{2}) (k - 32)) /\
-  (forall (k : int), 64 <= k < 128 => buf{1}.[k] = nth witness in_0{2} (k - 64))
-).
-    + auto => /> &1 &2 H0 H1 H2; do split. 
-         * by rewrite size_to_list.  
-         * move => k??.
-           rewrite initiE 1:/# => />.
-           rewrite ifF 1:/#.
-           apply H1 => //.
-         * move => k??.
-           rewrite initiE 1:/# => />.
-           rewrite ifF 1:/#. 
-           apply H2 => //.
-         * move => k??.
-           rewrite initiE 1:/# => />.
-           by rewrite ifT 1:/#. 
-
-auto => /> &1 &2 H0 H1 H2 H3 H4.
-
-apply (eq_from_nth witness). 
-    + rewrite !size_cat H0 !size_to_list //=.
-
-rewrite !size_cat H0 !size_to_list //= => i?.
+auto => /> &1 &2 H0 H1; apply (eq_from_nth witness); rewrite !size_cat H0 !size_to_list //= => i?.
 case (0 <= i < 32).
     + move => ?.
-      rewrite nth_cat !size_cat !size_to_list //= ifT 1:/#.
-      rewrite nth_cat !size_to_list //= ifT /#.
+      rewrite nth_cat !size_cat !size_to_list ifT 1:/#.
+      by rewrite nth_cat !size_to_list //= ifT 1:/# initiE //= ifF 1:/# initiE //= ifF 1:/# H1.
 case (32 <= i < 64). 
     + move => ?_.
       rewrite nth_cat !size_cat !size_to_list //= ifT 1:/#.
       rewrite nth_cat !size_to_list //= ifF 1:/#.
-      rewrite -!get_to_list -H0 /#.
+      rewrite initiE //= ifF 1:/# initiE /#.
 move => ??.
-rewrite nth_cat !size_cat !size_to_list //= ifF /#.
+rewrite nth_cat !size_cat !size_to_list //= ifF 1:/# initiE //= ifT 1:/#.
+rewrite initiE 1:/# /get8 initiE 1:/# /= /copy_64 initiE 1:/# /= bits8E /= wordP => j?.
+rewrite initiE //= get64E pack8E initiE 1:/# /= initiE 1:/# /= initiE /#.
 qed.
 
 op merge_nbytes_to_array (a b : nbytes) : W8.t Array64.t = 
@@ -288,11 +211,9 @@ proc => /=.
 seq 3 0 : #pre; first by auto. 
 
 seq 1 1 : (#pre /\ padding{2} = to_list aux{1} /\ size padding{2} = 32).
-    + call {1} (ull_to_bytes_32_correct W64.one). 
-      auto => />  H result ->.
-      split.
-        - by rewrite /rand_hash_padding plen.
-        - rewrite size_toByte_64 /#.
+  + outline {1} [1] { aux <@ M(Syscall).bytes_32__ull_to_bytes (Array32.init (fun (i_0 : int) => buf.[0 + i_0]), W64.one); }.
+    call {1} (ull_to_bytes_32_correct (of_int 1)%W64). 
+    auto => /> ??->; smt(W64toBytes_ext_toByte_64 size_toByte_64).
 
 swap {1} [2..3] -1.
 
@@ -364,9 +285,8 @@ seq 11 6 : (
   sub addr{1} 0 7 = sub a1 0 7 /\
   to_list buf{1} = padding{2} ++ (NBytes.val key{2}) ++ bytexor ((NBytes.val _left{2}) ++ (NBytes.val _right{2})) ((NBytes.val bitmask_0{2}) ++ (NBytes.val bitmask_1{2}))
 ); last first. 
-    + inline {1}  M(Syscall)._core_hash_128. 
-      wp. 
-      ecall {1} (hash_128 in_00{1}). 
+    + wp. 
+      ecall {1} (hash_128_ buf{1}). 
       auto => /> &1 &2 ??? ->. 
       split; last by smt(sub_k).
       apply nbytes_eq.
@@ -577,7 +497,7 @@ require import Bytes.
 
 lemma p_write_buf_ptr mem (ptr o : W64.t) (buf : W8.t Array32.t) :
     phoare [
-      M(Syscall).__memcpy_u8pu8_32 :
+      M(Syscall).memcpy_u8pu8_n____memcpy_u8pu8 :
       0 <= to_uint ptr + to_uint o + 32 < W64.max_uint /\
       Glob.mem = mem /\ 
       arg = (ptr, o, buf)  
@@ -696,7 +616,8 @@ seq 1 1 : (
   to_list buf{1} = padding{2} /\
   padding{2} = toByte_64 H_msg_padding_val n
 ).
-  + call {1} (ull_to_bytes_32_correct ((of_int 2)%W64)); auto => /> ?????->.
+  + outline {1} [1] { buf <@ M(Syscall).bytes_32__ull_to_bytes (buf, W64.of_int 2); }.
+    call {1} (ull_to_bytes_32_correct ((of_int 2)%W64)); auto => /> ?????->.
     apply (eq_from_nth witness); first by rewrite !size_toByte_64 //#. 
     rewrite size_W64toBytes_ext // => j?. 
     rewrite /toByte_64 /W64toBytes_ext; do congr => /#.
@@ -713,11 +634,9 @@ seq 2 0 : (
 ).
     + inline {1} 2; inline {1} 8.
       sp; wp.
+      outline {1} [1] { (out0, offset1) <@ M(Syscall).memcpy_u8pu8_n____memcpy_u8pu8 (out0, offset1, in_00); }. 
       ecall {1} (p_write_buf_ptr Glob.mem{1} out0{1} offset1{1} in_00{1}).
-      skip => /> &hr H0 H1 H2 H3 H4*; do split.        
-        - smt().
-        - smt(@W64 pow2_64).
-        - smt().
+      skip => /> &hr H0 H1 H2 H3 H4*; smt(@W64 pow2_64).
 
 (* toByte(X, 32) || R || root || index || M */ *) 
 seq 2 0 : (
@@ -809,7 +728,8 @@ seq 0 0 : (
       smt(@W64 pow2_64).
 
 seq 1 0 : (#pre /\ to_list buf_n{1} = toByte_64 idx{1} 32).
-    + ecall {1} (ull_to_bytes_32_correct idx{1}); auto => /> ????H*.
+    + outline {1} [1] { buf_n <@ M(Syscall).bytes_32__ull_to_bytes(buf_n, idx); }.
+      ecall {1} (ull_to_bytes_32_correct idx{1}); auto => /> ????H*.
       rewrite /XMSS_FULL_HEIGHT /= in H; smt().
 
 seq 2 0 : (

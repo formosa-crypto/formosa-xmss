@@ -265,7 +265,7 @@ seq 0 1 : (
 seq 1 1 : (#pre /\ NBytes.val root{2} = to_list root{1}).
     + inline M(Syscall).__treehash_ M(Syscall)._treehash.
       sp. 
-      exists * sk_seed0{1}, pub_seed0{1}, s0{1}, t0{1}, subtree_addr0{1}, address{2}.
+      exists * bufn0{1}, bufn1{1}, W32.zero, (W32.of_int 10), top_tree_addr{1}, address{2}.
       elim * => P0 P1 P2 P3 P4 P5.
       wp; sp. 
       call {1} (treehash_correct P0 P1 P2 P3 P4 P5) => [/# |].
@@ -281,6 +281,7 @@ seq 1 0  : (
 ).
     + exists * pk0{1}, root{1}.
       elim * => P0 P1.
+      outline {1} [1] { pk0 <@ M(Syscall).memcpy_u8u8_2N_N____nbytes_copy_offset (pk0, W64.zero, root, W64.zero); }.
       call {1} (nbytes_copy_64_32_p P0 P1). (* We need the phoare version of the lemma here *)
       skip => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H20 result H18 H19.
       have E : forall (k : int), 0 <= k < 32 => nth witness (sub result 32 32) k = nth witness (sub P0 32 32) k by smt().
