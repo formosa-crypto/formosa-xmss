@@ -6,9 +6,7 @@ EC_FLAGS   ?= -timeout 20 ${ECADDFLAGS}
 
 JASMIN2EC        ?= jasmin2ec
 JASMIN2EC_FLAGS  ?= --array-model=old
-
-JPP          := ../submodules/jasmin-preprocessor/jpp
-PREPROCESSOR := ../submodules/jasmin-preprocessor/preprocessor
+JPATH            := JASMINPATH="XMSS=../ref-jasmin:Stdlib=../ref-jasmin/stdlib"
 
 # --------------------------------------------------------------------------------------------------
 
@@ -26,8 +24,11 @@ extract: extraction/XMSS_IMPL.ec
 common/Array8.ec: | common/
 	printf "from Jasmin require import JArray.\n\nclone export PolyArray as Array8  with op size <- 8.\n" > $@
 
-extraction/XMSS_IMPL.ec: extraction/XMSS_IMPL.jazz | common/
-	$(JASMIN2EC) $(JASMIN2EC_FLAGS) $< -o $@
+extraction/XMSS_IMPL.ec: ../ref-jasmin/xmss/xmss.jinc | common/
+	printf "from XMSS require \"params/params-xmssmt-sha2_20_2_256.jinc\"" > tmp
+	cat $< >> tmp
+	$(JPATH) $(JASMIN2EC) $(JASMIN2EC_FLAGS) tmp -o $@
+	-$(RM) tmp
 	mv extraction/WArray* common/
 	mv extraction/Array* common/
 
@@ -53,17 +54,8 @@ check_extraction: extraction/XMSS_IMPL.ec
 
 ################################### correctness proof ##############################################
 
-# The targets check_c_* are used to check the correctness proof files
-# FIXME: Why are these individual jobs rather than a single runtest scenario?
-# TODO: After checking for Chesterton's fence, replace this entire section with
-# check_correctness_proof: extraction/XMSS_IMPL.ec
-#   $(ECRUNTEST) config/tests.config correctness
-check_c_%: extraction/XMSS_IMPL.ec
-	$(EASYCRYPT) $(EC_FLAGS) correctness/$*.ec
-
-CORRECTNESS_PROOF_FILES := $(addprefix check_c_, $(notdir $(basename $(wildcard correctness/*.ec))))
-
-check_correctness_proof: extraction/XMSS_IMPL.ec $(CORRECTNESS_PROOF_FILES)
+check_correctness_proof: extraction/XMSS_IMPL.ec
+	$(ECRUNTEST) config/tests.config correctness
 
 ####################################################################################################
 

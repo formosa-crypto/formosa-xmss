@@ -5,8 +5,9 @@ LABEL maintainer="rui.fernandes@mpi-sp.org"
 
 ARG USER="xmss-user"
 
-ARG ECLIB_COMMIT=14d8b2e2b2a3b4ccdb6366781d371afd0ac49bde
 ARG EASYCRYPT_RELEASE=r2025.02 
+
+# We dont use a Jasmin release because it doesnt't have jasmin2ec
 ARG JASMIN_COMMIT=4ab734290304bf832095a3939032678169f114d8
 
 SHELL ["/bin/bash", "-c"]
@@ -58,20 +59,15 @@ RUN eval $(opam env) && \
     opam depext easycrypt && \
     opam install easycrypt && \
     easycrypt why3config
-    
-# Download ECLib
-RUN git clone https://github.com/jasmin-lang/jasmin.git jasmin-eclib && \
-    cd jasmin-eclib && \    
-    git checkout ${ECLIB_COMMIT} && \
-    echo -e "[general]\nidirs = Jasmin:$(pwd)/eclib" > ~/.config/easycrypt/easycrypt.conf
 
-# Install Jasmin
+# Install Jasmin & set ECLib
 RUN git clone https://gitlab.com/jasmin-lang/jasmin-compiler.git jasmin-compiler && \
     cd jasmin-compiler && git checkout ${JASMIN_COMMIT} && \
     USER=$USER source /home/$USER/.nix-profile/etc/profile.d/nix.sh && \
     nix-channel --update && \
     cd compiler/ && nix-shell --command "make" && \
-    sudo install -D jasmin* /usr/local/bin/
+    sudo install -D jasmin* /usr/local/bin/ && \
+    cd - && echo -e "[general]\nidirs = Jasmin:$(pwd)/eclib" > ~/.config/easycrypt/easycrypt.conf
 
 COPY --chown=$USER:$USER . /home/$USER/xmss-jasmin
 WORKDIR /home/$USER/xmss-jasmin
