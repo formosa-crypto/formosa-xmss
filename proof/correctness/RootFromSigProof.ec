@@ -79,7 +79,7 @@ lemma foo_i (x : W32.t) (shift_amount : W8.t):
     to_uint (x `>>` shift_amount) = floor ((to_uint x)%r / (2 ^ (to_uint shift_amount))%r).
 proof.
 move => *.
-rewrite to_uint_shr 1:/# /= (: to_uint shift_amount %% 32 = to_uint shift_amount) 1:/#.
+rewrite to_uint_shr 1:/# /=.
 case: (to_uint shift_amount = 0)  => [-> /= | ?]; first by smt(@Real).
 case: (to_uint shift_amount = 1)  => [-> /= | ?]; first by smt(@Real).
 case: (to_uint shift_amount = 2)  => [-> /= | ?]; first by smt(@Real).
@@ -121,8 +121,6 @@ lemma shr_acc (w : W32.t, shift_amount : W64.t) :
 proof.
 move => ?.
 rewrite !to_uint_shr // of_uintK // 1,2:/# /=.
-rewrite (: to_uint shift_amount %% 256 %% 32 = to_uint shift_amount) 1:/#.
-rewrite (: ((to_uint shift_amount + 1) %% 256 %% 32) = to_uint shift_amount + 1) 1:/#.
 case: (to_uint shift_amount = 0)  => [-> /# |]; case: (to_uint shift_amount = 1)  => [-> /# |]; case: (to_uint shift_amount = 2)  => [-> /# |]; 
 case: (to_uint shift_amount = 3)  => [-> /# |]; case: (to_uint shift_amount = 4)  => [-> /# |]; case: (to_uint shift_amount = 5)  => [-> /# |];
 case: (to_uint shift_amount = 6)  => [-> /# |]; case: (to_uint shift_amount = 7)  => [-> /# |]; case: (to_uint shift_amount = 8)  => [-> /# |].
@@ -403,10 +401,10 @@ seq 3 2 : (
         case: (k{2} = 4) => [-> /# | ?]; case: (k{2} = 5) => [-> /# | ?]; case: (k{2} = 6) => [-> /# | ?]; case: (k{2} = 7) => [-> /# | ?]; 
         case: (k{2} = 8) => [-> /# | ?]; case: (k{2} = 9) => [-> /# | /#].
      rewrite odd_div; first by rewrite /odd /even foo_i of_uintK /#.
-     rewrite !to_uint_shr !of_uintK 1:/# /= (: k{2} %% 256 %% 32 = k{2}) 1:/#.
+     rewrite !to_uint_shr !of_uintK 1:/# /= (: k{2} %% 256 = k{2}) 1:/#.
      have E0: odd (_idx `>>` (of_int k{2})%W8) by rewrite /odd /even foo_i of_uintK /#.
      have Ha : 1 <= to_uint (_idx `>>` (of_int k{2})%W8) by (apply odd_g0; last by assumption); rewrite to_uint_shr of_uintK 1:/# /=; smt(@IntDiv).
-     rewrite to_uint_shr of_uintK 1:/# (: k{2} %% W8.modulus %% 32 = k{2}) 1:/# in Ha .
+     rewrite to_uint_shr of_uintK 1:/# (: k{2} %% W8.modulus = k{2}) 1:/# in Ha .
      have ->: (to_uint _idx %/ 2 ^ k{2} - 1) %/ 2 %% 4294967296 = (to_uint _idx %/ 2 ^ k{2} - 1) %/ 2; last by [].
      smt(@IntDiv).
    * rewrite H11 /get_tree_index /set_tree_index get_setE //=.
@@ -416,10 +414,10 @@ seq 3 2 : (
            case: (k{2} = 4) => [-> /# | ?]; case: (k{2} = 5) => [-> /# | ?]; case: (k{2} = 6) => [-> /# | ?]; case: (k{2} = 7) => [-> /# | ?]; 
            case: (k{2} = 8) => [-> /# | ?]; case: (k{2} = 9) => [-> /# | /#].
      rewrite odd_div; first by rewrite /odd /even foo_i of_uintK /#.
-     rewrite !to_uint_shr !of_uintK 1:/# /= (: k{2} %% 256 %% 32 = k{2}) 1:/#.
+     rewrite !to_uint_shr !of_uintK 1:/# /= (: k{2} %% 256 = k{2}) 1:/#.
      have E0: odd (_idx `>>` (of_int k{2})%W8) by rewrite /odd /even foo_i of_uintK /#.
      have Ha : 1 <= to_uint (_idx `>>` (of_int k{2})%W8) by (apply odd_g0; last by assumption); rewrite to_uint_shr of_uintK 1:/# /=; smt(@IntDiv).
-     rewrite to_uint_shr of_uintK 1:/# (: k{2} %% W8.modulus %% 32 = k{2}) 1:/# in Ha .
+     rewrite to_uint_shr of_uintK 1:/# (: k{2} %% W8.modulus = k{2}) 1:/# in Ha .
      have ->: (to_uint _idx %/ 2 ^ k{2} - 1) %/ 2 %% 4294967296 = (to_uint _idx %/ 2 ^ k{2} - 1) %/ 2; last by [].
      smt(@IntDiv).
 

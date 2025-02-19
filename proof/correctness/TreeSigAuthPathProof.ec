@@ -140,12 +140,12 @@ seq 2 1 : (
   rewrite /XMSS_FULL_HEIGHT /= in H8.
   pose X := (idx{2} `>>` (of_int j{2})%W8).
   have E1 : 0 <= to_uint idx{2} < 1048576 by smt().
-  have E2 : 0 <= to_uint (idx{2} `>>` (of_int j{2})%W8) < 1048576 by rewrite to_uint_shr of_uintK 1:/# (: j{2} %% W8.modulus %% 32 = j{2}) 1:/# /=; smt(@IntDiv).
+  have E2 : 0 <= to_uint (idx{2} `>>` (of_int j{2})%W8) < 1048576 by rewrite to_uint_shr of_uintK 1:/# (: j{2} %% W8.modulus = j{2}) 1:/# /=; smt(@IntDiv).
   case (to_uint X %% 2 = 0) => [Heven | Hodd].
    + rewrite xor1_even // 1:/# to_uintD /= /#.
-   + rewrite xor1_odd // 1:/# to_uintB 2:/# uleE /= /X to_uint_shr of_uintK 1:/# (: (j{2} %% W8.modulus %% 32) = j{2}) 1:/#.
+   + rewrite xor1_odd // 1:/# to_uintB 2:/# uleE /= /X to_uint_shr of_uintK 1:/# (: (j{2} %% W8.modulus) = j{2}) 1:/#.
      have := Hodd.
-     rewrite /X to_uint_shr of_uintK 1:/# (: (j{2} %% W8.modulus %% 32) = j{2}) 1:/#. 
+     rewrite /X to_uint_shr of_uintK 1:/# (: (j{2} %% W8.modulus) = j{2}) 1:/#. 
      case (j{2} = 0) => [-> /# | ?]; case (j{2} = 1) => [-> /# | ?]; case (j{2} = 2) => [-> /# | ?]; case (j{2} = 3) => [-> /# | ?];
      case (j{2} = 4) => [-> /# | ?]; case (j{2} = 5) => [-> /# | ?]; case (j{2} = 6) => [-> /# | ?]; case (j{2} = 7) => [-> /# | ?];
      case (j{2} = 8) => [-> /# | ?]; case (j{2} = 9) => [-> /# | /#].
@@ -155,7 +155,7 @@ seq 1 0 : (
   to_uint k{1} = k{2} * 2^j{2}
 ).
 - auto => /> &1 &2 *.
-  rewrite to_uint_shl of_uintK 1:/# /= (: (j{2} %% W8.modulus %% 32) = j{2}) 1:/#. 
+  rewrite to_uint_shl of_uintK 1:/# /= (: (j{2} %% W8.modulus) = j{2}) 1:/#. 
   case (j{2} = 0) => [-> /# | ?]; case (j{2} = 1) => [-> /# | ?]; case (j{2} = 2) => [-> /# | ?]; case (j{2} = 3) => [-> /# | ?];
   case (j{2} = 4) => [-> /# | ?]; case (j{2} = 5) => [-> /# | ?]; case (j{2} = 6) => [-> /# | ?]; case (j{2} = 7) => [-> /# | ?];
   case (j{2} = 8) => [-> /# | ?]; case (j{2} = 9) => [-> /# | /#].
@@ -178,14 +178,14 @@ seq 2 1 : (#pre /\ to_list node{1} = NBytes.val t{2}).
          * rewrite of_uintK /#.
          * smt(@W32 pow2_32).
          * have E1 : 0 <= to_uint idx{2} < 1048576 by smt().
-           have E2 : 0 <= to_uint (idx{2} `>>` (of_int j{2})%W8) < 1048576 by rewrite to_uint_shr of_uintK 1:/# (: j{2} %% W8.modulus %% 32 = j{2}) 1:/# /=; smt(@IntDiv).
+           have E2 : 0 <= to_uint (idx{2} `>>` (of_int j{2})%W8) < 1048576 by rewrite to_uint_shr of_uintK 1:/# (: j{2} %% W8.modulus = j{2}) 1:/# /=; smt(@IntDiv).
            have E3 : 0 <= 2 ^ j{2} < 2^10 
                  by case (j{2} = 0) => [-> /# | ?]; case (j{2} = 1) => [-> /# | ?]; case (j{2} = 2) => [-> /# | ?]; case (j{2} = 3) => [-> /# | ?];
                     case (j{2} = 4) => [-> /# | ?]; case (j{2} = 5) => [-> /# | ?]; case (j{2} = 6) => [-> /# | ?]; case (j{2} = 7) => [-> /# | ?];
                     case (j{2} = 8) => [-> /# | ?]; case (j{2} = 9) => [-> /# | /#].
            smt(@W32 pow2_32).
          * have E1 : 0 <= to_uint idx{2} < 1048576 by smt().
-           have E2 : 0 <= to_uint (idx{2} `>>` (of_int j{2})%W8) < 1048576 by rewrite to_uint_shr of_uintK 1:/# (: j{2} %% W8.modulus %% 32 = j{2}) 1:/# /=; smt(@IntDiv).
+           have E2 : 0 <= to_uint (idx{2} `>>` (of_int j{2})%W8) < 1048576 by rewrite to_uint_shr of_uintK 1:/# (: j{2} %% W8.modulus = j{2}) 1:/# /=; smt(@IntDiv).
            have E3 : 0 <= 2 ^ j{2} < 2^10 
                  by case (j{2} = 0) => [-> /# | ?]; case (j{2} = 1) => [-> /# | ?]; case (j{2} = 2) => [-> /# | ?]; case (j{2} = 3) => [-> /# | ?];
                     case (j{2} = 4) => [-> /# | ?]; case (j{2} = 5) => [-> /# | ?]; case (j{2} = 6) => [-> /# | ?]; case (j{2} = 7) => [-> /# | ?];
@@ -198,15 +198,15 @@ seq 2 1 : (#pre /\ to_list node{1} = NBytes.val t{2}).
                 case (j{2} = 4) => [-> /# | ?]; case (j{2} = 5) => [-> /# | ?]; case (j{2} = 6) => [-> /# | ?]; case (j{2} = 7) => [-> /# | ?];
                 case (j{2} = 8) => [-> /# | ?]; case (j{2} = 9) => [-> /# | /#].
               + rewrite xor1_odd // 1:/# to_uintB.
-                   * rewrite uleE /X /= to_uint_shr of_uintK 1:/# (: j{2} %% W8.modulus %% 32 = j{2}) 1:/#.
+                   * rewrite uleE /X /= to_uint_shr of_uintK 1:/# (: j{2} %% W8.modulus = j{2}) 1:/#.
                      have := Hodd. 
-                     rewrite /X /= to_uint_shr of_uintK 1:/# (: j{2} %% W8.modulus %% 32 = j{2}) 1:/#. 
+                     rewrite /X /= to_uint_shr of_uintK 1:/# (: j{2} %% W8.modulus = j{2}) 1:/#. 
                      case (j{2} = 0) => [-> /# | ?]; case (j{2} = 1) => [-> /# | ?]; case (j{2} = 2) => [-> /# | ?]; case (j{2} = 3) => [-> /# | ?];
                      case (j{2} = 4) => [-> /# | ?]; case (j{2} = 5) => [-> /# | ?]; case (j{2} = 6) => [-> /# | ?]; case (j{2} = 7) => [-> /# | ?];
                      case (j{2} = 8) => [-> /# | ?]; case (j{2} = 9) => [-> /# | /#].
                 rewrite !of_uintK /= (: j{2} %% 4294967296 = j{2}) 1:/#.
                 have := Hodd. 
-                rewrite /X /= to_uint_shr of_uintK 1:/# (: j{2} %% W8.modulus %% 32 = j{2}) 1:/#. 
+                rewrite /X /= to_uint_shr of_uintK 1:/# (: j{2} %% W8.modulus = j{2}) 1:/#. 
                      case (j{2} = 0) => [-> /# | ?]; case (j{2} = 1) => [-> /# | ?]; case (j{2} = 2) => [-> /# | ?]; case (j{2} = 3) => [-> /# | ?];
                      case (j{2} = 4) => [-> /# | ?]; case (j{2} = 5) => [-> /# | ?]; case (j{2} = 6) => [-> /# | ?]; case (j{2} = 7) => [-> /# | ?];
                      case (j{2} = 8) => [-> /# | ?]; case (j{2} = 9) => [-> /# | /#].
