@@ -7,6 +7,8 @@ import Params Types XMSS_Types Hash WOTS Address LTree BaseW.
 
 (* Get checksum from XMXX_Checksum and then plug those results
    here *)
+
+(*
 clone import XMSS_TW as XMSS_ABSTRACT with
    type mseed <- nbytes,
    op dmseed <- (dmap ((dlist W8.dword n)) NBytes.insubd),
@@ -81,3 +83,4 @@ equiv ver_eq : XMSS_TW(FakeRO).verify ~ XMSS_PRF.verify : pkrel pk{1} pk{2} /\ =
 proc. 
 admitted.
 
+*)

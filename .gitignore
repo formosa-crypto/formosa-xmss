@@ -2,4 +2,3 @@
 venv
 
 proof/extraction/*.ec
-proof/common/
