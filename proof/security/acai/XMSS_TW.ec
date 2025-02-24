@@ -5,7 +5,8 @@ require (*--*) ROM.
 (*---*) import BS2Int.
 
 (* -- Local -- *)
-require import FL_XMSS_TW.
+require (*--*) FL_XMSS_TW.
+clone import FL_XMSS_TW as FLXMSSTW.
 require (*--*) DigitalSignatures DigitalSignaturesROM KeyedHashFunctions HashThenSign.
 (*---*) import SA WTW FLXMSSTW_EUFRMA.
 
