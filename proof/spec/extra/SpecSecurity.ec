@@ -1,33 +1,47 @@
 require import AllCore List Distr DList.
+require import BitEncoding.
+(*---*) import BitChunking.
+
 from Jasmin require import JModel.
 
 require (****) XMSS_TW.
 require import XMSS_PRF.
 import Params Types XMSS_Types Hash WOTS Address LTree BaseW.
 
+import FL_XMSS_TW SA WTW.
+
+
+op BitsToBytes (bits : bool list) : W8.t list = map W8.bits2w (chunk W8.size bits).
+op BytesToBits (bytes : W8.t list) : bool list = flatten (map W8.w2bits bytes).
+op W64toBytes_ext (x : W64.t) (l : int) : W8.t list = 
+  rev (mkseq (fun i => nth W8.zero (to_list (W8u8.unpack8 x)) i) l). 
+
 (* Get checksum from XMXX_Checksum and then plug those results
    here *)
 
-(*
 clone import XMSS_TW as XMSS_ABSTRACT with
    type mseed <- nbytes,
-   op dmseed <- (dmap ((dlist W8.dword n)) NBytes.insubd),
+   op dmseed <- (dmap ((dlist W8.dword Params.n)) NBytes.insubd),
    type mkey <- nbytes * int,
-   type FLXMSSTWL.SA.WTW.pseed <- nbytes,
-   op FLXMSSTWL.SA.WTW.dpseed <- (dmap ((dlist W8.dword n)) NBytes.insubd),
-   type FLXMSSTWL.SA.WTW.sseed <- nbytes,
-   op FLXMSSTWL.SA.WTW.dsseed <- (dmap ((dlist W8.dword n)) NBytes.insubd),
-   type FLXMSSTWL.SA.WTW.adrs <- adrs,
-   type msgXMSSTW <- W8.t list,
-   op FLXMSSTWL.n <- n,
-   op FLXMSSTWL.h <- h,
-   op mkg = (fun (ms : nbytes) (i : FLXMSSTWL.SA.index) => 
-          let padding = lenbytes_be64 prf_padding_val padding_len in
-          let in_0 = lenbytes_be32 (W32.of_int (FLXMSSTWL.SA.Index.val i)) 4 in   
-          (Hash (padding ++ val ms ++ in_0),FLXMSSTWL.SA.Index.val i)).
+   type msgXMSSTW <- W8.t list.
+
+(*
+   type FL_XMSS_TW.SA.WTW.pseed <- nbytes,
+   op FL_XMSS_TW.SA.WTW.dpseed <- (dmap ((dlist W8.dword n)) NBytes.insubd),
+   type FL_XMSS_TW.SA.WTW.sseed <- nbytes,
+   op FL_XMSS_TW.SA.WTW.dsseed <- (dmap ((dlist W8.dword n)) NBytes.insubd),
+   type FL_XMSS_TW.SA.WTW.adrs <- adrs,
+   op FL_XMSS_TW.n <- n,
+   op FL_XMSS_TW.h <- h,
+   op mkg = (fun (ms : nbytes) (i : FL_XMSS_TW.SA.index) => 
+          let padding =  W64toBytes_ext prf_padding_val padding_len in
+          let in_0 = toByte (W32.of_int (FL_XMSS_TW.SA.Index.val i)) 4 in   
+          (Hash (padding ++ val ms ++ in_0),FL_XMSS_TW.SA.Index.val i)).
+*)
 print XMSS_TW.
 
-import   FLXMSSTWL SA WTW.
+
+
 import HtS Repro MCORO. 
 
 module FakeRO : POracle = {
@@ -35,9 +49,9 @@ module FakeRO : POracle = {
 
    proc o(x : (nbytes * int) * W8.t list) : msgFLXMSSTW = {
       var t,idx_bytes;
-      idx_bytes <- lenbytes_be32 (W32.of_int x.`1.`2) 4;   
-      t <- (ThreeNBytesBytes.insubd (val x.`1.`1 ++ val root ++ idx_bytes));
-      return DigestBlock.insubd (BytesToBits (val (H_msg t x.`2)));
+      idx_bytes <- toByte (W32.of_int x.`1.`2) 4;   
+      t <- (ThreeNBytesBytes.insubd (NBytes.val x.`1.`1 ++ NBytes.val root ++ idx_bytes));
+      return DigestBlock.insubd (BytesToBits (NBytes.val (H_msg t x.`2)));
    }
 }.
 
@@ -66,7 +80,7 @@ op sigrel(asig : sigXMSSTW, sig : sig_t) =
    (* asig.`1 = ??? /\ why is the public seed in the signature ? *)
    asig.`1.`1 = sig.`r /\
    asig.`1.`2 = to_uint sig.`sig_idx /\
-   asig.`2.`1 = FLXMSSTWL.SA.Index.insubd (to_uint sig.`sig_idx) /\
+   asig.`2.`1 = FL_XMSS_TW.SA.Index.insubd (to_uint sig.`sig_idx) /\
    asig.`2.`2 = DBLL.insubd 
      (map (fun (b : nbytes) => DigestBlock.insubd (BytesToBits (NBytes.val b))) (val sig.`r_sig.`1)) /\ 
    asig.`2.`3 = DBHL.insubd 
@@ -82,5 +96,3 @@ equiv ver_eq : XMSS_TW(FakeRO).verify ~ XMSS_PRF.verify : pkrel pk{1} pk{2} /\ =
    ={res}. 
 proc. 
 admitted.
-
-*)
