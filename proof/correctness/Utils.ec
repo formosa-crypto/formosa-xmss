@@ -181,9 +181,12 @@ lemma and_1_mod_2_W32_2 (x : W32.t):
     0 <= to_uint x < W32.max_uint =>
     x `&` W32.one = W32.zero <=> to_uint x %% 2 = 0.
 proof.
-move => ?.
-split; rewrite (: 1 = 2 ^ 1 - 1) 1:/# and_mod //=; smt(@W32 pow2_32).
+move => /= ?.
+rewrite (: 1 = 2 ^ 1 - 1) 1:/# and_mod //=.
+(split; rewrite -to_uintK' of_uintK /=) => [ H | /#].
+rewrite (: 0 = to_uint W32.zero) // -H of_uintK /#.
 qed.
+
 
 (** -------------------------------------------------------------------------------------------- **)
 
