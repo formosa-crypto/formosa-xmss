@@ -447,10 +447,9 @@ case (t{1} <> W64.zero); last first.
       rcondf {2} 1; first by auto => /> /#.
       auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7.
       do split.
-        - rewrite ifT 1:/# (: 63 = 2^6 - 1) 1:/# and_mod //.
-          rewrite to_uint_shr 1:/# /=.
-          have ->: to_uint (truncateu8 W256.one) %% 64 = 1 by rewrite to_uint_truncateu8.
-          by [].
+        - have E: to_uint (truncateu8 W256.one) %% 64 = 1 by rewrite to_uint_truncateu8.
+          rewrite ifT 1:/# (: 63 = 2^6 - 1) 1:/# and_mod //.
+          by rewrite to_uint_shr to_uint_truncateu8 E.
         - rewrite ifT /#.
         - rewrite ifT /#.
         - rewrite ifT 1:/# (: 63 = 2^6 - 1) 1:/# and_mod //.
@@ -484,24 +483,10 @@ case (t{1} <> W64.zero); last first.
       ); first by auto => /> *; rewrite to_uintM of_uintK /= to_uintB 2:/# uleE /#.
 
       seq 1 2 : #pre; last first.
-        - auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 *.
-          do split.
-            * rewrite ifF 1:/# (: 63 = 2^6 - 1) 1:/# and_mod //.
-              have ->: to_uint (truncateu8 W256.one) %% 64 = 1 by rewrite to_uint_truncateu8.
-              rewrite to_uintD to_uint_shr 1:/# /= to_uint_truncateu8.
-              smt().
-            * smt().
-            * smt().
-            * rewrite ifF 1:/# ultE (: 63 = 2^6 - 1) 1:/# and_mod //.
-              rewrite to_uintD of_uintK /=. 
-              rewrite to_uint_shr 1:/# /=.
-              have ->: to_uint (truncateu8 W256.one) %% 64 = 1 by rewrite to_uint_truncateu8.
-              smt().
-            * rewrite ifF 1:/# ultE (: 63 = 2^6 - 1) 1:/# and_mod //.
-              rewrite to_uintD of_uintK /=. 
-              rewrite to_uint_shr 1:/# /=.
-              have ->: to_uint (truncateu8 W256.one) %% 64 = 1 by rewrite to_uint_truncateu8.
-              smt().
+        - auto => /> &1 &2 *.
+          have E: to_uint (truncateu8 W256.one) %% 64 = 1 by rewrite to_uint_truncateu8.
+          rewrite ultE.
+          (do split; 2,3: by smt()); rewrite ifF 1:/# (: 63 = 2^6 - 1) 1:/# and_mod // E to_uintD to_uint_shr to_uint_truncateu8 //= /#.
 
    
 inline {1}.
