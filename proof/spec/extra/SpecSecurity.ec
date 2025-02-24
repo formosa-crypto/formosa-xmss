@@ -8,9 +8,6 @@ require (****) XMSS_TW.
 require import XMSS_PRF.
 import Params Types XMSS_Types Hash WOTS Address LTree BaseW.
 
-import FL_XMSS_TW SA WTW.
-
-
 op BitsToBytes (bits : bool list) : W8.t list = map W8.bits2w (chunk W8.size bits).
 op BytesToBits (bytes : W8.t list) : bool list = flatten (map W8.w2bits bytes).
 op W64toBytes_ext (x : W64.t) (l : int) : W8.t list = 
@@ -18,31 +15,25 @@ op W64toBytes_ext (x : W64.t) (l : int) : W8.t list =
 
 (* Get checksum from XMXX_Checksum and then plug those results
    here *)
-
 clone import XMSS_TW as XMSS_ABSTRACT with
    type mseed <- nbytes,
    op dmseed <- (dmap ((dlist W8.dword Params.n)) NBytes.insubd),
    type mkey <- nbytes * int,
-   type msgXMSSTW <- W8.t list.
-
-(*
-   type FL_XMSS_TW.SA.WTW.pseed <- nbytes,
-   op FL_XMSS_TW.SA.WTW.dpseed <- (dmap ((dlist W8.dword n)) NBytes.insubd),
-   type FL_XMSS_TW.SA.WTW.sseed <- nbytes,
-   op FL_XMSS_TW.SA.WTW.dsseed <- (dmap ((dlist W8.dword n)) NBytes.insubd),
-   type FL_XMSS_TW.SA.WTW.adrs <- adrs,
-   op FL_XMSS_TW.n <- n,
-   op FL_XMSS_TW.h <- h,
-   op mkg = (fun (ms : nbytes) (i : FL_XMSS_TW.SA.index) => 
+   type msgXMSSTW <- W8.t list,
+   type FLXMSSTW.SA.WTW.pseed <- nbytes,
+   op FLXMSSTW.SA.WTW.dpseed <- (dmap ((dlist W8.dword n)) NBytes.insubd),
+   type FLXMSSTW.SA.WTW.sseed <- nbytes,
+   op FLXMSSTW.SA.WTW.dsseed <- (dmap ((dlist W8.dword n)) NBytes.insubd),
+   type FLXMSSTW.SA.WTW.adrs <- adrs,
+   op FLXMSSTW.n <- n,
+   op FLXMSSTW.h <- h,
+   op mkg = (fun (ms : nbytes) (i : FLXMSSTW.SA.index) => 
           let padding =  W64toBytes_ext prf_padding_val padding_len in
-          let in_0 = toByte (W32.of_int (FL_XMSS_TW.SA.Index.val i)) 4 in   
-          (Hash (padding ++ val ms ++ in_0),FL_XMSS_TW.SA.Index.val i)).
-*)
-print XMSS_TW.
+          let in_0 = toByte (W32.of_int (FLXMSSTW.SA.Index.val i)) 4 in   
+          (Hash (padding ++ NBytes.val ms ++ in_0),FLXMSSTW.SA.Index.val i)).
 
 
-
-import HtS Repro MCORO. 
+import FLXMSSTW SA WTW HtS Repro MCORO. 
 
 module FakeRO : POracle = {
    var root : nbytes
@@ -64,7 +55,7 @@ op skrel(ask : skXMSSTW, sk : xmss_sk) =
    (* ??? = sk.`pk_root Why is the root not in/in the sk? *).
 
 op pkrel(apk : pkXMSSTW, pk : xmss_pk) = 
-   apk.`1 = DigestBlock.insubd (BytesToBits (val pk.`pk_root)) /\
+   apk.`1 = DigestBlock.insubd (BytesToBits (NBytes.val pk.`pk_root)) /\
    apk.`2 = pk.`pk_pub_seed
    (* apk.`3 = ??? Why is the address in the sk/pk? *)
    (* ??? = pk.`pk_oid I guess abstract proofs fon't care about oid *).
@@ -76,15 +67,16 @@ admitted.
 
 (* Signature type is abused with two index copies because I need this to simulate
    the actual operation of the implementation *)
+
 op sigrel(asig : sigXMSSTW, sig : sig_t) =
    (* asig.`1 = ??? /\ why is the public seed in the signature ? *)
    asig.`1.`1 = sig.`r /\
    asig.`1.`2 = to_uint sig.`sig_idx /\
-   asig.`2.`1 = FL_XMSS_TW.SA.Index.insubd (to_uint sig.`sig_idx) /\
+   asig.`2.`1 = Index.insubd (to_uint sig.`sig_idx) /\
    asig.`2.`2 = DBLL.insubd 
-     (map (fun (b : nbytes) => DigestBlock.insubd (BytesToBits (NBytes.val b))) (val sig.`r_sig.`1)) /\ 
+     (map (fun (b : nbytes) => DigestBlock.insubd (BytesToBits (NBytes.val b))) (LenNBytes.val sig.`r_sig.`1)) /\ 
    asig.`2.`3 = DBHL.insubd 
-     (map (fun (b : nbytes) => DigestBlock.insubd (BytesToBits (NBytes.val b))) (val sig.`r_sig.`2)).
+     (map (fun (b : nbytes) => DigestBlock.insubd (BytesToBits (NBytes.val b))) (AuthPath.val sig.`r_sig.`2)).
 
 
 equiv sig_eq : XMSS_TW(FakeRO).sign ~ XMSS_PRF.sign : skrel sk{1} sk{2} /\ ={m} ==> 
