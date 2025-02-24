@@ -590,7 +590,7 @@ seq 2 1 : (
     idx_leaf{2} = idx{2} `&` (of_int (2 ^ (h %/ d) - 1))%W32    
 ).
     + auto => /> *; do split.
-        - rewrite and_comm ; congr; [by rewrite /truncateu32; smt(@W32 pow2_32) | by rewrite /(`<<`) /= h_val d_val /=].
+        - rewrite andwC ; congr; [by rewrite /truncateu32; smt(@W32 pow2_32) | by rewrite /(`<<`) /= h_val d_val /=].
         - rewrite /(`<<`) /=; smt(@W32 pow2_32).
         - rewrite /(`<<`) /=; smt(@W32 pow2_32).
 
@@ -898,7 +898,7 @@ seq 2 1 : #pre.
     + auto => /> *.
       rewrite h_val d_val /=.
       do split.
-       - rewrite and_comm; congr; first by smt(@W32 pow2_32).
+       - rewrite andwC; congr; first by smt(@W32 pow2_32).
          by rewrite /(`<<`) /=.
        - rewrite /(`<<`) /=; smt(@W32 pow2_32).
        - move => ?; rewrite /(`<<`) /=; smt(@W32 pow2_32).

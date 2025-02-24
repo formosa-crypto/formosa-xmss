@@ -477,7 +477,7 @@ while (
 ); last by auto => /> /#. 
 
 wp; conseq />.
-seq 2 1 : #pre; first by auto => /> &1 &2 *; rewrite and_comm h_val d_val /(`<<`) /=; congr; smt(@W32 pow2_32).
+seq 2 1 : #pre; first by auto => /> &1 &2 *; rewrite andwC h_val d_val /(`<<`) /=; congr; smt(@W32 pow2_32).
 
 seq 1 1 : #pre.
 - auto => /> &1 &2 *.
@@ -639,7 +639,7 @@ do split.
 swap {2} 1 1.
 seq 3 1 : (#pre /\ i{1} = W32.zero /\ ={idx_leaf}).
 - auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19 H20 H21 H22 H23 H24 H25 H26 H27 H28 H29 H30 H31 H32 H33 H34 H35.
-  rewrite and_comm; congr; first by smt(@W32 pow2_32).
+  rewrite andwC; congr; first by smt(@W32 pow2_32).
   by rewrite h_val d_val /(`<<`).
 
 seq 1 1 : (
