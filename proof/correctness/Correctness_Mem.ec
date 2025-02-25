@@ -201,19 +201,16 @@ conseq (: _ ==>
 ).
     + auto => /> &hr H0 H1 H2 out; split => Hout; rewrite Hout. 
 (** -------------------------------------------------------------------------------------------- **)
-      have ->: (to_uint (o - W64.one)) = to_uint o - 1 by smt(@W64 pow2_64).
-      have ->: (to_uint (o - (of_int 2)%W64)) = to_uint o - 2 by smt(@W64 pow2_64).
+      have ->: (to_uint (o - W64.one)) = to_uint o - 1 by rewrite to_uintB // uleE /=/#.
+      have ->: (to_uint (o - (of_int 2)%W64)) = to_uint o - 2 by rewrite to_uintB // uleE /=/#.
       case (0 <= to_uint o - 1 < size stack_spec) => [H_o_m_1_in | H_o_m_1_out].
          (* Cenario normal => tudo in bounds => todos os acessos sao validos *)
          - apply (eq_from_nth witness).
                + by rewrite size_sub_list 1:/# size_cat !NBytes.valP n_val.
            rewrite size_cat !NBytes.valP n_val /= => i?.
-           case (0 <= i < 32) => [Hfst | Hsnd];
-               rewrite nth_cat NBytes.valP n_val; [rewrite ifT 1:/# | rewrite ifF 1:/#].
-               + rewrite nth_sub_list 1:/# nth_nbytes_flatten 1:/#.
-                 smt(nth_change_dfl).
-               + rewrite nth_sub_list 1:/# nth_nbytes_flatten 1:/#.
-                 smt(nth_change_dfl).
+           (case (0 <= i < 32) => [Hfst | Hsnd]; rewrite nth_cat NBytes.valP n_val; [rewrite ifT 1:/# | rewrite ifF 1:/#]);
+           rewrite nth_sub_list 1:/# nth_nbytes_flatten 1:/# ;smt(nth_change_dfl).
+
       (* Daqui para a frente, stack_spec[o - 1] = witness *)     
       have ->: nth nbytes_witness stack_spec (to_uint o - 1) = nbytes_witness 
       by rewrite nth_out /#.
@@ -242,8 +239,8 @@ conseq (: _ ==>
                  rewrite nth_sub_list //.
                  rewrite nth_out // size_nbytes_flatten /#.
 (** -------------------------------------------------------------------------------------------- **)
-      have ->: (to_uint (o - W64.one)) = to_uint o - 1 by smt(@W64 pow2_64).
-      have ->: (to_uint (o - (of_int 2)%W64)) = to_uint o - 2 by smt(@W64 pow2_64).
+      have ->: (to_uint (o - W64.one)) = to_uint o - 1 by rewrite to_uintB // uleE /#.
+      have ->: (to_uint (o - (of_int 2)%W64)) = to_uint o - 2 by rewrite to_uintB // uleE /#.
       case (0 <= to_uint o - 1 < size stack_spec) => [H_o_m_1_in | H_o_m_1_out].
          (* Cenario normal => tudo in bounds => todos os acessos sao validos *)
          - apply (eq_from_nth witness).
@@ -368,7 +365,7 @@ rewrite ultE of_uintK /= => H7.
 have E: 2^h = 1048576 by rewrite h_val /#. 
 do split; 1,2,5: by smt(@W64 pow2_64).
  + ring.
- + have ->: to_uint (i{hr} + W64.one) = to_uint i{hr} + 1 by smt(@W64 pow2_64).
+ + have ->: to_uint (i{hr} + W64.one) = to_uint i{hr} + 1 by rewrite to_uintD_small /#.
    move => k??.
    rewrite get_setE 1:/#. 
    have E2: to_uint ((o - (of_int 2)%W64) * (of_int 32)%W64) = 
@@ -380,7 +377,7 @@ do split; 1,2,5: by smt(@W64 pow2_64).
       - rewrite to_uintD E2 /#. 
    rewrite E2.
    case (k = to_uint i{hr}) => [-> // | ?]. (* trivial solves the first goal *)
-   rewrite H6 1:/#; congr; smt(@W64 pow2_64).
+   rewrite H6 1:/#; congr; rewrite to_uintM of_uintK /= to_uintB ?of_uintK 2:/# uleE of_uintK /#.
 qed.
 
 lemma p_treehash_memcpy_0 (node : W8.t Array32.t) (stack : nbytes list) (_stack : W8.t Array352.t) (offset : W64.t) : 
@@ -437,7 +434,7 @@ if 0 <= to_uint out_offset + k < 352 then in_0.[k] else witness) /\
     split => [/# |].
     move => H4 H5 H6.
     have ->: i0 = 32 by smt().
-    have ->: to_uint (offset * (of_int 32)%W64) = to_uint offset * 32 by smt(@W64 pow2_64).
+    have ->: to_uint (offset * (of_int 32)%W64) = to_uint offset * 32 by rewrite to_uintM /=/#.
     move => H7 H8.
     apply (eq_from_nth witness); first by rewrite size_sub 1:/# size_sub_list // /#.
     rewrite size_sub 1:/# H2 => i Hi.
@@ -499,17 +496,15 @@ if 0 <= to_uint out_offset + k < 352 then in_0.[k] else witness) /\
 (** -------------------------------------------------------------------------------------------- **)
 auto => /> &hr H0 H1 H2 H3 H4 H5 H6 H7 H8.
 
-have E: to_uint (offset * (of_int 32)%W64) = to_uint offset * 32 by smt(@W64 pow2_64).
-
+have E: to_uint (offset * (of_int 32)%W64) = to_uint offset * 32 by rewrite to_uintM /=/#.
 do split; 1,2,5: by smt().
-
   + move => k??.
     have ->: to_uint (offset * (of_int 32)%W64 + (of_int i{hr})%W64) = 
-             (to_uint offset * 32) + i{hr} by smt(@W64 pow2_64).
+             (to_uint offset * 32) + i{hr} by rewrite to_uintD to_uintM /= of_uintK /#.
     case (0 <= to_uint offset * 32 + i{hr} < 352) => ?; first by rewrite get_setE /#.
     by rewrite ifF 1:/# get_out 1:/#.
   + rewrite E => k???.
-    rewrite -H7 1,2:/# get_set_if ifF //; smt(@W64 pow2_64).
+    rewrite -H7 1,2:/# get_set_if ifF // to_uintD to_uintM of_uintK /=; smt(@W64 pow2_64).
 qed.
 
 
