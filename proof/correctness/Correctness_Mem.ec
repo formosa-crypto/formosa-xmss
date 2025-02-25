@@ -170,11 +170,6 @@ case (0 <= k < n) => [k_in | k_out].
 rewrite nth_out // NBytes.valP /#.
 qed.
 
-(* If the index is in bounds, the default value passed to nth does not matter *)
-(* FIXME: Este lemma ja existe e esta da teoria de listas como nth_change_dfl *)
-lemma nth_dflt ['a] (x : 'a list) (dflt1 dflt2 : 'a) (i : int) :
-    0 <= i < size x =>
-    nth dflt1 x i = nth dflt2 x i by smt(@List). 
 
 (* Obs: Este lema precisa de ser phoare p ser usado na prova do treehash *)     
 lemma memcpy_treehash_node_2 (_stack_impl : W8.t Array352.t, o : W64.t) (stack_spec : nbytes list) :
@@ -216,9 +211,9 @@ conseq (: _ ==>
            case (0 <= i < 32) => [Hfst | Hsnd];
                rewrite nth_cat NBytes.valP n_val; [rewrite ifT 1:/# | rewrite ifF 1:/#].
                + rewrite nth_sub_list 1:/# nth_nbytes_flatten 1:/#.
-                 smt(nth_dflt).
+                 smt(nth_change_dfl).
                + rewrite nth_sub_list 1:/# nth_nbytes_flatten 1:/#.
-                 smt(nth_dflt).
+                 smt(nth_change_dfl).
       (* Daqui para a frente, stack_spec[o - 1] = witness *)     
       have ->: nth nbytes_witness stack_spec (to_uint o - 1) = nbytes_witness 
       by rewrite nth_out /#.
@@ -229,7 +224,7 @@ conseq (: _ ==>
            case (0 <= i < 32) => [Hfst | Hsnd];
                rewrite nth_cat NBytes.valP n_val; [rewrite ifT 1:/# | rewrite ifF 1:/#].
                + rewrite nth_sub_list 1:/# nth_nbytes_flatten 1:/#. 
-                 smt(nth_dflt).                 
+                 smt(nth_change_dfl).                 
                + rewrite nth_nbytes_witness.
                  rewrite nth_sub_list 1:/#. 
                  rewrite nth_out // size_nbytes_flatten /#.
@@ -257,9 +252,9 @@ conseq (: _ ==>
            case (0 <= i < 32) => [Hfst | Hsnd];
                rewrite nth_cat NBytes.valP n_val; [rewrite ifT 1:/# | rewrite ifF 1:/#].
                + rewrite nth_sub_list 1:/# nth_nbytes_flatten 1:/#.
-                 smt(nth_dflt).
+                 smt(nth_change_dfl).
                + rewrite nth_sub_list 1:/# nth_nbytes_flatten 1:/#.
-                 smt(nth_dflt).
+                 smt(nth_change_dfl).
       (* Daqui para a frente, stack_spec[o - 1] = witness *)     
       have ->: nth nbytes_witness stack_spec (to_uint o - 1) = nbytes_witness 
       by rewrite nth_out /#.
@@ -270,7 +265,7 @@ conseq (: _ ==>
            case (0 <= i < 32) => [Hfst | Hsnd];
                rewrite nth_cat NBytes.valP n_val; [rewrite ifT 1:/# | rewrite ifF 1:/#].
                + rewrite nth_sub_list 1:/# nth_nbytes_flatten 1:/#. 
-                 smt(nth_dflt).                 
+                 smt(nth_change_dfl).                 
                + rewrite nth_nbytes_witness.
                  rewrite nth_sub_list 1:/#. 
                  rewrite nth_out // size_nbytes_flatten /#.
