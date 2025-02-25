@@ -82,40 +82,33 @@ while
         rewrite E => H5 H6.
         split => [| /#]; by apply H5.
   + auto => /> &hr H0 H1 H2 H3 H4 H5 H6 H7 H8 H9.
-    rewrite ultE => H10 *.    
-do split; last by smt(@W64 pow2_64).
-        - rewrite to_uintD /#.
-        - rewrite to_uintD /#.
-        - ring.
-        - ring.
-        - apply (eq_from_nth witness); first by rewrite !size_load_buf //; smt(@W64 pow2_64).
-          rewrite size_load_buf; first by smt(@W64 pow2_64).
-          have ->: to_uint (i{hr} + W64.one) = to_uint i{hr} + 1 by smt(@W64 pow2_64).
-          move => j?.
-          rewrite /load_buf !nth_mkseq //= !load_store_mem. 
-          rewrite /valid_ptr in H5.
-          have ->: to_uint (dst_ptr + oo) = to_uint dst_ptr + to_uint oo by smt(@W64 pow2_64).
-          have ->: to_uint (dst_ptr + (oo + i{hr})) = to_uint dst_ptr + to_uint oo + to_uint i{hr} by smt(@W64 pow2_64).
-          have ->: to_uint (src_ptr + oi) = to_uint src_ptr + to_uint oi by smt(@W64 pow2_64).
-          have ->: (to_uint (src_ptr + (oi + i{hr}))) =
-                   to_uint src_ptr + to_uint oi + to_uint i{hr} by smt(@W64 pow2_64). 
-          case (j = to_uint i{hr}) => [/# | Hb].
-          rewrite ifF 1:/#. 
-          case (
+    rewrite ultE to_uintD => H10 *.   
+    (do split; 1,2,7: by smt()); 1,2: by ring.
+    - apply (eq_from_nth witness); rewrite size_load_buf /= 1:/# ?size_load_buf // => [/# | j?].
+      rewrite /load_buf !nth_mkseq //= !load_store_mem. 
+      rewrite /valid_ptr in H5.
+      have ->: to_uint (dst_ptr + oo) = to_uint dst_ptr + to_uint oo by rewrite to_uintD_small /#.
+      have ->: to_uint (dst_ptr + (oo + i{hr})) = to_uint dst_ptr + to_uint oo + to_uint i{hr} by smt(@W64 pow2_64).
+      have ->: to_uint (src_ptr + oi) = to_uint src_ptr + to_uint oi by rewrite to_uintD_small /#.
+      have ->: (to_uint (src_ptr + (oi + i{hr}))) =
+                to_uint src_ptr + to_uint oi + to_uint i{hr} by smt(@W64 pow2_64). 
+      case (j = to_uint i{hr}) => [/# | Hb].
+      rewrite ifF 1:/#. 
+      case (
             to_uint src_ptr + to_uint oi + j =
             to_uint dst_ptr + to_uint oo + to_uint i{hr}
-          ) => [Hx | Hy].
-            * have ->: loadW8 Glob.mem{hr} (to_uint src_ptr + to_uint oi + to_uint i{hr}) = 
+      ) => [Hx | Hy].
+           * have ->: loadW8 Glob.mem{hr} (to_uint src_ptr + to_uint oi + to_uint i{hr}) = 
                        nth witness (load_buf Glob.mem{hr} (src_ptr + oi) (to_uint i{hr})) (to_uint i{hr})
                        by rewrite nth_load_buf /#.
               by rewrite -H8 nth_load_buf /#.
             * have ->: Glob.mem{hr}.[to_uint src_ptr + to_uint oi + j] = 
-                       nth witness (load_buf Glob.mem{hr} (src_ptr + oi) (to_uint i{hr})) j.
-                       by rewrite nth_load_buf 1:/#; congr; smt(@W64 pow2_64).
-              rewrite -H8 nth_load_buf 1:/#; congr; smt(@W64 pow2_64).
-        - move => k??Hk.
-          rewrite /storeW8 /loadW8 get_setE.
-          have ->: to_uint (dst_ptr + (oo + i{hr})) = to_uint dst_ptr + to_uint oo + to_uint i{hr} by smt(@W64 pow2_64).
+                       nth witness (load_buf Glob.mem{hr} (src_ptr + oi) (to_uint i{hr})) j
+                       by rewrite nth_load_buf 1:/#; congr; rewrite to_uintD_small /#.
+              rewrite -H8 nth_load_buf 1:/#; congr; rewrite to_uintD_small /#.
+    - move => /= k??Hk.
+      rewrite /storeW8 /loadW8 get_setE.
+      have ->: to_uint (dst_ptr + (oo + i{hr})) = to_uint dst_ptr + to_uint oo + to_uint i{hr} by smt(@W64 pow2_64).
           have ->: (to_uint (src_ptr + (oi + i{hr}))) =
                    to_uint src_ptr + to_uint oi + to_uint i{hr} by smt(@W64 pow2_64). 
           case (k = to_uint dst_ptr + to_uint oo + to_uint i{hr}) => [Ha | Hb]; last first.
