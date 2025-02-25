@@ -97,7 +97,7 @@ while
       case (
             to_uint src_ptr + to_uint oi + j =
             to_uint dst_ptr + to_uint oo + to_uint i{hr}
-      ) => [Hx | Hy].
+      ) => ?.
            * have ->: loadW8 Glob.mem{hr} (to_uint src_ptr + to_uint oi + to_uint i{hr}) = 
                        nth witness (load_buf Glob.mem{hr} (src_ptr + oi) (to_uint i{hr})) (to_uint i{hr})
                        by rewrite nth_load_buf /#.
@@ -116,17 +116,6 @@ while
           rewrite -H9 1,2:/# Ha; smt(@W64 pow2_64).
 qed.
 
-lemma nth_sub_list_dflt (x : nbytes list) (i l0 l1 : int) :
-    0 <= l0 => 
-    0 <= l1 =>
-    nth witness (sub_list (nbytes_flatten x) l0 l1) i = 
-    if 0 <= i < l1 then nth witness (nbytes_flatten x) (l0 + i) else witness.
-proof.
-move => ??.
-case (0 <= i < l1) => [H_in | H_out].
-  + rewrite /sub_list nth_mkseq //=.
-  + rewrite /sub_list nth_out // size_mkseq /#.
-qed.
 
 (*
     `nbytes_witness` is a witness value of type `nbytes`.
