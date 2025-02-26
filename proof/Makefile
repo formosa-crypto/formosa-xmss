@@ -97,3 +97,6 @@ distclean:
 extraction/:
 	mkdir -p $@
 
+common/:
+	mkdir -p $@
+

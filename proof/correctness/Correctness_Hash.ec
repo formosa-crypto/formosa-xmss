@@ -636,7 +636,9 @@ seq 2 0 : (
       sp; wp.
       outline {1} [1] { (out0, offset1) <@ M(Syscall).memcpy_u8pu8_n____memcpy_u8pu8 (out0, offset1, in_00); }. 
       ecall {1} (p_write_buf_ptr Glob.mem{1} out0{1} offset1{1} in_00{1}).
-      skip => /> &hr H0 H1 H2 H3 H4*; smt(@W64 pow2_64).
+      skip => /> &hr H0 H1 H2 H3 H4*.
+      have := H0; rewrite n_val /= /valid_ptr_i /= => H.
+      smt().
 
 (* toByte(X, 32) || R || root || index || M */ *) 
 seq 2 0 : (

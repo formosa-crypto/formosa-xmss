@@ -228,9 +228,9 @@ swap {1} 1 2.
 
 seq 2 0 : (#pre /\ to_uint upper_bound{1} = 2^t{2}).
     + auto => /> &2 *.
-      rewrite (: 31 = 2^5 - 1) 1:/# and_mod // shl_shlw 1:#smt:(@W32) of_uintK to_uint_shl 1:/# /=.
+      rewrite (: 31 = 2^5 - 1) 1:/# and_mod // shl_shlw of_uintK 1:/#.
       have ->: to_uint _t %% 32 %% 4294967296 = to_uint _t by smt(modz_small). 
-      smt(@IntDiv @RealExp).
+      rewrite to_uint_shl //=; smt(@IntDiv @RealExp).
 
 
 seq 2 2 : (sub _stack{1} 0 n = NBytes.val (nth witness stack{2} 0)); last first.

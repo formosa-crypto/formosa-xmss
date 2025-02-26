@@ -118,27 +118,25 @@ if.
           rewrite (: 15 = 2 ^ 4 - 1) 1:/# !and_mod // of_uintK.
           smt(modz_small).
     + auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10.
-      do split; 1,2: by smt().
-        * by rewrite size_put.
-        * rewrite to_uintD /#.
-        * rewrite to_uintD /#.
-        * rewrite to_uintD /#.
-        * rewrite to_uintD /#.
-        * rewrite logw_val to_uintB // #smt:(@W64 pow2_64 modz_small).
-        * rewrite logw_val H5 /= #smt:(@W64 pow2_64 modz_small).
-        * rewrite H6 #smt:(@W64 pow2_64 @IntDiv).  
-        * rewrite to_uintD_small 1:/# /= => j??.
+      have E  : to_uint out{1} %% 2 = 0 \/ to_uint out{1} %% 2 = 1 by smt().
+      have E2 : to_uint bits{1} = 0 \/ to_uint bits{1} = 4 by smt(). 
+(* TODO: E and E2 are aux, not used anywhere (yet???) *)
+      rewrite logw_val to_uintD size_put; do split; 1,2,4..7: by smt().
+        * assumption.
+        * rewrite to_uintB //= uleE /= H5; smt(@W64).
+        * rewrite H5; smt(@W64 pow2_64 modz_small).
+        * rewrite H6; smt(@W64 pow2_64 @IntDiv).  
+        * have ->: (to_uint out{1} + to_uint W64.one) %% W64.modulus = to_uint out{1} + 1 by smt().
+          move => /= j??.
           rewrite nth_put 1:/# get_setE //.
           case (j = to_uint out{1}) => [-> |?]; last first.
              - rewrite ifF 1:/# H7 //#.
-          rewrite ifT // logw_val w_val /= (: 15 = 2^4 - 1) 1:/# (: 31 = 2^5 - 1) 1:/# !and_mod // !of_uintK //=.
-          rewrite to_uint_shr.
-             - rewrite !of_uintK /#.
-          rewrite to_uint_shr.
-             - rewrite !of_uintK /#.
-         rewrite to_uint_truncateu8 to_uint_zeroextu32 !of_uintK /=. 
-         smt(@IntDiv @W64 pow2_64 modz_small).
-        * rewrite to_uintD_small 1:/# /= => j??. 
+          rewrite ifT // w_val /= (: 15 = 2^4 - 1) 1:/# (: 31 = 2^5 - 1) 1:/# !and_mod // !of_uintK //=.
+          do 2! (rewrite to_uint_shr; [rewrite !of_uintK /# |]).
+          rewrite to_uint_truncateu8 to_uint_zeroextu32 !of_uintK /=. 
+          smt(@IntDiv @W64 pow2_64 modz_small).
+        * have ->: (to_uint out{1} + to_uint W64.one) %% W64.modulus = to_uint out{1} + 1 by smt().
+          move => j??. 
           rewrite (: 31 = 2^5 - 1) 1:/# (: 15 = 2^4 - 1) 1:/# !and_mod //=.        
           rewrite to_uint_shr.
              - rewrite !of_uintK /#.
@@ -212,27 +210,22 @@ if.
           rewrite (: 15 = 2 ^ 4 - 1) 1:/# !and_mod // of_uintK.
           smt(modz_small).
     + auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10.
-      do split; 1,2: by smt().
-        * by rewrite size_put.
-        * rewrite to_uintD /#.
-        * rewrite to_uintD /#.
-        * rewrite to_uintD /#.
-        * rewrite to_uintD /#.
-        * rewrite logw_val to_uintB // #smt:(@W64 pow2_3 modz_small).
-        * rewrite logw_val H5 //= #smt:(@W64 pow2_32 modz_small @IntDiv).
-        * rewrite H6 #smt:(@W64 pow2_32 @IntDiv).  
-        * rewrite to_uintD_small 1:/# /= => j??.
+      rewrite logw_val to_uintD size_put; do split; 1,2,4..7: by smt(). 
+        * assumption.
+        * rewrite to_uintB //= uleE /= H5; smt(@W64).
+        * rewrite H5 /=; admit. (* smt(@W64 pow2_64 modz_small) *)
+        * rewrite H6; smt(@W64 pow2_64 @IntDiv).  
+        * have ->: (to_uint out{1} + to_uint W64.one) %% W64.modulus = to_uint out{1} + 1 by smt().
+          move => /= j??.
           rewrite nth_put 1:/# get_setE //.
           case (j = to_uint out{1}) => [-> |?]; last first.
              - rewrite ifF 1:/# H7 //#.
-          rewrite ifT // logw_val w_val /= (: 15 = 2^4 - 1) 1:/# (: 31 = 2^5 - 1) 1:/# !and_mod // !of_uintK //=.
-          rewrite to_uint_shr.
-             - rewrite !of_uintK /#.
-          rewrite to_uint_shr.
-             - rewrite !of_uintK /#.
-         rewrite to_uint_truncateu8 to_uint_zeroextu32 !of_uintK /=. 
-         smt(@IntDiv @W64 modz_small).
-        * rewrite to_uintD_small 1:/# /= => j??. 
+          rewrite ifT // w_val /= (: 15 = 2^4 - 1) 1:/# (: 31 = 2^5 - 1) 1:/# !and_mod // !of_uintK //=.
+          do 2! (rewrite to_uint_shr; [rewrite !of_uintK /# |]).
+          rewrite to_uint_truncateu8 to_uint_zeroextu32 !of_uintK /=. 
+          smt(@IntDiv @W64 pow2_64 modz_small).
+        * have ->: (to_uint out{1} + to_uint W64.one) %% W64.modulus = to_uint out{1} + 1 by smt().
+          move => j??. 
           rewrite (: 31 = 2^5 - 1) 1:/# (: 15 = 2^4 - 1) 1:/# !and_mod //=.        
           rewrite to_uint_shr.
              - rewrite !of_uintK /#.
