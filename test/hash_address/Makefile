@@ -5,7 +5,7 @@
 CC       ?= clang
 CFLAGS   ?= -Wall -g -O3 -Wextra -Wpedantic
 
-JASMIN   ?= jasminc
+JASMIN   ?= /home/rui/tmp/jasmin/compiler/jasminc
 JAZZCT   ?= jasmin-ct
 JFLAGS   ?= ${JADDFLAGS}
 JINCLUDE ?= -I XMSS:../../ref-jasmin/

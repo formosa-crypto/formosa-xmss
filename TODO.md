@@ -1,0 +1,3 @@
+- [X] hash address
+- [ ] hash 
+- [ ] wots 

@@ -1,0 +1,26 @@
+name: Run Tests
+
+on:
+  push:
+    branches:
+      - 'subarrays'
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  run_tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Build docker image
+        run: docker build -t jasmin-xmss .
+
+      - name: Test hash address
+        run: docker run --rm jasmin-xmss make -j$(nproc) -C test/hash_address/ run
+
