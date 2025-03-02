@@ -1,0 +1,184 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+import argparse
+import json
+import re
+import subprocess
+import sys
+import os
+import shutil
+
+# Default config: if the config file does not specify a value, we use this
+default_config = {
+    "indent_size": 4,
+    "indent_style": "space",
+    "insert_final_newline": True,
+    "split_fn_modifier": False,
+}
+
+
+def parse_arguments():
+    parser = argparse.ArgumentParser(description="Jasmin Source code Formatter")
+    parser.add_argument("-in", "--input", help="Input file")
+    parser.add_argument("-out", "--output", help="Output file")
+    parser.add_argument("-config", "--config", help="Config file")
+    parser.add_argument("-i", "--inplace", help="Format the file inplace")
+    parser.add_argument("-I", help="include path", action="append")
+    parser.add_argument("-d", "--debug", help="Enable debug prints", action="store_true")
+    return parser.parse_args()
+
+
+def set_jasmin_path(include_path: list[str]):
+    if include_path is None or len(include_path) == 0:
+        return
+
+    r = []
+
+    for i in include_path:
+        parts = i.split(":")
+        if len(parts) == 2:
+            r.append(f"{parts[0]}={parts[1]}")
+        else:
+            print(i)
+            print(parts)
+            # print pq -I ta provavelmente mal
+
+    env = os.environ
+    env["JASMINPATH"] = ":".join(r)
+
+
+def format(content):
+    content = content.replace("\{", "{")
+    content = content.replace("\}", "}\n")
+    content = content.replace("\jasminarrow{}", "->")
+    content = content.replace(">{}>", ">>")
+
+    content = re.sub(r"\\jasminkw\{(.*?)\}", r"\1", content)
+    content = re.sub(r"\\jasmindname\{(.*?)\}", r"\1", content)
+    content = re.sub(r"\\jasminstorageclass\{(.*?)\}", r"\1", content)
+    content = re.sub(r"\\jasmintype\{(.*?)\}", r"\1", content)
+    content = re.sub(r"\\#\\jasminprimitive\{(.*?)\}", r"#\1", content)
+    content = re.sub(r"\\jasminannotation\{(.*?)\}", r"\1", content)
+
+    # Stuff like ?{ zf } gets translated by jasmin2tex to ?{zf
+    # } (the ending } is on a new line)
+    # This fixes it
+    # TODO: Fix this upstream (?)
+    content = re.sub(
+        r"\?\{(.*?)\}", lambda match: re.sub(r"\s+", " ", match.group(0)), content, flags=re.DOTALL
+    )
+
+    # This fixes the spacing issues caused by the previous instruction
+    content = re.sub(
+        r"\?\{(.*?)\}",
+        lambda match: "?{ " + match.group(1).strip() + " }",
+        content,
+        flags=re.DOTALL,
+    )
+
+    # this removes the \\ before the newline
+    content = re.sub(r"\\\\\s*$", "", content, flags=re.MULTILINE)
+
+    content = re.sub(
+        r"\\jasminindent\{(\d+)\}", lambda match: " " * indent_size * int(match.group(1)), content
+    )
+
+    # Add a newline after type statements
+    content = re.sub(r"^(type .*? = .*?;)$", r"\1\n", content, flags=re.MULTILINE)
+
+    content = content.replace("?{  }", "?{}")
+    content = content.replace("() =#", "() = #")
+    content = content.replace(">>u=", ">>u =")
+
+    if split_fn_modifier:
+        content = content.replace("export ", "export\n")
+        content = content.replace("inline fn", "inline\nfn")
+
+    return content
+
+
+jasmin2tex_path = shutil.which("jasmin2tex")
+if jasmin2tex_path is None:
+    sys.stderr.write("jasmin2tex not found in PATH\n")
+    sys.exit(1)
+
+args = parse_arguments()
+
+if args.debug:
+    print(f"Args: {args}")
+
+if args.inplace is not None:
+    input_filename = args.inplace
+elif args.input is not None:
+    input_filename = args.input
+else:
+    raise ValueError("No input file specified")
+
+if args.inplace is not None:
+    output_filename = args.inplace
+elif args.output is not None:
+    output_filename = args.output
+else:
+    output_filename = "__tmp__"  # we print to sdtdout instead
+
+set_jasmin_path(args.I)
+
+result = subprocess.run(
+    ["jasmin2tex", input_filename, "-o", output_filename],
+    stdout=subprocess.DEVNULL,
+    stderr=subprocess.PIPE,
+)
+
+if result.returncode != 0:
+    sys.stderr.write(f"jasmin2tex failed with return code {result.returncode}\n")
+    sys.stderr.write("=" * 100 + "\n")
+    if result.stderr is not None:
+        sys.stderr.write(result.stderr.decode())
+    sys.stderr.write("=" * 100 + "\n")
+    sys.exit(1)
+
+
+with open(output_filename, "r", encoding="utf-8") as file:
+    content = file.read()
+
+if args.config is not None:
+    with open(args.config, "r", encoding="utf-8") as config_file:
+        config = json.load(config_file)
+
+    try:
+        indent_size = config["indent_size"]
+    except KeyError:
+        indent_size = default_config["indent_size"]
+
+    try:
+        split_fn_modifier_str = config["split_fn_modifier"]
+        split_fn_modifier = split_fn_modifier_str.strip().lower() == "true"
+    except KeyError:
+        split_fn_modifier = default_config["split_fn_modifier"]
+else:
+    indent_size = default_config["indent_size"]
+    split_fn_modifier = default_config["split_fn_modifier"]
+
+if args.debug:
+    print(f"Indent size: {indent_size}")
+    print(f"Split fn modifier: {split_fn_modifier}")
+
+# Remove the header
+content = content.replace("% The produced LATEX snippet is meant to be included in a", "")
+content = content.replace("% jasmincode environment provided by the jasmin package", "")
+content = content.replace("% defined in file:", "")
+content = content.replace("% https://github.com/jasmin-lang/jasmin/wiki/resources/jasmin.sty", "")
+content = content.replace("%", "")
+
+# remove the blank lines at the beginning
+content = "\n".join([line.rstrip() for line in content.splitlines() if line.strip() != ""])
+
+content = format(content)
+
+if output_filename == "__tmp__":
+    print(content)
+    os.remove("__tmp__")
+else:
+    with open(output_filename, "w", encoding="utf-8") as file:
+        file.write(content)
