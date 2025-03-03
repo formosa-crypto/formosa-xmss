@@ -169,14 +169,13 @@ seq 2 1 : (#pre /\ to_list node{1} = NBytes.val t{2}).
       exists * pub_seed1{1}, sk_seed1{1}, k{1}, (of_int j{1})%W32, subtree_addr0{1}, address{2}.
       elim * => P0 P1 P2 P3 P4 P5.
       call {1} (treehash_correct P1 P0 P2 P3 P4 P5) => [/# |].  
-      skip => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 ->. 
+      skip => /> &1 &2  -> -> H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 ->. 
       rewrite /XMSS_FULL_HEIGHT /= in H8.  
+      rewrite !NBytes.valKd /=.
       do split.
-         * smt(@NBytes).
-         * smt(@NBytes).      
          * rewrite of_uintK /#.
          * rewrite of_uintK /#.
-         * smt(@W32 pow2_32).
+         * rewrite !of_uintK /#.
          * have E1 : 0 <= to_uint idx{2} < 1048576 by smt().
            have E2 : 0 <= to_uint (idx{2} `>>` (of_int j{2})%W8) < 1048576 by rewrite to_uint_shr of_uintK 1:/# (: j{2} %% W8.modulus = j{2}) 1:/# /=; smt(@IntDiv).
            have E3 : 0 <= 2 ^ j{2} < 2^10 
@@ -326,7 +325,7 @@ seq 1 1 : (#pre /\ auth{2} = EncodeAuthPath (to_list auth_path{1})).
     + exists * pub_seed{1}, sk_seed{1}, idx_sig{1}, addr{1}, address{2}.
       elim * => P0 P1 P2 P3 P4.
       call (build_auth_path_correct P0 P1 P2 P3 P4) => [/# |].
-      skip => /> &2 <- <- ???; by smt(@NBytes).
+      skip => /> &2 <- <- <- ???? //=; by rewrite !NBytes.valKd.
    
 seq 2 2 : (
     #{/~addr{1}.[4] = W32.zero}pre /\
@@ -345,11 +344,8 @@ seq 1 1 : (
       exists * msg0{1}, seed0{1}, pub_seed{1}, addr1{1}, address{2}.
       elim * => P0 P1 P2 P3 P4.
       call {1} (wots_sign_seed_addr P0 P1 P2 P3 P4) => [/# |].
-      skip => /> &1 &2 H0 <- <- H1 H2 *; do split.
-           - by rewrite NBytes.insubdK /P // size_to_list n_val.
-           - smt(@NBytes).
-           - smt(@NBytes).
-           - move => *; apply (eq_from_nth witness); rewrite !size_sub // => ??; rewrite !nth_sub //; smt(sub_k).
+      skip => /> &1 &2 H0 <- <- H1 H2 *; rewrite !NBytes.valKd /= NBytes.insubdK /P // ?size_to_list ?n_val //= => *.
+      apply (eq_from_nth witness); rewrite !size_sub // => ??; rewrite !nth_sub //; smt(sub_k).
 
 seq 2 0 : (#pre /\ sub sig{1} 0 XMSS_WOTS_SIG_BYTES = to_list sig_ots{1}).
     + while {1} 

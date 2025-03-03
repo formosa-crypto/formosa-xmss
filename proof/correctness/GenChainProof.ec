@@ -109,8 +109,8 @@ seq 1 1 : (#pre /\ to_list aux{1} = NBytes.val key{2}).
   + inline {1} M(Syscall).__prf_ M(Syscall)._prf; wp; sp.
     exists * in_00{1}, key0{1}; elim * => _P1 _P2.
     call {1} (prf_correctness _P1 _P2) => [/# |]. 
-    skip => /> &1 &2 H0 H1.
-    split => [| /#]; smt(@NBytes).
+    skip => /> &1 &2 -> H1.
+    split => [| /#]; by rewrite NBytes.valKd.
 
 seq 1 0 : (#pre /\ sub buf{1} n n = NBytes.val key{2}).
   + auto => /> &1 &2 H0 H1 H2. 
@@ -166,8 +166,7 @@ seq 1 1 : (#pre /\ to_list bitmask{1} = NBytes.val bitmask{2}).
   + inline {1} M(Syscall).__prf_ M(Syscall)._prf; wp; sp.
     exists * in_00{1}, key0{1}; elim * => _P1 _P2.
     call {1} (prf_correctness _P1 _P2) => [/# |]. 
-    skip => /> &1 &2 H0 H1 H2 H3 H4 *. 
-    split; [smt(@NBytes) | smt()]. 
+    skip => /> &1 &2 -> *; split => [| /#]; by rewrite NBytes.valKd. 
 
 seq 2 3 : (
   addr{1} = address{2} /\
@@ -331,12 +330,13 @@ conseq />.
 exists * out1{1}, pub_seed1{1}, addr1{1}.
 elim * => P0 P1 P2.
 call (thash_f_equiv P0 P1 P2) => [/# |]. 
-skip => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13.
-do split; 1,2: by smt(@NBytes).
-move => H14 H15 resultL resultR H16 H17 H18 H19.
+skip => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 <- <- H9 H10 H11 H12 H13.
+rewrite !NBytes.valKd.
+do split => _ _. (* These hypothesis are useless: t{2} = t{2} and _seed{2} = _seed{2} *)
+move => H14 H15 resultL resultR H16 H17.
 do split; 1,3..5: by smt().
 - smt(sub_N).
-- smt(@W32 pow2_32).
+- rewrite to_uintD /#.
 - rewrite ultE to_uintD_small 1:/# /= H11 => ?; smt(@W32 pow2_32).
 - rewrite ultE to_uintD_small 1:/# /= H11 => ?; smt(@W32 pow2_32).
 qed.

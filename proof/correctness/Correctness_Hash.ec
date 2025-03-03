@@ -278,7 +278,7 @@ seq 1 1 : (
       exists * in_01{1}, key0{1}; elim * => _P1 _P2.
       call {1} (prf_correctness _P1 _P2) => [/# |].  
       skip => /> &1 &2 ?? <- ? <- ?.
-      smt(@NBytes).
+      by rewrite !NBytes.valKd.
 
 seq 11 6 : ( 
   addr{1} = address{2} /\
@@ -350,9 +350,8 @@ seq 2 1 : (
       exists * in_01{1}, key0{1}.
       elim * => _P1 _P2.
       call {1} (prf_correctness _P1 _P2) => [/# |]. 
-      skip => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7. 
-      split; [rewrite -H3 #smt:(@NBytes) |]. 
-      move => ???? -> ???. 
+      skip => /> &1 &2 H0 H1 <- <- H4 H5 H6 H7. 
+      rewrite !NBytes.valKd //= => ?? -> ???. 
       by rewrite initE ifT 1:/# /= ifT.
 
 seq 1 1 : #pre.
@@ -394,12 +393,9 @@ seq 2 1 : (
 ). 
     + inline {1} M(Syscall).__prf_ M(Syscall)._prf; wp; sp.
       exists * in_01{1}, key0{1}; elim * => _P1 _P2; call {1} (prf_correctness _P1 _P2) => [/# |].
-      skip => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7. 
-      do split.
-         * rewrite -H2 #smt:(@NBytes). 
-         * rewrite -H1 #smt:(@NBytes). 
-         * move => H8 H9 resultL resultR ->.
-           split => k??; rewrite initiE 1:/# /=; [by rewrite ifF 1:/# H4 | by rewrite ifT 1:/# ].
+      skip => /> &1 &2 H0 <- <- H3 H4 H5 H6 H7. 
+      rewrite !NBytes.valKd /= => resultL resultR ->.
+      split => k??; rewrite initiE 1:/# /=; [by rewrite ifF 1:/# H4 | by rewrite ifT 1:/# ].
 
 conseq (: _ ==>
   size padding{2} = 32 /\
@@ -636,7 +632,9 @@ seq 2 0 : (
       sp; wp.
       outline {1} [1] { (out0, offset1) <@ M(Syscall).memcpy_u8pu8_n____memcpy_u8pu8 (out0, offset1, in_00); }. 
       ecall {1} (p_write_buf_ptr Glob.mem{1} out0{1} offset1{1} in_00{1}).
-      skip => /> &hr H0 H1 H2 H3 H4*; smt(@W64 pow2_64).
+      skip => /> &hr H0 H1 H2 H3 H4*.
+      have := H0; rewrite n_val /= /valid_ptr_i /= => H.
+      smt().
 
 (* toByte(X, 32) || R || root || index || M */ *) 
 seq 2 0 : (

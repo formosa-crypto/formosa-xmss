@@ -170,7 +170,7 @@ case (node{2} = root{2}).
          _ 
       ); first by auto => /> &1 &2 H0 H1 *; rewrite tP => j?; rewrite -!get_to_list H0 H1.
  
-    + seq 1 1 : (#pre /\ are_equal{1} = W8.zero /\ is_valid{2} = true).
+    + seq 1 1 : (#pre /\ are_equal{1} = W8.zero /\ is_valid{2}).
         - ecall {1} (p_memcmp_true root{1} pub_root{1}); auto.
 
     inline; rcondf {1} 6; first by auto; wp; sp.
@@ -181,14 +181,14 @@ case (node{2} = root{2}).
           res_00{1} = W64.zero /\
           0 <= to_uint bytes3{1} < W64.max_uint
     ); first by auto.
+
     wp.
     while {1} (
-      is_valid{2} = true /\ 
+      is_valid{2} /\ 
       res_00{1} = W64.zero /\ 
       0 <= to_uint i1{1} <= to_uint bytes3{1} /\
       0 <= to_uint bytes3{1} < W64.max_uint
-    ) (to_uint bytes3{1} - to_uint i1{1}); auto => /> &hr *; last by rewrite ultE /#. 
-    by do split; smt(@W64 pow2_64).
+    ) (to_uint bytes3{1} - to_uint i1{1}); auto => /> &hr *; [by rewrite !to_uintD /# | by rewrite ultE /#]. 
 
 (* ==== invalid signature ======================================================= *)
 
@@ -201,7 +201,7 @@ case (node{2} = root{2}).
          0 <= to_uint (loadW64 Glob.mem{1} (to_uint mlen_ptr{1})) < W64.max_uint
          ==> 
          _ 
-      ); first by auto => /> &1 &2 H0 H1 *; apply array_neq; rewrite H0 H1; smt(@NBytes).
+      ); first by auto => /> &1 &2 H0 H1 *; apply array_neq; rewrite H0 H1; smt(NBytes.val_inj).
 
     + seq 1 1 : (#pre /\ are_equal{1} <> W8.zero /\ is_valid{2} = false).
         - ecall {1} (p_memcmp_false root{1} pub_root{1}); auto => />.
@@ -214,14 +214,13 @@ case (node{2} = root{2}).
         res_00{1} <> W64.zero /\
         0 <= to_uint inlen{1} < W64.max_uint
     ); first by auto => /> *; smt(@W64 pow2_64).
+
     while {1} (
       is_valid{2} = false /\ 
       res_00{1} <> W64.zero /\ 
       0 <= to_uint i0{1} <= to_uint inlen{1} /\
       0 <= to_uint inlen{1} < W64.max_uint
-    ) (to_uint inlen{1} - to_uint i0{1}); auto => /> &hr *; last by rewrite ultE /#. 
-    
-by do split; smt(@W64 pow2_64).
+    ) (to_uint inlen{1} - to_uint i0{1}); auto => /> &hr *; [by rewrite !to_uintD /# | by rewrite ultE /#]. 
 
 (* ------------------------------------------------------------------------------- *)
 (*                                                                                 *)
@@ -243,10 +242,8 @@ seq 1 0 : (
       rewrite !bits8E !get_setE !ifF 1..7:/# //. 
       rewrite /disjoint_ptr /XMSS_SIG_BYTES in E.  
       smt(disjoint_ptr_ptr).
-  do split.
-    + smt().
-    + smt().
-    + apply (eq_from_nth witness); rewrite !size_load_buf //; 1..3: by smt(@W64 pow2_64).
+  do split; 1,2: by smt().
+    + apply (eq_from_nth witness); rewrite !size_load_buf //; 1..3: by rewrite to_uintB ?of_uintK ?uleE /#.
       rewrite /XMSS_SIG_BYTES. 
       have ->: to_uint (sm_len - (of_int 4963)%W64) = to_uint sm_len - XMSS_SIG_BYTES.
          * rewrite to_uintB; 1: by rewrite uleE /#.
@@ -258,7 +255,7 @@ seq 1 0 : (
       rewrite !nth_load_buf // storeW64E /stores => />.
       rewrite !bits8E !get_setE. 
       have ->: to_uint (ptr_sm + (of_int 4963)%W64) = 
-               to_uint ptr_sm + XMSS_SIG_BYTES by smt(@W64 pow2_64).
+               to_uint ptr_sm + XMSS_SIG_BYTES by rewrite /XMSS_SIG_BYTES to_uintD_small /#.
       rewrite !ifF 1..7:/#; smt(disjoint_ptr_ptr).
 
 seq 0 0 : (
@@ -477,7 +474,7 @@ while (
 ); last by auto => /> /#. 
 
 wp; conseq />.
-seq 2 1 : #pre; first by auto => /> &1 &2 *; rewrite and_comm h_val d_val /(`<<`) /=; congr; smt(@W32 pow2_32).
+seq 2 1 : #pre; first by auto => /> &1 &2 *; rewrite andwC h_val d_val /(`<<`) /=; congr; smt(@W32 pow2_32).
 
 seq 1 1 : #pre.
 - auto => /> &1 &2 *.
@@ -639,7 +636,7 @@ do split.
 swap {2} 1 1.
 seq 3 1 : (#pre /\ i{1} = W32.zero /\ ={idx_leaf}).
 - auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19 H20 H21 H22 H23 H24 H25 H26 H27 H28 H29 H30 H31 H32 H33 H34 H35.
-  rewrite and_comm; congr; first by smt(@W32 pow2_32).
+  rewrite andwC; congr; first by smt(@W32 pow2_32).
   by rewrite h_val d_val /(`<<`).
 
 seq 1 1 : (
@@ -734,7 +731,8 @@ seq 1 1 : (#pre /\ to_list leaf{1} = NBytes.val nodes0{2}).
 - exists * wots_pk{1}, pub_seed{1}, ltree_addr{1}, address0{2}.
   elim * => P0 P1 P2 P3.
   call (ltree_correct P0 P1 P2 P3) => [/#|]. 
-  auto => /> &1 &2 *; smt(@NBytes).
+  auto => /> &1 &2 22? -> *.
+  split => [| /#]; by rewrite -enc_dec_wots_pk 1:/# NBytes.valKd.
  
 seq 0 2 : (#{/~sub ltree_addr{1} 0 5 = sub address0{2} 0 5}pre /\ sub node_addr{1} 0 5 = sub address0{2} 0 5).
 - inline {1}; auto => /> *; do split; apply (eq_from_nth witness); rewrite !size_sub // => i?; rewrite !nth_sub //= !get_setE //; smt(sub_k).
@@ -747,11 +745,10 @@ conseq />.
 exists * leaf{1}, pub_seed{1}, idx_leaf{1}, t64{1}, node_addr{1}, address0{2}.
 elim * => P0 P1 P2 P3 P4 P5.
 call (compute_root_equiv P0 P1 P2 P3 P4 P5) => [/# |].
-skip => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19 H20 H21 H22 H23 H24 H25 H26 H27 H28 H29 H30 H31 H32 H33 H34 H35
-                 H36 H37 H38 H39 H40 H41 H42 H43 H44 H45.
-do split.
-- smt(@NBytes).
-- smt(@NBytes).
+skip => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19 H20 H21 -> H23 H24 H25 H26 H27 H28 H29 H30 H31 H32 H33 H34 H35
+                 H36 H37 H38 H39 H40 H41 H42 H43 -> H45.
+rewrite !to_uintD.
+(do split; 4..11: by smt()); 1,2: by rewrite NBytes.valKd.
 - have ->: auth{2} = (nth witness (EncodeSignature (load_sig_mem Glob.mem{1} ptr_sm)).`r_sigs (to_uint i{1})).`2 by smt().
   rewrite /EncodeSignature => />.
   rewrite (nth_map witness); first by rewrite size_chunk 1:/# size_sub_list size_load_sig /#.
@@ -761,12 +758,4 @@ do split.
   apply (eq_from_nth witness); first by rewrite size_sub_list 1:/# size_load_buf /#.
   rewrite size_sub_list 1:/# => k?.
   rewrite nth_sub_list // nth_take 1,2:/# nth_drop 1,2:/# nth_sub_list /#.
-- smt(@W64 pow2_64).
-- smt(@W64 pow2_64).
-- smt(@W64 pow2_64).
-- smt(@W64 pow2_64).
-- smt().
-- smt().
-- smt().
-- smt().
 qed.

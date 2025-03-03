@@ -119,7 +119,7 @@ proof.
 move => /= ??. 
 rewrite /truncateu32.
 rewrite !get_to_uint.
-rewrite (: (0 <= i && i < 32) = true) 1:/# (: (0 <= i && i < 64) = true) 1:/# /=.
+rewrite (: (0 <= i && i < 32) ) 1:/# (: (0 <= i && i < 64) ) 1:/# /=.
 rewrite of_uintK /=.
 case (i = 0) => [-> /= /# | ?].
 case (i = 1) => [-> /= /# | ?].
@@ -181,12 +181,7 @@ qed.
 require import Hash.
 
 lemma W64toBytes_ext_toByte_64 (w : W64.t) (l : int) :
-    W64toBytes_ext w l = toByte_64 w l.
-proof.
-by [].
-qed.
-
-
+    W64toBytes_ext w l = toByte_64 w l by [].
 
 lemma W32toBytes_zeroextu64 (x : W32.t) (l : int) : 
     0 <= to_uint x < W32.max_uint =>

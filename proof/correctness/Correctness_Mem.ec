@@ -82,40 +82,33 @@ while
         rewrite E => H5 H6.
         split => [| /#]; by apply H5.
   + auto => /> &hr H0 H1 H2 H3 H4 H5 H6 H7 H8 H9.
-    rewrite ultE => H10 *.    
-do split; last by smt(@W64 pow2_64).
-        - rewrite to_uintD /#.
-        - rewrite to_uintD /#.
-        - ring.
-        - ring.
-        - apply (eq_from_nth witness); first by rewrite !size_load_buf //; smt(@W64 pow2_64).
-          rewrite size_load_buf; first by smt(@W64 pow2_64).
-          have ->: to_uint (i{hr} + W64.one) = to_uint i{hr} + 1 by smt(@W64 pow2_64).
-          move => j?.
-          rewrite /load_buf !nth_mkseq //= !load_store_mem. 
-          rewrite /valid_ptr in H5.
-          have ->: to_uint (dst_ptr + oo) = to_uint dst_ptr + to_uint oo by smt(@W64 pow2_64).
-          have ->: to_uint (dst_ptr + (oo + i{hr})) = to_uint dst_ptr + to_uint oo + to_uint i{hr} by smt(@W64 pow2_64).
-          have ->: to_uint (src_ptr + oi) = to_uint src_ptr + to_uint oi by smt(@W64 pow2_64).
-          have ->: (to_uint (src_ptr + (oi + i{hr}))) =
-                   to_uint src_ptr + to_uint oi + to_uint i{hr} by smt(@W64 pow2_64). 
-          case (j = to_uint i{hr}) => [/# | Hb].
-          rewrite ifF 1:/#. 
-          case (
+    rewrite ultE to_uintD => H10 *.   
+    (do split; 1,2,7: by smt()); 1,2: by ring.
+    - apply (eq_from_nth witness); rewrite size_load_buf /= 1:/# ?size_load_buf // => [/# | j?].
+      rewrite /load_buf !nth_mkseq //= !load_store_mem. 
+      rewrite /valid_ptr in H5.
+      have ->: to_uint (dst_ptr + oo) = to_uint dst_ptr + to_uint oo by rewrite to_uintD_small /#.
+      have ->: to_uint (dst_ptr + (oo + i{hr})) = to_uint dst_ptr + to_uint oo + to_uint i{hr} by smt(@W64 pow2_64).
+      have ->: to_uint (src_ptr + oi) = to_uint src_ptr + to_uint oi by rewrite to_uintD_small /#.
+      have ->: (to_uint (src_ptr + (oi + i{hr}))) =
+                to_uint src_ptr + to_uint oi + to_uint i{hr} by smt(@W64 pow2_64). 
+      case (j = to_uint i{hr}) => [/# | Hb].
+      rewrite ifF 1:/#. 
+      case (
             to_uint src_ptr + to_uint oi + j =
             to_uint dst_ptr + to_uint oo + to_uint i{hr}
-          ) => [Hx | Hy].
-            * have ->: loadW8 Glob.mem{hr} (to_uint src_ptr + to_uint oi + to_uint i{hr}) = 
+      ) => ?.
+           * have ->: loadW8 Glob.mem{hr} (to_uint src_ptr + to_uint oi + to_uint i{hr}) = 
                        nth witness (load_buf Glob.mem{hr} (src_ptr + oi) (to_uint i{hr})) (to_uint i{hr})
                        by rewrite nth_load_buf /#.
               by rewrite -H8 nth_load_buf /#.
             * have ->: Glob.mem{hr}.[to_uint src_ptr + to_uint oi + j] = 
-                       nth witness (load_buf Glob.mem{hr} (src_ptr + oi) (to_uint i{hr})) j.
-                       by rewrite nth_load_buf 1:/#; congr; smt(@W64 pow2_64).
-              rewrite -H8 nth_load_buf 1:/#; congr; smt(@W64 pow2_64).
-        - move => k??Hk.
-          rewrite /storeW8 /loadW8 get_setE.
-          have ->: to_uint (dst_ptr + (oo + i{hr})) = to_uint dst_ptr + to_uint oo + to_uint i{hr} by smt(@W64 pow2_64).
+                       nth witness (load_buf Glob.mem{hr} (src_ptr + oi) (to_uint i{hr})) j
+                       by rewrite nth_load_buf 1:/#; congr; rewrite to_uintD_small /#.
+              rewrite -H8 nth_load_buf 1:/#; congr; rewrite to_uintD_small /#.
+    - move => /= k??Hk.
+      rewrite /storeW8 /loadW8 get_setE.
+      have ->: to_uint (dst_ptr + (oo + i{hr})) = to_uint dst_ptr + to_uint oo + to_uint i{hr} by smt(@W64 pow2_64).
           have ->: (to_uint (src_ptr + (oi + i{hr}))) =
                    to_uint src_ptr + to_uint oi + to_uint i{hr} by smt(@W64 pow2_64). 
           case (k = to_uint dst_ptr + to_uint oo + to_uint i{hr}) => [Ha | Hb]; last first.
@@ -123,17 +116,6 @@ do split; last by smt(@W64 pow2_64).
           rewrite -H9 1,2:/# Ha; smt(@W64 pow2_64).
 qed.
 
-lemma nth_sub_list_dflt (x : nbytes list) (i l0 l1 : int) :
-    0 <= l0 => 
-    0 <= l1 =>
-    nth witness (sub_list (nbytes_flatten x) l0 l1) i = 
-    if 0 <= i < l1 then nth witness (nbytes_flatten x) (l0 + i) else witness.
-proof.
-move => ??.
-case (0 <= i < l1) => [H_in | H_out].
-  + rewrite /sub_list nth_mkseq //=.
-  + rewrite /sub_list nth_out // size_mkseq /#.
-qed.
 
 (*
     `nbytes_witness` is a witness value of type `nbytes`.
@@ -188,11 +170,6 @@ case (0 <= k < n) => [k_in | k_out].
 rewrite nth_out // NBytes.valP /#.
 qed.
 
-(* If the index is in bounds, the default value passed to nth does not matter *)
-(* FIXME: Este lemma ja existe e esta da teoria de listas como nth_change_dfl *)
-lemma nth_dflt ['a] (x : 'a list) (dflt1 dflt2 : 'a) (i : int) :
-    0 <= i < size x =>
-    nth dflt1 x i = nth dflt2 x i by smt(@List). 
 
 (* Obs: Este lema precisa de ser phoare p ser usado na prova do treehash *)     
 lemma memcpy_treehash_node_2 (_stack_impl : W8.t Array352.t, o : W64.t) (stack_spec : nbytes list) :
@@ -224,19 +201,16 @@ conseq (: _ ==>
 ).
     + auto => /> &hr H0 H1 H2 out; split => Hout; rewrite Hout. 
 (** -------------------------------------------------------------------------------------------- **)
-      have ->: (to_uint (o - W64.one)) = to_uint o - 1 by smt(@W64 pow2_64).
-      have ->: (to_uint (o - (of_int 2)%W64)) = to_uint o - 2 by smt(@W64 pow2_64).
+      have ->: (to_uint (o - W64.one)) = to_uint o - 1 by rewrite to_uintB // uleE /=/#.
+      have ->: (to_uint (o - (of_int 2)%W64)) = to_uint o - 2 by rewrite to_uintB // uleE /=/#.
       case (0 <= to_uint o - 1 < size stack_spec) => [H_o_m_1_in | H_o_m_1_out].
          (* Cenario normal => tudo in bounds => todos os acessos sao validos *)
          - apply (eq_from_nth witness).
                + by rewrite size_sub_list 1:/# size_cat !NBytes.valP n_val.
            rewrite size_cat !NBytes.valP n_val /= => i?.
-           case (0 <= i < 32) => [Hfst | Hsnd];
-               rewrite nth_cat NBytes.valP n_val; [rewrite ifT 1:/# | rewrite ifF 1:/#].
-               + rewrite nth_sub_list 1:/# nth_nbytes_flatten 1:/#.
-                 smt(nth_dflt).
-               + rewrite nth_sub_list 1:/# nth_nbytes_flatten 1:/#.
-                 smt(nth_dflt).
+           (case (0 <= i < 32) => [Hfst | Hsnd]; rewrite nth_cat NBytes.valP n_val; [rewrite ifT 1:/# | rewrite ifF 1:/#]);
+           rewrite nth_sub_list 1:/# nth_nbytes_flatten 1:/# ;smt(nth_change_dfl).
+
       (* Daqui para a frente, stack_spec[o - 1] = witness *)     
       have ->: nth nbytes_witness stack_spec (to_uint o - 1) = nbytes_witness 
       by rewrite nth_out /#.
@@ -247,7 +221,7 @@ conseq (: _ ==>
            case (0 <= i < 32) => [Hfst | Hsnd];
                rewrite nth_cat NBytes.valP n_val; [rewrite ifT 1:/# | rewrite ifF 1:/#].
                + rewrite nth_sub_list 1:/# nth_nbytes_flatten 1:/#. 
-                 smt(nth_dflt).                 
+                 smt(nth_change_dfl).                 
                + rewrite nth_nbytes_witness.
                  rewrite nth_sub_list 1:/#. 
                  rewrite nth_out // size_nbytes_flatten /#.
@@ -265,8 +239,8 @@ conseq (: _ ==>
                  rewrite nth_sub_list //.
                  rewrite nth_out // size_nbytes_flatten /#.
 (** -------------------------------------------------------------------------------------------- **)
-      have ->: (to_uint (o - W64.one)) = to_uint o - 1 by smt(@W64 pow2_64).
-      have ->: (to_uint (o - (of_int 2)%W64)) = to_uint o - 2 by smt(@W64 pow2_64).
+      have ->: (to_uint (o - W64.one)) = to_uint o - 1 by rewrite to_uintB // uleE /#.
+      have ->: (to_uint (o - (of_int 2)%W64)) = to_uint o - 2 by rewrite to_uintB // uleE /#.
       case (0 <= to_uint o - 1 < size stack_spec) => [H_o_m_1_in | H_o_m_1_out].
          (* Cenario normal => tudo in bounds => todos os acessos sao validos *)
          - apply (eq_from_nth witness).
@@ -275,9 +249,9 @@ conseq (: _ ==>
            case (0 <= i < 32) => [Hfst | Hsnd];
                rewrite nth_cat NBytes.valP n_val; [rewrite ifT 1:/# | rewrite ifF 1:/#].
                + rewrite nth_sub_list 1:/# nth_nbytes_flatten 1:/#.
-                 smt(nth_dflt).
+                 smt(nth_change_dfl).
                + rewrite nth_sub_list 1:/# nth_nbytes_flatten 1:/#.
-                 smt(nth_dflt).
+                 smt(nth_change_dfl).
       (* Daqui para a frente, stack_spec[o - 1] = witness *)     
       have ->: nth nbytes_witness stack_spec (to_uint o - 1) = nbytes_witness 
       by rewrite nth_out /#.
@@ -288,7 +262,7 @@ conseq (: _ ==>
            case (0 <= i < 32) => [Hfst | Hsnd];
                rewrite nth_cat NBytes.valP n_val; [rewrite ifT 1:/# | rewrite ifF 1:/#].
                + rewrite nth_sub_list 1:/# nth_nbytes_flatten 1:/#. 
-                 smt(nth_dflt).                 
+                 smt(nth_change_dfl).                 
                + rewrite nth_nbytes_witness.
                  rewrite nth_sub_list 1:/#. 
                  rewrite nth_out // size_nbytes_flatten /#.
@@ -391,7 +365,7 @@ rewrite ultE of_uintK /= => H7.
 have E: 2^h = 1048576 by rewrite h_val /#. 
 do split; 1,2,5: by smt(@W64 pow2_64).
  + ring.
- + have ->: to_uint (i{hr} + W64.one) = to_uint i{hr} + 1 by smt(@W64 pow2_64).
+ + have ->: to_uint (i{hr} + W64.one) = to_uint i{hr} + 1 by rewrite to_uintD_small /#.
    move => k??.
    rewrite get_setE 1:/#. 
    have E2: to_uint ((o - (of_int 2)%W64) * (of_int 32)%W64) = 
@@ -403,7 +377,7 @@ do split; 1,2,5: by smt(@W64 pow2_64).
       - rewrite to_uintD E2 /#. 
    rewrite E2.
    case (k = to_uint i{hr}) => [-> // | ?]. (* trivial solves the first goal *)
-   rewrite H6 1:/#; congr; smt(@W64 pow2_64).
+   rewrite H6 1:/#; congr; rewrite to_uintM of_uintK /= to_uintB ?of_uintK 2:/# uleE of_uintK /#.
 qed.
 
 lemma p_treehash_memcpy_0 (node : W8.t Array32.t) (stack : nbytes list) (_stack : W8.t Array352.t) (offset : W64.t) : 
@@ -460,7 +434,7 @@ if 0 <= to_uint out_offset + k < 352 then in_0.[k] else witness) /\
     split => [/# |].
     move => H4 H5 H6.
     have ->: i0 = 32 by smt().
-    have ->: to_uint (offset * (of_int 32)%W64) = to_uint offset * 32 by smt(@W64 pow2_64).
+    have ->: to_uint (offset * (of_int 32)%W64) = to_uint offset * 32 by rewrite to_uintM /=/#.
     move => H7 H8.
     apply (eq_from_nth witness); first by rewrite size_sub 1:/# size_sub_list // /#.
     rewrite size_sub 1:/# H2 => i Hi.
@@ -522,17 +496,15 @@ if 0 <= to_uint out_offset + k < 352 then in_0.[k] else witness) /\
 (** -------------------------------------------------------------------------------------------- **)
 auto => /> &hr H0 H1 H2 H3 H4 H5 H6 H7 H8.
 
-have E: to_uint (offset * (of_int 32)%W64) = to_uint offset * 32 by smt(@W64 pow2_64).
-
+have E: to_uint (offset * (of_int 32)%W64) = to_uint offset * 32 by rewrite to_uintM /=/#.
 do split; 1,2,5: by smt().
-
   + move => k??.
     have ->: to_uint (offset * (of_int 32)%W64 + (of_int i{hr})%W64) = 
-             (to_uint offset * 32) + i{hr} by smt(@W64 pow2_64).
+             (to_uint offset * 32) + i{hr} by rewrite to_uintD to_uintM /= of_uintK /#.
     case (0 <= to_uint offset * 32 + i{hr} < 352) => ?; first by rewrite get_setE /#.
     by rewrite ifF 1:/# get_out 1:/#.
   + rewrite E => k???.
-    rewrite -H7 1,2:/# get_set_if ifF //; smt(@W64 pow2_64).
+    rewrite -H7 1,2:/# get_set_if ifF // to_uintD to_uintM of_uintK /=; smt(@W64 pow2_64).
 qed.
 
 

@@ -37,17 +37,17 @@ lemma array_neq (x y : W8.t Array32.t) :
     to_list x <> to_list y <=> x <> y by smt(@Array32).    
 
 lemma lsb_odd (w : W32.t) : 
-    to_uint w %% 2 <> 0 => w.[0] = true.
+    to_uint w %% 2 <> 0 => w.[0].
 proof.
 move => ?.
-rewrite get_to_uint (: (0 <= 0 && 0 < 32) = true) //= /#.
+rewrite get_to_uint (: (0 <= 0 && 0 < 32)) //= /#.
 qed.
 
 lemma lsb_even (w : W32.t) : 
     to_uint w %% 2 = 0 => w.[0] = false.
 proof.
 move => ?.
-rewrite get_to_uint (: (0 <= 0 && 0 < 32) = true) //= /#.
+rewrite get_to_uint (: (0 <= 0 && 0 < 32)) //= /#.
 qed.
 
 lemma xor1_even (x : W32.t) :
@@ -59,20 +59,20 @@ move => /= ??.
 have w0E : x.[0] = false by smt(lsb_even).
 rewrite wordP => j?.
 rewrite xorwE.
-have E0: W32.one.[0] = true by rewrite /W32.one bits2wE initiE //= /int2bs nth_mkseq.
+have E0: W32.one.[0] by rewrite /W32.one bits2wE initiE //= /int2bs nth_mkseq.
 have E1: forall (k : int), 0 < k < 32 => W32.one.[k] = false by smt(W32_oneE).
 case (j = 0) => [-> | ?].
   + rewrite E0 /=.
     rewrite eq_sym !get_to_uint.
-    rewrite (: (0 <= 0 && 0 < 32) = true) 1:/# /=.
+    rewrite (: (0 <= 0 && 0 < 32)) 1:/# /=.
     rewrite to_uintD_small 1:/# /= /#.
 rewrite E1 1:/# /=.
 rewrite eq_sym get_to_uint.
-have E: (0 <= j && j < 32) = true by smt().
+have E: (0 <= j && j < 32) by smt().
 rewrite to_uintD_small 1:/# E /=.
 rewrite get_to_uint E /=.
 do 4! congr.
-have ->: 2^j = 2 * 2^(j - 1) by rewrite -exprS 1:/#. (* smt(@Real would also work *)
+have ->: 2^j = 2 * 2^(j - 1) by rewrite -exprS 1:/#. 
 rewrite !divzMr 1?IntOrder.expr_ge0 ~-1://; 1,2: smt(@IntDiv).
 do 2! congr; rewrite divzDl //.
 qed.
@@ -83,15 +83,15 @@ lemma xor1_odd (x : W32.t) :
     (x `^` W32.one) = x - W32.one.
 proof.
 move => /= ??.
-have E0: W32.one.[0] = true by rewrite /W32.one bits2wE initiE //= /int2bs nth_mkseq.
+have E0: W32.one.[0] by rewrite /W32.one bits2wE initiE //= /int2bs nth_mkseq.
 have E1: forall (k : int), 0 < k < 32 => W32.one.[k] = false by smt(W32_oneE).
-have E2 : x.[0] = true by smt(lsb_odd).
+have E2 : x.[0] by smt(lsb_odd).
 rewrite wordP => i?.
 rewrite xorwE.
 case (i = 0) => [-> | ?]; [rewrite E0 | rewrite E1 1:/#] => /=.
-  + rewrite !get_to_uint (: (0 <= 0 && 0 < 32) = true) 1:/# /=.
+  + rewrite !get_to_uint (: (0 <= 0 && 0 < 32)) 1:/# /=.
     rewrite to_uintB 2:/# uleE /#.
-rewrite !get_to_uint (: (0 <= i && i < 32) = true) 1:/# /=.
+rewrite !get_to_uint (: (0 <= i && i < 32)) 1:/# /=.
 rewrite to_uintB /=; first by rewrite uleE /#.
 do 4! congr.
 have ->: 2^i = 2 * 2^(i - 1) by rewrite -exprS 1:/#. 
@@ -123,10 +123,6 @@ lemma pow2_leq_1 (a : int):
 proof.
 smt(StdOrder.IntOrder.exprn_ege1).
 qed.
-
-(** -------------------------------------------------------------------------------------------- **)
-
-lemma and_comm (a b : W32.t) : a `&` b = b `&` a by smt(@W32 pow2_32).
 
 (** -------------------------------------------------------------------------------------------- **)
 
@@ -178,22 +174,24 @@ proof.
 have E: forall (x : W32.t), to_uint x %% 2 = 1 => W32.of_int (to_uint x %% 2) = W32.one by smt(@W32). 
 split; rewrite (: 1 = 2 ^ 1 - 1) 1:/# and_mod //=; first by smt().
 move => H.
-rewrite E //= #smt:(@W32). 
+rewrite E //=; smt(@W32).
 qed.
 
 lemma and_1_mod_2_W32_2 (x : W32.t):
     0 <= to_uint x < W32.max_uint =>
     x `&` W32.one = W32.zero <=> to_uint x %% 2 = 0.
 proof.
-move => ?.
-split; rewrite (: 1 = 2 ^ 1 - 1) 1:/# and_mod //=; smt(@W32 pow2_32).
+move => /= ?.
+rewrite (: 1 = 2 ^ 1 - 1) 1:/# and_mod //=.
+(split; rewrite -to_uintK' of_uintK /=) => [ H | /#].
+rewrite (: 0 = to_uint W32.zero) // -H of_uintK /#.
 qed.
+
 
 (** -------------------------------------------------------------------------------------------- **)
 
 lemma pow2_pos (e : int) :
-    0 <= e => 0 < 2^e.
-proof. move => ?; smt(@IntDiv). qed.
+    0 <= e => 0 < 2^e by move => ?; smt(@IntDiv). 
 
 lemma pow2_neq_0  (t : int) : 
     0 <= t => 0 <> 2^t by smt(@Real).
@@ -209,20 +207,18 @@ qed.
 
 (** -------------------------------------------------------------------------------------------- **)
 
-lemma to_uintW (i : int) : 
-    0 <= i < W32.max_uint => 
-    W64.of_int i = zeroextu64 (W32.of_int i).
-proof.
-move => ?; smt(@W64 @W32).
-qed.
-
 lemma to_uintW2 (i : int) : 
     0 <= i < W32.max_uint => 
     W32.of_int i = truncateu32 (W64.of_int i).
 proof.
 move => ?.
+have to_uintW : forall (i : int), 0 <= i < W32.max_uint => W64.of_int i = zeroextu64 (W32.of_int i).
+   - move => j?.
+     rewrite wordP => k?.
+     rewrite !get_to_uint /= (: 0 <= k < 64) //= to_uint_zeroextu64 !of_uintK. 
+     by have ->: j %% W64.modulus = j %% W32.modulus by smt(pow2_32).
 rewrite to_uintW //.
-rewrite /truncateu32 to_uint_zeroextu64 of_uintK; smt(@W32 pow2_32).
+rewrite /truncateu32 to_uint_zeroextu64 of_uintK; smt(pow2_32).
 qed.
 
 (** -------------------------------------------------------------------------------------------- **)
@@ -256,17 +252,6 @@ pred valid_ptr_i (p : W64.t) (o : int) =
   0 <= o => 
     0 <= to_uint p /\ to_uint (p) + o < W64.modulus.
 
-(*
- States that if a pointer p is valid for a certain length l1 and 
- l2 is a non-negative integer that is less than l1, then the pointer p 
- is also valid for the length l2
-*)
-lemma valid_ptr_sub (p : W64.t) (l1 l2 : int) :
-    0 <= l1 => 
-    valid_ptr_i p l1 =>
-    l2 < l1 => 
-    valid_ptr_i p l2 by smt().
-
 pred valid_addr(p : int, o : int) = 
   0 <= o => 0 <= p /\ p + o < W64.modulus.
 
@@ -291,12 +276,6 @@ lemma disjoint_ptr_comm (p1 l1 p2 l2 : int) :
     disjoint_ptr p1 l1 p2 l2 <=>
     disjoint_ptr p2 l2 p1 l1 by smt().
 
-(* if p1 and p2 are disjoint, a sub region of p1 is also disjoint from p2 *)
-lemma disjoint_ptr_sub (p1 l1 p2 l2 : int) l3 :
-    disjoint_ptr p1 l1 p2 l2 => 
-    l3 < l1 => 
-    disjoint_ptr p1 l3 p2 l2 by smt().
-
 (* if p1 and p2 are two disjoint memory regions, p1 and p2[0]/the ptr itself are disjoint *)
 lemma disjoint_ptr_ptr (p1 l1 p2 l2 : int) : 
     disjoint_ptr p1 l1 p2 l2 =>
@@ -315,26 +294,27 @@ lemma disjoint_ptr_offset (p1 l1 p2 l2 o : int) :
 require import Params.
 
 lemma nbytes_eq:
-  forall (s1 s2 : nbytes), NBytes.val s1 = NBytes.val s2 <=> s1 = s2
-    by smt(@NBytes).
+  forall (s1 s2 : nbytes), NBytes.val s1 = NBytes.val s2 <=> s1 = s2 
+    by smt(NBytes.val_inj).
 
 lemma auth_path_eq:
   forall (s1 s2 : auth_path), AuthPath.val s1 = AuthPath.val s2 <=> s1 = s2
-    by smt(@AuthPath).
+    by smt(AuthPath.val_inj).
 
 lemma len_n_bytes_eq : 
   forall (s1 s2 : len_nbytes), LenNBytes.val s1 = LenNBytes.val s2 <=> s1 = s2
-    by smt(@LenNBytes).
+    by smt(LenNBytes.val_inj).
 
 lemma three_nbytes_eq :
   forall (s1 s2 : threen_bytes), ThreeNBytesBytes.val s1 = ThreeNBytesBytes.val s2 <=> s1 = s2 
-    by smt(@ThreeNBytesBytes).
+    by smt(ThreeNBytesBytes.val_inj).
 
 (** -------------------------------------------------------------------------------------------- **)
 
 lemma nseq_nth (x : W8.t list) (i : int) (v : W8.t) :
     x = nseq i v => forall (k : int), 0 <= k < i => nth witness x k = v
-        by smt(@List).
+       by move => -> k?; rewrite nth_nseq.
+
 
 lemma size_nbytes_flatten (x : nbytes list) :
     size (flatten (map NBytes.val x)) = n * size x.

@@ -139,24 +139,15 @@ while
  
   + auto => /> &hr H0 H1 H2 H3 H4 H5.
     rewrite ultE of_uintK /= => H6.
-    do split.
-     - by ring.
-     - rewrite to_uintD /#.
-     - rewrite to_uintD /#.
-     - apply (eq_from_nth witness); first by rewrite !size_sub // to_uintD /#.
-       rewrite size_sub; first by rewrite to_uintD /#.
-       rewrite to_uintD_small 1:/# /= => j?.
-       rewrite !nth_sub //= get_setE; first by smt(@W64).
-       case (to_uint i{hr} = j) => ?.
-         * rewrite ifT 2:/#; smt(@W64 pow2_64). 
-         * rewrite ifF; first by smt(@W64 pow2_64).
-           have ->: _in_.[j] = nth witness (sub _in_ 0 (to_uint i{hr})) j by rewrite nth_sub // /#.
-           by rewrite -H4 nth_sub /#.
-     - move => k?? Hk.
-       rewrite !get_setE; first by smt(@W64 pow2_64).
-       rewrite H5 //; first by smt(@W64 pow2_64).
-       by rewrite ifF; smt(@W64 pow2_64).
-     - rewrite to_uintD /#.
+    rewrite to_uintD.
+    (do split; first by ring); 1,2,5: by smt().
+     - apply (eq_from_nth witness); rewrite !size_sub // 1:/# /= => [/# | j?].
+       rewrite !nth_sub //= get_setE to_uintD of_uintK /= 1:/#.
+       case (to_uint i{hr} = j) => ?; [rewrite ifT /# | rewrite ifF 1:/#].
+       have ->: _in_.[j] = nth witness (sub _in_ 0 (to_uint i{hr})) j by rewrite nth_sub // /#.
+       by rewrite -H4 nth_sub /#.
+     - move => /= k?? Hk.
+       rewrite !get_setE to_uintD of_uintK /= 1:/# H5 // /#.
 qed.
 
 
@@ -277,7 +268,7 @@ seq 2 0 : (#pre /\ to_uint parent_nodes{1} = _len{2} %/ 2).
 seq 5 4 : #post; last first.
     + conseq />.
       inline {1}; auto => /> &1 &2 H0 H1 H2 H3 H4 H5.
-      rewrite ultE => H6.
+      rewrite ultE /=.
       do split.
         - apply (eq_from_nth witness); first by rewrite !size_sub.
           rewrite size_sub // => j?.
@@ -321,8 +312,8 @@ seq 4 2 : (
     + sp.
       ecall {1} (memcpy_u8u8_2_64_2144_post wots_pk1{1} offset_in{1}).
       skip => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13.
-      do split; 1..3: by smt(@W64 pow2_64).
-        - smt(@W64 pow2_64 @IntDiv).
+      rewrite !to_uintD !to_uintM of_uintK /=.
+      do split; 1..4: by smt().
         - move => ???? result H.
           rewrite H.
           apply (eq_from_nth witness); first by rewrite size_cat !NBytes.valP n_val size_sub.
@@ -339,13 +330,13 @@ seq 4 2 : (
              * rewrite nth_cat size_take 1:/# size_drop 1:/# size_to_list ifT 1:/#.
                rewrite nth_take 1,2:/#.
                rewrite nth_drop 1,2:/#.
-               by rewrite get_to_list; congr; smt(@W64 pow2_64).
+               rewrite get_to_list; congr => /#.
              * rewrite nth_cat size_take 1:/# size_drop 1:/# size_to_list ifF 1:/#.
                rewrite (nth_map witness); first by rewrite size_mkseq /#.
                rewrite NBytes.insubdK; first by rewrite /P nth_mkseq 1:/# /= size_take 1:/# size_drop 1:/# size_to_list /#.
                rewrite nth_mkseq 1:/# /= ifT 1:/#.
                rewrite nth_take 1,2:/# nth_drop 1,2:/#.
-               by rewrite get_to_list; congr; smt(@W64 pow2_64).
+               by rewrite get_to_list; congr => /#.
 
 seq 1 1 : (
     #{/~to_list buf1{1} = NBytes.val pk_i{2} ++ NBytes.val tmp{2}}pre /\
@@ -363,7 +354,7 @@ seq 1 1 : (
               by rewrite initiE //= ifT.
             * rewrite nth_cat NBytes.valP ifF 1:/# /merge_nbytes_to_array.
               rewrite initiE //= ifF /#.
-        - rewrite -H0; smt(@NBytes).
+        - by rewrite -H0 NBytes.valKd.
         - smt(sub_k).
         - move => ??? resL resR Ha Hb.
           do split; (apply (eq_from_nth witness); rewrite !size_sub // => j?).
@@ -377,10 +368,11 @@ elim * => P0 P1 P2 P3.
 call {1} (memcpy_offset_ltree P0 P1 P2 P3) => [/# |].
 auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14.
 do split.
-- smt(@W64 pow2_64).
+- rewrite -to_uintK; congr; rewrite to_uintM of_uintK /#.
 - smt().
 - move => H15 H16.
-  do split; 2..6: by smt(@W64 pow2_64).
+  rewrite !ultE !to_uintD.
+  do split; 2..6: by smt().
   apply (eq_from_nth witness); first by rewrite size_put !LenNBytes.valP.
   rewrite size_put LenNBytes.valP len_val => j?.
   rewrite nth_put; first by rewrite LenNBytes.valP /#.
@@ -447,10 +439,9 @@ case (t{1} <> W64.zero); last first.
       rcondf {2} 1; first by auto => /> /#.
       auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7.
       do split.
-        - rewrite ifT 1:/# (: 63 = 2^6 - 1) 1:/# and_mod //.
-          rewrite to_uint_shr 1:/# /=.
-          have ->: to_uint (truncateu8 W256.one) %% 64 = 1 by rewrite to_uint_truncateu8.
-          by [].
+        - have E: to_uint (truncateu8 W256.one) %% 64 = 1 by rewrite to_uint_truncateu8.
+          rewrite ifT 1:/# (: 63 = 2^6 - 1) 1:/# and_mod //.
+          by rewrite to_uint_shr to_uint_truncateu8 E.
         - rewrite ifT /#.
         - rewrite ifT /#.
         - rewrite ifT 1:/# (: 63 = 2^6 - 1) 1:/# and_mod //.
@@ -484,24 +475,10 @@ case (t{1} <> W64.zero); last first.
       ); first by auto => /> *; rewrite to_uintM of_uintK /= to_uintB 2:/# uleE /#.
 
       seq 1 2 : #pre; last first.
-        - auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 *.
-          do split.
-            * rewrite ifF 1:/# (: 63 = 2^6 - 1) 1:/# and_mod //.
-              have ->: to_uint (truncateu8 W256.one) %% 64 = 1 by rewrite to_uint_truncateu8.
-              rewrite to_uintD to_uint_shr 1:/# /= to_uint_truncateu8.
-              smt().
-            * smt().
-            * smt().
-            * rewrite ifF 1:/# ultE (: 63 = 2^6 - 1) 1:/# and_mod //.
-              rewrite to_uintD of_uintK /=. 
-              rewrite to_uint_shr 1:/# /=.
-              have ->: to_uint (truncateu8 W256.one) %% 64 = 1 by rewrite to_uint_truncateu8.
-              smt().
-            * rewrite ifF 1:/# ultE (: 63 = 2^6 - 1) 1:/# and_mod //.
-              rewrite to_uintD of_uintK /=. 
-              rewrite to_uint_shr 1:/# /=.
-              have ->: to_uint (truncateu8 W256.one) %% 64 = 1 by rewrite to_uint_truncateu8.
-              smt().
+        - auto => /> &1 &2 *.
+          have E: to_uint (truncateu8 W256.one) %% 64 = 1 by rewrite to_uint_truncateu8.
+          rewrite ultE.
+          (do split; 2,3: by smt()); rewrite ifF 1:/# (: 63 = 2^6 - 1) 1:/# and_mod // E to_uintD to_uint_shr to_uint_truncateu8 //= /#.
 
    
 inline {1}.
@@ -624,10 +601,10 @@ while {1}
         rewrite nth_sub // get_setE. 
           * rewrite !to_uintD of_uintK /= /#. 
         case (j = i0{hr}) => [Ha | Hb].
-          * rewrite ifT; first by smt(@W64 pow2_64).
+          * rewrite ifT; first by rewrite to_uintD of_uintK /#.
             rewrite /sub_list nth_mkseq /= 1:/#.
             have ->: to_uint (offset_in0{hr} + (of_int i0{hr})%W64) = 
-                     to_uint offset_in0{hr} + i0{hr} by smt(@W64 pow2_64).
+                     to_uint offset_in0{hr} + i0{hr} by rewrite to_uintD of_uintK /#.
             rewrite H9 1,2:/#.
             rewrite nth_nbytes_flatten; first by rewrite LenNBytes.valP /#.
             rewrite /EncodeWotsPk /#.
@@ -637,8 +614,8 @@ while {1}
                      by rewrite nth_sub /#.
             rewrite H8 /sub_list !nth_mkseq /#. 
       - move => k?? Hk.
-        rewrite get_setE; first by smt(@W64 pow2_64).
-        rewrite ifF; first by smt(@W64 pow2_64).
+        rewrite get_setE; first by rewrite to_uintD of_uintK /#.
+        rewrite ifF; first by rewrite to_uintD of_uintK /#.
         by rewrite H9 1,2:/#.
 qed.
 

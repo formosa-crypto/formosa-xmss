@@ -115,7 +115,7 @@ rewrite size_to_list /to_list nth_mkseq 1:/# /=.
 rewrite unpack8E initiE 1:/# /= bits8E /=.
 rewrite /W8.zero wordP => j?.
 rewrite initE ifT 1:/# /= bits2wE initE /=. 
-have ->: ((0 <= j && j < 8)) = true by smt().
+have ->: ((0 <= j && j < 8)) by smt().
 simplify.
 by rewrite /int2bs nth_mkseq //=.
 qed.
@@ -263,7 +263,7 @@ have ->: nth [] (map W8.w2bits (rev (W32toBytes_ext idx 3))) (i %/ 8) = [].
 
 rewrite nth_out 1:/#.
 have E: 24 <= i < 32 by smt().
-rewrite get_to_uint (: (0 <= i && i < 32) = true) 1:/# /=.
+rewrite get_to_uint (: (0 <= i && i < 32)) 1:/# /=.
 case (i = 24) => [-> // /#  | ?].
 case (i = 25) => [-> // /#  | ?].
 case (i = 26) => [-> // /#  | ?].
@@ -302,7 +302,7 @@ have ->: nth [] (map W8.w2bits (rev (W32toBytes_ext idx 3))) (i %/ 8) = [].
 
 rewrite nth_out 1:/#.
 have E: 24 <= i < 32 by smt().
-rewrite get_to_uint (: (0 <= i && i < 32) = true) 1:/# /=.
+rewrite get_to_uint (: (0 <= i && i < 32)) 1:/# /=.
 case (i = 24) => [-> // /#  | ?].
 case (i = 25) => [-> // /#  | ?].
 case (i = 26) => [-> // /#  | ?].

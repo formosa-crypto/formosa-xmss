@@ -228,9 +228,9 @@ swap {1} 1 2.
 
 seq 2 0 : (#pre /\ to_uint upper_bound{1} = 2^t{2}).
     + auto => /> &2 *.
-      rewrite (: 31 = 2^5 - 1) 1:/# and_mod // shl_shlw 1:#smt:(@W32) of_uintK to_uint_shl 1:/# /=.
+      rewrite (: 31 = 2^5 - 1) 1:/# and_mod // shl_shlw of_uintK 1:/#.
       have ->: to_uint _t %% 32 %% 4294967296 = to_uint _t by smt(modz_small). 
-      smt(@IntDiv @RealExp).
+      rewrite to_uint_shl //=; smt(@IntDiv @RealExp).
 
 
 seq 2 2 : (sub _stack{1} 0 n = NBytes.val (nth witness stack{2} 0)); last first.
@@ -298,17 +298,10 @@ seq 1 1 : (
       elim * => P0 P1 P2 P3 P4 P5 P6.
       call (gen_leaf_equiv P0 P1 P2 P3 P4 P5 P6) => [/# |].
       skip => /> &1 &2 *; split; first by smt(@W32 pow2_32).
-      move => *; do split.
-        - apply (eq_from_nth witness); rewrite !size_sub // => j?; rewrite !nth_sub //; smt(sub_k). 
-        - apply (eq_from_nth witness); rewrite !size_sub // => j?; rewrite !nth_sub //; smt(sub_k).         
-        - apply (eq_from_nth witness); rewrite !size_sub // => j?; rewrite !nth_sub //; smt(sub_k). 
-        - apply (eq_from_nth witness); rewrite !size_sub // => j?; rewrite !nth_sub //; smt(sub_k). 
-        - smt(sub_k).
-        - smt(sub_k).
-        - smt(sub_k).
-        - apply (eq_from_nth witness); rewrite !size_sub // => j?; rewrite !nth_sub //; smt(sub_k). 
-        - smt(@NBytes).
-        - smt(sub_k).
+      move => 3? -> *.
+      (do split; 1..4,8: by (
+          apply (eq_from_nth witness); rewrite !size_sub // => j?; rewrite !nth_sub //; smt(sub_k) 
+      )); smt(sub_k).
 
 seq 3 1 : (
     #pre /\ 
@@ -319,7 +312,7 @@ seq 3 1 : (
       elim * => P0 P1 P2 P3. 
       sp.
       call {1} (p_treehash_memcpy_0 P0 P1 P2 P3) => [/# |].
-      skip => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 *. 
+      skip => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 <- *. 
       do split.
         - smt().
         - apply (eq_from_nth witness); first by rewrite size_sub 1:/# size_sub_list /#.
@@ -331,8 +324,7 @@ seq 3 1 : (
           rewrite n_val.
           rewrite /XMSS_N (: (32 * min 1 (size P1)) = 32) 1:/# in H26.
           rewrite H26.
-          do congr.
-          smt(@NBytes).
+          do congr; by rewrite NBytes.valKd.
 
 seq 1 1 : ( 
   #{/~sub _stack{1} 0 (n * (to_uint offset{2} + 1)) = sub_list (nbytes_flatten stack{2}) 0 (n * (to_uint offset{2} + 1))}
@@ -466,14 +458,8 @@ seq 1 1 : (
     + exists * sk_seed{1}, pub_seed{1}, (of_int s{2})%W32, (of_int i{2})%W32, ots_addr{1}, ltree_addr{1}, address{2}.
       elim * => P0 P1 P2 P3 P4 P5 P6.
       call (gen_leaf_equiv P0 P1 P2 P3 P4 P5 P6) => [/# |].
-      skip => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19 H20 H21 H22 H23 H24 H25 H26 H27 *.
-      do split.
-        - apply (eq_from_nth witness); rewrite !size_sub // => j?; rewrite !nth_sub //; smt(sub_k).         
-        - smt(sub_k).
-        - smt(sub_k).
-        - rewrite -H23; smt(sub_k).
-        - smt(@NBytes).
-        - apply (eq_from_nth witness); rewrite !size_sub // => j?; rewrite !nth_sub //; smt(sub_k).         
+      skip => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19 H20 H21 <- <- resL resR <- *.
+      (do split; 2..4: by smt(sub_k)); [| assumption]; apply (eq_from_nth witness); rewrite !size_sub // => j?; rewrite !nth_sub //; smt(sub_k).         
 
 seq 3 1 : (
         #{/~sub _stack{1} 0 (n * min (to_uint offset{2}) (size stack{2})) = sub_list (nbytes_flatten stack{2}) 0 (n * min (to_uint offset{2}) (size stack{2}))}pre /\
@@ -486,11 +472,8 @@ seq 3 1 : (
       call {1} (p_treehash_memcpy_0 P0 P1 P2 P3) => [/# |].
       skip => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18.
       rewrite ultE => H19 H20 H21 H22 H23 *.
-      do split. 
-        - smt(). 
+      do split; 1,3,4: by smt().
         - smt(@StdOrder.IntOrder).
-        - smt(). 
-        - smt().
         - move => H H24 H25 H26 result H27 *.
           rewrite size_put; split => //. (* the first goal of split is solved by trivial *)
           apply (eq_from_nth witness); first by rewrite size_sub 1:/# size_sub_list /#.
@@ -501,10 +484,9 @@ seq 3 1 : (
           (* === in bounds case === *)
           have E: min (to_uint offset{2} + 1) (size P1) = to_uint offset{2} + 1 by smt().
           rewrite H27 E.
-          do congr.
-          smt(@NBytes).
+          do congr; by rewrite -H23 NBytes.valKd.
           (* === out of bounds case === *)
-          rewrite put_out; first by smt(@W64 pow2_64).
+          rewrite put_out //.
           have E: min (to_uint offset{2} + 1) (size P1) = size P1 by smt().
           rewrite H27 E H25.
           do congr.
@@ -808,7 +790,7 @@ seq 1 1 : (#pre /\ to_list buf{1} = NBytes.val new_node{2}).
                    case (0 <= i < 32) => ?; [by rewrite ifT 1:/# ifT 1:/# | by  rewrite ifF 1:/# ifF 1:/#].
                  - smt(sub_k).           
                  - move => ?? resL resR ? H.
-                   do split; [| smt() | smt() |]; (
+                   (do split; 2,3: by smt()); (
                             apply (eq_from_nth witness); [by rewrite !size_sub | rewrite size_sub // => j?]
                    ); [rewrite -H12 | rewrite -H25]; rewrite !nth_sub //=/#.
 
@@ -841,7 +823,7 @@ seq 1 1 : #pre.
           by rewrite H19 !nth_mkseq 1,2:/#. 
         - rewrite /XMSS_N n_val => H29 H28 Ha Hb result Hr.  
           split => [/# |].
-          have ->: new_node{2} = NBytes.insubd (to_list P0) by smt(@NBytes).
+          have ->: new_node{2} = NBytes.insubd (to_list P0) by rewrite H27 NBytes.valKd.
           have E: to_uint (offset{2} - (of_int 2)%W64) = to_uint offset{2} - 2 by smt(@W64 pow2_64). 
           rewrite E.
           apply (eq_from_nth witness); first by rewrite size_sub 1:/# size_sub_list 1:/#.

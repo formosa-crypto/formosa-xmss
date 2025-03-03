@@ -2,3 +2,6 @@
 venv
 
 proof/extraction/*.ec
+
+proof/common/*
+!proof/common/Array8.ec
