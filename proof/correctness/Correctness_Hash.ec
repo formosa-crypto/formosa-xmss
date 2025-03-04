@@ -420,26 +420,22 @@ while {1}
 ) 
 (64 - to_uint i{1}).
   + auto => /> &hr H0 H1 H2 H3 H4 H5 H6 H7 H8 H9. 
-    do split.
-       - rewrite to_uintD_small /#.
-       - smt(@W64 pow2_64).
-       - move => k??.
-         rewrite get_setE 1:#smt:(@W64) ifF 1:#smt:(@W64 pow2_64) /#.       
-       - move => k??.
-         rewrite get_setE 1:#smt:(@W64) ifF 1:#smt:(@W64 pow2_64) /#.       
-       - move => k??.
+    rewrite ultE /= in H9.
+    (do split ; 1,2: by rewrite to_uintD_small /#); 1,2: by (move => k??; rewrite to_uintD_small of_uintK 1:/# /= get_setE 1:/# ifF /#).
+       - move => k?.
+         rewrite to_uintD_small 1:/#/= => ?.         
          rewrite to_uintD_small 1:/# of_uintK /=. 
-         have E0: forall (k : int), 0 <= k < 32 => in_0{hr}.[k] = nth witness (NBytes.val _left{m}) k by smt(@List @Array64 @NBytes). 
-         have E1: forall (k : int), 0 <= k < 32 => in_0{hr}.[32 + k] = nth witness (NBytes.val _right{m}) k by smt(@List @Array64 @NBytes). 
-         have E2: forall (k : int), 0 <= k < 32 => bitmask{hr}.[k] = nth witness (NBytes.val bitmask_0{m}) k by smt(@List @Array64 @NBytes). 
-         have E3: forall (k : int), 0 <= k < 32 => bitmask{hr}.[32 + k] = nth witness (NBytes.val bitmask_1{m}) k by smt(@List @Array64 @NBytes).
-         rewrite get_setE 1:#smt:(@W64).
-         case (64 + k = 64 + to_uint i{hr}) => ?; last by apply H8; smt(@W64 pow2_64).
-         congr; [smt(@List @Array64) |].
+         have E0: forall (k : int), 0 <= k < 32 => in_0{hr}.[k] = nth witness (NBytes.val _left{m}) k by move => *; rewrite -get_to_list H4 nth_cat NBytes.valP nval ifT 1:/#.
+         have E1: forall (k : int), 0 <= k < 32 => in_0{hr}.[32 + k] = nth witness (NBytes.val _right{m}) k by move => *; rewrite -get_to_list H4 nth_cat NBytes.valP ifF /#.
+         have E2: forall (k : int), 0 <= k < 32 => bitmask{hr}.[k] = nth witness (NBytes.val bitmask_0{m}) k by move => *; rewrite -get_to_list H5 nth_cat NBytes.valP ifT 1:/#.
+         have E3: forall (k : int), 0 <= k < 32 => bitmask{hr}.[32 + k] = nth witness (NBytes.val bitmask_1{m}) k by move => *; rewrite -get_to_list H5 nth_cat NBytes.valP ifF /#.
+         rewrite get_setE 1:/#.
+         case (64 + k = 64 + to_uint i{hr}) => ?; last by apply H8 => /#. 
+         congr; first by rewrite -get_to_list H4 /#.
          rewrite nth_cat NBytes.valP nval.
          case (0 <= k < 32) => ?.
             * rewrite ifT /#.
-            * rewrite ifF 1:/# -E3 #smt:(@W64 pow2_64).
+            * rewrite ifF 1:/# -E3 /#.
        - rewrite to_uintD /#.
   + auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8. 
     do split; 2: by smt().
@@ -452,20 +448,21 @@ while {1}
          rewrite ultE => H9 H10 H11 H12 H13 H14 H15 k??.
          rewrite H15 1:#smt:(@W64 pow2_64) /bytexor. 
          case (0 <= k < 32) => ?.
-             - rewrite !nth_cat !NBytes.valP ifT 1:/# ifT 1:/# (nth_map witness) /=.
-                 * rewrite size_zip !size_cat !NBytes.valP /#.
-               have ->: (nth witness (zip (NBytes.val _left{2} ++ NBytes.val _right{2}) (NBytes.val bitmask_0{2} ++ NBytes.val bitmask_1{2})) k).`1 = nth witness (NBytes.val _left{2} ++ NBytes.val _right{2}) k by smt(@List @NBytes). 
-               have ->: (nth witness (zip (NBytes.val _left{2} ++ NBytes.val _right{2}) (NBytes.val bitmask_0{2} ++ NBytes.val bitmask_1{2})) k).`2 = nth witness (NBytes.val bitmask_0{2} ++ NBytes.val bitmask_1{2}) k by smt(@List @NBytes). 
-               rewrite nth_cat NBytes.valP ifT 1:/#.
-               congr.
-               by rewrite nth_cat NBytes.valP ifT 1:/#.
+             - rewrite !nth_cat !NBytes.valP ifT 1:/# ifT 1:/# (nth_map witness) /=; first by rewrite size_zip !size_cat !NBytes.valP /#.
+               pose S := (NBytes.val _left{2} ++ NBytes.val _right{2}).
+               pose T := (NBytes.val bitmask_0{2} ++ NBytes.val bitmask_1{2}).
+               have ->: nth witness (zip S T) k = nth (witness, witness) (zip S T) k
+                        by apply nth_change_dfl ; rewrite size_zip /S /T !size_cat !NBytes.valP nval /= /#.  
+               by rewrite !nth_zip //= /S /T ?size_cat ?NBytes.valP // !nth_cat !NBytes.valP !ifT 1,2:/#.
          rewrite (nth_map witness) .
                - rewrite size_zip !size_cat !NBytes.valP /#.
          rewrite nth_cat NBytes.valP ifF 1:/#.
          rewrite nth_cat NBytes.valP ifF 1:/# /=.
-         have ->: (nth witness (zip (NBytes.val _left{2} ++ NBytes.val _right{2}) (NBytes.val bitmask_0{2} ++ NBytes.val bitmask_1{2})) k).`1 = nth witness (NBytes.val _left{2} ++ NBytes.val _right{2}) k by smt(@List @NBytes). 
-         have ->: (nth witness (zip (NBytes.val _left{2} ++ NBytes.val _right{2}) (NBytes.val bitmask_0{2} ++ NBytes.val bitmask_1{2})) k).`2 = nth witness (NBytes.val bitmask_0{2} ++ NBytes.val bitmask_1{2}) k by smt(@List @NBytes). 
-         congr; rewrite nth_cat NBytes.valP nval ifF /#.
+               pose S := (NBytes.val _left{2} ++ NBytes.val _right{2}).
+               pose T := (NBytes.val bitmask_0{2} ++ NBytes.val bitmask_1{2}).
+               have ->: nth witness (zip S T) k = nth (witness, witness) (zip S T) k
+                        by apply nth_change_dfl ; rewrite size_zip /S /T !size_cat !NBytes.valP nval /= /#.  
+               by rewrite !nth_zip //= /S /T ?size_cat ?NBytes.valP // !nth_cat !NBytes.valP !ifF 1,2:/#.
 qed.
 
 
@@ -871,6 +868,6 @@ case (96 <= j < 128) => [H_4 | H_5].
       rewrite -H10 nth_load_buf 1:/#; congr; smt(@W64 pow2_64).
     + rewrite nth_cat !size_cat size_to_list ThreeNBytesBytes.valP ifF 1:/#.
       rewrite nth_load_buf 1:/#.
-rewrite n_val /=  H11; smt(@W64 pow2_64).
+rewrite n_val /=  H11 ; smt(@W64 pow2_64).
 qed.
 
