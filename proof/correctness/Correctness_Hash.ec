@@ -26,18 +26,7 @@ axiom hash_96 (x : W8.t Array96.t) :
       to_list res = NBytes.val (Hash (to_list x))
     ] = 1%r.
 
-axiom hash_96_ (x : W8.t Array96.t) :
-  phoare[M(Syscall).hash_plen_n_32____sha256 : arg.`2 = x ==> to_list res = NBytes.val (Hash (to_list x))] = 1%r.
-
 axiom hash_128 (x : W8.t Array128.t) :
-  phoare[
-      M(Syscall).hash_plen_2n_32____sha256 : 
-      arg.`2 = x 
-      ==> 
-      to_list res = NBytes.val (Hash (to_list x))
-    ] = 1%r.
-
-axiom hash_128_ (x : W8.t Array128.t) :
   phoare[
       M(Syscall).hash_plen_3n____sha256 : 
       arg.`2 = x 
@@ -85,7 +74,7 @@ lemma prf_correctness (a b : W8.t Array32.t) :
 proof.
 rewrite /XMSS_N /XMSS_HASH_PADDING_PRF /XMSS_PADDING_LEN => [#] n_val pval plen.
 proc => /=.
-seq 7 2 : (buf{2} = to_list buf{1}); last by ecall {1} (hash_96_ buf{1}); auto => /> /#.
+seq 7 2 : (buf{2} = to_list buf{1}); last by rcondt {1} 1 => //; ecall {1} (hash_96 buf{1}); auto => /> /#.
 seq 3 0 : #pre; 1:auto. 
 seq 1 1 : (#pre /\ padding{2} = to_list padding_buf{1}).
   + outline {1} [1] { padding_buf <@ M(Syscall).bytes_32__ull_to_bytes (padding_buf, W64.of_int 3); }.
@@ -140,7 +129,7 @@ lemma prf_keygen_correctness (a : W8.t Array64.t, b : W8.t Array32.t) :
 proof.
 rewrite /XMSS_N /XMSS_HASH_PADDING_PRF_KEYGEN /XMSS_PADDING_LEN => [#] n_val pval plen.
 proc => //=.
-seq 7 2 : (buf{2} = to_list buf{1}); last by ecall {1} (hash_128 buf{1}); auto => /> /#.
+seq 7 2 : (buf{2} = to_list buf{1}); last by rcondt {1} 1 => // ; ecall {1} (hash_128 buf{1}); auto => /> /#.
 
 seq 3 0 : #pre; 1:auto.
 
@@ -286,7 +275,7 @@ seq 11 6 : (
   to_list buf{1} = padding{2} ++ (NBytes.val key{2}) ++ bytexor ((NBytes.val _left{2}) ++ (NBytes.val _right{2})) ((NBytes.val bitmask_0{2}) ++ (NBytes.val bitmask_1{2}))
 ); last first. 
     + wp. 
-      ecall {1} (hash_128_ buf{1}). 
+      ecall {1} (hash_128 buf{1}). 
       auto => /> &1 &2 ??? ->. 
       split; last by smt(sub_k).
       apply nbytes_eq.

@@ -45,7 +45,17 @@ fn __prf(
     buf[XMSS_PADDING_LEN + XMSS_N : 32] = #copy(in);
 
     // out = __core_hash_ <OUTLEN, XMSS_PADDING_LEN + XMSS_N + 32>(out, buf_p);
-    out = hash_plen_n_32::__sha256(out, buf);
+    
+    // if n=32, we dont need to implement another namespace (hash_plen_n_32).
+    // In this case n+32 = 2*n and we can use the hash_plen_2n namespace.
+    // In this case, the else branch is dead code (the if is resolved at compile time)
+    // and the hash_plen_n_32 namespace will not be in the assembly
+    // It will be the in the extracted easycrypt though, so the proofs need to be updated
+    #inline if (XMSS_N == 32) { 
+        out = hash_plen_2n::__sha256(out, buf);
+    } else {
+        out = hash_plen_n_32::__sha256(out, buf);
+    }
 
     return out;
 }
@@ -97,7 +107,16 @@ fn __prf_keygen(
     buf[XMSS_PADDING_LEN + XMSS_N : XMSS_N + 32] = #copy(in);
 
     // core_hash(params, out, buf, params->padding_len + 2*params->n + 32);
-    out = hash_plen_2n_32::__sha256(out, buf); 
+    // if n=32, we dont need to implement another namespace (hash_plen_2n_32).
+    // In this case 2*n+32 = 3*n and we can use the hash_plen_2n namespace.
+    // In this case, the else branch is dead code (the if is resolved at compile time)
+    // and the hash_plen_2n_32 namespace will not be in the assembly
+    // It will be the in the extracted easycrypt though, so the proofs need to be updated
+    #inline if (XMSS_N == 32) {
+        out = hash_plen_3n::__sha256(out, buf); 
+    } else {
+        out = hash_plen_2n_32::__sha256(out, buf); 
+    }
 
     return out; 
 }
