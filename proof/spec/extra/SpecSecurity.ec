@@ -60,9 +60,11 @@ op pkrel(apk : pkXMSSTW, pk : xmss_pk) =
    (* apk.`3 = ??? Why is the address in the sk/pk? *)
    (* ??? = pk.`pk_oid I guess abstract proofs fon't care about oid *).
 
+(* FD + WR *)
 equiv kg_eq : XMSS_TW(FakeRO).keygen ~ XMSS_PRF.kg : ={arg} ==> pkrel res{1}.`1 res{2}.`2 /\ skrel res{1}.`2 res{2}.`1.
-proc. inline {1} 2. inline {1} 5.
-inline {2} 5. inline {1} 8. inline {2} 10.
+proof.
+proc. inline {1} 2. inline {1} 5. inline {1} 8.
+inline {2} 5. inline {2} 10.
 admitted.
 
 (* Signature type is abused with two index copies because I need this to simulate
@@ -78,13 +80,18 @@ op sigrel(asig : sigXMSSTW, sig : sig_t) =
    asig.`2.`3 = DBHL.insubd 
      (map (fun (b : nbytes) => DigestBlock.insubd (BytesToBits (NBytes.val b))) (AuthPath.val sig.`r_sig.`2)).
 
-
+(* FD + WR *)
 equiv sig_eq : XMSS_TW(FakeRO).sign ~ XMSS_PRF.sign : skrel sk{1} sk{2} /\ ={m} ==> 
    sigrel res{1}.`1 res{2}.`1 /\  skrel res{1}.`2 res{2}.`2. 
-proc. inline {1} 6. inline {1} 8. inline {1} 14. inline {1} 20. inline {2} 7.
+proof.
+proc. inline {1} 6. inline {1} 8. inline {1} 14. inline {1} 20. inline {2} 7. inline {2} 16. inline {2} 22.
 admitted.
 
+(* PY *)
 equiv ver_eq : XMSS_TW(FakeRO).verify ~ XMSS_PRF.verify : pkrel pk{1} pk{2} /\ ={m} /\ sigrel sig{1} s{2} ==> 
-   ={res}. 
-proc. 
+   ={res}.
+proof.
+proc.
+inline {1} 4. inline {1} 7. inline {1} 13.
+inline {2} 10.
 admitted.
