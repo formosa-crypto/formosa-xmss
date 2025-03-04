@@ -6,9 +6,7 @@ LABEL maintainer="rui.fernandes@mpi-sp.org"
 ARG USER="xmss-user"
 
 ARG EASYCRYPT_RELEASE=r2025.02 
-
-# We dont use a Jasmin release because it doesnt't have jasmin2ec
-ARG JASMIN_COMMIT=4ab734290304bf832095a3939032678169f114d8
+ARG JASMIN_RELEASE=release-2025.02
 
 SHELL ["/bin/bash", "-c"]
 
@@ -62,7 +60,7 @@ RUN eval $(opam env) && \
 
 # Install Jasmin & set ECLib
 RUN git clone https://gitlab.com/jasmin-lang/jasmin-compiler.git jasmin-compiler && \
-    cd jasmin-compiler && git checkout ${JASMIN_COMMIT} && \
+    cd jasmin-compiler && git checkout ${JASMIN_RELEASE} && \
     USER=$USER source /home/$USER/.nix-profile/etc/profile.d/nix.sh && \
     nix-channel --update && \
     cd compiler/ && nix-shell --command "make" && \
