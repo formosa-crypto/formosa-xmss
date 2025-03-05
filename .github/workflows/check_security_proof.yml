@@ -1,0 +1,47 @@
+name: Check EasyCrypt security proofs
+
+on:
+    push:
+        branch:
+            - 'main'
+    pull_request:
+
+env:
+    OPAMROOT: /home/charlie/.opam
+    OPAMYES: true
+    OPAMJOBS: 2
+    ECRJOBS: 1
+
+jobs:
+    default:
+        runs-on: ubuntu-latest
+        container:
+            image: ghcr.io/easycrypt/ec-build-box
+        steps:
+            -   uses: actions/checkout@v4
+                name: Initialize submodules
+                with:
+                    submodules: recursive
+            -   uses: actions/checkout@v4
+                name: Checkout EasyCrypt
+                with:
+                    repository: EasyCrypt/easycrypt
+                    ref: ${{ format('refs/heads/{0}', 'main') }}
+                    path: easycrypt
+            -   name: Update OPAM and EasyCrypt dependencies
+                run: |
+                    opam update
+                    opam pin add -n easycrypt easycrypt
+                    opam install --deps-only easycrypt
+            -   name: Install EasyCrypt
+                run: opam install easycrypt
+            -   name: Configure SMT provers
+                run: opam config exec -- easycrypt why3config -why3 ~/.why3.conf
+            -   name: Check project (acai)
+                run: ${{ format('opam config exec -- easycrypt runtest -report report.log -raw-args -gcstats {0} {1}', 'proof/config/tests.config', 'acai') }}
+            -   uses: actions/upload-artifact@v4
+                name: Upload report
+                with:
+                    name: report.log
+                    path: report.log
+                    if-no-files-found: ignore
