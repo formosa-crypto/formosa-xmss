@@ -12,16 +12,16 @@ fn __base_w(
     reg u8 total;
     reg u32 total_32;
     reg u64 bits;
-
-    inline int consumed;
+    reg u64 consumed;
 
     in = 0;
-    out  = 0;
+    out = 0;
     bits = 0;
     total = 0;
+    consumed = 0;
 
     // for (consumed = 0; consumed < out_len; consumed++) 
-    for consumed=0 to OUTLEN {
+    while (consumed < OUTLEN) {
         // if (bits == 0) { total = input[in]; in++; bits += 8; }
         if (bits == 0) 
         {
@@ -41,6 +41,7 @@ fn __base_w(
 
       // out++;
       out += 1;
+      consumed += 1;
     }
 
     return output;
