@@ -6,19 +6,23 @@ JINCLUDE := -I XMSS:../ref-jasmin -I Stdlib:../ref-jasmin/stdlib
 
 ########################################################################################################################
 
+# ASM := 	bin/bench_xmssmt_sha2_20_2_256.s \
+# 		bin/bench_xmssmt_sha2_20_2_256_loop_u8.s \
+# 		bin/bench_xmssmt_sha2_20_2_256_loop_u16.s \
+# 		bin/bench_xmssmt_sha2_20_2_256_loop_u32.s \
+# 		bin/bench_xmssmt_sha2_20_2_256_loop_u64.s \
+# 		bin/bench_xmssmt_sha2_20_2_256_loop_u128.s \
+# 		bin/bench_xmssmt_sha2_20_2_256_loop_u256.s \
+# 		bin/bench_xmssmt_sha2_20_2_256_unrolled_u8.s \
+# 		bin/bench_xmssmt_sha2_20_2_256_unrolled_u16.s \
+# 		bin/bench_xmssmt_sha2_20_2_256_unrolled_u32.s \
+# 		bin/bench_xmssmt_sha2_20_2_256_unrolled_u64.s \
+# 		bin/bench_xmssmt_sha2_20_2_256_unrolled_u128.s \
+# 		bin/bench_xmssmt_sha2_20_2_256_unrolled_u256.s
+
 ASM := 	bin/bench_xmssmt_sha2_20_2_256.s \
-		bin/bench_xmssmt_sha2_20_2_256_loop_u8.s \
-		bin/bench_xmssmt_sha2_20_2_256_loop_u16.s \
-		bin/bench_xmssmt_sha2_20_2_256_loop_u32.s \
 		bin/bench_xmssmt_sha2_20_2_256_loop_u64.s \
-		bin/bench_xmssmt_sha2_20_2_256_loop_u128.s \
-		bin/bench_xmssmt_sha2_20_2_256_loop_u256.s \
-		bin/bench_xmssmt_sha2_20_2_256_unrolled_u8.s \
-		bin/bench_xmssmt_sha2_20_2_256_unrolled_u16.s \
-		bin/bench_xmssmt_sha2_20_2_256_unrolled_u32.s \
 		bin/bench_xmssmt_sha2_20_2_256_unrolled_u64.s \
-		bin/bench_xmssmt_sha2_20_2_256_unrolled_u128.s \
-		bin/bench_xmssmt_sha2_20_2_256_unrolled_u256.s
 
 BIN := $(ASM:.s=)
 OUT := $(BIN:=.out)
