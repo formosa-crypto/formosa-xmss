@@ -105,7 +105,7 @@ bin/bench_xmssmt_sha2_20_2_256_unrolled_u64: bench_jasmin.c  bin/bench_xmssmt_sh
 
 .PHONY: print_results
 print_results:
-	printf 'foo\n'
+	printf 'impl;kg;sign;verify\n'; @for i in $(BIN); do ./$$i; done
 
 
 ########################################################################################################################

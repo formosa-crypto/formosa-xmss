@@ -197,7 +197,7 @@ void print_results(uint64_t obs[OP][RUNS][TIMINGS]) {
     strcat(impl_name, "_jasmin_ref_no_zeroization");
 #endif
 
-    printf("%s;%" PRIu64 "%" PRIu64 ";%" PRIu64 "\n", impl_name, kg_median, sign_median,
+    printf("%s;%" PRIu64 ";%" PRIu64 ";%" PRIu64 "\n", impl_name, kg_median, sign_median,
            verify_median);
 }
 
