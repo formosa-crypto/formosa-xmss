@@ -28,13 +28,13 @@ ASM := 	bin/bench_xmssmt_sha2_20_2_256.s \
 		bin/bench_xmssmt_sha2_20_2_256_loop_u64.s \
 		bin/bench_xmssmt_sha2_20_2_256_unrolled_u64.s \
 
-BIN := $(ASM:.s=)
+BIN := $(ASM:.s=) bin/bench_xmssmt_sha2_20_2_256_ref
 OUT := $(BIN:=.out)
 
 ########################################################################################################################
 
 asm: $(ASM)
-bin: $(BIN)
+build: $(BIN)
 run: $(OUT)
 
 ########################################################################################################################
@@ -104,8 +104,8 @@ bin/bench_xmssmt_sha2_20_2_256_unrolled_u64: bench_jasmin.c  bin/bench_xmssmt_sh
 ########################################################################################################################
 
 .PHONY: print_results
-print_results:
-	printf 'impl;kg;sign;verify\n'; @for i in $(BIN); do ./$$i; done
+print_results: $(BIN)
+	printf 'impl;kg;sign;verify\n'; for i in $^; do ./$$i; done
 
 
 ########################################################################################################################

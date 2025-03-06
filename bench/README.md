@@ -9,23 +9,23 @@ make -j$(nproc) asm
 - Compile the benchmark C files
 
 ```bash
-make -j$(nproc) bench_files
+make -j$(nproc) build
 ```
 
 - Run the benchmarks
 
 ```
-make run
+make print_results # printf 'impl;kg;sign;verify\n'; for i in $^; do ./$$i; done
 ```
 
 - Print results including the object size
 
 ```
-./print_results.py < $(make run)
+./print_results.py < $(printf 'impl;kg;sign;verify\n'; for i in $^; do ./$$i; done)
 ```
 
 - Print the results to a latex table (`-obj_size` flag to also include the object size in the table)
 
 ```
-./print_results.py -tex [-obj_size] < $(make run)
+./print_results.py -tex [-obj_size] < $(printf 'impl;kg;sign;verify\n'; for i in $^; do ./$$i; done)
 ```

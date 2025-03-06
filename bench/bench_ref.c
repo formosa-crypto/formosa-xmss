@@ -9,6 +9,7 @@
 #include "config.h"
 #include "macros.h"
 #include "params.h"
+#include "xmss.h"
 
 #ifndef IMPL
 #error IMPL must be defined
@@ -24,11 +25,6 @@
 
 bool verbose = false;
 
-extern int xmssmt_keypair_jazz(uint8_t *pk, uint8_t *sk);
-extern int xmssmt_sign_jazz(uint8_t *sk, uint8_t *sm, size_t *smlen, const uint8_t *m, size_t mlen);
-extern int xmssmt_sign_open_jazz(uint8_t *m, size_t *mlen, const uint8_t *sm, size_t smlen,
-                                 const uint8_t *pk);
-
 static uint64_t min3(uint64_t a, uint64_t b, uint64_t c) {
     return (a < b ? (a < c ? a : c) : (b < c ? b : c));
 }
@@ -39,8 +35,8 @@ static uint64_t min3_array(const uint64_t *a) {
     return min3(a[0], a[1], a[2]);
 }
 
-static int starts_with(const char *str, const char *pjasminix) {
-    return strncmp(str, pjasminix, strlen(pjasminix)) == 0;
+static int starts_with(const char *str, const char *prefix) {
+    return strncmp(str, prefix, strlen(prefix)) == 0;
 }
 
 static inline uint64_t cpucycles(void) {
@@ -61,7 +57,7 @@ static int cmp_uint64(const void *a, const void *b) {
     return 0;
 }
 
-static uint64_t median(uint64_t *l, size_t llen) {
+static uint64_t median(uint64_t *l, unsigned long long llen) {
     qsort(l, llen, sizeof(uint64_t), cmp_uint64);
 
     if (llen % 2) {
@@ -71,8 +67,8 @@ static uint64_t median(uint64_t *l, size_t llen) {
     }
 }
 
-static uint64_t average(const uint64_t *t, size_t tlen) {
-    size_t i;
+static uint64_t average(const uint64_t *t, unsigned long long tlen) {
+    unsigned long long i;
     uint64_t acc = 0;
 
     for (i = 0; i < tlen; i++) {
@@ -98,7 +94,7 @@ static uint64_t overhead_of_cpucycles_call(void) {
     return overhead;
 }
 
-void xmssmt_bench_kg(const xmss_params *params, uint64_t observations[TIMINGS]) {
+void xmssmt_bench_kg(const xmss_params *params, uint32_t oid, uint64_t observations[TIMINGS]) {
     uint8_t pk[XMSS_OID_LEN + params->pk_bytes];
     uint8_t sk[XMSS_OID_LEN + params->sk_bytes];
 
@@ -108,61 +104,61 @@ void xmssmt_bench_kg(const xmss_params *params, uint64_t observations[TIMINGS]) 
 
     for (int i = 0; i + 1 < TIMINGS; i++) {
         if (verbose) {
-            printf("[(jasmin) kg]: Timing %d/%d\n", i + 1, TIMINGS - 1);
+            printf("[(c-ref) kg]: Timing %d/%d\n", i + 1, TIMINGS - 1);
         }
         before = cpucycles();
-        xmssmt_keypair_jazz(pk, sk);
+        xmssmt_keypair(pk, sk, oid);
         after = cpucycles();
         observations[i] = (after - cpucycles_overhead) - before;
     }
 }
 
-void xmssmt_bench_sign(const xmss_params *params, uint64_t observations[TIMINGS]) {
+void xmssmt_bench_sign(const xmss_params *params, uint32_t oid, uint64_t observations[TIMINGS]) {
     uint8_t pk[XMSS_OID_LEN + params->pk_bytes];
     uint8_t sk[XMSS_OID_LEN + params->sk_bytes];
     uint8_t m[MESSAGE_SIZE];
     uint8_t sm[params->sig_bytes + MESSAGE_SIZE];
-    size_t smlen;
+    unsigned long long smlen;
 
     uint64_t before, after;
 
     uint64_t cpucycles_overhead = overhead_of_cpucycles_call();
 
     // Generate a valid keypair first
-    xmssmt_keypair_jazz(pk, sk);
+    xmssmt_keypair(pk, sk, oid);
 
     for (int i = 0; i + 1 < TIMINGS; i++) {
         if (verbose) {
-            printf("[(jasmin) sign]: Timing %d/%d\n", i + 1, TIMINGS - 1);
+            printf("[(c-ref) sign]: Timing %d/%d\n", i + 1, TIMINGS - 1);
         }
         before = cpucycles();
-        xmssmt_sign_jazz(sk, sm, &smlen, m, MESSAGE_SIZE);
+        xmssmt_sign(sk, sm, &smlen, m, MESSAGE_SIZE);
         after = cpucycles();
         observations[i] = (after - cpucycles_overhead) - before;
     }
 }
 
-void xmssmt_bench_verify(const xmss_params *params, uint64_t observations[TIMINGS]) {
+void xmssmt_bench_verify(const xmss_params *params, uint32_t oid, uint64_t observations[TIMINGS]) {
     uint8_t pk[XMSS_OID_LEN + params->pk_bytes];
     uint8_t sk[XMSS_OID_LEN + params->sk_bytes];
     uint8_t m[MESSAGE_SIZE];
     uint8_t sm[params->sig_bytes + MESSAGE_SIZE];
-    size_t smlen = params->sig_bytes + MESSAGE_SIZE;
-    size_t mlen;
+    unsigned long long smlen = params->sig_bytes + MESSAGE_SIZE;
+    unsigned long long mlen;
 
     uint64_t before, after;
 
     uint64_t cpucycles_overhead = overhead_of_cpucycles_call();
 
     // Generate a valid keypair first
-    xmssmt_keypair_jazz(pk, sk);
+    xmssmt_keypair(pk, sk, oid);
 
     for (int i = 0; i + 1 < TIMINGS; i++) {
         if (verbose) {
-            printf("[(jasmin) verify]: Timing %d/%d\n", i + 1, TIMINGS - 1);
+            printf("[(c-ref) verify]: Timing %d/%d\n", i + 1, TIMINGS - 1);
         }
         before = cpucycles();
-        xmssmt_sign_open_jazz(m, &mlen, sm, smlen, pk);
+        xmssmt_sign_open(m, &mlen, sm, smlen, pk);
         after = cpucycles();
         observations[i] = (after - cpucycles_overhead) - before;
     }
@@ -184,17 +180,7 @@ void print_results(uint64_t obs[OP][RUNS][TIMINGS]) {
     uint64_t sign_median = min3_array(sign_medians);
     uint64_t verify_median = min3_array(verify_medians);
 
-#ifdef STACK_ZERO
-    #ifdef STACK_ZERO_SIZE
-        snprintf(impl_name, sizeof(impl_name), "%s_%s_%s", xstr(IMPL), xstr(STACK_ZERO),
-                 xstr(STACK_ZERO_SIZE));
-    #else
-        #error STACK_ZERO_SIZE must be defined when STACK_ZERO is defined
-    #endif
-#else
-    snprintf(impl_name, sizeof(impl_name), "%s", xstr(IMPL));
-    strcat(impl_name, "_jasmin_ref_no_zeroization");
-#endif
+        snprintf(impl_name, sizeof(impl_name), "%s_c_ref", xstr(IMPL));
 
     printf("%s;%" PRIu64 ";%" PRIu64 ";%" PRIu64 "\n", impl_name, kg_median, sign_median,
            verify_median);
@@ -229,9 +215,9 @@ int main(void) {
             printf("================= Run %d =================\n", i);
         }
 
-        xmssmt_bench_kg(&params, observations[0][i]);
-        xmssmt_bench_sign(&params, observations[1][i]);
-        xmssmt_bench_verify(&params, observations[2][i]);
+        xmssmt_bench_kg(&params, oid,  observations[0][i]);
+        xmssmt_bench_sign(&params, oid, observations[1][i]);
+        xmssmt_bench_verify(&params, oid, observations[2][i]);
     }
 
     print_results(observations);
