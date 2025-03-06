@@ -23,7 +23,7 @@
 #define MESSAGE_SIZE 128
 #endif
 
-bool verbose = true;
+bool verbose = false;
 
 extern int xmssmt_keypair_jazz(uint8_t *pk, uint8_t *sk);
 extern int xmssmt_sign_jazz(uint8_t *sk, uint8_t *sm, size_t *smlen, const uint8_t *m, size_t mlen);
@@ -99,9 +99,7 @@ static uint64_t overhead_of_cpucycles_call(void) {
     return overhead;
 }
 
-void xmssmt_bench_kg(const xmss_params *params, uint32_t oid, uint64_t observations[TIMINGS]) {
-    assert(params != NULL);
-
+void xmssmt_bench_kg(const xmss_params *params, uint64_t observations[TIMINGS]) {
     uint8_t pk[XMSS_OID_LEN + params->pk_bytes];
     uint8_t sk[XMSS_OID_LEN + params->sk_bytes];
 
@@ -111,20 +109,101 @@ void xmssmt_bench_kg(const xmss_params *params, uint32_t oid, uint64_t observati
 
     for (int i = 0; i + 1 < TIMINGS; i++) {
         if (verbose) {
-            printf("[(jasmin) kg]: Timing %d/%d\n", i + 1, TIMINGS);
+            printf("[(jasmin) kg]: Timing %d/%d\n", i + 1, TIMINGS - 1);
         }
         before = cpucycles();
-        xmssmt_keypair(pk, sk, oid);
+        xmssmt_keypair_jazz(pk, sk);
         after = cpucycles();
         observations[i] = (after - cpucycles_overhead) - before;
     }
 }
 
+void xmssmt_bench_sign(const xmss_params *params, uint64_t observations[TIMINGS]) {
+    uint8_t pk[XMSS_OID_LEN + params->pk_bytes];
+    uint8_t sk[XMSS_OID_LEN + params->sk_bytes];
+    uint8_t m[MESSAGE_SIZE];
+    uint8_t sm[params->sig_bytes + MESSAGE_SIZE];
+    size_t smlen;
+
+    uint64_t before, after;
+
+    uint64_t cpucycles_overhead = overhead_of_cpucycles_call();
+
+    // Generate a valid keypair first
+    xmssmt_keypair_jazz(pk, sk);
+
+    for (int i = 0; i + 1 < TIMINGS; i++) {
+        if (verbose) {
+            printf("[(jasmin) sign]: Timing %d/%d\n", i + 1, TIMINGS - 1);
+        }
+        before = cpucycles();
+        xmssmt_sign_jazz(sk, sm, &smlen, m, MESSAGE_SIZE);
+        after = cpucycles();
+        observations[i] = (after - cpucycles_overhead) - before;
+    }
+}
+
+void xmssmt_bench_verify(const xmss_params *params, uint64_t observations[TIMINGS]) {
+    uint8_t pk[XMSS_OID_LEN + params->pk_bytes];
+    uint8_t sk[XMSS_OID_LEN + params->sk_bytes];
+    uint8_t m[MESSAGE_SIZE];
+    uint8_t sm[params->sig_bytes + MESSAGE_SIZE];
+    size_t smlen = params->sig_bytes + MESSAGE_SIZE;
+    size_t mlen;
+
+    uint64_t before, after;
+
+    uint64_t cpucycles_overhead = overhead_of_cpucycles_call();
+
+    // Generate a valid keypair first
+    xmssmt_keypair_jazz(pk, sk);
+
+    for (int i = 0; i + 1 < TIMINGS; i++) {
+        if (verbose) {
+            printf("[(jasmin) verify]: Timing %d/%d\n", i + 1, TIMINGS - 1);
+        }
+        before = cpucycles();
+        xmssmt_sign_open_jazz(m, &mlen, sm, smlen, pk);
+        after = cpucycles();
+        observations[i] = (after - cpucycles_overhead) - before;
+    }
+}
+
+void print_results(uint64_t obs[OP][RUNS][TIMINGS]) {
+    uint64_t kg_medians[RUNS];
+    uint64_t sign_medians[RUNS];
+    uint64_t verify_medians[RUNS];
+    char impl_name[1024];
+
+    for (int i = 0; i < RUNS; i++) {
+        kg_medians[i] = median(obs[0][i], TIMINGS);
+        sign_medians[i] = median(obs[1][i], TIMINGS);
+        verify_medians[i] = median(obs[2][i], TIMINGS);
+    }
+
+    uint64_t kg_median = min3_array(kg_medians);
+    uint64_t sign_median = min3_array(sign_medians);
+    uint64_t verify_median = min3_array(verify_medians);
+
+#ifdef STACK_ZERO
+    #ifdef STACK_ZERO_SIZE
+        snprintf(impl_name, sizeof(impl_name), "%s_%s_%s", xstr(IMPL), xstr(STACK_ZERO),
+                 xstr(STACK_ZERO_SIZE));
+    #else
+        #error STACK_ZERO_SIZE must be defined when STACK_ZERO is defined
+    #endif
+#else
+    snprintf(impl_name, sizeof(impl_name), "%s", xstr(IMPL));
+    strcat(impl_name, "_jasmin_ref_no_zeroization");
+#endif
+
+    printf("%s;%" PRIu64 "%" PRIu64 ";%" PRIu64 "\n", impl_name, kg_median, sign_median,
+           verify_median);
+}
+
 int main(void) {
     xmss_params params;
     uint32_t oid;
-
-    uint64_t observations[OP][RUNS][TIMINGS] = {0};
 
     if (starts_with(IMPL, "XMSSMT")) {
         if (xmssmt_str_to_oid(&oid, IMPL) == -1) {
@@ -136,22 +215,27 @@ int main(void) {
             fprintf(stderr, "Failed to generate params from oid\n");
             exit(-1);
         }
+    } else {
+        fprintf(stderr, "multi tree only \n");
+        return EXIT_FAILURE;
+    }
 
-        for (int i = 0; i < RUNS; i++) {
-            if (verbose) {
-                printf("Run %d\n", i);
-            }
-            xmssmt_bench_kg(&params, oid, observations[0][i]);
-            // xmssmt_bench_sign(&params, oid, observations[1][i]);
-            // xmssmt_bench_verify(&params, oid, observations[2][i]);
+    // observations[0] : for keygen
+    // observations[1] : for signing
+    // observations[2] : for verfication
+    uint64_t observations[OP][RUNS][TIMINGS] = {0};
+
+    for (int i = 0; i < RUNS; i++) {
+        if (verbose) {
+            printf("================= Run %d =================\n", i);
         }
 
-        char *labels[OP] = {"kg", "sign", "verify"};
-        print_results(labels, observations);
-    } else {
-        // Benchmarks not implemented for single tree variant
-        // TODO: DO this later
+        xmssmt_bench_kg(&params, observations[0][i]);
+        xmssmt_bench_sign(&params, observations[1][i]);
+        xmssmt_bench_verify(&params, observations[2][i]);
     }
+
+    print_results(observations);
 
     return EXIT_SUCCESS;
 }

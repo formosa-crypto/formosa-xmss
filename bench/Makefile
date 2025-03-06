@@ -89,11 +89,17 @@ bin/bench_xmssmt_sha2_20_2_256_ref: bench_ref.c | bin/
 	$(CC) $(CFLAGS) -o $@ -I./common/ -I./randombytes/ -I../submodules/xmss-reference/ -DIMPL=\"XMSSMT-SHA2_20/2_256\" \
 	$(SOURCE_FILES) $(REF_FILES)  $< -lcrypto
 
+bin/bench_xmssmt_sha2_20_2_256: bench_jasmin.c  bin/bench_xmssmt_sha2_20_2_256.s | bin/
+	$(CC) $(CFLAGS) -o $@ -I./common/ -I./randombytes/ -I../submodules/xmss-reference/ -DIMPL=\"XMSSMT-SHA2_20/2_256\" \
+	 $(SOURCE_FILES) $(REF_FILES)  $^ -lcrypto
+
 bin/bench_xmssmt_sha2_20_2_256_loop_u64: bench_jasmin.c  bin/bench_xmssmt_sha2_20_2_256_loop_u64.s | bin/
-	$(CC) $(CFLAGS) -o $@ -I./common/ -I./randombytes/ -I../submodules/xmss-reference/ -DSTACK_ZERO="loop" -DSTACK_ZERO_SIZE="u64" -DIMPL=XMSSMT-SHA2_20/2_256 $(SOURCE_FILES) $<
+	$(CC) $(CFLAGS) -o $@ -I./common/ -I./randombytes/ -I../submodules/xmss-reference/ -DSTACK_ZERO="loop" -DSTACK_ZERO_SIZE="u64" \
+	-DIMPL=\"XMSSMT-SHA2_20/2_256\" $(SOURCE_FILES) $(REF_FILES)  $^ -lcrypto
 
 bin/bench_xmssmt_sha2_20_2_256_unrolled_u64: bench_jasmin.c  bin/bench_xmssmt_sha2_20_2_256_unrolled_u64.s | bin/
-	$(CC) $(CFLAGS) -o $@ -I./common/ -I./randombytes/ -I../submodules/xmss-reference/ -DSTACK_ZERO="unrolled" -DSTACK_ZERO_SIZE="u64" -DIMPL=XMSSMT-SHA2_20/2_256 $(SOURCE_FILES) $<
+	$(CC) $(CFLAGS) -o $@ -I./common/ -I./randombytes/ -I../submodules/xmss-reference/ -DSTACK_ZERO="unrolled" -DSTACK_ZERO_SIZE="u64" \
+	-DIMPL=\"XMSSMT-SHA2_20/2_256\" $(SOURCE_FILES) $(REF_FILES)  $^ -lcrypto
 
 ########################################################################################################################
 
