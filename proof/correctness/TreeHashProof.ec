@@ -542,31 +542,27 @@ seq 1 1 : (
   #{/~sub heights{1} 0 (min (to_uint (offset{2} - W64.one)) (size heights{2})) = sub_list heights{2} 0 (min (to_uint (offset{2} - W64.one)) (size heights{2}))}pre /\
   sub heights{1} 0 (min (to_uint offset{2}) (size heights{2})) = sub_list heights{2} 0 (min (to_uint offset{2}) (size heights{2}))
 ).
-    + auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19 H20 H21 H22 H23 H24.
+    + auto => /> &1 &2. rewrite ultE => H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19 H20 H21 H22 H23 H24.
+      have := H24; rewrite to_uintB ?uleE 1:/# /= => H25.
       rewrite size_put; split => //.
-      apply (eq_from_nth witness).
-         - rewrite size_sub; first by smt(@W64 pow2_64).
-           by rewrite size_sub_list; first by smt(@W64 pow2_64).
-      rewrite size_sub; first by smt(@W64 pow2_64).
+      apply (eq_from_nth witness); first by rewrite size_sub 1:/# size_sub_list /#.
+      rewrite size_sub 1:/#. 
       case (0 <= to_uint offset{2} <= size heights{2}) => ?.
          - have E1 : min (to_uint offset{2}) (size heights{2}) = to_uint offset{2} by smt().
-           rewrite E1 => j?.
-           rewrite nth_sub //= /sub_list nth_mkseq //= nth_put; first by smt(@W64 pow2_64).
-           rewrite get_setE; first by smt(@W64 pow2_64).
-           case (j = to_uint (offset{2} - W64.one)) => [/# | ? //=].
+           rewrite E1 => j?. 
+           rewrite nth_sub //= /sub_list nth_mkseq //= nth_put 1:/# get_setE 1:/#.
+           case (j = to_uint (offset{2} - W64.one)); first by rewrite to_uintB ?uleE /#.
+           rewrite to_uintB ?uleE 1:/# /= => H.
            rewrite ifF 1:/#.
-           have ->: heights{1}.[j] = nth witness (sub heights{1} 0 (min (to_uint (offset{2} - W64.one)) (size heights{2}))) j by rewrite nth_sub; smt(@W64 pow2_64).
-           rewrite H23 /sub_list nth_mkseq; first by smt(@W64 pow2_64).
-           trivial.
+           have ->: heights{1}.[j] = nth witness (sub heights{1} 0 (min (to_uint (offset{2} - W64.one)) (size heights{2}))) j.
+             * rewrite nth_sub //. 
+               rewrite to_uintB ?uleE /= /#.          
+           rewrite H23 /sub_list nth_mkseq ?to_uintB ?uleE /= /#.          
          - have E1 : min (to_uint offset{2}) (size heights{2}) = size heights{2} by smt().
            rewrite E1 H9 h_val d_val /= => j?.
-           rewrite nth_sub // /sub_list nth_mkseq //=.
-           rewrite put_out; first by smt(@W64 pow2_64).
-           rewrite get_set_if.
-           rewrite ifF; first by smt(@W64 pow2_64).
-           have ->: heights{1}.[j] = nth witness (sub heights{1} 0 (min (to_uint (offset{2} - W64.one)) (size heights{2}))) j by rewrite nth_sub; smt(@W64 pow2_64).
-           rewrite H23 /sub_list nth_mkseq; first by smt(@W64 pow2_64).
-           trivial.
+           rewrite nth_sub // /sub_list nth_mkseq //= put_out 1:/# get_set_if ifF 1:/#.
+           have ->: heights{1}.[j] = nth witness (sub heights{1} 0 (min (to_uint (offset{2} - W64.one)) (size heights{2}))) j by rewrite nth_sub ?to_uintB ?uleE /#.
+           rewrite H23 /sub_list nth_mkseq // to_uintB ?uleE /#.
 
 seq 1 0 : (
     #pre /\ 
@@ -581,10 +577,7 @@ seq 0 1 : (
 ).
     + auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19 H20 H21 H22 H23 H24 H25.
       rewrite /set_type.
-      do split; (apply (eq_from_nth witness); rewrite !size_sub // => j?; rewrite !nth_sub //= !get_setE //).
-        - rewrite !ifF 1..5:/#; smt(sub_k).
-        - rewrite !ifF 1..5:/#; smt(sub_k).
-        - rewrite !ifF 1..5:/#; smt(sub_k).
+      (do split; (apply (eq_from_nth witness); rewrite !size_sub // => j?; rewrite !nth_sub //= !get_setE //)); 1..3: by rewrite !ifF 1..5:/#; smt(sub_k).
         - rewrite ifF 1:/# ifF 1:/# ifF 1:/#.
           smt(sub_k).
 

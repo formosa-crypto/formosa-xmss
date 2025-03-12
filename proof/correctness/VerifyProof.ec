@@ -358,7 +358,7 @@ seq 1 1 : (
   #pre /\ 
   to_list root{1} = NBytes.val _M'{2}
 ).
-- exists * Glob.mem{1}, buf{1}, (init (fun (i_0 : int) => pk{1}.[0 + i_0]))%Array32, idx{1}, t64{1}, bytes{1}. 
+- do 2! (inline {1} 1; wp; sp); exists * Glob.mem{1}, buf{1}, (init (fun (i_0 : int) => pk{1}.[0 + i_0]))%Array32, idx{1}, t64{1}, bytes{1}. 
   elim * => P0 P1 P2 P3 P4 P5.
   call {1} (hash_message_correct P0 P1 P2 P3 P4 P5) => [/# |]. 
   auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 

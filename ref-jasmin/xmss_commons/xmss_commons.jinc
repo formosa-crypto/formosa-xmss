@@ -59,7 +59,7 @@ fn __l_tree(
             buf1, _ = memcpy_u8u8_2_ltree::__memcpy_u8u8_2(buf1, wots_pk, offset_in, bytes);
 
             () = #unspill(pub_seed);
-            buf0, addr = __thash_h(buf0, buf1, pub_seed, addr);
+            buf0, addr = __thash_h_(buf0, buf1, pub_seed, addr);
 
             // Copy the result back to wots_pk: same as memcpy(wots_pk + i*XMSS_N, buf0, XMSS_N)
             () = #unspill(i, wots_pk);
@@ -197,14 +197,14 @@ fn __new_compute_root(
         () = #unspill(pub_seed);
         #inline if (k == XMSS_TREE_HEIGHT - 1) {
             () = #unspill(root);
-            root, addr = __thash_h(root, thash_in, pub_seed, addr);
+            root, addr = __thash_h_(root, thash_in, pub_seed, addr);
 
             // The compiler rejects this program without spilling root after thash 
             // This shouldnt be needed. This is the last iteration of the loop, so we're 
             // spilling root and unspilling it immeadiatly after.
             () = #spill(root); 
         } else {
-            node, addr = __thash_h(node, thash_in, pub_seed, addr);
+            node, addr = __thash_h_(node, thash_in, pub_seed, addr);
         }
     }
 
@@ -265,6 +265,7 @@ fn __gen_leaf_wots(
     () = #spill(leaf, sk_seed, pub_seed, ltree_addr);
 
     // wots_pkgen(params, pk, sk_seed, pub_seed, ots_addr);
+    // Obs: This function is inline because it is not used anywhere else 
     pk, ots_addr = __wots_pkgen(pk, sk_seed, pub_seed, ots_addr);
     () = #spill(ots_addr);
 
@@ -423,7 +424,7 @@ fn __xmssmt_core_sign_open(
     #declassify bytes = (u64) [mlen_ptr];
     
     // NOTE: We use root instead of mhash because mhash is just a pointer to root
-    #declassify root = __hash_message(root, buf, pk[0 : XMSS_N], idx, t64, bytes);
+    #declassify root = __hash_message_(root, buf, pk[0 : XMSS_N], idx, t64, bytes);
 
     // sm += params->index_bytes + params->n;
     t64 = XMSS_INDEX_BYTES + XMSS_N;

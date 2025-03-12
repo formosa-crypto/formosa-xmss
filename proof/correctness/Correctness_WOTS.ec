@@ -107,9 +107,10 @@ if.
           rewrite (: 15 = 2 ^ 4 - 1) 1:/# !and_mod // of_uintK.
           smt(modz_small).
     + auto => /> &1 &2 => H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 _ H11 H12. (* H10 and H11 are equal after some rewrites *)
-      rewrite logw_val !to_uintD size_put to_uintN H6 ultE !to_uintD /=; do split; 1..9, 15,16: by smt(). 
-        * smt(@W64 pow2_64).
-        * smt(@W64 pow2_64).  
+      rewrite logw_val !to_uintD size_put to_uintN H6 ultE !to_uintD /=.
+      (do split; 1..9: by smt()); 6,7: by smt().
+        * smt(@W64 pow2_64 @IntDiv).
+        * smt(@W64 pow2_64 @IntDiv).  
         * rewrite H7; smt(@W64 pow2_64 @IntDiv).
         * have ->: (to_uint out{1} + to_uint W64.one) %% W64.modulus = to_uint out{1} + 1 by smt().
           move => /= j??.
@@ -186,7 +187,7 @@ if.
     + auto => /> &1 &2 => H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 _ H11 H12. (* H10 and H11 are equal after some rewrites *)
       rewrite logw_val !to_uintD size_put to_uintN H6 ultE !to_uintD /=; do split; 1..9, 15,16: by smt(). 
         * smt(@W64 pow2_64 @IntDiv).
-        * smt(@W64 pow2_64).  
+        * smt(@W64 pow2_64 @IntDiv).  
         * rewrite H7; smt(@W64 pow2_64 @IntDiv).
         * have ->: (to_uint out{1} + to_uint W64.one) %% W64.modulus = to_uint out{1} + 1 by smt().
           move => /= j??.
