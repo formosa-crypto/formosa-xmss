@@ -1,4 +1,4 @@
-name: Check Proofs
+name: Check EasyCrypt Correctness Proof
 
 on:
   push:
@@ -20,5 +20,5 @@ jobs:
         run: docker build -t jasmin-xmss .
 
       - name: Check correctness proofs
-        run: docker run --rm jasmin-xmss make -j$(nproc) -C proof/ check_correctness_proof
+        run: docker run --rm jasmin-xmss make -C proof/ check_correctness_proof
 

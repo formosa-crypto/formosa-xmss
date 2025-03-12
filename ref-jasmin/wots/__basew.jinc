@@ -1,30 +1,20 @@
 // Obs: The two underscores at the beginning of the filename mean that the
 //      code in this file is to be requires in the body of a namespace
 
-
 inline
 fn __base_w(
   reg ptr u32[OUTLEN] output,
   reg ptr u8[INLEN] input
 ) -> reg ptr u32[OUTLEN]
 {
-    reg u64 in out;
-    reg u8 total;
+    reg u64 in = 0 out = 0 bits = 0;
+    reg u8 consumed = 0 total = 0;
     reg u32 total_32;
-    reg u64 bits;
-
-    inline int consumed;
-
-    in = 0;
-    out  = 0;
-    bits = 0;
-    total = 0;
 
     // for (consumed = 0; consumed < out_len; consumed++) 
-    for consumed=0 to OUTLEN {
+    while (consumed < OUTLEN) {
         // if (bits == 0) { total = input[in]; in++; bits += 8; }
-        if (bits == 0) 
-        {
+        if (bits == 0) {
           total = input[in];
           in += 1;
           bits += 8;
@@ -41,6 +31,7 @@ fn __base_w(
 
       // out++;
       out += 1;
+      consumed += 1;
     }
 
     return output;

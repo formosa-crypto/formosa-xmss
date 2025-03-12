@@ -69,11 +69,12 @@ rewrite /XMSS_WOTS_W /XMSS_WOTS_LOG_W => [#] logw_val w_val.
 proc.
 sp.
 while (
-  ={total, consumed} /\ 0 <= consumed{1} <= 64 /\
+  ={total} /\ 0 <= consumed{2} <= 64 /\
+  to_uint consumed{1} = consumed{2} /\
   size base_w{2} = 64 /\
   outlen{2} = 64 /\
   out{2} = to_uint out{1} /\
-  out{2} = consumed{1} /\
+  out{2} = consumed{2} /\
   X{2} = to_list input{1} /\
   out{2} = to_uint out{1} /\ 0 <= to_uint out{1} <= 67 /\
   bits{2} = to_uint bits{1} /\ 
@@ -83,54 +84,38 @@ while (
   (forall (j : int), 0 <= j < to_uint out{1} => 0 <= to_uint output{1}.[j] < w)
 ); last first.
     + auto => /> &1.
-      do split; 2,3: by smt().
-         * by rewrite size_nseq.
-         * move => bitsL inL outL resultL resultR H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10.
-           split => [| /#].
-           apply (eq_from_nth witness); first by rewrite H4 size_map size_to_list.
-           rewrite H4 => i?.
-           rewrite (nth_map witness). 
-              - by rewrite size_to_list.
-           rewrite get_to_list H9 //#.
+      rewrite size_nseq; do split; 1,2: by smt().
+      move => bitsL inL consumedL in0L outL resultL resultR H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10. 
+      split => [| /#].
+      apply (eq_from_nth witness); rewrite ?size_map H3 ?size_to_list ?size_iota // => i?.
+      rewrite (nth_map witness); rewrite ?size_to_list // get_to_list H9 /#.
 if.
-    + auto => /> &1 &2 *; smt(@W64).
-    + auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9. 
-      do split; 1,2,11: by smt().
-        * by rewrite size_put.
-        * rewrite to_uintD /#.
-        * rewrite to_uintD /#.
-        * rewrite to_uintD /#.
-        * rewrite to_uintD /#.
-        * by rewrite logw_val.
-        * rewrite logw_val /=/#.
-        * rewrite to_uintD /#.
-        * rewrite to_uintD_small 1:/# /= => j??.
-          rewrite nth_put 1:/# get_setE //.
-          case (j = to_uint out{1}) => [-> |?]; last first.
-               - rewrite ifF 1:/# H7 //#.
-          rewrite w_val ifT // log2_16 from_int_floor /= (: 15 = 2 ^ 4 - 1) 1:/# !and_mod //.
+    + auto => /> &1 &2 12? H; rewrite wordP => j?; rewrite get_to_uint H /#.
+    + auto => /> &1 &2; rewrite ultE => H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 _ H11.  
+      rewrite size_put !to_uintD logw_val ultE to_uintD //=.
+      do split; 1..12, 15,16: by smt().
+        * move => j??.
+          rewrite nth_put 1:/# get_setE H3 //. 
+          case (j = to_uint out{1}) => [-> |?]; last by rewrite ifF 1:/# H7 //#.
+          rewrite w_val ifT // /= (: 15 = 2 ^ 4 - 1) 1:/# !and_mod //.
           rewrite (: 31 = 2 ^ 5 - 1) 1:/# !shr_div !of_uintK and_mod //=.
           smt(modz_small).
-        * rewrite to_uintD_small 1:/# /= => j??.
+        * move => j??.
           rewrite (: 31 = 2 ^ 5 - 1) 1:/# !and_mod // of_uintK.
-          rewrite get_setE //.
+          rewrite get_setE 1:/#.
           case (j = to_uint out{1}) => [?| /#].
           rewrite (: 15 = 2 ^ 4 - 1) 1:/# !and_mod // of_uintK.
           smt(modz_small).
-    + auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10.
-      have E  : to_uint out{1} %% 2 = 0 \/ to_uint out{1} %% 2 = 1 by smt().
-      have E2 : to_uint bits{1} = 0 \/ to_uint bits{1} = 4 by smt(). 
-(* TODO: E and E2 are aux, not used anywhere (yet???) *)
-      rewrite logw_val to_uintD size_put; do split; 1,2,4..7: by smt().
-        * assumption.
-        * rewrite to_uintB //= uleE /= H5; smt(@W64).
-        * rewrite H5; smt(@W64 pow2_64 modz_small).
-        * rewrite H6; smt(@W64 pow2_64 @IntDiv).  
+    + auto => /> &1 &2 => H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 _ H11 H12. (* H10 and H11 are equal after some rewrites *)
+      rewrite logw_val !to_uintD size_put to_uintN H6 ultE !to_uintD /=; do split; 1..9, 15,16: by smt(). 
+        * smt(@W64 pow2_64).
+        * smt(@W64 pow2_64).  
+        * rewrite H7; smt(@W64 pow2_64 @IntDiv).
         * have ->: (to_uint out{1} + to_uint W64.one) %% W64.modulus = to_uint out{1} + 1 by smt().
           move => /= j??.
-          rewrite nth_put 1:/# get_setE //.
+          rewrite nth_put 1:/# get_setE 1:/#.
           case (j = to_uint out{1}) => [-> |?]; last first.
-             - rewrite ifF 1:/# H7 //#.
+             - rewrite ifF 1:/# H8 //#.
           rewrite ifT // w_val /= (: 15 = 2^4 - 1) 1:/# (: 31 = 2^5 - 1) 1:/# !and_mod // !of_uintK //=.
           do 2! (rewrite to_uint_shr; [rewrite !of_uintK /# |]).
           rewrite to_uint_truncateu8 to_uint_zeroextu32 !of_uintK /=. 
@@ -140,7 +125,7 @@ if.
           rewrite (: 31 = 2^5 - 1) 1:/# (: 15 = 2^4 - 1) 1:/# !and_mod //=.        
           rewrite to_uint_shr.
              - rewrite !of_uintK /#.
-          rewrite get_setE //.
+          rewrite get_setE 1:/#.
           case (j = to_uint out{1}) => [?| /#].
           rewrite to_uint_zeroextu32 to_uint_truncateu8 !of_uintK #smt:(modz_small).
 qed.
@@ -159,13 +144,14 @@ lemma base_w_results_3 ( _in_ : W8.t Array2.t) :
 proof.
 rewrite /XMSS_WOTS_W /XMSS_WOTS_LOG_W => [#] logw_val w_val.
 proc.
-sp.
+sp. 
 while (
-  ={total, consumed} /\ 0 <= consumed{1} <= 3 /\
+  ={total} /\ 0 <= consumed{2} <= 3 /\
+  to_uint consumed{1} = consumed{2} /\
   size base_w{2} = 3 /\
   outlen{2} = 3 /\
   out{2} = to_uint out{1} /\
-  out{2} = consumed{1} /\
+  out{2} = consumed{2} /\
   X{2} = to_list input{1} /\
   out{2} = to_uint out{1} /\ 0 <= to_uint out{1} <= 67 /\
   bits{2} = to_uint bits{1} /\ 
@@ -175,51 +161,38 @@ while (
   (forall (j : int), 0 <= j < to_uint out{1} => 0 <= to_uint output{1}.[j] < w)
 ); last first.
     + auto => /> &1.
-      do split; 2,3: by smt().
-         * by rewrite size_nseq.
-         * move => bitsL inL outL resultL resultR H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10.
-           split => [| /#].
-           apply (eq_from_nth witness); first by rewrite H4 size_map size_to_list.
-           rewrite H4 => i?.
-           rewrite (nth_map witness). 
-              - by rewrite size_to_list.
-           rewrite get_to_list H9 //#.
+      rewrite size_nseq; do split; 1,2: by smt().
+      move => bitsL inL consumedL in0L outL resultL resultR H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10. 
+      split => [| /#].
+      apply (eq_from_nth witness); rewrite ?size_map H3 ?size_to_list ?size_iota // => i?.
+      rewrite (nth_map witness); rewrite ?size_to_list // get_to_list H9 /#.
 if.
-    + auto => /> &1 &2 *; smt(@W64).
-    + auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9. 
-      do split; 1,2,11: by smt().
-        * by rewrite size_put.
-        * rewrite to_uintD /#.
-        * rewrite to_uintD /#.
-        * rewrite to_uintD /#.
-        * rewrite to_uintD /#.
-        * by rewrite logw_val.
-        * rewrite logw_val /=/#.
-        * rewrite to_uintD /#.
-        * rewrite to_uintD_small 1:/# /= => j??.
-          rewrite nth_put 1:/# get_setE //.
-          case (j = to_uint out{1}) => [-> |?]; last first.
-               - rewrite ifF 1:/# H7 //#.
-          rewrite w_val ifT // log2_16 from_int_floor /= (: 15 = 2 ^ 4 - 1) 1:/# !and_mod //.
+    + auto => /> &1 &2 12? H; rewrite wordP => j?; rewrite get_to_uint H /#.
+    + auto => /> &1 &2; rewrite ultE => H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 _ H11.  
+      rewrite size_put !to_uintD logw_val ultE !to_uintD //=.
+      do split; 1..12,15,16: by smt().
+        * move => j??.
+          rewrite nth_put 1:/# get_setE H3 //. 
+          case (j = to_uint out{1}) => [-> |?]; last by rewrite ifF 1:/# H7 //#.
+          rewrite w_val ifT // /= (: 15 = 2 ^ 4 - 1) 1:/# !and_mod //.
           rewrite (: 31 = 2 ^ 5 - 1) 1:/# !shr_div !of_uintK and_mod //=.
           smt(modz_small).
-        * rewrite to_uintD_small 1:/# /= => j??.
+        * move => j??.
           rewrite (: 31 = 2 ^ 5 - 1) 1:/# !and_mod // of_uintK.
-          rewrite get_setE //.
+          rewrite get_setE 1:/#.
           case (j = to_uint out{1}) => [?| /#].
           rewrite (: 15 = 2 ^ 4 - 1) 1:/# !and_mod // of_uintK.
           smt(modz_small).
-    + auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10.
-      rewrite logw_val to_uintD size_put; do split; 1,2,4..7: by smt(). 
-        * assumption.
-        * rewrite to_uintB //= uleE /= H5; smt(@W64).
-        * rewrite H5 /=; admit. (* smt(@W64 pow2_64 modz_small) *)
-        * rewrite H6; smt(@W64 pow2_64 @IntDiv).  
+    + auto => /> &1 &2 => H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 _ H11 H12. (* H10 and H11 are equal after some rewrites *)
+      rewrite logw_val !to_uintD size_put to_uintN H6 ultE !to_uintD /=; do split; 1..9, 15,16: by smt(). 
+        * smt(@W64 pow2_64 @IntDiv).
+        * smt(@W64 pow2_64).  
+        * rewrite H7; smt(@W64 pow2_64 @IntDiv).
         * have ->: (to_uint out{1} + to_uint W64.one) %% W64.modulus = to_uint out{1} + 1 by smt().
           move => /= j??.
-          rewrite nth_put 1:/# get_setE //.
+          rewrite nth_put 1:/# get_setE 1:/#.
           case (j = to_uint out{1}) => [-> |?]; last first.
-             - rewrite ifF 1:/# H7 //#.
+             - rewrite ifF 1:/# H8 //#.
           rewrite ifT // w_val /= (: 15 = 2^4 - 1) 1:/# (: 31 = 2^5 - 1) 1:/# !and_mod // !of_uintK //=.
           do 2! (rewrite to_uint_shr; [rewrite !of_uintK /# |]).
           rewrite to_uint_truncateu8 to_uint_zeroextu32 !of_uintK /=. 
@@ -229,7 +202,7 @@ if.
           rewrite (: 31 = 2^5 - 1) 1:/# (: 15 = 2^4 - 1) 1:/# !and_mod //=.        
           rewrite to_uint_shr.
              - rewrite !of_uintK /#.
-          rewrite get_setE //.
+          rewrite get_setE 1:/#.
           case (j = to_uint out{1}) => [?| /#].
           rewrite to_uint_zeroextu32 to_uint_truncateu8 !of_uintK #smt:(modz_small).
 qed.
