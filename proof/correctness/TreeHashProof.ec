@@ -18,8 +18,6 @@ require import LTReeProof.
 
 require import WArray32.
 
-lemma eq_symm ['a] (a b : 'a) : a = b => b = a by move => ->.
-
 lemma eq_true (a : bool) : a = true => a by move => ->.
 
 op node_addr_padding_val : W32.t = W32.zero.
@@ -116,11 +114,9 @@ seq 0 2 : (
 ).
     + auto => /> &1 &2 H0 H1 H2 H3 H4.
       rewrite /set_ltree_addr /set_type.
-      do split; (apply (eq_from_nth witness); rewrite !size_sub // => j?; rewrite !nth_sub //=).
-         * rewrite !get_setE // !ifF 1..6:/#; smt(sub_k).  
-         * rewrite !get_setE // !ifF 1..6:/#; smt(sub_k). 
-         * rewrite !get_setE //; case (j = 4) => [-> | ?]; first by rewrite H1 /#. 
-           case (j = 3) => [/# | ?]; rewrite !ifF 1..3:/#; smt(sub_k).
+      (do split; (apply (eq_from_nth witness); rewrite !size_sub // => j?; rewrite !nth_sub //=); rewrite !get_setE //); 1,2: by rewrite !ifF 1..6:/#; smt(sub_k).
+      case (j = 4) => [-> | ?]; first by rewrite H1 /#. 
+      case (j = 3) => [/# | ?]; rewrite !ifF 1..3:/#; smt(sub_k).
  
 exists * pk{1}, ltree_addr1{1}, pub_seed1{1}, address{2}; elim * => P0 P1 P2 P3.
 call (ltree_correct P0 P2 P1 P3) => [/# |]; auto => />.
@@ -299,7 +295,7 @@ seq 1 1 : (
     + exists * sk_seed{1}, pub_seed{1}, (of_int s{2})%W32, (of_int i{2})%W32, ots_addr{1}, ltree_addr{1}, address{2}.
       elim * => P0 P1 P2 P3 P4 P5 P6.
       call (gen_leaf_equiv P0 P1 P2 P3 P4 P5 P6) => [/# |].
-      skip => /> &1 &2 17? H *; split; first by smt(@W32 pow2_32).
+      skip => /> &1 &2 17? H *; split;first by smt(@W32 pow2_32).
       move => 3? -> *.
       (do split; 1..4,8: by (
           apply (eq_from_nth witness); rewrite !size_sub // => j?; rewrite !nth_sub //; smt(sub_k) 
@@ -446,7 +442,7 @@ seq 1 2 : (
 
 seq 1 0 : (#pre /\ ltree_addr{1}.[4] = W32.of_int (s{2} + i{2})).
     + inline {1}; auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19 H20 H21 *.
-      split; last by smt(@W32 pow2_32).
+      split; last by rewrite -H21 to_uintK. 
       apply (eq_from_nth witness); rewrite !size_sub // => i?; rewrite !nth_sub // get_setE // ifF 1:/#; smt(sub_k).
 
 wp; conseq />.
@@ -513,27 +509,27 @@ seq 1 1 : (
       - apply (eq_from_nth witness).
           * rewrite size_sub; first by rewrite to_uintD of_uintK /#.
             rewrite size_sub_list !to_uintD of_uintK /#. 
-        rewrite size_sub; first by smt(@W64 pow2_64).
+        rewrite size_sub; first by rewrite to_uintD 1:/#.
         case (0 <= to_uint (offset{2} + W64.one) < size stack{2}) => ?.
           * have E1: min (to_uint (offset{2} + W64.one)) (size stack{2}) = to_uint (offset{2} + W64.one) by smt().
             have E2: 0 <= to_uint (offset{2} + W64.one) < 11 by smt().
-            rewrite E1 n_val => j?.
-            rewrite nth_sub //= /sub_list nth_mkseq //= nth_nbytes_flatten; first by smt(@W64 pow2_64).
-            have ->: _stack{1}.[j] = nth witness (sub _stack{1} 0 (n * min (to_uint offset{2} + 1) (size stack{2}))) j by rewrite nth_sub; first by smt(@W64 pow2_64).
-            rewrite H24 /sub_list nth_mkseq; first by smt(@W64 pow2_64).
+            rewrite E1 n_val => j Hj.
+            have := Hj; rewrite to_uintD_small 1:/# /= => Hjj.
+            rewrite nth_sub //= /sub_list nth_mkseq //= nth_nbytes_flatten 1:/#.
+            have ->: _stack{1}.[j] = nth witness (sub _stack{1} 0 (n * min (to_uint offset{2} + 1) (size stack{2}))) j by rewrite nth_sub 1:/#.
+            rewrite H24 /sub_list nth_mkseq 1:/#. 
             rewrite /= nth_nbytes_flatten // /#.
           * have E1: min (to_uint (offset{2} + W64.one)) (size stack{2}) = size stack{2} by smt(@W64 pow2_64).
-            rewrite E1 H9 d_val h_val n_val /= => j?. 
-            rewrite nth_sub //.
-            rewrite /sub_list nth_mkseq //= nth_nbytes_flatten 1:/#.
-            have ->: _stack{1}.[j] = nth witness (sub _stack{1} 0 (n * min (to_uint offset{2} + 1) (size stack{2}))) j by rewrite nth_sub; first by smt(@W64 pow2_64).
-            rewrite H24 /sub_list nth_mkseq; first by smt(@W64 pow2_64).
-            rewrite /= nth_nbytes_flatten // /#.
+            rewrite E1 H9 d_val h_val n_val /= => j Hj. 
+            have := E1; rewrite to_uintD_small 1:/# /= => T. (* by simplifying E1 a bit we can use smt() instead of smt(@W64 pow2_64) *)
+            rewrite nth_sub // /sub_list nth_mkseq //= nth_nbytes_flatten 1:/#.
+            have ->: _stack{1}.[j] = nth witness (sub _stack{1} 0 (n * min (to_uint offset{2} + 1) (size stack{2}))) j by rewrite nth_sub 1:/#.
+            rewrite H24 /sub_list nth_mkseq 1:/# /= nth_nbytes_flatten // /#.
       - apply (eq_from_nth witness).  
-          * rewrite size_sub; first by smt(@W64 pow2_64). 
+          * rewrite size_sub ; first by smt(@W64 pow2_64). 
             by rewrite size_sub_list; first by smt(@W64 pow2_64).
         rewrite size_sub; first by smt(@W64 pow2_64).
-        have ->: to_uint (offset{2} + W64.one - W64.one) = to_uint offset{2} by smt(@W64 pow2_64).
+        have ->: to_uint (offset{2} + W64.one - W64.one) = to_uint offset{2} by rewrite to_uintB ?uleE /= to_uintD_small /#.
         smt().
       - have ->: to_uint (offset{2} + W64.one - W64.one) = to_uint offset{2} by rewrite to_uintB ?uleE to_uintD //=/#.
         apply H5.
@@ -781,7 +777,8 @@ seq 1 1 : #pre.
     + exists * buf{1}, stack{2}, _stack{1}, (offset{1} - (of_int 2)%W64).
       elim * => P0 P1 P2 P3.  
       call {1} (p_treehash_memcpy P0 P1 P2 P3) => [/# |].
-      auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19 H20 H21 H22.
+      auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19 H20.
+      rewrite eq_sym /= => H21 H22.
       rewrite uleE of_uintK /= => H23 H24 H25 H26 H27 *.
       rewrite !size_put.
       do split. 

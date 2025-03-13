@@ -1,0 +1,14 @@
+from XMSS require "sha256/sha256_in_ptr/sha256_in_ptr.jinc"
+from XMSS require "sha256/sha256_array/sha256_array.jinc"
+
+export 
+fn sha256_jazz(reg ptr u8[32] out, reg ptr u8[INLEN] in) -> reg ptr u8[32] {
+    out = __sha256(out, in); 
+    return out;
+}
+
+export 
+fn sha256_in_ptr_jazz(reg ptr u8[32] out, reg u64 in inlen) -> reg ptr u8[32] {
+  out = __sha256_in_ptr(out, in, inlen); 
+  return out;
+}
