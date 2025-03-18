@@ -11,7 +11,6 @@ require import Array8.
 
 equiv treehash_equiv : 
     XMSS_TreeHash.TreeHash.treehash ~  XMSS_MT_TreeHash.TreeHash.treehash :
-    XMSS_Params.impl_oid = XMSS_MT_Params.impl_oid /\
     d = 1 /\ ={pub_seed, sk_seed, s, t, address}
     ==> 
     ={res}.
@@ -19,7 +18,7 @@ proof.
 proc => /=. 
 seq 5 5 : (={stack}); 2:auto.
 seq 4 4 : (#pre /\ ={stack, heights, offset, i}).
-- by auto => /> ? -> /=.
+- auto => /> -> //.
 while (#pre).
 - seq 2 2 : #pre; 1:auto.
   seq 1 1 : (#pre /\ ={pk}).
