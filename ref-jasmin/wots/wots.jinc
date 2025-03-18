@@ -443,6 +443,7 @@ fn __wots_pk_from_sig(
         start = lengths[i];
         steps = XMSS_WOTS_W - 1; steps -= lengths[i];
         
+        /* FIXME: EXTRA MEMCPY HERE */
         t = sig_ptr; t += i*XMSS_N;
         pk[i*XMSS_N : XMSS_N] = _x_memcpy_u8u8p(pk[i*XMSS_N : XMSS_N], t);
 

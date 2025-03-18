@@ -104,6 +104,8 @@ fn __treehash(
         buf, ltree_addr, ots_addr = __gen_leaf_wots_(buf, sk_seed, pub_seed, ltree_addr, ots_addr);
 
         // We now copy the result to stack + offset * params->n
+        /* FIXME: EXTRA MEMCPY HERE */
+        /* I dont think this one can be removed */
         () = #unspill(offset);
         t64 = offset; t64 *= XMSS_N; // Obs: if XMSS_N = 32 we can do a shift instead
         _stack = memcpy_u8u8_3_treehash::__memcpy_u8u8_3(_stack, buf, t64, XMSS_N);
@@ -133,6 +135,7 @@ fn __treehash(
             // thash_h(params, stack + (offset - 2) * params->n, stack + (offset - 2) * params->n, pub_seed, node_addr);
             // We first need to load stack + (offset-2)*params->n into buf2
             () = #unspill(offset);
+            /* FIXME: EXTRA MEMCPY HERE */
             t64 = offset; t64 -= 2; t64 *= XMSS_N;
             buf2, _ = memcpy_u8u8_2_treehash::__memcpy_u8u8_2(buf2, _stack, t64, 2 * XMSS_N);
 
@@ -141,6 +144,7 @@ fn __treehash(
 
             // We now need to copy the result to stack + (offset-2)*params->n
             () = #unspill(offset);
+            /* FIXME: EXTRA MEMCPY HERE */
             t64 = offset; t64 -= 2; t64 *= XMSS_N;
             _stack = memcpy_u8u8_3_treehash::__memcpy_u8u8_3(_stack, buf, t64, XMSS_N);
 
@@ -157,6 +161,7 @@ fn __treehash(
     }
 
     () = #unspill(root);
+    /* FIXME: Can this be a #copy?? */
     for j=0 to XMSS_N { root[j] = _stack[j]; }
 
     return root;
@@ -290,6 +295,8 @@ fn __tree_sig(
     // Sig = sig_ots || auth;
     () = #unspill(sig);
 
+    /* FIXME: Can these be #copy?? */
+    /* This does not happen in the c reference impl */
     for i=0 to XMSS_WOTS_SIG_BYTES { sig[i] = sig_ots[i]; }
     for i=0 to XMSS_TREE_HEIGHT * XMSS_N { sig[(XMSS_WOTS_LEN * XMSS_N) + i] = auth_path[i]; }
     
