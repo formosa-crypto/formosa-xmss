@@ -26,6 +26,10 @@
 bool verbose = true;
 
 static uint64_t min_array(const uint64_t *a, size_t len) {
+    if (!a) {
+        return -1;
+    }
+
     uint64_t min = a[0];
     for (size_t i = 1; i < len; i++) {
         if (a[i] < min) {
@@ -33,16 +37,6 @@ static uint64_t min_array(const uint64_t *a, size_t len) {
         }
     }
     return min;
-}
-
-static uint64_t min3(uint64_t a, uint64_t b, uint64_t c) {
-    return (a < b ? (a < c ? a : c) : (b < c ? b : c));
-}
-
-static uint64_t min3_array(const uint64_t *a) {
-    assert(a != NULL);
-
-    return min3(a[0], a[1], a[2]);
 }
 
 static int starts_with(const char *str, const char *prefix) {
@@ -191,15 +185,9 @@ void print_results(uint64_t obs[OP][RUNS][TIMINGS]) {
         verify_medians[i] = median(obs[2][i], TIMINGS);
     }
 
-    if (RUNS == 3) {
-        kg_median = min3_array(kg_medians);
-        sign_median = min3_array(sign_medians);
-        verify_median = min3_array(verify_medians);
-    } else {
-        kg_median = min_array(kg_medians, RUNS);
-        sign_median = min_array(sign_medians, RUNS);
-        verify_median = min_array(verify_medians, RUNS);
-    }
+    kg_median = min_array(kg_medians, RUNS);
+    sign_median = min_array(sign_medians, RUNS);
+    verify_median = min_array(verify_medians, RUNS);
 
     snprintf(impl_name, sizeof(impl_name), "%s_c_ref", xstr(IMPL));
 
@@ -211,7 +199,6 @@ void print_results(uint64_t obs[OP][RUNS][TIMINGS]) {
             exit(EXIT_FAILURE);
         }
 
-        printf("Debug: impl_name = %s\n", impl_name);
         fprintf(f, "%s;%" PRIu64 ";%" PRIu64 ";%" PRIu64 "\n", impl_name, kg_median, sign_median,
                 verify_median);
         fclose(f);
