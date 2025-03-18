@@ -4,45 +4,17 @@
 //
 
 #ifndef RUNS
-#define RUNS 3
+#define RUNS 1
 #endif
 
+/* Loops is not used yet */
 #ifndef LOOPS
 #define LOOPS 3
 #endif
 
 #ifndef TIMINGS
-#define TIMINGS 10000
+#define TIMINGS 500
 #endif
-
-//
-
-#ifndef MININBYTES
-#define MININBYTES 0
-#endif
-
-#ifndef MAXINBYTES
-#define MAXINBYTES 16384
-#endif
-
-#ifndef MINOUTBYTES
-#define MINOUTBYTES 32
-#endif
-
-#ifndef MAXOUTBYTES
-#define MAXOUTBYTES 128
-#endif
-
-//
-
-#ifndef INC_INBYTES
-#define INC_INBYTES 2
-#endif
-
-#ifndef INC_OUTBYTES
-#define INC_OUTBYTES 2
-#endif
-
 
 #endif
 

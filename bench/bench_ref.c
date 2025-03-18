@@ -23,7 +23,17 @@
 #define MESSAGE_SIZE 128
 #endif
 
-bool verbose = false;
+bool verbose = true;
+
+static uint64_t min_array(const uint64_t *a, size_t len) {
+    uint64_t min = a[0];
+    for (size_t i = 1; i < len; i++) {
+        if (a[i] < min) {
+            min = a[i];
+        }
+    }
+    return min;
+}
 
 static uint64_t min3(uint64_t a, uint64_t b, uint64_t c) {
     return (a < b ? (a < c ? a : c) : (b < c ? b : c));
@@ -168,6 +178,11 @@ void print_results(uint64_t obs[OP][RUNS][TIMINGS]) {
     uint64_t kg_medians[RUNS];
     uint64_t sign_medians[RUNS];
     uint64_t verify_medians[RUNS];
+
+    uint64_t kg_median;
+    uint64_t sign_median;
+    uint64_t verify_median;
+
     char impl_name[1024];
 
     for (int i = 0; i < RUNS; i++) {
@@ -176,14 +191,34 @@ void print_results(uint64_t obs[OP][RUNS][TIMINGS]) {
         verify_medians[i] = median(obs[2][i], TIMINGS);
     }
 
-    uint64_t kg_median = min3_array(kg_medians);
-    uint64_t sign_median = min3_array(sign_medians);
-    uint64_t verify_median = min3_array(verify_medians);
+    if (RUNS == 3) {
+        kg_median = min3_array(kg_medians);
+        sign_median = min3_array(sign_medians);
+        verify_median = min3_array(verify_medians);
+    } else {
+        kg_median = min_array(kg_medians, RUNS);
+        sign_median = min_array(sign_medians, RUNS);
+        verify_median = min_array(verify_medians, RUNS);
+    }
 
-        snprintf(impl_name, sizeof(impl_name), "%s_c_ref", xstr(IMPL));
+    snprintf(impl_name, sizeof(impl_name), "%s_c_ref", xstr(IMPL));
 
-    printf("%s;%" PRIu64 ";%" PRIu64 ";%" PRIu64 "\n", impl_name, kg_median, sign_median,
-           verify_median);
+    if (verbose) {
+        // In this case we print to the file results.txt
+        FILE *f = fopen("results.txt", "a");
+        if (f == NULL) {
+            fprintf(stderr, "Failed to open results.txt for writing\n");
+            exit(EXIT_FAILURE);
+        }
+
+        printf("Debug: impl_name = %s\n", impl_name);
+        fprintf(f, "%s;%" PRIu64 ";%" PRIu64 ";%" PRIu64 "\n", impl_name, kg_median, sign_median,
+                verify_median);
+        fclose(f);
+    } else {
+        printf("%s;%" PRIu64 ";%" PRIu64 ";%" PRIu64 "\n", impl_name, kg_median, sign_median,
+               verify_median);
+    }
 }
 
 int main(void) {
@@ -215,7 +250,7 @@ int main(void) {
             printf("================= Run %d =================\n", i);
         }
 
-        xmssmt_bench_kg(&params, oid,  observations[0][i]);
+        xmssmt_bench_kg(&params, oid, observations[0][i]);
         xmssmt_bench_sign(&params, oid, observations[1][i]);
         xmssmt_bench_verify(&params, oid, observations[2][i]);
     }
