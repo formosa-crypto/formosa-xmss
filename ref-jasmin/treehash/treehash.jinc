@@ -62,18 +62,23 @@ fn __treehash(
 
     reg u32 i upper_bound t32 u tree_idx;
     reg u64 t64;
-    reg u64 offset = 0;
+    reg u64 offset;
     reg u8 val;
     
     reg u8 cond;
 
     inline int j;
 
+    offset = 0;
     () = #spill(root, offset, start_index, sk_seed, pub_seed);
 
-    stack u32[8] ots_addr = #copy(subtree_addr);
-    stack u32[8] ltree_addr = #copy(subtree_addr);
-    stack u32[8] node_addr = #copy(subtree_addr);
+    stack u32[8] ots_addr; 
+    stack u32[8] ltree_addr; 
+    stack u32[8] node_addr; 
+
+    ots_addr = #copy(subtree_addr);
+    ltree_addr = #copy(subtree_addr);
+    node_addr = #copy(subtree_addr);
 
     // set_type(ots_addr, XMSS_ADDR_TYPE_OTS);
     // set_type(ltree_addr, XMSS_ADDR_TYPE_LTREE);
@@ -212,29 +217,40 @@ fn __build_auth_path(
     reg ptr u32[8] addr
 ) -> reg ptr u8[XMSS_TREE_HEIGHT * XMSS_N]
 {
-    inline int j;
-    reg u32 k;
+    reg u64 j;
+    reg u64 start_index; /* start index of the slice */
+    reg u32 k t;
     reg ptr u8[XMSS_N] node;
 
     () = #spill(i, auth_path, sk_seed, pub_seed, addr);
 
-    for j=0 to XMSS_TREE_HEIGHT {
+    j = 0;
+    while (j < XMSS_TREE_HEIGHT) {
+        () = #spill(j);
         () = #unspill(i);
 
         // k = ((i >> j) ^ 1) << j;
-        k = i >> j; 
+        t = (32u) j;
+        k = i;
+        k >>= t & 31; 
         k ^= 1; 
-        k <<= j;
+        k <<= t & 31;
 
         () = #unspill(auth_path);
-        node = auth_path[j*XMSS_N:XMSS_N];
-
+        start_index = j; start_index *= XMSS_N;
+        node = auth_path[start_index : XMSS_N];
+        
         () = #unspill(sk_seed, pub_seed, addr);
-        node = __treehash_(node, sk_seed, pub_seed, k, j, addr);
+        node = __treehash_(node, sk_seed, pub_seed, k, t, addr);
 
+        // start_index = j; start_index *= XMSS_N;
         () = #unspill(auth_path);
-        auth_path[j*XMSS_N:XMSS_N] = node;
+        auth_path[start_index : XMSS_N] = node;
         () = #spill(auth_path);
+
+
+        () = #unspill(j);
+        j += 1;
     }
 
     return auth_path;
@@ -263,10 +279,13 @@ fn __tree_sig(
     stack u8[XMSS_WOTS_SIG_BYTES] sig_ots;
     stack u8[XMSS_TREE_HEIGHT * XMSS_N] auth_path;
 
-    stack u8[XMSS_N] pub_seed = #copy_8(sk[XMSS_INDEX_BYTES + 3 * XMSS_N : XMSS_N]);
-    stack u8[XMSS_N] sk_seed  = #copy_8(sk[XMSS_INDEX_BYTES : XMSS_N]);
+    stack u8[XMSS_N] pub_seed;
+    stack u8[XMSS_N] sk_seed; 
 
     inline int i;
+
+    pub_seed = #copy_8(sk[XMSS_INDEX_BYTES + 3 * XMSS_N : XMSS_N]);
+    sk_seed  = #copy_8(sk[XMSS_INDEX_BYTES : XMSS_N]);
 
     addr[4] = 0;
 
