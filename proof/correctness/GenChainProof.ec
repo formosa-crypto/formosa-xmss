@@ -19,14 +19,26 @@ require import Repr Utils Bytes.
 (*---*) import StdBigop.Bigint.
 
 lemma zip_fst (a b : W8.t list) (i : int):
-  0 <= i < min (size a) (size b) =>
-    (nth witness (zip a b) i).`1 = nth witness a i 
-      by smt(@List).
+    size a = size b => 
+    0 <= i < size a =>
+    (nth witness (zip a b) i).`1 = nth witness a i.
+proof.
+move => H ?.
+have ->: nth witness (zip a b) i = nth (witness, witness) (zip a b) i.
+- by apply nth_change_dfl; rewrite size_zip -H (: min (size a) (size a) = size a). 
+by rewrite nth_zip.
+qed.
 
 lemma zip_snd (a b : W8.t list) (i : int):
-  0 <= i < min (size a) (size b) =>
-    (nth witness (zip a b) i).`2 = nth witness b i 
-      by smt(@List).
+    size a = size b =>
+    0 <= i < size a =>
+    (nth witness (zip a b) i).`2 = nth witness b i.
+proof.
+move => H ?.
+have ->: nth witness (zip a b) i = nth (witness, witness) (zip a b) i.
+- by apply nth_change_dfl; rewrite size_zip -H (: min (size a) (size a) = size a). 
+by rewrite nth_zip.
+qed.
 
 module ThashF = {
   proc thash_f (t : nbytes, seed : seed, address : adrs) : (nbytes * adrs) = {
@@ -215,7 +227,8 @@ while {1}
         rewrite H9 !nth_cat !size_cat !size_to_list !NBytes.valP n_val /= ifF 1:/#.
         by rewrite /sub_list nth_mkseq 1:/#.
 
-auto => /> &hr H0 H1 H2 H3 H4 H5 H6 H7 H8 *.
+auto => /> &hr H0 H1 H2 H3 H4 H5 H6 H7. 
+rewrite ultE of_uintK /= => H8 *.
 do split; 1,2,6: by smt(@W64 pow2_64).
   - apply (eq_from_nth witness); first by rewrite !size_sub /#.
     rewrite size_sub 1:/# => j?.        
@@ -227,19 +240,17 @@ do split; 1,2,6: by smt(@W64 pow2_64).
     rewrite ifF; first by rewrite to_uintD of_uintK /=/#.
     rewrite -H6 n_val /= nth_sub /#.
   - apply (eq_from_nth witness); first by rewrite size_sub to_uintD_small 1..3:/# size_sub_list /#.
-    rewrite size_sub to_uintD_small 1..3:/# => j?.
-    rewrite nth_sub // /sub_list nth_mkseq // /= get_setE; first by smt(@W64 pow2_64).
+    rewrite size_sub to_uintD_small 1..3:/# /= => j?. 
+    rewrite nth_sub // /sub_list nth_mkseq // /= get_setE; first by smt(@W64 pow2_64). 
     case (to_uint i{hr} = j) => H; [rewrite ifT; first by smt(@W64 pow2_64) | rewrite ifF; first by smt(@W64 pow2_64)]; last first.
-        + rewrite n_val /=.
+        + rewrite n_val /=. 
           have ->: buf{hr}.[64 + j] = nth witness (sub buf{hr} (n + n) (to_uint i{hr})) j by rewrite nth_sub 2:/#; smt(@W64 pow2_64).
           rewrite H7 /sub_list nth_mkseq 2:/#; smt(@W64 pow2_64).
         + rewrite /nbytexor NBytes.insubdK /bytexor; first by rewrite /P size_map size_zip !NBytes.valP.
           rewrite (nth_map witness) /=. 
              - rewrite size_zip !NBytes.valP n_val (: min 32 32 = 32) 1:/#; smt(@W64 pow2_64).
-               rewrite zip_fst; first by rewrite !NBytes.valP n_val /=; smt(@W64 pow2_64).
-               rewrite zip_snd; first by rewrite !NBytes.valP n_val /=; smt(@W64 pow2_64).
-               rewrite -H4 -!get_to_list H; congr. (* this gets rid of the rhs *)
-               congr.               
+               rewrite zip_fst ?NBytes.valP // 1:/# zip_snd ?NBytes.valP // 1:/# -H4 -!get_to_list H.
+               congr; congr.               
 qed.
 
 lemma gen_chain_correct (_buf_ : W8.t Array32.t, _start_ _steps_ : W32.t, _pub_seed_ : W8.t Array32.t) (a1 a2 : W32.t Array8.t):
@@ -299,7 +310,7 @@ while (
   i{2} = to_uint start{1} /\
   to_uint i{1} = i{2} + chain_count{2} /\
   t{1} = start{1} + steps{1} 
-); last by auto => /> ; smt(@W32 pow2_32).
+); last by auto => /> *; rewrite ultE !to_uintD /#.
 
 seq 2 2 : (#pre /\ address{2} = addr{1}).
     + inline {1}; auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 *.
@@ -334,10 +345,6 @@ skip => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 <- <- H9 H10 H11 H12 H13.
 rewrite !NBytes.valKd.
 do split => _ _. (* These hypothesis are useless: t{2} = t{2} and _seed{2} = _seed{2} *)
 move => H14 H15 resultL resultR H16 H17.
-do split; 1,3..5: by smt().
-- smt(sub_N).
-- rewrite to_uintD /#.
-- rewrite ultE to_uintD_small 1:/# /= H11 => ?; smt(@W32 pow2_32).
-- rewrite ultE to_uintD_small 1:/# /= H11 => ?; smt(@W32 pow2_32).
+rewrite !ultE !to_uintD -H0; smt(sub_N). 
 qed.
 
