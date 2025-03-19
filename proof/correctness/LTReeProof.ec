@@ -326,7 +326,7 @@ seq 4 2 : (
              * rewrite /P /chunk nth_mkseq /=; first by rewrite size_to_list /#.
                rewrite size_take 1:/# size_drop 1:/# size_to_list /#.
           rewrite /chunk nth_mkseq /=; first by rewrite size_to_list /#.
-          case (0 <= j < 32) => [Hfst | Hsnd].
+          case (0 <= j < 32) => ?.
              * rewrite nth_cat size_take 1:/# size_drop 1:/# size_to_list ifT 1:/#.
                rewrite nth_take 1,2:/#.
                rewrite nth_drop 1,2:/#.
@@ -342,7 +342,8 @@ seq 1 1 : (
     #{/~to_list buf1{1} = NBytes.val pk_i{2} ++ NBytes.val tmp{2}}pre /\
     to_list buf0{1} = NBytes.val pk_i{2}
 ).
-    + exists * pk_i{2}, tmp{2}, pub_seed1{1}, addr1{1}, address{2}.
+    + do 2! (inline {1} 1; wp; sp).
+      exists * pk_i{2}, tmp{2}, pub_seed3{1}, addr3{1}, address{2}.
       elim * => P0 P1 P2 P3 P4.
       call (rand_hash_results P0 P1 P2 P3 P4) => [/# |].
       skip => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14*.
@@ -356,12 +357,7 @@ seq 1 1 : (
               rewrite initiE //= ifF /#.
         - by rewrite -H0 NBytes.valKd.
         - smt(sub_k).
-        - move => ??? resL resR Ha Hb.
-          do split; (apply (eq_from_nth witness); rewrite !size_sub // => j?).
-            * rewrite !nth_sub //; smt(sub_k).
-            * rewrite !nth_sub //; smt(sub_k).
-            * rewrite !nth_sub //; smt(sub_k).
-
+        - move => *; (do split; (apply (eq_from_nth witness); rewrite !size_sub // => j?)); rewrite !nth_sub //; smt(sub_k).
 wp.
 exists * wots_pk1{1}, pks{2}, (to_uint i{1}), buf0{1}.
 elim * => P0 P1 P2 P3.

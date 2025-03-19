@@ -528,8 +528,9 @@ seq 1 1 : (
   address{2} = ots_addr{1} /\
   idx_new{2} = sk{2}.`Types.idx /\
 sub signature{1} 0 XMSS_INDEX_BYTES = EncodeIdx idx{2} 
-).
-    + exists * Glob.mem{1}, 
+). 
+    + do 2! (inline {1} 1; wp; sp).
+      exists * Glob.mem{1}, 
                (init (fun (i_0 : int) => signature{1}.[3 + i_0]))%Array32,
                pub_root{1},
                idx{1},

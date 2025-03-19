@@ -33,8 +33,6 @@ qed.
 
 pred valid_idx (idx : W32.t) = 0 <= to_uint idx < 2^XMSS_FULL_HEIGHT.
 
-lemma size_to_list_W64 (w : W64.t) : size (W8u8.to_list w) = 8 by smt(@W8u8).
-
 lemma to_uintEq (w0 w1 : W32.t) :
     w0 = w1 <=> to_uint w0 = to_uint w1.
 proof.
@@ -45,15 +43,6 @@ qed.
 
 pred even (x : W32.t) = to_uint x %% 2 = 0.
 pred odd (x : W32.t) = !even x.
-
-lemma even_not_odd :
-    forall (w : W32.t), even w => !odd w by smt().
-
-lemma even_odd_false :
-    forall (w : W32.t), even w => odd w = false by smt().
-
-lemma floor_even :
-    forall (w : W32.t), floor (to_uint w)%r %% 2 = 0 => even w by smt(@Real).
 
 lemma even_div :
     forall (w : W32.t), even w => to_uint (w `>>` W8.one) = to_uint w %/ 2.
@@ -114,31 +103,8 @@ case: (to_uint shift_amount = 30) => [-> /= | ?]; first by smt(@Real).
 case: (to_uint shift_amount = 31) => [-> /= | /#]; by smt(@Real).
 qed.
 
-lemma shr_acc (w : W32.t, shift_amount : W64.t) :
-    0 <= to_uint shift_amount < 31 =>
-    to_uint (w `>>` (of_int (to_uint shift_amount))%W8 `>>` W8.one) = 
-    to_uint (w `>>` (of_int (to_uint shift_amount + 1))%W8).
-proof.
-move => ?.
-rewrite !to_uint_shr // of_uintK // 1,2:/# /=.
-case: (to_uint shift_amount = 0)  => [-> /# |]; case: (to_uint shift_amount = 1)  => [-> /# |]; case: (to_uint shift_amount = 2)  => [-> /# |]; 
-case: (to_uint shift_amount = 3)  => [-> /# |]; case: (to_uint shift_amount = 4)  => [-> /# |]; case: (to_uint shift_amount = 5)  => [-> /# |];
-case: (to_uint shift_amount = 6)  => [-> /# |]; case: (to_uint shift_amount = 7)  => [-> /# |]; case: (to_uint shift_amount = 8)  => [-> /# |].
-case: (to_uint shift_amount = 9)  => [-> /# |]; case: (to_uint shift_amount = 10) => [-> /# |]; case: (to_uint shift_amount = 11) => [-> /# |];
-case: (to_uint shift_amount = 12) => [-> /# |]; case: (to_uint shift_amount = 13) => [-> /# |]; case: (to_uint shift_amount = 14) => [-> /# |].
-case: (to_uint shift_amount = 15) => [-> /# |]; case: (to_uint shift_amount = 16) => [-> /# |]; case: (to_uint shift_amount = 17) => [-> /# |];
-case: (to_uint shift_amount = 18) => [-> /# |]; case: (to_uint shift_amount = 19) => [-> /# |]; case: (to_uint shift_amount = 20) => [-> /# |].
-case: (to_uint shift_amount = 21) => [-> /# |]; case: (to_uint shift_amount = 22) => [-> /# |]; case: (to_uint shift_amount = 23) => [-> /# |].
-case: (to_uint shift_amount = 24) => [-> /# |]; case: (to_uint shift_amount = 25) => [-> /# |]; case: (to_uint shift_amount = 26) => [-> /# |].
-case: (to_uint shift_amount = 27) => [-> /# |]; case: (to_uint shift_amount = 28) => [-> /# |]; case: (to_uint shift_amount = 29) => [-> /# |].
-case: (to_uint shift_amount = 30) => [-> /# | /#].
-qed.
-
 lemma odd_g0 :
     forall (w : W32.t), 0 <= to_uint w  => odd w => 1 <= to_uint w by smt(@IntDiv).
-
-lemma to_uintEq_w8 :
-    forall (w0 w1 : W8.t), w0 = w1 <=> to_uint w0 = to_uint w1 by smt(@W8).
 
 module ComputeRoot = {
 proc compute_root (_seed nodes0 : nbytes, address0 : adrs, idx_sig0 : W32.t, auth0 : auth_path) : nbytes = {
@@ -359,7 +325,9 @@ move => ???; split.
           congr; smt(@W64 pow2_64).
 
 if{1}.
-- exists * nodes0{2}, auth_k{2}, pub_seed1{1}, addr1{1}, address0{2}; elim * => P0 P1 P2 P3 P4; (call (rand_hash_results P0 P1 P2 P3 P4) => [/# |]).
+
+- do 2! (inline {1} 1; wp; sp). 
+  exists * nodes0{2}, auth_k{2}, pub_seed3{1}, addr3{1}, address0{2}; elim * => P0 P1 P2 P3 P4; (call (rand_hash_results P0 P1 P2 P3 P4) => [/# |]).
   auto => /> &1 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19.
   do split.
     * rewrite tP => i?.
@@ -368,7 +336,7 @@ if{1}.
     * smt(sub_k).
     * move => *; (do split; 3..: by smt()); apply (eq_from_nth witness); rewrite !size_sub // => i?; rewrite !nth_sub //; smt(sub_k). 
 
-- exists * nodes0{2}, auth_k{2}, pub_seed1{1}, addr1{1}, address0{2}; elim * => P0 P1 P2 P3 P4; (call (rand_hash_results P0 P1 P2 P3 P4) => [/# |]).
+- do 2! (inline {1} 1; wp; sp) ; exists * nodes0{2}, auth_k{2}, pub_seed3{1}, addr3{1}, address0{2}; elim * => P0 P1 P2 P3 P4; (call (rand_hash_results P0 P1 P2 P3 P4) => [/# |]).
   auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19 H20 H21 H22 H23 *.
   do split.
     * rewrite tP => i?.
@@ -455,8 +423,8 @@ move => ???; split.
           rewrite nth_chunk 1:/# ?size_load_buf 1,2:/# nth_take 1,2:/# nth_drop 1,2:/# nth_load_buf 1:/# /loadW8.
           congr; smt(@W64 pow2_64).
 
-if{1}.
-- exists * auth_k{2}, nodes0{2}, pub_seed1{1}, addr1{1}, address0{2}; elim * => P0 P1 P2 P3 P4; (call (rand_hash_results P0 P1 P2 P3 P4) => [/# |]).
+if{1}; do 2! (inline {1} 1; wp; sp).
+- exists * auth_k{2}, nodes0{2}, pub_seed3{1}, addr3{1}, address0{2}; elim * => P0 P1 P2 P3 P4; (call (rand_hash_results P0 P1 P2 P3 P4) => [/# |]).
   auto => /> &1 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19.
   do split.
     * rewrite tP => i?.
@@ -465,7 +433,7 @@ if{1}.
     * smt(sub_k).
     * move => *; (do split; 3..: by smt()); apply (eq_from_nth witness); rewrite !size_sub // => i?; rewrite !nth_sub //; smt(sub_k). 
 
-- exists * auth_k{2}, nodes0{2}, pub_seed1{1}, addr1{1}, address0{2}; elim * => P0 P1 P2 P3 P4; (call (rand_hash_results P0 P1 P2 P3 P4) => [/# |]).
+- exists * auth_k{2}, nodes0{2}, pub_seed3{1}, addr3{1}, address0{2}; elim * => P0 P1 P2 P3 P4; (call (rand_hash_results P0 P1 P2 P3 P4) => [/# |]).
   auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19 H20 H21 H22*.
   do split.
     * rewrite tP => i?.

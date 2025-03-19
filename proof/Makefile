@@ -1,23 +1,25 @@
 # -*- Makefile -*-
 
 EASYCRYPT  ?= easycrypt
-ECRUNTEST  ?= $(EASYCRYPT) runtest
-EC_FLAGS   ?= -timeout 20 ${ECADDFLAGS}
+EC_FLAGS   ?= ${ECADDFLAGS}
+ECRUNTEST  ?= $(EASYCRYPT) runtest $(EC_FLAGS) # So we can set the number of jobs (e.g. make check_correctness_proof EC_FLAGS='-jobs 4')
 
 JASMIN2EC        ?= jasmin2ec
 JASMIN2EC_FLAGS  ?= --array-model=old
-JPATH            := JASMINPATH="XMSS=../ref-jasmin:Stdlib=../ref-jasmin/stdlib"
+
+JPATH := JASMINPATH="XMSS=../ref-jasmin:Stdlib=../ref-jasmin/stdlib"
 
 # --------------------------------------------------------------------------------------------------
 
 default: extract check_spec check_proofs check_extraction
-all: clean distclean extract check_spec check_proofs check_extraction
+all: clean distclean extract check_spec check_proofs check_extraction check_xmss_spec \
+	check_xmss_mt_spec check_xmss_spec_extra check_correctness_proof check_security_proof
 extract: extraction/XMSS_IMPL.ec
 
 # --------------------------------------------------------------------------------------------------
 
 .PHONY: check_spec check_proofs check_extraction check_xmss_spec check_xmss_mt_spec \
-        check_correctness_proof check_security_proof check_xmss_xmssmt_proof
+        check_correctness_proof check_security_proof check_xmss_spec_extra
 
 # --------------------------------------------------------------------------------------------------
 
@@ -40,10 +42,6 @@ check_xmss_spec:
 check_xmss_mt_spec: 
 	$(ECRUNTEST) config/tests.config xmss-mt-spec
 
-# FIXME: This is currently not checked
-check_xmss_spec_extra: 
-	$(ECRUNTEST) config/tests.config xmss-spec-extra
-
 check_spec:  check_xmss_common_spec check_xmss_spec check_xmss_mt_spec
 
 check_extraction: extraction/XMSS_IMPL.ec
@@ -61,11 +59,14 @@ check_security_proof:
 	$(ECRUNTEST) config/tests.config acai
 	$(ECRUNTEST) config/tests.config fsai
 
-####################################################################################################
-
-# FIXME: This would currently be subsumed by the xmss-spec-extra target, if activated
+# TODO: This would currently be subsumed by the xmss-spec-extra target, if activated
 check_xmss_xmssmt_proof: 
 	$(EASYCRYPT) $(EC_FLAGS) spec/extra/XMSS_vs_XMSS_MT.ec
+
+####################################################################################################
+
+check_xmss_spec_extra: 
+	$(ECRUNTEST) config/tests.config spec-extra
 
 check_proofs: check_xmss_xmssmt_proof check_correctness_proof check_security_proof
 
@@ -73,20 +74,9 @@ check_proofs: check_xmss_xmssmt_proof check_correctness_proof check_security_pro
 
 .PHONY: clean
 clean:
-	-$(RM) -r *.eco
-	-$(RM) -r *~ 
-	-$(RM) -r \#*\#
-	-$(RM) -r spec/xmss/*.eco
-	-$(RM) -r spec/xmss/*~ 
-	-$(RM) -r spec/xmss/\#*\#
-	-$(RM) -r spec/xmss_mt/*.eco
-	-$(RM) -r spec/xmss_mt/*~ 
-	-$(RM) -r spec/xmss_mt/\#*\#
-	-$(RM) -r correctness/*.eco
-	-$(RM) -r correctness/*~ 
-	-$(RM) -r correctness/\#*\#
-	-$(RM) -r security/*/*.eco
-
+	-$(RM) -r *.eco *~ \#*\# spec/xmss/*.eco spec/xmss/*~ \
+	spec/xmss/\#*\# spec/xmss_mt/*.eco spec/xmss_mt/*~ spec/xmss_mt/\#*\# \
+	correctness/*.eco correctness/*~ correctness/\#*\# security/*/*.eco
 
 .PHONY: distclean
 distclean:
@@ -94,9 +84,5 @@ distclean:
 
 # --------------------------------------------------------------------------------------------------
 
-extraction/:
+extraction/ common/:
 	mkdir -p $@
-
-common/:
-	mkdir -p $@
-
