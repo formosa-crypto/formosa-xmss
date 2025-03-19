@@ -34,17 +34,9 @@ axiom hash_128 (x : W8.t Array128.t) :
       to_list res = NBytes.val (Hash (to_list x))
     ] = 1%r.
 
-axiom hash_ptr_ll (ptr len : W64.t) :
-  phoare[
-      M(Syscall).__core_hash_in_ptr_ :
-      valid_ptr_i ptr (to_uint len) 
-      ==>
-      true
-    ]= 1%r.
-
 axiom hash_ptr_correct (ptr len : W64.t) :
   phoare[
-      M(Syscall).__core_hash_in_ptr_ :
+      M(Syscall).__sha256_in_ptr:
       valid_ptr_i ptr (to_uint len) /\
       arg.`2 = ptr /\
       arg.`3 = len 
