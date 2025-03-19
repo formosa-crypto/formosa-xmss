@@ -20,9 +20,35 @@
 #define FILENAME "results.txt"
 #endif
 
+#ifndef MESSAGE_SIZE
+#define MESSAGE_SIZE 128
+#endif
+
 extern void prf_jazz(uint8_t *out, const uint8_t *in, const uint8_t *key);
+extern void prf_keygen_jazz(uint8_t *out, const uint8_t *in, const uint8_t *key);
+extern void hash_message_jazz(uint8_t *mhash, const uint8_t *r, const uint8_t *root, uint64_t idx,
+                              uint64_t m, size_t mlen);
+extern void thash_h_jazz(uint8_t *out, uint32_t *addr, const uint8_t *in, const uint8_t *pub_seed);
+extern void thash_f_jazz(uint8_t *out, uint32_t *addr, const uint8_t *pub_seed);
 
 bool verbose = true;
+
+xmss_params setup_params(void) {
+    xmss_params p;
+    uint32_t oid;
+
+    if (xmssmt_str_to_oid(&oid, xstr(IMPL)) == -1) {
+        fprintf(stderr, "Failed to generate oid from impl name\n");
+        exit(EXIT_FAILURE);
+    }
+
+    if (xmssmt_parse_oid(&p, oid) == -1) {
+        fprintf(stderr, "Failed to generate params from oid\n");
+        exit(EXIT_FAILURE);
+    }
+
+    return p;
+}
 
 void clearfile(const char *filename) {
     FILE *f = NULL;
@@ -30,6 +56,20 @@ void clearfile(const char *filename) {
         fprintf(stderr, "Failed to open %s\n", filename);
         exit(EXIT_FAILURE);
     }
+    fclose(f);
+}
+
+static uint32_t random_valid_idx(const xmss_params *p) {
+    return rand() % (1 << (uint32_t)(1 << p->tree_height));
+}
+
+void print_header(const char *filename) {
+    FILE *f = NULL;
+    if (!(f = fopen(filename, "w"))) {
+        fprintf(stderr, "Failed to open %s\n", filename);
+        exit(EXIT_FAILURE);
+    }
+    fprintf(f, "Function;Average;Median\n");
     fclose(f);
 }
 
@@ -41,6 +81,10 @@ static inline uint64_t cpucycles(void) {
     return result;
 }
 
+/*
+ * Func is a wrapper around the function to be benchmarked. It sets up the
+ * xmss_params and register the cycles before and after executing the function.
+ */
 void bench_function(void (*func)(uint64_t *, uint64_t *), const char *s) {
     uint64_t observations[TIMINGS] = {0};
     uint64_t before, after;
@@ -73,18 +117,7 @@ void bench_function(void (*func)(uint64_t *, uint64_t *), const char *s) {
 }
 
 void bench_prf_jasmin(uint64_t *before, uint64_t *after) {
-    xmss_params p;
-    uint32_t oid;
-
-    if (xmssmt_str_to_oid(&oid, xstr(IMPL)) == -1) {
-        fprintf(stderr, "Failed to generate oid from impl name\n");
-        exit(EXIT_FAILURE);
-    }
-
-    if (xmssmt_parse_oid(&p, oid) == -1) {
-        fprintf(stderr, "Failed to generate params from oid\n");
-        exit(EXIT_FAILURE);
-    }
+    xmss_params p = setup_params();
 
     uint8_t out[p.n];
     uint8_t in[32];
@@ -96,18 +129,7 @@ void bench_prf_jasmin(uint64_t *before, uint64_t *after) {
 }
 
 void bench_prf_c(uint64_t *before, uint64_t *after) {
-    xmss_params p;
-    uint32_t oid;
-
-    if (xmssmt_str_to_oid(&oid, xstr(IMPL)) == -1) {
-        fprintf(stderr, "Failed to generate oid from impl name\n");
-        exit(EXIT_FAILURE);
-    }
-
-    if (xmssmt_parse_oid(&p, oid) == -1) {
-        fprintf(stderr, "Failed to generate params from oid\n");
-        exit(EXIT_FAILURE);
-    }
+    xmss_params p = setup_params();
 
     uint8_t out[p.n];
     uint8_t in[32];
@@ -118,11 +140,127 @@ void bench_prf_c(uint64_t *before, uint64_t *after) {
     *after = cpucycles();
 }
 
+void bench_prf_keygen_jasmin(uint64_t *before, uint64_t *after) {
+    xmss_params p = setup_params();
+
+    uint8_t out[p.n];
+    uint8_t in[p.n + 32];
+    uint8_t key[p.n];
+
+    *before = cpucycles();
+    prf_keygen_jazz(out, in, key);
+    *after = cpucycles();
+}
+
+void bench_prf_keygen_ref(uint64_t *before, uint64_t *after) {
+    xmss_params p = setup_params();
+
+    uint8_t out[p.n];
+    uint8_t in[p.n + 32];
+    uint8_t key[p.n];
+
+    *before = cpucycles();
+    prf_keygen(&p, out, in, key);
+    *after = cpucycles();
+}
+
+void bench_hash_message_jasmin(uint64_t *before, uint64_t *after) {
+    xmss_params p = setup_params();
+
+    uint64_t idx = (uint64_t)random_valid_idx(&p);
+    uint8_t mhash[p.n];
+    uint8_t r[p.n];
+    uint8_t root[p.n];
+    uint8_t m[MESSAGE_SIZE];
+
+    *before = cpucycles();
+    hash_message_jazz(mhash, r, root, idx, m, MESSAGE_SIZE);
+    *after = cpucycles();
+}
+
+void bench_hash_message_ref(uint64_t *before, uint64_t *after) {
+    xmss_params p = setup_params();
+
+    unsigned long long idx = (unsigned long long)random_valid_idx(&p);
+    uint8_t mhash[p.n];
+    uint8_t r[p.n];
+    uint8_t root[p.n];
+    uint8_t m[MESSAGE_SIZE];
+
+    *before = cpucycles();
+    hash_message(&p, mhash, r, root, idx, m, MESSAGE_SIZE);
+    *after = cpucycles();
+}
+
+void bench_thash_h_jasmin(uint64_t *before, uint64_t *after) {
+    xmss_params p = setup_params();
+
+    uint8_t out[p.n];
+    uint32_t addr[8];
+    uint8_t in[2 * p.n];
+    uint8_t pub_seed[p.n];
+
+    *before = cpucycles();
+    thash_h_jazz(out, addr, in, pub_seed);
+    *after = cpucycles();
+}
+
+void bench_thash_h_ref(uint64_t *before, uint64_t *after) {
+    xmss_params p = setup_params();
+
+    uint8_t out[p.n];
+    uint32_t addr[8];
+    uint8_t in[2 * p.n];
+    uint8_t pub_seed[p.n];
+
+    *before = cpucycles();
+    thash_h(&p, out, in, pub_seed, addr);
+    *after = cpucycles();
+}
+
+void bench_thash_f_jasmin(uint64_t *before, uint64_t *after) {
+    xmss_params p = setup_params();
+
+    uint8_t out[p.n];
+    uint32_t addr[8];
+    uint8_t pub_seed[p.n];
+
+    *before = cpucycles();
+    thash_f_jazz(out, addr, pub_seed);
+    *after = cpucycles();
+}
+
+void bench_thash_f_c(uint64_t *before, uint64_t *after) {
+    xmss_params p = setup_params();
+
+    uint8_t out[p.n];
+    uint32_t addr[8];
+    uint8_t pub_seed[p.n];
+
+    *before = cpucycles();
+    thash_f(&p, out, out, pub_seed,
+            addr); /* the out and in arguments always point to the same memory */
+    *after = cpucycles();
+}
+
 int main(void) {
     clearfile(FILENAME);
+    print_header(FILENAME);
 
     bench_function(bench_prf_jasmin, "prf_jasmin");
     bench_function(bench_prf_c, "prf_ref");
+
+    bench_function(bench_prf_keygen_jasmin, "prf_keygen_jasmin");
+    bench_function(bench_prf_keygen_ref, "prf_keygen_ref");
+
+    bench_function(bench_hash_message_jasmin, "hash_message_jasmin");
+    bench_function(bench_hash_message_ref, "hash_message_ref");
+
+    bench_function(bench_thash_h_jasmin, "thash_h_jasmin");
+    bench_function(bench_thash_h_ref, "thash_h_ref");
+
+    bench_function(bench_thash_f_jasmin, "thash_f_jasmin");
+    bench_function(bench_thash_f_c, "thash_f_ref");
 
     return EXIT_SUCCESS;
 }

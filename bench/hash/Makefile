@@ -27,6 +27,13 @@ bin/bench_hash: bin/hash.s bench_hash.c
 bin/%.out: bin/%
 	@./$<
 
+results.txt: bin/bench_hash
+	@./$< 
+
+.PHONY: show_results
+show_results: results.txt
+	@./print_results.py
+
 bin/:
 	mkdir -p $@ 
 
