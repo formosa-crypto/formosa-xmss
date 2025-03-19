@@ -13,7 +13,7 @@
 #endif
 
 #ifndef TIMINGS
-#define TIMINGS 500
+#define TIMINGS 10000
 #endif
 
 #endif
