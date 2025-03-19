@@ -34,11 +34,11 @@ extern void gen_chain_inplace_jazz(uint8_t *out, uint32_t *addr, uint32_t start,
 extern void wots_pkgen_jazz(uint8_t *pk, uint32_t *addr, const uint8_t *seed,
                             const uint8_t *pub_seed);
 
-extern void wots_sign_jazz(uint8_t* sig, uint32_t* addr, const uint8_t* msg,
-                           const uint8_t* seed, const uint8_t* pub_seed);
+extern void wots_sign_jazz(uint8_t *sig, uint32_t *addr, const uint8_t *msg, const uint8_t *seed,
+                           const uint8_t *pub_seed);
 
-extern void wots_pk_from_sig_jazz(uint8_t* pk, uint32_t* addr, const uint8_t* sig, const uint8_t* msg,
-                                  const uint8_t* pub_seed);
+extern void wots_pk_from_sig_jazz(uint8_t *pk, uint32_t *addr, const uint8_t *sig,
+                                  const uint8_t *msg, const uint8_t *pub_seed);
 
 bool verbose = true;
 
@@ -193,7 +193,7 @@ void bench_gen_chain_ref(uint64_t *before, uint64_t *after) {
     *after = cpucycles();
 }
 
-void bench_pkgen_jasmin(uint64_t*before, uint64_t* after) {
+void bench_pkgen_jasmin(uint64_t *before, uint64_t *after) {
     xmss_params p = setup_params();
 
     uint8_t pk[p.wots_len * p.n];
@@ -206,7 +206,7 @@ void bench_pkgen_jasmin(uint64_t*before, uint64_t* after) {
     *after = cpucycles();
 }
 
-void bench_pkgen_ref(uint64_t*before, uint64_t* after) {
+void bench_pkgen_ref(uint64_t *before, uint64_t *after) {
     xmss_params p = setup_params();
 
     uint8_t pk[p.wots_len * p.n];
@@ -219,7 +219,7 @@ void bench_pkgen_ref(uint64_t*before, uint64_t* after) {
     *after = cpucycles();
 }
 
-void bench_sign_jasmin(uint64_t*before, uint64_t* after) {
+void bench_sign_jasmin(uint64_t *before, uint64_t *after) {
     xmss_params p = setup_params();
 
     uint8_t sig[p.wots_len * p.n];
@@ -233,7 +233,7 @@ void bench_sign_jasmin(uint64_t*before, uint64_t* after) {
     *after = cpucycles();
 }
 
-void bench_sign_ref(uint64_t*before, uint64_t* after) {
+void bench_sign_ref(uint64_t *before, uint64_t *after) {
     xmss_params p = setup_params();
 
     uint8_t sig[p.wots_len * p.n];
@@ -243,7 +243,35 @@ void bench_sign_ref(uint64_t*before, uint64_t* after) {
     uint8_t pub_seed[p.n];
 
     *before = cpucycles();
-    wots_sign(&p, sig,msg, seed, pub_seed, addr);
+    wots_sign(&p, sig, msg, seed, pub_seed, addr);
+    *after = cpucycles();
+}
+
+void bench_pk_from_sig_jasmin(uint64_t *before, uint64_t *after) {
+    xmss_params p = setup_params();
+
+    uint8_t pk[p.wots_len * p.n];
+    uint8_t sig[p.wots_len * p.n];
+    uint32_t addr[8];
+    uint8_t msg[p.n];
+    uint8_t pub_seed[p.n];
+
+    *before = cpucycles();
+    wots_pk_from_sig_jazz(pk, addr, sig, msg, pub_seed);
+    *after = cpucycles();
+}
+
+void bench_pk_from_sig_ref(uint64_t *before, uint64_t *after) {
+    xmss_params p = setup_params();
+
+    uint8_t pk[p.wots_len * p.n];
+    uint8_t sig[p.wots_len * p.n];
+    uint32_t addr[8];
+    uint8_t msg[p.n];
+    uint8_t pub_seed[p.n];
+
+    *before = cpucycles();
+    wots_pk_from_sig(&p, pk, sig, msg, pub_seed, addr);
     *after = cpucycles();
 }
 
@@ -262,6 +290,9 @@ int main(void) {
 
     bench_function(bench_sign_jasmin, "wots_sign_jasmin");
     bench_function(bench_sign_ref, "wots_sign_ref");
-    
+
+    bench_function(bench_pk_from_sig_jasmin, "wots_pk_from_sig_jasmin");
+    bench_function(bench_pk_from_sig_ref, "wots_pk_from_sig_ref");
+
     return EXIT_SUCCESS;
 }
