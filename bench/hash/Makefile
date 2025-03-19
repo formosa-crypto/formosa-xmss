@@ -8,6 +8,7 @@ JASMIN   ?= jasminc
 JFLAGS   ?= -nowarning ${JADDFLAGS}
 JINCLUDE := -I XMSS:../../ref-jasmin -I Stdlib:../../ref-jasmin/stdlib
 
+default: build
 asm: bin/hash.s
 build: bin/bench_hash
 run: bin/bench_hash.out
