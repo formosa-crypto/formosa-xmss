@@ -119,8 +119,7 @@ def main():
     table = read_data(input_filepath)
 
     if print_tex:
-        table = table.drop(columns=["Faster Implementation"])
-        print_latex_table(table)
+        print_latex_table(table.drop(columns=["Faster Implementation"]))
     else:
         print(table.to_string(index=False))
 
