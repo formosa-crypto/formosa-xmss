@@ -22,25 +22,23 @@ lemma cmp_eq_W64 :
     forall (a b : W64.t), (CMP_64 a b).`5 = (a = b).
 proof.
 move => a b.
-case (a = b) => ?; rewrite /CMP_64 /rflags_of_aluop //=; last by smt(@W64).
-have ->:  (a - b) = W64.zero by smt(@W64).
-by auto.
+case (a = b) => [-> | ?]; rewrite /CMP_64 /rflags_of_aluop /ZF_of //= ?W64.WRingA.subrr //.
+(have ?: !(a - b = W64.zero)) => [| /#]; smt(@W64).
 qed.
 
 lemma cmp_lt_W64 :
     forall (a b : W64.t), (CMP_64 a b).`2 = (a \ult b).
 proof.
 move => a b.
-rewrite /CMP_64 /rflags_of_aluop /= #smt:(@W64).
+rewrite /CMP_64 /rflags_of_aluop /=; smt(@W64).
 qed.
 
 lemma cmp_eq_W32 :
     forall (a b : W32.t), (CMP_32 a b).`5 = (a = b).
 proof.
 move => a b.
-case (a = b) => ?; rewrite /CMP_32 /rflags_of_aluop //=; last by smt(@W32).
-have ->:  (a - b) = W32.zero by smt(@W32).
-by auto.
+case (a = b) => [-> | ?]; rewrite /CMP_32 /rflags_of_aluop /ZF_of //= ?W32.WRingA.subrr //.
+(have ?: !(a - b = W32.zero)) => [| /#]; smt(@W32).
 qed.
 
 (* ============================================================================================================================= *)
@@ -57,15 +55,11 @@ proc => /=.
 seq 3 : (#pre /\ bc1 = if (W64.of_int 2 \ule offset) then W8.one else W8.zero).
   + auto => /> *.
     by case ((of_int 2)%W64 \ule o) => H; [rewrite setcc_true | rewrite setcc_false] => //; rewrite cmp_eq_W64 cmp_lt_W64 /#. 
-if.
-- (* 1st branch: bc1 = W8.zero i.e 2 <= offset is false so the whole expression is false *)
-   auto => /> ?.
-   rewrite /treehash_cond.
-   have ->: ((of_int 2)%W64 \ule o) = false; by smt(@W8). (* este ; aplica o by smt aos 2 subgoals *)
-- (* 2nd branch: bc1 = W8.zero i.e. 2 <= offset is true *)
-   auto => /> *.
-   have E: (of_int 2)%W64 \ule o by smt().
-   rewrite /treehash_cond /= (: (of_int 2)%W64 \ule o) 1:/# /= /_EQ cmp_eq_W32 !to_uintB 2,3:/# #smt:(@W64 pow2_64).
+if; auto => />; rewrite uleE of_uintK /= => H; [
+  have ?: !(2 <= to_uint o) by smt(W8.WRingA.oner_neq0) |
+  have ?: (2 <= to_uint o) by smt(W8.WRingA.oner_neq0)
+]; rewrite /treehash_cond uleE of_uintK /=; first by smt(W8.WRingA.oner_neq0).
+rewrite (: 2 <= to_uint o = true) 1:/# /= /_EQ cmp_eq_W32 /SETcc /= /#.
 qed.
 
 lemma treehash_condition_correct_equiv (h : W32.t Array11.t) (o : W64.t) :
@@ -81,15 +75,11 @@ proc => /=.
 seq 3 : (#pre /\ bc1 = if (W64.of_int 2 \ule offset) then W8.one else W8.zero).
   + auto => /> *.
     by case ((of_int 2)%W64 \ule o) => H; [rewrite setcc_true | rewrite setcc_false] => //; rewrite cmp_eq_W64 cmp_lt_W64 /#. 
-if.
-- (* 1st branch: bc1 = W8.zero i.e 2 <= offset is false so the whole expression is false *)
-   auto => /> ?.
-   rewrite /treehash_cond.
-   have ->: ((of_int 2)%W64 \ule o) = false; by smt(@W8). (* este ; aplica o by smt aos 2 subgoals *)
-- (* 2nd branch: bc1 = W8.zero i.e. 2 <= offset is true *)
-   auto => /> *.
-   have E: (of_int 2)%W64 \ule o by smt().
-   rewrite /treehash_cond /= (: (of_int 2)%W64 \ule o) 1:/# /= /_EQ cmp_eq_W32 !to_uintB 2,3:/# #smt:(@W64 pow2_64).
+if; auto => />; rewrite uleE of_uintK /= => H; [
+  have ?: !(2 <= to_uint o) by smt(W8.WRingA.oner_neq0) |
+  have ?: (2 <= to_uint o) by smt(W8.WRingA.oner_neq0)
+]; rewrite /treehash_cond uleE of_uintK /=; first by smt(W8.WRingA.oner_neq0).
+rewrite (: 2 <= to_uint o = true) 1:/# /= /_EQ cmp_eq_W32 /SETcc /= /#.
 qed.
 
 lemma treehash_condition_if (h : W32.t Array11.t) (o : W64.t) :
