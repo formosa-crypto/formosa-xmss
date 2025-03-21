@@ -2,7 +2,7 @@
 
 CC     := clang-14
 CFLAGS := -march=native -O3 -fomit-frame-pointer -fwrapv -Qunused-arguments -fPIC -fPIE
-LDLIBS   = -lcrypto
+LDLIBS = -lcrypto
 
 JASMIN   ?= jasminc
 JFLAGS   ?= -nowarning ${JADDFLAGS}
@@ -33,7 +33,7 @@ results.txt: bin/bench_hash
 
 .PHONY: show_results
 show_results: results.txt
-	@./print_results.py
+	@../scripts/print_results.py
 
 bin/:
 	mkdir -p $@ 

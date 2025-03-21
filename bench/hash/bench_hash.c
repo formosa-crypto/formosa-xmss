@@ -27,7 +27,7 @@
 extern void prf_jazz(uint8_t *out, const uint8_t *in, const uint8_t *key);
 extern void prf_keygen_jazz(uint8_t *out, const uint8_t *in, const uint8_t *key);
 extern void hash_message_jazz(uint8_t *mhash, const uint8_t *r, const uint8_t *root, uint64_t idx,
-                              uint64_t m, size_t mlen);
+                              uint8_t* m, size_t mlen);
 extern void thash_h_jazz(uint8_t *out, uint32_t *addr, const uint8_t *in, const uint8_t *pub_seed);
 extern void thash_f_jazz(uint8_t *out, uint32_t *addr, const uint8_t *pub_seed);
 
