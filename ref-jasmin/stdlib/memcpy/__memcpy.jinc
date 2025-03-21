@@ -36,7 +36,6 @@ fn __memcpy_u8u8(
     return out;
 }
 
-#[returnaddress="stack"]
 fn _memcpy_u8u8(
     reg ptr u8[OUTLEN] out,
     reg ptr u8[INLEN] in
