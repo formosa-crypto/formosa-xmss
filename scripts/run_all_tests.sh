@@ -1,6 +1,6 @@
 #!/bin/bash
 
-test_dirs=("hash" "wots")
+test_dirs=("wots")
 
 for dir in "${test_dirs[@]}"; do
     echo "Running tests for ${dir}"

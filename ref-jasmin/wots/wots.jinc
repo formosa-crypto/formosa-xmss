@@ -126,6 +126,9 @@ fn __gen_chain_inplace(
     // for (i = start; i < (start+steps) && i < params->wots_w; i++)
     i = start;
     t = start; t += steps; 
+
+    // Este ciclo nao acaba
+
     while (i < t) {
         () = #spill(i, t);
 
@@ -276,7 +279,6 @@ fn __chain_lengths(
 {
     reg ptr u32[XMSS_WOTS_LEN1] t0;
     reg ptr u32[XMSS_WOTS_LEN2] t1;
-/*
   
     // base_w(params, lengths, params->wots_len1, msg);
     t0 = lengths[0 : XMSS_WOTS_LEN1];
@@ -287,7 +289,7 @@ fn __chain_lengths(
     t1 = lengths[XMSS_WOTS_LEN1 : XMSS_WOTS_LEN2];
     t1 = __wots_checksum(t1, lengths);
     lengths[XMSS_WOTS_LEN1 : XMSS_WOTS_LEN2] = t1;
-*/
+
     return lengths;
 }
 
@@ -380,7 +382,7 @@ fn __wots_sign(
     stack u32[XMSS_WOTS_LEN] lengths;
 
     reg u32 chain;
-    reg u64 i start_index;
+    inline int i;
 
     () = #spill(pub_seed);
 
@@ -390,29 +392,14 @@ fn __wots_sign(
     // expand_seed(params, sig, seed, pub_seed, addr);
     sig, addr = __expand_seed_(sig, seed, pub_seed, addr);
 
-    i = 0;
-    while (i < XMSS_WOTS_LEN) {
-        () = #spill(i);
-
+    for i = 0 to XMSS_WOTS_LEN {
         // set_chain_addr(addr, i);
-        chain = (32u) i;
+        chain = i;
         addr = __set_chain_addr(addr, chain);
 
         // gen_chain(params, sig + i * params->n, sig + i * params->n, 0, lengths[i], pub_seed, addr);
         () = #unspill(pub_seed);
-
-        // start_index = i * n. If n = 32 (true for the implementation, a shift should be faster)
-        start_index = i; 
-        #inline if (XMSS_N == 32) {
-            start_index <<= 5;
-        } else {
-            start_index *= XMSS_N;
-        }
-        
-        sig[start_index : XMSS_N], addr = __gen_chain_inplace_(sig[start_index : XMSS_N], 0, lengths[i], pub_seed, addr);
-
-        () = #unspill(i);
-        i += 1;
+        sig[i*XMSS_N : XMSS_N], addr = __gen_chain_inplace_(sig[i*XMSS_N : XMSS_N], 0, lengths[i], pub_seed, addr);
     }
 
     return sig, addr;

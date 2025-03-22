@@ -4,3 +4,7 @@ EasyCrypt (security) version: r2025.02
 EasyCrypt (correctness) version: r2025.02
 
 Jasmin & ECLib: release-2025.02
+
+
+- Subarray branch: Compiler at commit `0a46220ad375acab2cb66832675a258941432d9e` from 
+the `subarray_unknown_index3` branch 

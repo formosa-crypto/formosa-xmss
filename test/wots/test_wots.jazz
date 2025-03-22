@@ -1,6 +1,16 @@
 from XMSS require "wots/wots.jinc"
 
 export
+fn chain_lengths_jazz(
+    reg ptr u32[XMSS_WOTS_LEN] lengths,
+    reg ptr u8[XMSS_N] msg
+) -> reg ptr u32[XMSS_WOTS_LEN]
+{
+    lengths = __chain_lengths_(lengths, msg);
+    return lengths;
+}
+
+export
 fn expand_seed_jazz(
     reg ptr u8[XMSS_WOTS_LEN * XMSS_N] outseeds,
     reg ptr u32[8] addr,
@@ -21,6 +31,8 @@ fn wots_checksum_jazz(
     return csum_base_w;
 }
 
+
+// This is just a wrapper around gen chain inplace
 export
 fn gen_chain_jazz(
     reg ptr u8[XMSS_N] out,
