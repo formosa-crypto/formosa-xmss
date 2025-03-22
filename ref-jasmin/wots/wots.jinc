@@ -54,7 +54,15 @@ fn __expand_seed(
         buf[XMSS_N : 32] = addr_bytes;
 
         () = #unspill(outseeds, inseed);
-        start_index = i; start_index *= XMSS_N;
+
+        // start_index = i * n. If n = 32 (true for the implementation, a shift should be faster)
+        start_index = i; 
+        #inline if (XMSS_N == 32) {
+            start_index <<= 5;
+        } else {
+            start_index *= XMSS_N;
+        } 
+        
         ith_seed = outseeds[start_index : XMSS_N];
         ith_seed = __prf_keygen(ith_seed, buf, inseed);
         outseeds[start_index : XMSS_N] = ith_seed;
@@ -336,7 +344,15 @@ fn __wots_pkgen(
         addr = __set_chain_addr(addr, chain);
 
         () = #unspill(pk, pub_seed);
-        start_index = i; start_index *= XMSS_N;
+        
+        // start_index = i * n. If n = 32 (true for the implementation, a shift should be faster)
+        start_index = i; 
+        #inline if (XMSS_N == 32) {
+            start_index <<= 5;
+        } else {
+            start_index *= XMSS_N;
+        }
+
         t = pk[start_index : XMSS_N];
         t, addr = __gen_chain_inplace_(t, 0, XMSS_WOTS_W - 1, pub_seed, addr);
         pk[start_index : XMSS_N] = t;
@@ -384,8 +400,15 @@ fn __wots_sign(
 
         // gen_chain(params, sig + i * params->n, sig + i * params->n, 0, lengths[i], pub_seed, addr);
         () = #unspill(pub_seed);
-        start_index = i; start_index *= XMSS_N;
 
+        // start_index = i * n. If n = 32 (true for the implementation, a shift should be faster)
+        start_index = i; 
+        #inline if (XMSS_N == 32) {
+            start_index <<= 5;
+        } else {
+            start_index *= XMSS_N;
+        }
+        
         sig[start_index : XMSS_N], addr = __gen_chain_inplace_(sig[start_index : XMSS_N], 0, lengths[i], pub_seed, addr);
 
         () = #unspill(i);
@@ -465,10 +488,18 @@ fn __wots_pk_from_sig(
         steps = XMSS_WOTS_W - 1; steps -= lengths[i];
         
         t = sig_ptr; t0 = i; t0 *= XMSS_N; t += t0;
-        start_index = i; start_index *= XMSS_N;
+        
+        // start_index = i * n. If n = 32 (true for the implementation, a shift should be faster)
+        start_index = i; 
+        #inline if (XMSS_N == 32) {
+            start_index <<= 5;
+        } else {
+            start_index *= XMSS_N;
+        }
+        
         pk[start_index : XMSS_N] = _x_memcpy_u8u8p(pk[start_index : XMSS_N], t);
-
         pk[start_index : XMSS_N], addr = __gen_chain_inplace_(pk[start_index : XMSS_N], start, steps, pub_seed, addr);
+
         () = #unspill(i);
         i += 1;
     }
