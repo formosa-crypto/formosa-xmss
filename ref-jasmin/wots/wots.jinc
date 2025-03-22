@@ -382,7 +382,7 @@ fn __wots_sign(
     stack u32[XMSS_WOTS_LEN] lengths;
 
     reg u32 chain;
-    inline int i;
+    reg u64 i start_index;
 
     () = #spill(pub_seed);
 
@@ -392,14 +392,30 @@ fn __wots_sign(
     // expand_seed(params, sig, seed, pub_seed, addr);
     sig, addr = __expand_seed_(sig, seed, pub_seed, addr);
 
-    for i = 0 to XMSS_WOTS_LEN {
+    i = 0;
+    while (i < XMSS_WOTS_LEN) {
         // set_chain_addr(addr, i);
-        chain = i;
+        chain = (32u) i;
         addr = __set_chain_addr(addr, chain);
 
         // gen_chain(params, sig + i * params->n, sig + i * params->n, 0, lengths[i], pub_seed, addr);
         () = #unspill(pub_seed);
-        sig[i*XMSS_N : XMSS_N], addr = __gen_chain_inplace_(sig[i*XMSS_N : XMSS_N], 0, lengths[i], pub_seed, addr);
+
+        // start_index = i * n. If n = 32 (true for the implementation, a shift should be faster)
+        start_index = i; 
+        #inline if (XMSS_N == 32) {
+            start_index <<= 5;
+        } else {
+            start_index *= XMSS_N;
+        }
+
+        () = #spill(i);
+
+        sig[start_index : XMSS_N], addr = __gen_chain_inplace_(sig[start_index : XMSS_N], 0, lengths[i], pub_seed, addr);
+
+        () = #unspill(i);
+
+        i += 1;
     }
 
     return sig, addr;
