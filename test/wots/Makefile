@@ -6,7 +6,7 @@ CC       ?= clang
 CFLAGS   ?= -Wall -g -O3 -Wextra -Wpedantic
 LDLIBS   = -lcrypto
 
-JASMIN   ?= /home/rui/tmp/jasmin/compiler/jasminc
+JASMIN   ?= /home/rui/repos/jasmin_unkown_index/compiler/jasminc
 JAZZCT   ?= jasmin-ct
 JFLAGS   ?= -nowarning ${JADDFLAGS}
 JINCLUDE ?= -I XMSS:../../ref-jasmin/ -I Stdlib:../../ref-jasmin/stdlib
