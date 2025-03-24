@@ -53,9 +53,17 @@ fn __l_tree(
             // thash_h(params, wots_pk + i*params->n, wots_pk + (i*2)*params->n, pub_seed, addr);
 
             // First we need to copy wots_pk + i*params->n and wots_pk + (i*2)*params->n to the respective buffers
+            #inline if (XMSS_N == 32) {
+                offset_in = i;
+                offset_in <<= 6; // should be faster
+            } else {
+                offset_in = (i * 2); 
+                offset_in *= XMSS_N;
+            }
+
+            bytes = 2 * XMSS_N; // This should be resolved and compile time and should be just a bytes = MOV 64
+            
             () = #unspill(wots_pk);
-            offset_in = (i * 2); offset_in *= XMSS_N;
-            bytes = 2 * XMSS_N;
             buf1, _ = memcpy_u8u8_2_ltree::__memcpy_u8u8_2(buf1, wots_pk, offset_in, bytes);
 
             () = #unspill(pub_seed);
@@ -63,11 +71,19 @@ fn __l_tree(
 
             // Copy the result back to wots_pk: same as memcpy(wots_pk + i*XMSS_N, buf0, XMSS_N)
             () = #unspill(i, wots_pk);
-            offset_out = i * XMSS_N;
-            wots_pk = __memcpy_u8u8_offset(wots_pk, offset_out, buf0);
-            () = #spill(wots_pk);
+            
+            #inline if (XMSS_N == 32) {
+                offset_out = i;
+                offset_out <<= 5;
+            } else {
+                offset_out = i * XMSS_N; 
+            }
 
+            wots_pk = __memcpy_u8u8_offset(wots_pk, offset_out, buf0);
+            
+            () = #spill(wots_pk);
             () = #unspill(parent_nodes);
+
             i += 1;
         }
 
@@ -77,12 +93,27 @@ fn __l_tree(
         t &= 1;
         if (t != 0) {
             // memcpy(wots_pk + (l >> 1)*params->n, wots_pk + (l - 1)*params->n, params->n);
-            // offset out = (l >> 1) * XMSS_N
-            // offset_in = (l - 1) * XMSS_N
+            // offset out = (l >> 1) * XMSS_N ==> same as l << 4 // TODO: FIXME: Proving this is tricky.
+            // offset_in = (l - 1) * XMSS_N   ==> same as (l - 1) << 5
             () = #unspill(wots_pk);
-            offset_out = l; offset_out >>= (1 & 63); offset_out *= XMSS_N;
-            offset_in = l; offset_in -= 1; offset_in *= XMSS_N;
+
+            offset_out = l; 
+            offset_out >>= 1; 
+            offset_out *= XMSS_N; 
+
+            #inline if (XMSS_N == 32) {
+                offset_in = l; 
+                offset_in -= 1;
+                offset_in <<= 5;  // should be faster than a multiplication
+            } else {
+
+                offset_in = l; 
+                offset_in -= 1; 
+                offset_in *= XMSS_N;
+            }
+            
             wots_pk = __nbytes_copy_inplace(wots_pk, offset_out, offset_in);
+
             () = #spill(wots_pk);
 
             // l = (l >> 1) + 1;
@@ -195,6 +226,7 @@ fn __new_compute_root(
         // call thash 
 
         () = #unspill(pub_seed);
+
         #inline if (k == XMSS_TREE_HEIGHT - 1) {
             () = #unspill(root);
             root, addr = __thash_h_(root, thash_in, pub_seed, addr);

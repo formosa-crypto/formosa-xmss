@@ -305,14 +305,16 @@ seq 2 1 : (#pre /\ sub addr1{1} 0 7 = sub address{2} 0 7).
         - rewrite !nth_sub //= !get_setE //.
           case (j = 6) => ?; [smt(@W32 pow2_32) | smt(sub_k)]. 
 
-seq 4 2 : (
+
+seq 3 2 : (
   #pre /\
   to_list buf1{1} = NBytes.val pk_i{2} ++ NBytes.val tmp{2}
 ).
-    + sp.
+    + seq 1 0 : (#pre /\ to_uint offset_in{1} = to_uint i{1} * 64); first by rcondt {1} 1; auto => /> &1 &2 *; rewrite to_uint_shl of_uintK //= /#.
+      sp.
       ecall {1} (memcpy_u8u8_2_64_2144_post wots_pk1{1} offset_in{1}).
-      skip => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13.
-      rewrite !to_uintD !to_uintM of_uintK /=.
+      skip => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 *.
+      rewrite !to_uintD of_uintK /=.
       do split; 1..4: by smt().
         - move => ???? result H.
           rewrite H.
@@ -362,9 +364,10 @@ wp.
 exists * wots_pk1{1}, pks{2}, (to_uint i{1}), buf0{1}.
 elim * => P0 P1 P2 P3.
 call {1} (memcpy_offset_ltree P0 P1 P2 P3) => [/# |].
+rcondt{1} 1; first by auto. (* esta linha nao e precisa. O auto da linha de baixo ja simplifica o if (32 = 32) mas assim fica mais facil perceber o q se esta a passar *)
 auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14.
 do split.
-- rewrite -to_uintK; congr; rewrite to_uintM of_uintK /#.
+- by rewrite shl_5 wordP => k?; rewrite !get_to_uint (: 0 <= k < 64) //= to_uintM !of_uintK.
 - smt().
 - move => H15 H16.
   rewrite !ultE !to_uintD.
@@ -453,22 +456,18 @@ case (t{1} <> W64.zero); last first.
     + rcondt {1} 1; first by auto.
       rcondt {2} 1; first by auto => /> /#.
       conseq />.
+ 
+      seq 4 0 : (
+           #pre /\ 
+           to_uint offset_out{1} = (_len{2} %/ 2) * 32 /\ 
+           to_uint offset_in{1} = (_len{2} - 1) * 32
+      ).
+        - auto => /> &1 &2 *. (* this also does the rcondt{1} 1 *)
+          rewrite shl_5; split; [
+             rewrite to_uintM to_uint_shr //= /# |
+             by rewrite to_uintM to_uintB; [rewrite uleE /# |]; rewrite !of_uintK /= /#
+          ].
 
-      seq 2 0 : (#pre /\ to_uint offset_out{1} = _len{2} %/ 2).
-        - auto => /> &1 &2 *.
-          rewrite (: 63 = 2^6 - 1) 1:/# and_mod //.
-          have ->: to_uint (truncateu8 W256.one) %% 64 = 1 by rewrite to_uint_truncateu8.
-          by rewrite to_uint_shr.
-
-      seq 1 0 : (
-           #{/~to_uint offset_out{1} = _len{2} %/ 2}pre /\ 
-           to_uint offset_out{1} = (_len{2} %/ 2) * 32
-      ); first by auto => /> ???????????H; rewrite to_uintM H of_uintK /#.
-
-      seq 3 0 : (
-        #pre /\ 
-        to_uint offset_in{1} = (_len{2} - 1) * 32
-      ); first by auto => /> *; rewrite to_uintM of_uintK /= to_uintB 2:/# uleE /#.
 
       seq 1 2 : #pre; last first.
         - auto => /> &1 &2 *.
@@ -476,10 +475,8 @@ case (t{1} <> W64.zero); last first.
           rewrite ultE.
           (do split; 2,3: by smt()); rewrite ifF 1:/# (: 63 = 2^6 - 1) 1:/# and_mod // E to_uintD to_uint_shr to_uint_truncateu8 //= /#.
 
-   
-inline {1}.
-sp 3 0.
-conseq />.
+
+inline {1}; sp 3 0; conseq />.
 
 seq 2 2 : (pks{2} = LenNBytes.val (EncodeWotsPk out{1})); last by auto.
 wp.
@@ -596,7 +593,7 @@ while {1}
         rewrite size_sub 1:/# => j?.
         rewrite nth_sub // get_setE. 
           * rewrite !to_uintD of_uintK /= /#. 
-        case (j = i0{hr}) => [Ha | Hb].
+        case (j = i0{hr}) => ?.
           * rewrite ifT; first by rewrite to_uintD of_uintK /#.
             rewrite /sub_list nth_mkseq /= 1:/#.
             have ->: to_uint (offset_in0{hr} + (of_int i0{hr})%W64) = 

@@ -105,7 +105,15 @@ fn __treehash(
 
         // We now copy the result to stack + offset * params->n
         () = #unspill(offset);
-        t64 = offset; t64 *= XMSS_N; // Obs: if XMSS_N = 32 we can do a shift instead
+        
+        t64 = offset; 
+        // if n = 32 (true for the implementation, a shift should be faster)
+        #inline if (XMSS_N == 32) {
+            t64 <<= 5;
+        } else {
+            t64 *= XMSS_N;
+        }
+
         _stack = memcpy_u8u8_3_treehash::__memcpy_u8u8_3(_stack, buf, t64, XMSS_N);
 
         // offset++;
@@ -133,7 +141,14 @@ fn __treehash(
             // thash_h(params, stack + (offset - 2) * params->n, stack + (offset - 2) * params->n, pub_seed, node_addr);
             // We first need to load stack + (offset-2)*params->n into buf2
             () = #unspill(offset);
-            t64 = offset; t64 -= 2; t64 *= XMSS_N;
+            
+            t64 = offset; t64 -= 2; 
+            #inline if (XMSS_N == 32) {
+	            t64 <<= 5;
+            } else {
+	            t64 *= XMSS_N;
+            }
+
             buf2, _ = memcpy_u8u8_2_treehash::__memcpy_u8u8_2(buf2, _stack, t64, 2 * XMSS_N);
 
             () = #unspill(pub_seed);
@@ -141,7 +156,15 @@ fn __treehash(
 
             // We now need to copy the result to stack + (offset-2)*params->n
             () = #unspill(offset);
-            t64 = offset; t64 -= 2; t64 *= XMSS_N;
+            
+            // FIXME: We can use the old value of t64
+            t64 = offset; t64 -= 2; 
+            #inline if (XMSS_N == 32) {
+	            t64 <<= 5;
+            } else {
+	            t64 *= XMSS_N;
+            }
+
             _stack = memcpy_u8u8_3_treehash::__memcpy_u8u8_3(_stack, buf, t64, XMSS_N);
 
             // offset--;

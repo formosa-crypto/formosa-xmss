@@ -312,10 +312,11 @@ seq 3 1 : (
       call {1} (p_treehash_memcpy_0 P0 P1 P2 P3) => [/# |].
       skip => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 <- *. 
       do split.
-        - smt().
+        - by rewrite H10 d_val h_val.
         - apply (eq_from_nth witness); first by rewrite size_sub 1:/# size_sub_list /#.
           by rewrite size_sub /#.
-        - move => H24 H25 result H26.
+        - by rewrite shl_5 wordP => k?; rewrite !get_to_uint (: 0 <= k < 64) //= !to_uintM !of_uintK.
+        - move => H24 H25 ? result H26.
           rewrite size_put; split => //. (* the first goal of split is solved by trivial *)
           apply (eq_from_nth witness); first by rewrite size_sub 1:/# size_sub_list /#.
           rewrite size_sub 1:/# => j?.
@@ -472,7 +473,8 @@ seq 3 1 : (
       rewrite ultE => H19 H20 H21 H22 H23 *.
       do split; 1,3,4: by smt().
         - smt(@StdOrder.IntOrder).
-        - move => H H24 H25 H26 result H27 *.
+        - apply shl_5.
+        - move => H H24 H25 H26 ? result H27 *.
           rewrite size_put; split => //. (* the first goal of split is solved by trivial *)
           apply (eq_from_nth witness); first by rewrite size_sub 1:/# size_sub_list /#.
           rewrite size_sub 1:/# => j?.
@@ -749,6 +751,7 @@ move => H21 H22 H23 H24 H25 *; rewrite uleE /= in H23; do split => //=.
           smt(@StdOrder.IntOrder). 
         - rewrite (: XMSS_N = n); first by rewrite n_val /XMSS_N.
           assumption.
+        - apply shl_5.
 
 seq 1 1 : (#pre /\ to_list buf{1} = NBytes.val new_node{2}).
           + inline M(Syscall).__thash_h_ M(Syscall)._thash_h.
@@ -771,7 +774,7 @@ ecall {1} (p_treehash_condition_correct_eq heights{1} offset{1}).
  
 conseq /> => [/# |].
 
-seq 3 0 : (#pre /\ t64{1} = (offset{1} - (of_int 2)%W64) * (of_int 32)%W64); first by auto.
+seq 3 0 : (#pre /\ t64{1} = (offset{1} - (of_int 2)%W64) * (of_int 32)%W64); first by rcondt {1} 3 ; auto => /> &1 &2 *; apply shl_5.
 
 seq 1 1 : #pre.
     + exists * buf{1}, stack{2}, _stack{1}, (offset{1} - (of_int 2)%W64).
