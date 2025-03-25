@@ -4,3 +4,21 @@ EasyCrypt (security) version: r2025.02
 EasyCrypt (correctness) version: r2025.02
 
 Jasmin & ECLib: release-2025.02
+
+
+## Changes wrt main
+
+- In hash we spill to mmx registers (undo this, the code is slower)
+- Shifts by constants dont need & 63
+
+## TODO:
+- [ ] Memcpies devem copiar words 64bits de cada vez em vez de 8bits.
+
+- copy_nbytes function => We use this when #copy fails with `variable allocation: bad range alignment`
+but `#copy_8` works. 
+
+
+## Mais todos 
+
+- [ ] The correctness proof no longer goes through with ec main because of 
+[#727 - Reworked outline tactic](https://github.com/EasyCrypt/easycrypt/pull/727)
