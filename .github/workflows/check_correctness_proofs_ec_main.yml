@@ -1,4 +1,4 @@
-name: Check EasyCrypt Correctness Proof
+name: Check EasyCrypt Correctness Proof with EasyCrypt main
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
       - main
 
 jobs:
-  check_correctness_proof:
+  check_correctness_proof_ec_main:
     runs-on: ubuntu-latest
 
     steps:
@@ -17,7 +17,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Build docker image
-        run: docker build -t jasmin-xmss .
+        run: docker build --build-arg EASYCRYPT_RELEASE= -t jasmin-xmss .
 
       - name: Check correctness proofs
         run: docker run --rm jasmin-xmss make -C proof/ check_correctness_proof
