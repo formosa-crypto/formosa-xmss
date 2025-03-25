@@ -40,6 +40,8 @@ fn __prf(
 
     // memcpy(buf + params->padding_len, key, params->n);
     buf[XMSS_PADDING_LEN : XMSS_N] = #copy_8(key);
+    // buf[XMSS_PADDING_LEN : XMSS_N] = copy_nbytes(buf[XMSS_PADDING_LEN : XMSS_N], key);
+
 
     // memcpy(buf + params->padding_len + params->n, in, 32);
     buf[XMSS_PADDING_LEN + XMSS_N : 32] = #copy(in);
