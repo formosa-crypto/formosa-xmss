@@ -39,9 +39,7 @@ fn __prf(
     buf[0:XMSS_PADDING_LEN] = padding_buf;
 
     // memcpy(buf + params->padding_len, key, params->n);
-    buf[XMSS_PADDING_LEN : XMSS_N] = #copy_8(key);
-    // buf[XMSS_PADDING_LEN : XMSS_N] = copy_nbytes(buf[XMSS_PADDING_LEN : XMSS_N], key);
-
+    buf[XMSS_PADDING_LEN : XMSS_N] = copy_nbytes(buf[XMSS_PADDING_LEN : XMSS_N], key);
 
     // memcpy(buf + params->padding_len + params->n, in, 32);
     buf[XMSS_PADDING_LEN + XMSS_N : 32] = #copy(in);
@@ -103,7 +101,11 @@ fn __prf_keygen(
     buf[0:XMSS_PADDING_LEN] = padding_buf;
 
     // memcpy(buf + params->padding_len, key, params->n);
-    buf[XMSS_PADDING_LEN : 32] = #copy_8(key);
+    if XMSS_N == 32 {
+        buf[XMSS_PADDING_LEN : 32] = copy_nbytes(buf[XMSS_PADDING_LEN : 32], key);
+    } else {
+        buf[XMSS_PADDING_LEN : 32] = #copy_8(key);
+    }
 
     // memcpy(buf + params->padding_len + params->n, in, params->n + 32);
     buf[XMSS_PADDING_LEN + XMSS_N : XMSS_N + 32] = #copy(in);
@@ -230,10 +232,10 @@ fn __hash_message_(
 //        in that case, we copy the value of in to a buffer and write to out
 inline
 fn __thash_h(
-    #spill_to_mmx reg ptr u8[XMSS_N] out,
-    #spill_to_mmx reg ptr u8[2 * XMSS_N] in,
-    #spill_to_mmx reg ptr u8[XMSS_N] pub_seed,
-    #spill_to_mmx reg ptr u32[8] addr
+    reg ptr u8[XMSS_N] out,
+    reg ptr u8[2 * XMSS_N] in,
+    reg ptr u8[XMSS_N] pub_seed,
+    reg ptr u32[8] addr
 ) -> reg ptr u8[XMSS_N], reg ptr u32[8] 
 {
     stack u8[XMSS_PADDING_LEN + 3*XMSS_N] buf;

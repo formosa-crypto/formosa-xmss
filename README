@@ -8,17 +8,36 @@ Jasmin & ECLib: release-2025.02
 
 ## Changes wrt main
 
-- In hash we spill to mmx registers (undo this, the code is slower)
 - Shifts by constants dont need & 63
 
 ## TODO:
 - [ ] Memcpies devem copiar words 64bits de cada vez em vez de 8bits.
-
-- copy_nbytes function => We use this when #copy fails with `variable allocation: bad range alignment`
-but `#copy_8` works. 
 
 
 ## Mais todos 
 
 - [ ] The correctness proof no longer goes through with ec main because of 
 [#727 - Reworked outline tactic](https://github.com/EasyCrypt/easycrypt/pull/727)
+
+
+
+# Benchmark Results
+
+## Hash 
+
+### Antes
+
+Function  Median Jasmin  Median Ref Faster Implementation  Diff (%)
+hash_message           6452        3320                   Ref     94.34
+         prf           2520        3020                Jasmin     16.56
+  prf_keygen           3590        3110                   Ref     15.43
+     thash_f           7552        6382                   Ref     18.33
+     thash_h          11262        8340                   Ref     35.04
+
+### Depois
+
+hash_message           6218        3256                   Ref     90.97
+         prf           2530        3070                Jasmin     17.59
+  prf_keygen           3714        2946                   Ref     26.07
+     thash_f           7518        6518                   Ref     15.34
+     thash_h           8579        8358                   Ref      2.64

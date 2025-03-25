@@ -36,10 +36,10 @@ def parse_args() -> tuple[bool, str]:
         if sys.argv[1] == "-tex":
             print_tex = True
             if len(sys.argv) > 2:
-                if os.path.exists(sys.argv[2]):
-                    filepath = sys.argv[2]
+                if os.path.exists(sys.argv[-1]):
+                    filepath = sys.argv[-1]
         else:
-            filepath = sys.argv[1]
+            filepath = sys.argv[-1]
 
     if not os.path.exists(filepath):
         sys.stderr.write(f"The file '{filepath}' does not exist\n")
@@ -80,12 +80,18 @@ def read_data(filepath: str) -> pd.DataFrame:
             )
 
             result["Diff (%)"] = result.apply(
-                lambda row: ((row["Median Ref"] - row["Median Jasmin"]) / row["Median Ref"]) * 100, axis=1
+                lambda row: round(
+                    abs((row["Median Ref"] - row["Median Jasmin"]) / row["Median Ref"]) * 100, 2
+                ),
+                axis=1,
             )
 
         result.rename(columns={"Basename": "Function"}, inplace=True)
     except Exception:
-        sys.stderr.write("ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ\n")
+        sys.stderr.write("Failed\n")
+        sys.stderr.write(
+            "Make sure the jasmin function end with the _jasmin suffix and the C functions end with the _ref suffix \n"
+        )
         sys.exit(1)
 
     return result
@@ -93,7 +99,7 @@ def read_data(filepath: str) -> pd.DataFrame:
 
 def print_latex_table(table: pd.DataFrame):
     """
-    Obs: this requires the package \ usepackage{booktabs} 
+    Obs: this requires the package \ usepackage{booktabs}
     """
 
     assert table is not None
@@ -121,6 +127,9 @@ def print_latex_table(table: pd.DataFrame):
 def main():
     print_tex, input_filepath = parse_args()
     table = read_data(input_filepath)
+
+    if "-noavg" in sys.argv:
+        table = table.drop(columns=[col for col in table.columns if "Average" in col])
 
     if print_tex:
         print_latex_table(table.drop(columns=["Faster Implementation"]))

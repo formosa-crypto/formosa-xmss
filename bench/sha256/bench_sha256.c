@@ -141,11 +141,11 @@ int main(void) {
     clearfile(FILENAME);
     print_header(FILENAME);
 
-    bench_function(bench_sha256_96_c, "c_96");
-    bench_function(bench_sha256_96_jasmin, "jasmin_96");
+    bench_function(bench_sha256_96_c, "sha256_96_ref");
+    bench_function(bench_sha256_96_jasmin, "sha256_96_jasmin");
 
-    bench_function(bench_sha256_128_c, "c_128");
-    bench_function(bench_sha256_128_jasmin, "jasmin_128");
+    bench_function(bench_sha256_128_c, "sha256_128_ref");
+    bench_function(bench_sha256_128_jasmin, "sha256_128_jasmin");
 
     return EXIT_SUCCESS;
 }
