@@ -36,7 +36,6 @@ fn __memcpy_u8u8p(
     return out;
 }
 
-#[returnaddress="stack"]
 fn _memcpy_u8u8p(
     reg ptr u8[XMSS_N] out,
     reg u64 in_ptr

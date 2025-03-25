@@ -16,7 +16,6 @@ fn __memcpy_u8pu8(reg u64 out offset, reg ptr u8[INLEN] in) -> reg u64, reg u64 
     return out, offset;
 }
 
-#[returnaddress="stack"]
 fn _memcpy_u8pu8(reg u64 out offset, reg ptr u8[INLEN] in) -> reg u64, reg u64 {
     out, offset = __memcpy_u8pu8(out, offset, in);
     return out, offset;

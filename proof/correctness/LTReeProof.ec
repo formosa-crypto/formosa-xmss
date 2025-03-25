@@ -439,42 +439,34 @@ case (t{1} <> W64.zero); last first.
       auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7.
       do split.
         - have E: to_uint (truncateu8 W256.one) %% 64 = 1 by rewrite to_uint_truncateu8.
-          rewrite ifT 1:/# (: 63 = 2^6 - 1) 1:/# and_mod //.
-          by rewrite to_uint_shr to_uint_truncateu8 E.
+          rewrite ifT 1:/#.
+          by rewrite to_uint_shr E.
         - rewrite ifT /#.
         - rewrite ifT /#.
-        - rewrite ifT 1:/# (: 63 = 2^6 - 1) 1:/# and_mod //.
-          rewrite ultE /=.
+        - rewrite ifT 1:/# ultE /=.
           have ->: to_uint (truncateu8 W256.one) %% 64 = 1 by rewrite to_uint_truncateu8.
           by rewrite to_uint_shr.
-        - rewrite ifT 1:/# (: 63 = 2^6 - 1) 1:/# and_mod //.
-          rewrite ultE /=.
+        - rewrite ifT 1:/# ultE /=.
           have ->: to_uint (truncateu8 W256.one) %% 64 = 1 by rewrite to_uint_truncateu8.
           by rewrite to_uint_shr.
-
 
     + rcondt {1} 1; first by auto.
       rcondt {2} 1; first by auto => /> /#.
       conseq />.
  
-      seq 4 0 : (
+      seq 1 0 : (
            #pre /\ 
            to_uint offset_out{1} = (_len{2} %/ 2) * 32 /\ 
            to_uint offset_in{1} = (_len{2} - 1) * 32
       ).
         - auto => /> &1 &2 *. (* this also does the rcondt{1} 1 *)
-          rewrite shl_5; split; [
-             rewrite to_uintM to_uint_shr //= /# |
-             by rewrite to_uintM to_uintB; [rewrite uleE /# |]; rewrite !of_uintK /= /#
-          ].
-
+          rewrite !shl_5 !to_uintM of_uintK to_uint_shr // to_uintB ?uleE /#.
 
       seq 1 2 : #pre; last first.
         - auto => /> &1 &2 *.
           have E: to_uint (truncateu8 W256.one) %% 64 = 1 by rewrite to_uint_truncateu8.
           rewrite ultE.
-          (do split; 2,3: by smt()); rewrite ifF 1:/# (: 63 = 2^6 - 1) 1:/# and_mod // E to_uintD to_uint_shr to_uint_truncateu8 //= /#.
-
+          (do split; 2,3: by smt()); rewrite ifF 1:/#  E to_uintD to_uint_shr //= /#.
 
 inline {1}; sp 3 0; conseq />.
 
