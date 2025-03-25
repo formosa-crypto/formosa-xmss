@@ -786,16 +786,11 @@ lemma memset_zero_post :
     hoare [M(Syscall).__memset_zero_u8 : true ==> forall (k : int), 0 <= k < 3 => (res.[k] = W8.zero)].
 proof.
 proc.
+do 2! (rcondf 1 => //).
 while (
   0 <= to_uint i <= 3 /\   
   (forall (k : int), 0 <= k < to_uint i => (a.[k] = W8.zero))
-); auto => /> *.
-- do split ; 1,2: by smt(@W64).  
-  move => ???.
-  rewrite get_setE #smt:(@W64).
-- split => [/# |]. 
-  move => ?i0???.   
-  (have ->: to_uint i0 = 3 by smt(@W64 pow2_64)) => /#. 
+); (auto => /> &hr; rewrite ?ultE ?to_uintD /= => *; split => [/# |??]); rewrite ?get_setE ?ultE /#.
 qed.
 
 lemma p_memset_zero_post :
@@ -815,6 +810,7 @@ lemma _memset_nseq :
     ].
 proof.
 proc.
+do 2! (rcondf 1 => //).
 while (
   0 <= to_uint i <= 3 /\
   forall (k : int), 0 <= k < to_uint i => a.[k] = W8.zero
