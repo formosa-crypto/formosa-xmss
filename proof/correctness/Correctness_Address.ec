@@ -39,9 +39,6 @@ lemma zero_addr_res (address : adrs) :
     phoare[M(Syscall)._zero_address : true ==> res = zero_addr] = 1%r
       by conseq zero_addr_ll (zero_addr_op_impl address) => //=. 
 
-op addrToBytes (a : adrs) : W8.t list = flatten (map W32toBytes (to_list a)).
-
-
 lemma u32_to_bytes_correct (x : W32.t) :
     phoare [
       M(Syscall).__u32_to_bytes : 
