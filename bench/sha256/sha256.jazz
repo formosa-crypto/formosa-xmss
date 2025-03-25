@@ -1,0 +1,15 @@
+
+from XMSS require "params/params-xmssmt-sha2_20_2_256.jinc"
+from XMSS require "core_hash/core_hash_sha256.jinc"
+
+export
+fn sha256_96(reg ptr u8[32] out, reg ptr u8[96] in) -> reg ptr u8[32] {
+    out = hash_plen_2n::__sha256(out, in);
+    return out;
+}
+
+export 
+fn sha256_128(reg ptr u8[32] out, reg ptr u8[128] in) -> reg ptr u8[32] {
+    out = hash_plen_3n::__sha256(out, in);
+    return out;
+}
