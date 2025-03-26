@@ -1,0 +1,31 @@
+inline
+fn __memcpy_u8pu8(reg u64 out offset, reg ptr u8[INLEN] in) -> reg ptr u8[INLEN], reg u64, reg u64 {
+    reg u64 i;
+
+    i = 0;
+
+    while (i < INLEN/8) {
+        (u64) [out + offset] = in[u64 i];
+        offset += 8;
+        i += 1;
+    }
+
+    // in[0] = (8u) i;
+    // in[1] = (8u) i;
+    // in[2] = (8u) i;
+
+    i <<= 3;
+    while (i < INLEN) {
+        (u8) [out + offset] = in[i]; /* FIXME: What is the start index of in */
+        offset += 1;
+        i += 1;
+    }
+
+    return in, out, offset;
+}
+
+export 
+fn copy(reg ptr u8[INLEN] in, reg u64 out offset) -> reg ptr u8[INLEN]{
+    in, _, _ = __memcpy_u8pu8(out, offset, in);
+    return in;
+}
