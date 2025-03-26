@@ -475,6 +475,382 @@ module M_Hash = {
 
 require import Bytes.
 
+lemma write_buf_ptr_ll : islossless M(Syscall).memcpy_u8pu8_n____memcpy_u8pu8 by proc; rcondt 1 => //; unroll for 2; auto.
+
+lemma _p_write_buf_ptr mem (ptr o : W64.t) (buf : W8.t Array32.t) :
+    hoare [
+      M(Syscall).memcpy_u8pu8_n____memcpy_u8pu8 :
+      0 <= to_uint ptr + to_uint o + 32 < W64.max_uint /\
+      Glob.mem = mem /\ 
+      arg = (ptr, o, buf)  
+
+      ==>
+      
+      res.`1 = ptr /\ (* No fim, o apontaodor aponta para o mm sitio *)
+
+      load_buf Glob.mem (ptr + o) 32 = to_list buf /\
+
+      (* O resto da memoria fica igual *)
+      forall (k : int), 0 <= k < W64.max_uint => 
+         !(to_uint ptr + to_uint o <= k < to_uint ptr + to_uint o + 32) => 
+             Glob.mem.[k] = mem.[k]
+    ].
+proof.
+proc; rcondt 1=> //; unroll for 2; auto => /> *; split => *; last by rewrite !storeW64E !get_storesE ifF; smt(@W64 pow2_64).
+apply (eq_from_nth witness); rewrite size_load_buf ?size_to_list // => j?.
+rewrite nth_load_buf // get_to_list !storeW64E !get_storesE !size_to_list.
+
+(* primeiros 64 bits *)
+case (j = 0) => ?.
+  * rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64). 
+    rewrite ifT; first by smt(@W64 pow2_64).    
+    rewrite get64E pack8E => />.
+    rewrite !bits8E ifT 1:/# wordP => k?.
+    (do rewrite initiE 1:/#/=) => /#.
+case (j = 1) => ?.
+  * rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64). 
+    rewrite ifT; first by smt(@W64 pow2_64).    
+    rewrite get64E pack8E => />.
+    rewrite !bits8E ifF 1:/# ifT 1:/# wordP => k?.
+    (do rewrite initiE 1:/#/=) => /#.
+case (j = 2) => ?.
+  * rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64). 
+    rewrite ifT; first by smt(@W64 pow2_64).    
+    rewrite get64E pack8E => />.
+    rewrite !bits8E ifF 1:/# ifF 1:/# ifT 1:/# wordP => k?.
+    (do rewrite initiE 1:/#/=) => /#.
+case (j = 3) => ?.
+  * rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64). 
+    rewrite ifT; first by smt(@W64 pow2_64).    
+    rewrite get64E pack8E => />.
+    rewrite !bits8E ifF 1:/# ifF 1:/# ifF 1:/# ifT 1:/# wordP => k?.
+    (do rewrite initiE 1:/#/=) => /#.
+case (j = 4) => ?.
+  * rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64). 
+    rewrite ifT; first by smt(@W64 pow2_64).    
+    rewrite get64E pack8E => />.
+    rewrite !bits8E ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# ifT 1:/# wordP => k?.
+    (do rewrite initiE 1:/#/=) => /#.
+case (j = 5) => ?.
+  * rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64). 
+    rewrite ifT; first by smt(@W64 pow2_64).    
+    rewrite get64E pack8E => />.
+    rewrite !bits8E ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# ifT 1:/# wordP => k?.
+    (do rewrite initiE 1:/#/=) => /#.
+case (j = 6) => ?.
+  * rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64). 
+    rewrite ifT; first by smt(@W64 pow2_64).    
+    rewrite get64E pack8E => />.
+    rewrite !bits8E ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# ifT 1:/# wordP => k?.
+    (do rewrite initiE 1:/#/=) => /#.
+case (j = 7) => ?.
+  * rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64). 
+    rewrite ifT; first by smt(@W64 pow2_64).    
+    rewrite get64E pack8E => />.
+    rewrite !bits8E ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# ifT 1:/# wordP => k?.
+    (do rewrite initiE 1:/#/=) => /#.
+
+
+(* 64 bits a seguir *)
+case (j = 8) => ?.
+  * rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64). 
+    rewrite ifT; first by smt(@W64 pow2_64).    
+    rewrite get64E pack8E => />.
+    rewrite !bits8E. 
+    rewrite ifT; first by smt(@W64 pow2_64).
+    rewrite wordP=> k?.
+    (do rewrite initiE 1:/#/=) => /#.
+case (j = 9) => ?.
+  * rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64). 
+    rewrite ifT; first by smt(@W64 pow2_64).    
+    rewrite get64E pack8E => />.
+    rewrite !bits8E. 
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifT; first by smt(@W64 pow2_64).
+    rewrite wordP=> k?.
+    (do rewrite initiE 1:/#/=) => /#.
+case (j = 10) => ?.
+  * rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64). 
+    rewrite ifT; first by smt(@W64 pow2_64).    
+    rewrite get64E pack8E => />.
+    rewrite !bits8E. 
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifT; first by smt(@W64 pow2_64).
+    rewrite wordP=> k?.
+    (do rewrite initiE 1:/#/=) => /#.
+case (j = 11) => ?.
+  * rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64). 
+    rewrite ifT; first by smt(@W64 pow2_64).    
+    rewrite get64E pack8E => />.
+    rewrite !bits8E. 
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifT; first by smt(@W64 pow2_64).
+    rewrite wordP=> k?.
+    (do rewrite initiE 1:/#/=) => /#.
+case (j = 12) => ?.
+  * rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64). 
+    rewrite ifT; first by smt(@W64 pow2_64).    
+    rewrite get64E pack8E => />.
+    rewrite !bits8E. 
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifT; first by smt(@W64 pow2_64).
+    rewrite wordP=> k?.
+    (do rewrite initiE 1:/#/=) => /#.
+case (j = 13) => ?.
+  * rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64). 
+    rewrite ifT; first by smt(@W64 pow2_64).    
+    rewrite get64E pack8E => />.
+    rewrite !bits8E. 
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifT; first by smt(@W64 pow2_64).
+    rewrite wordP=> k?.
+    (do rewrite initiE 1:/#/=) => /#.
+case (j = 14) => ?.
+  * rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64). 
+    rewrite ifT; first by smt(@W64 pow2_64).    
+    rewrite get64E pack8E => />.
+    rewrite !bits8E. 
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifT; first by smt(@W64 pow2_64).
+    rewrite wordP=> k?.
+    (do rewrite initiE 1:/#/=) => /#.
+case (j = 15) => ?.
+  * rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64). 
+    rewrite ifT; first by smt(@W64 pow2_64).    
+    rewrite get64E pack8E => />.
+    rewrite !bits8E. 
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifT; first by smt(@W64 pow2_64).
+    rewrite wordP=> k?.
+    (do rewrite initiE 1:/#/=) => /#.
+
+(* Mais 64 bits a seguir *)
+case (j = 16) => ?.
+  * rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifT; first by smt(@W64 pow2_64).    
+    rewrite get64E pack8E => />.
+    rewrite !bits8E. 
+    rewrite ifT; first by smt(@W64 pow2_64).
+    rewrite wordP=> k?.
+    (do rewrite initiE 1:/#/=) => /#.
+case (j = 17) => ?.
+  * rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifT; first by smt(@W64 pow2_64).    
+    rewrite get64E pack8E => />.
+    rewrite !bits8E. 
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifT; first by smt(@W64 pow2_64).
+    rewrite wordP=> k?.
+    (do rewrite initiE 1:/#/=) => /#.
+case (j = 18) => ?.
+  * rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifT; first by smt(@W64 pow2_64).    
+    rewrite get64E pack8E => />.
+    rewrite !bits8E. 
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifT; first by smt(@W64 pow2_64).
+    rewrite wordP=> k?.
+    (do rewrite initiE 1:/#/=) => /#.
+case (j = 19) => ?.
+  * rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifT; first by smt(@W64 pow2_64).    
+    rewrite get64E pack8E => />.
+    rewrite !bits8E. 
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifT; first by smt(@W64 pow2_64).
+    rewrite wordP=> k?.
+    (do rewrite initiE 1:/#/=) => /#.
+case (j = 20) => ?.
+  * rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifT; first by smt(@W64 pow2_64).    
+    rewrite get64E pack8E => />.
+    rewrite !bits8E. 
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifT; first by smt(@W64 pow2_64).
+    rewrite wordP=> k?.
+    (do rewrite initiE 1:/#/=) => /#.
+case (j = 21) => ?.
+  * rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifT; first by smt(@W64 pow2_64).    
+    rewrite get64E pack8E => />.
+    rewrite !bits8E. 
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifT; first by smt(@W64 pow2_64).
+    rewrite wordP=> k?.
+    (do rewrite initiE 1:/#/=) => /#.
+case (j = 22) => ?.
+  * rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifT; first by smt(@W64 pow2_64).    
+    rewrite get64E pack8E => />.
+    rewrite !bits8E. 
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifT; first by smt(@W64 pow2_64).
+    rewrite wordP=> k?.
+    (do rewrite initiE 1:/#/=) => /#.
+case (j = 23) => ?.
+  * rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifT; first by smt(@W64 pow2_64).    
+    rewrite get64E pack8E => />.
+    rewrite !bits8E. 
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifT; first by smt(@W64 pow2_64).
+    rewrite wordP=> k?.
+    (do rewrite initiE 1:/#/=) => /#.
+
+
+(* ultimos 64 bits *)
+case (j = 24) => ?.
+  * rewrite ifT; first by smt(@W64 pow2_64).    
+    rewrite get64E pack8E => />.
+    rewrite ifT; first by smt(@W64 pow2_64).
+    rewrite wordP=> k?.
+    rewrite bits8E.
+    (do rewrite initiE 1:/#/=) => /#.
+case (j = 25) => ?.
+  * rewrite ifT; first by smt(@W64 pow2_64).    
+    rewrite get64E pack8E => />.
+    rewrite !bits8E. 
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifT; first by smt(@W64 pow2_64).
+    rewrite wordP=> k?.
+    (do rewrite initiE 1:/#/=) => /#.
+case (j = 26) => ?.
+  * rewrite ifT; first by smt(@W64 pow2_64).    
+    rewrite get64E pack8E => />.
+    rewrite !bits8E. 
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifT; first by smt(@W64 pow2_64).
+    rewrite wordP=> k?.
+    (do rewrite initiE 1:/#/=) => /#.
+case (j = 27) => ?.
+  * rewrite ifT; first by smt(@W64 pow2_64).    
+    rewrite get64E pack8E => />.
+    rewrite !bits8E. 
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifT; first by smt(@W64 pow2_64).
+    rewrite wordP=> k?.
+    (do rewrite initiE 1:/#/=) => /#.
+case (j = 28) => ?.
+  * rewrite ifT; first by smt(@W64 pow2_64).    
+    rewrite get64E pack8E => />.
+    rewrite !bits8E. 
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifT; first by smt(@W64 pow2_64).
+    rewrite wordP=> k?.
+    (do rewrite initiE 1:/#/=) => /#.
+case (j = 29) => ?.
+  * rewrite ifT; first by smt(@W64 pow2_64).    
+    rewrite get64E pack8E => />.
+    rewrite !bits8E. 
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifT; first by smt(@W64 pow2_64).
+    rewrite wordP=> k?.
+    (do rewrite initiE 1:/#/=) => /#.
+case (j = 30) => ?.
+  * rewrite ifT; first by smt(@W64 pow2_64).    
+    rewrite get64E pack8E => />.
+    rewrite !bits8E. 
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifT; first by smt(@W64 pow2_64).
+    rewrite wordP=> k?.
+    (do rewrite initiE 1:/#/=) => /#.
+case (j = 31) => [| /#].
+  * rewrite ifT; first by smt(@W64 pow2_64).    
+    rewrite get64E pack8E => />.
+    rewrite !bits8E. 
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifT; first by smt(@W64 pow2_64).
+    rewrite wordP=> k?.
+    (do rewrite initiE 1:/#/=) => /#.
+qed.
+
 lemma p_write_buf_ptr mem (ptr o : W64.t) (buf : W8.t Array32.t) :
     phoare [
       M(Syscall).memcpy_u8pu8_n____memcpy_u8pu8 :
@@ -492,18 +868,7 @@ lemma p_write_buf_ptr mem (ptr o : W64.t) (buf : W8.t Array32.t) :
       forall (k : int), 0 <= k < W64.max_uint => 
          !(to_uint ptr + to_uint o <= k < to_uint ptr + to_uint o + 32) => 
              Glob.mem.[k] = mem.[k]
-    ] = 1%r.
-proof.
-proc => /=.
-rcondf 4.
-- wp; while (0 <= to_uint i <= 4); auto => /> ???; rewrite !ultE of_uintK /= ?to_uintD_small ?to_uint_shl /#.
-
-wp.
-
-admit.
-
-qed.
-
+    ] = 1%r by conseq write_buf_ptr_ll (_p_write_buf_ptr mem ptr o buf); auto.
 
 lemma hash_message_correct (mem : global_mem_t) 
                            (R _root : W8.t Array32.t) (_idx msg_ptr _mlen : W64.t) :
