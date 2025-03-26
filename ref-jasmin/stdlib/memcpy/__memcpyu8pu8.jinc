@@ -1,16 +1,21 @@
 // Obs: The two underscores at the beginning of the filename mean that the
 //      code in this file is to be requires in the body of a namespace
-
-
 inline
 fn __memcpy_u8pu8(reg u64 out offset, reg ptr u8[INLEN] in) -> reg u64, reg u64 {
-    reg u64 i;
+    if (INLEN == 32) {
+        inline int i;
 
-    i = 0;
-    while (i < INLEN) {
-        (u8) [out + offset] = in[i];
-        offset += 1;
-        i += 1;
+        for i=0 to 4 { /* 8*4 = 32 */
+            (u64) [out + offset] = in[u64 i];
+            offset += 8;
+            i += 1;
+        }
+    } else {
+        while (i < INLEN) {
+            (u8) [out + offset] = in[i];
+            offset += 1;
+            i += 1;
+        }
     }
 
     return out, offset;

@@ -1,8 +1,6 @@
 inline
 fn __memcpy_u8pu8(reg u64 out offset, reg ptr u8[INLEN] in) -> reg ptr u8[INLEN], reg u64, reg u64 {
-    reg u64 i;
-
-    i = 0;
+    reg u64 i = 0;
 
     while (i < INLEN/8) {
         (u64) [out + offset] = in[u64 i];

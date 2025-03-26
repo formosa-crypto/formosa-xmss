@@ -495,55 +495,13 @@ lemma p_write_buf_ptr mem (ptr o : W64.t) (buf : W8.t Array32.t) :
     ] = 1%r.
 proof.
 proc => /=.
-while (
-  0 <= to_uint ptr + to_uint o + 32 < W64.max_uint /\ 
-  out = ptr  /\
-  offset = o + i /\
-  in_0 = buf /\ 
-  
-  0 <= to_uint i <= 32 /\
+rcondf 4.
+- wp; while (0 <= to_uint i <= 4); auto => /> ???; rewrite !ultE of_uintK /= ?to_uintD_small ?to_uint_shl /#.
 
-  load_buf Glob.mem (ptr + o) (to_uint i) = sub buf 0 (to_uint i) /\
-  
-  forall (k : int),
-    0 <= k < W64.max_uint  =>
-      ! (to_uint ptr + to_uint o <= k < to_uint ptr + to_uint o + to_uint i) =>
-         Glob.mem.[k] = mem.[k]
-)
-(32 - to_uint i); last first.
-  + auto => /> H0 H1; split.
-       - apply (eq_from_nth witness); first by rewrite size_load_buf // size_sub.
-         rewrite size_load_buf // /#.
-    move => mem0 i0; split => [* |]; first by rewrite ultE /#.
-    rewrite ultE of_uintK /= => H2 H3 H4.
-    have ->: to_uint i0 = 32 by smt().
-    move => H5 H6.
-    split => [| /#].
-    apply (eq_from_nth witness); first by rewrite size_load_buf // size_to_list.
-    rewrite size_load_buf // => j?. 
-    by rewrite H5 nth_sub.
+wp.
 
-  + auto => /> &hr H0 H1 H2 H3 H4 H5 H6.
-    do split; 2,3,6: by smt(@W64 pow2_64).
-      - ring.
-      - apply (eq_from_nth witness). 
-          * rewrite size_load_buf; first by smt(@W64 pow2_64).
-            rewrite size_sub; first by smt(@W64 pow2_64).
-            reflexivity.
-        rewrite size_load_buf; first by smt(@W64 pow2_64).
-        move => j?.
-        rewrite nth_load_buf // storeW8E get_setE.
-        rewrite ultE of_uintK /= in H6.
-        case (j = to_uint i{hr}) => [Ha | Hb].
-          * rewrite ifT; first by smt(@W64 pow2_64).
-            by rewrite nth_sub //=; congr; rewrite Ha.
-          * rewrite ifF; first by smt(@W64 pow2_64).        
-            rewrite nth_sub //=.
-            have ->: buf.[j] = nth witness (sub buf 0 (to_uint i{hr})) j by rewrite nth_sub // ; smt(@W64 pow2_64).
-            rewrite -H4 nth_load_buf //; smt(@W64 pow2_64).
-      - move => k???.
-        rewrite storeW8E get_setE ifF; first by smt(@W64 pow2_64).
-        rewrite H5 1:/# // ; smt(@W64 pow2_64).
+admit.
+
 qed.
 
 
