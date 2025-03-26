@@ -26,13 +26,7 @@ lemma zero_addr_res (address : adrs) :
     phoare[M(Syscall)._zero_address : true ==> res = zero_addr] = 1%r.
 proof.
 proc.
-unroll 2; rcondt 2; first by auto.
-unroll 4; rcondt 4; first by auto.
-unroll 6; rcondt 6; first by auto.
-unroll 8; rcondt 8; first by auto.
-rcondf 10; first by auto. 
-auto => /> &hr.
-rewrite tP => i?. 
+unroll for 2; auto => /> &hr; rewrite tP => i?. 
 rewrite initiE //= !set64E zero_addr_i //= get32E pack4E /= wordP => k?. 
 rewrite initiE //=; do (rewrite initiE 1:/# /=); rewrite bits8E.
 case (24 <= 4 * i + k %/ 8 < 32) => H; first by rewrite initiE 1:/#.
