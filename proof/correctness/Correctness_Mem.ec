@@ -6,6 +6,7 @@ from Jasmin require import JModel.
 
 require import Array3 Array32 Array64 Array128 Array2144.
 require import Array352.
+require import WArray32.
 
 require import XMSS_IMPL.
 require import Utils Repr.
@@ -14,6 +15,26 @@ require import Termination.
 require import Params Parameters. 
 
 require import XMSS_MT_TreeHash.
+
+lemma copy_nbytes_eq  (i : W8.t Array32.t) :
+    phoare [M(Syscall).copy_nbytes : arg.`2 = i ==> res = i] = 1%r.
+proof.
+proc.
+rcondt 1 => //.
+auto => /> &hr.
+ rewrite tP => j?.
+rewrite initiE // get8_set64_directE // bits8E.
+case (24 <= j < 24 + 8) => ?; rewrite wordP => k?.
+     * rewrite initiE //= get64E pack8E; do  (rewrite initiE 1:/# /=); smt().
+rewrite /get8 !initiE //= set64E initiE //=.
+case (16 <= j < 24) => ?.
+     * rewrite get64E /= bits8E /= initiE //= pack8E //=; do (rewrite initiE 1:/# /=); smt().
+rewrite /get8 !initiE //= set64E initiE //=. 
+case (8 <= j < 16) => ?.
+     * rewrite get64E /= bits8E /= initiE //= pack8E //=; do (rewrite initiE 1:/# /=); smt().
+rewrite /get8 !initiE //= set64E initiE //= ifT 1:/#.
+rewrite get64E /= bits8E /= initiE //= pack8E //=; do (rewrite initiE 1:/# /=); smt().
+qed.
 
 lemma memcpy_mem_mem (mem : global_mem_t) (dst_ptr oo src_ptr oi len : W64.t) :
     phoare [

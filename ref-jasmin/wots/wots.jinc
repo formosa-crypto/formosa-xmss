@@ -36,7 +36,7 @@ fn __expand_seed(
     addr = __set_key_and_mask(addr, 0);
 
     // memcpy(buf, pub_seed, params->n);
-    buf[0 : XMSS_N] = #copy_8(pub_seed);
+    buf[0 : XMSS_N] = copy_nbytes(buf[0 : XMSS_N], pub_seed);
 
     for i = 0 to XMSS_WOTS_LEN {
         // NOTE: addr is live at the beggining of the loop => we must unspill it at the end

@@ -305,6 +305,8 @@ seq 5 3 : (
           case (k = 6) => //?.
           smt(sub_k).
 
+seq 1 0 : (#pre /\ aux{1} = pub_seed{1}); first by ecall {1} (copy_nbytes_eq pub_seed{1}); auto.
+
 seq 1 0 : (#pre /\ sub buf{1} 0 n = to_list pub_seed{1}).
     + auto => /> &1 &2 H0 H1 H2 H3 H4 H5.
       apply (eq_from_nth witness); first by rewrite n_val size_sub // size_to_list.
