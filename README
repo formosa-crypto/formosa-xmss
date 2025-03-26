@@ -11,7 +11,10 @@ Jasmin & ECLib: release-2025.02
 - Shifts by constants dont need & 63
 
 ## TODO:
-- [ ] Memcpies devem copiar words 64bits de cada vez em vez de 8bits.
+- [X] Memcpies devem copiar words 64bits de cada vez em vez de 8bits. Replace in
+    - [X] Hash 
+    - [X] Wots
+    - [ ]
 
 
 ## Mais todos 

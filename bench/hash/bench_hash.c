@@ -27,11 +27,21 @@
 extern void prf_jazz(uint8_t *out, const uint8_t *in, const uint8_t *key);
 extern void prf_keygen_jazz(uint8_t *out, const uint8_t *in, const uint8_t *key);
 extern void hash_message_jazz(uint8_t *mhash, const uint8_t *r, const uint8_t *root, uint64_t idx,
-                              uint8_t* m, size_t mlen);
+                              uint8_t *m, size_t mlen);
 extern void thash_h_jazz(uint8_t *out, uint32_t *addr, const uint8_t *in, const uint8_t *pub_seed);
 extern void thash_f_jazz(uint8_t *out, uint32_t *addr, const uint8_t *pub_seed);
 
 bool verbose = true;
+
+static size_t find_min_index(const uint64_t *array, size_t size) {
+    size_t min_index = 0;
+    for (size_t i = 1; i < size; i++) {
+        if (array[i] < array[min_index]) {
+            min_index = i;
+        }
+    }
+    return min_index;
+}
 
 xmss_params setup_params(void) {
     xmss_params p;
@@ -86,23 +96,30 @@ static inline uint64_t cpucycles(void) {
  * xmss_params and register the cycles before and after executing the function.
  */
 void bench_function(void (*func)(uint64_t *, uint64_t *), const char *s) {
-    uint64_t observations[TIMINGS] = {0};
+    uint64_t observations[RUNS][TIMINGS] = {0};
+    uint64_t medians[RUNS] = {0};
+    uint64_t averages[RUNS] = {0};
     uint64_t before, after;
 
     uint64_t cpucycles_overhead = overhead_of_cpucycles_call();
 
-    for (int i = 0; i + 1 < TIMINGS; i++) {
-        if (verbose) {
-            printf("[%s]: Timing %d/%d\n", s, i + 1, TIMINGS - 1);
+    for (int run = 0; run < RUNS; run++) {
+        for (int i = 0; i + 1 < TIMINGS; i++) {
+            if (verbose) {
+                printf("[%s]: Timing %d/%d (Run %d/%d)\n", s, i + 1, TIMINGS - 1, run + 1, RUNS);
+            }
+
+            func(&before, &after);
+
+            observations[run][i] = (after - cpucycles_overhead) - before;
         }
-
-        func(&before, &after);
-
-        observations[i] = (after - cpucycles_overhead) - before;
+        medians[run] = average(observations[run], TIMINGS);
+        averages[run] = median(observations[run], TIMINGS);
     }
 
-    uint64_t average_val = average(observations, TIMINGS);
-    uint64_t median_val = median(observations, TIMINGS);
+    size_t index = find_min_index(medians, RUNS);
+    uint64_t median_val = medians[index];
+    uint64_t average_val = averages[index];
 
     FILE *f = NULL;
     if (!(f = fopen(FILENAME, "a"))) {

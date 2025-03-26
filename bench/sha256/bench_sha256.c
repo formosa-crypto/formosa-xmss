@@ -27,6 +27,16 @@ extern void sha256_128(uint8_t *, const uint8_t *);
 
 bool verbose = true;
 
+static size_t find_min_index(const uint64_t *array, size_t size) {
+    size_t min_index = 0;
+    for (size_t i = 1; i < size; i++) {
+        if (array[i] < array[min_index]) {
+            min_index = i;
+        }
+    }
+    return min_index;
+}
+
 void clearfile(const char *filename) {
     FILE *f = NULL;
     if (!(f = fopen(filename, "w"))) {
@@ -63,23 +73,30 @@ static inline uint64_t cpucycles(void) {
  * xmss_params and register the cycles before and after executing the function.
  */
 void bench_function(void (*func)(uint64_t *, uint64_t *), const char *s) {
-    uint64_t observations[TIMINGS] = {0};
+    uint64_t observations[RUNS][TIMINGS] = {0};
+    uint64_t medians[RUNS] = {0};
+    uint64_t averages[RUNS] = {0};
     uint64_t before, after;
 
     uint64_t cpucycles_overhead = overhead_of_cpucycles_call();
 
-    for (int i = 0; i + 1 < TIMINGS; i++) {
-        if (verbose) {
-            printf("[%s]: Timing %d/%d\n", s, i + 1, TIMINGS - 1);
+    for (int run = 0; run < RUNS; run++) {
+        for (int i = 0; i + 1 < TIMINGS; i++) {
+            if (verbose) {
+                printf("[%s]: Timing %d/%d (Run %d/%d)\n", s, i + 1, TIMINGS - 1, run + 1, RUNS);
+            }
+
+            func(&before, &after);
+
+            observations[run][i] = (after - cpucycles_overhead) - before;
         }
-
-        func(&before, &after);
-
-        observations[i] = (after - cpucycles_overhead) - before;
+        medians[run] = average(observations[run], TIMINGS);
+        averages[run] = median(observations[run], TIMINGS);
     }
 
-    uint64_t average_val = average(observations, TIMINGS);
-    uint64_t median_val = median(observations, TIMINGS);
+    size_t index = find_min_index(medians, RUNS);
+    uint64_t median_val = medians[index];
+    uint64_t average_val = averages[index];
 
     FILE *f = NULL;
     if (!(f = fopen(FILENAME, "a"))) {
