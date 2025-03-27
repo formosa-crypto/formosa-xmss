@@ -42,7 +42,7 @@ qed.
 lemma memcpy_ptr_ll : islossless M(Syscall).__memcpy_u8u8p.
 proof.
 proc.
-while (0 <= i <= 32) (32 - i); auto => /> /#.
+while (0 <= i <= 4 /\ inc = 4) (4 - i); auto => /#.
 qed.
 
 lemma memset_zero_ll : islossless M(Syscall).__memset_zero_u8.
