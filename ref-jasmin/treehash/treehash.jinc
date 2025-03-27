@@ -313,8 +313,27 @@ fn __tree_sig(
     // Sig = sig_ots || auth;
     () = #unspill(sig);
 
-    for i=0 to XMSS_WOTS_SIG_BYTES { sig[i] = sig_ots[i]; }
-    for i=0 to XMSS_TREE_HEIGHT * XMSS_N { sig[(XMSS_WOTS_LEN * XMSS_N) + i] = auth_path[i]; }
+    // FIXME: Instead of using sig_ots and auth path as separate stack arrays and then compy the result to 
+    // the final sig array, we can directly use slices of the sig array
+
+    // This is true for the implementation that we are verifying
+    if (XMSS_WOTS_SIG_BYTES == 2144) {
+        for i=0 to 268 { /* 268 = 2144/8 */
+            sig.[u64 8*i] = sig_ots[u64 i]; /* This has to be unaligned on the left hand side */
+        }
+    } else { 
+        for i=0 to XMSS_WOTS_SIG_BYTES { sig[i] = sig_ots[i]; } 
+    }
+
+    if (XMSS_TREE_HEIGHT == 10 && XMSS_N == 32) {
+        for i =0 to 40 { /* 40 = (10*32)/8 */
+            sig.[u64 8*((268) + i)] = auth_path[u64 i];
+        }
+    } else {
+        for i=0 to XMSS_TREE_HEIGHT * XMSS_N { 
+            sig[(XMSS_WOTS_LEN * XMSS_N) + i] = auth_path[i]; 
+        }
+    }
     
     return sig, addr;
 }
