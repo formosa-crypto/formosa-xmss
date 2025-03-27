@@ -14,7 +14,7 @@ require import Utils Repr.
 
 require import Array4 Array8 Array32 Array64 Array96 Array128.
 
-require import WArray32 WArray64.
+require import WArray32 WArray64 WArray128.
 
 (*---*) import StdBigop.Bigint.
 
@@ -403,68 +403,75 @@ conseq (: _ ==>
           rewrite nth_cat size_cat NBytes.valP H3 nval /= ifF 1:/# -H11 /#.
 
 rcondt{1} 1 => //.
-(*
-while {1}
-( 
-  0 <= to_uint i{1} <= 64 /\
-  size padding{2} = 32 /\ 
-  addr{1} = address{2} /\
-  sub addr{1} 0 7 = sub a1 0 7 /\
-  to_list in_0{1} = NBytes.val _left{2} ++ NBytes.val _right{2} /\
-  to_list bitmask{1} = NBytes.val bitmask_0{2} ++ NBytes.val bitmask_1{2} /\
-  (forall (k : int), 0 <= k < 32 => buf{1}.[k] = nth witness padding{2} k) /\
-  (forall (k : int), 0 <= k < 32 => buf{1}.[32 + k] = nth witness (NBytes.val key{2}) k) /\
-  (forall (k : int), 0 <= k < to_uint i{1} => 
-    buf{1}.[64 + k] = 
-      nth witness (NBytes.val _left{2} ++ NBytes.val _right{2}) (k) `^` nth witness (NBytes.val bitmask_0{2} ++ NBytes.val bitmask_1{2}) (k))
-) 
-(64 - to_uint i{1}).
-  + auto => /> &hr H0 H1 H2 H3 H4 H5 H6 H7 H8 H9. 
-    rewrite ultE /= in H9.
-    (do split ; 1,2: by rewrite to_uintD_small /#); 1,2: by (move => k??; rewrite to_uintD_small of_uintK 1:/# /= get_setE 1:/# ifF /#).
-       - move => k?.
-         rewrite to_uintD_small 1:/#/= => ?.         
-         rewrite to_uintD_small 1:/# of_uintK /=. 
-         have E0: forall (k : int), 0 <= k < 32 => in_0{hr}.[k] = nth witness (NBytes.val _left{m}) k by move => *; rewrite -get_to_list H4 nth_cat NBytes.valP nval ifT 1:/#.
-         have E1: forall (k : int), 0 <= k < 32 => in_0{hr}.[32 + k] = nth witness (NBytes.val _right{m}) k by move => *; rewrite -get_to_list H4 nth_cat NBytes.valP ifF /#.
-         have E2: forall (k : int), 0 <= k < 32 => bitmask{hr}.[k] = nth witness (NBytes.val bitmask_0{m}) k by move => *; rewrite -get_to_list H5 nth_cat NBytes.valP ifT 1:/#.
-         have E3: forall (k : int), 0 <= k < 32 => bitmask{hr}.[32 + k] = nth witness (NBytes.val bitmask_1{m}) k by move => *; rewrite -get_to_list H5 nth_cat NBytes.valP ifF /#.
-         rewrite get_setE 1:/#.
-         case (64 + k = 64 + to_uint i{hr}) => ?; last by apply H8 => /#. 
-         congr; first by rewrite -get_to_list H4 /#.
-         rewrite nth_cat NBytes.valP nval.
-         case (0 <= k < 32) => ?.
-            * rewrite ifT /#.
-            * rewrite ifF 1:/# -E3 /#.
-       - rewrite to_uintD /#.
-  + auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8. 
-    do split; 2: by smt().
-       - apply (eq_from_nth witness); first by rewrite size_to_list size_cat !NBytes.valP nval. 
-         rewrite size_to_list => i?.
-         rewrite get_to_list nth_cat NBytes.valP nval.
-         case (0 <= i < 32) => ?; [rewrite ifT | rewrite ifF] => /#.
-       - move => bufL iL. 
-         split; first by rewrite ultE /#.
-         rewrite ultE => H9 H10 H11 H12 H13 H14 H15 k??.
-         rewrite H15 1:#smt:(@W64 pow2_64) /bytexor. 
-         case (0 <= k < 32) => ?.
-             - rewrite !nth_cat !NBytes.valP ifT 1:/# ifT 1:/# (nth_map witness) /=; first by rewrite size_zip !size_cat !NBytes.valP /#.
-               pose S := (NBytes.val _left{2} ++ NBytes.val _right{2}).
-               pose T := (NBytes.val bitmask_0{2} ++ NBytes.val bitmask_1{2}).
-               have ->: nth witness (zip S T) k = nth (witness, witness) (zip S T) k
-                        by apply nth_change_dfl ; rewrite size_zip /S /T !size_cat !NBytes.valP nval /= /#.  
-               by rewrite !nth_zip //= /S /T ?size_cat ?NBytes.valP // !nth_cat !NBytes.valP !ifT 1,2:/#.
-         rewrite (nth_map witness) .
-               - rewrite size_zip !size_cat !NBytes.valP /#.
-         rewrite nth_cat NBytes.valP ifF 1:/#.
-         rewrite nth_cat NBytes.valP ifF 1:/# /=.
-               pose S := (NBytes.val _left{2} ++ NBytes.val _right{2}).
-               pose T := (NBytes.val bitmask_0{2} ++ NBytes.val bitmask_1{2}).
-               have ->: nth witness (zip S T) k = nth (witness, witness) (zip S T) k
-                        by apply nth_change_dfl ; rewrite size_zip /S /T !size_cat !NBytes.valP nval /= /#.  
-               by rewrite !nth_zip //= /S /T ?size_cat ?NBytes.valP // !nth_cat !NBytes.valP !ifF 1,2:/#.
-*)
-admit.
+
+unroll{1} 2; rcondt{1} 2; 1: by auto.
+unroll{1} 6; rcondt{1} 6; 1: by auto.
+unroll{1} 10; rcondt{1} 10; 1: by auto.
+unroll{1} 14; rcondt{1} 14; 1: by auto.
+unroll{1} 18; rcondt{1} 18; 1: by auto.
+unroll{1} 22; rcondt{1} 22; 1: by auto.
+unroll{1} 26; rcondt{1} 26; 1: by auto.
+unroll{1} 30; rcondt{1} 30; 1: by auto.
+rcondf{1} 34; 1: by auto.
+
+auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8; do split => k ??; 1,2: by (
+    rewrite initiE 1:/# !get64E !pack8E wordP =>?; 
+    rewrite /get8 /set64_direct !initiE 1:/#/= !bits8E ifF 1:/#; 
+    do rewrite !initiE 1..3:/#/= ifF 1:/#; 
+    rewrite initiE /#
+).
+- rewrite initiE 1:/# !get64E !pack8E wordP => j?.
+  rewrite /get8 /set64_direct !initiE 1:/#/= !bits8E. 
+  case (120 <= 64 + k < 128) => ?.
+    * auto => />; do rewrite initiE 1:/#/=. 
+      rewrite -H0 /bytexor (nth_map (witness, witness)) /=; first by rewrite size_zip !size_cat !NBytes.valP size_to_list /#.
+      rewrite nth_zip; first by rewrite !size_cat !NBytes.valP size_to_list /#.
+      rewrite get_to_list.
+      do rewrite nth_cat NBytes.valP ifF 1:/#.
+      rewrite -H8 /#.
+  rewrite !initiE 1..3:/#/= !bits8E; case (112 <= 64 + k < 120) => ?.
+    * auto => />; do rewrite initiE 1:/#/=. 
+      rewrite -H0 /bytexor (nth_map (witness, witness)) /=; first by rewrite size_zip !size_cat !NBytes.valP size_to_list /#.
+      rewrite nth_zip; first by rewrite !size_cat !NBytes.valP size_to_list /#.
+      rewrite get_to_list.
+      do rewrite nth_cat NBytes.valP ifF 1:/#.
+      rewrite -H8 /#.
+  rewrite !initiE 1..3:/#/= !bits8E; case (104 <= 64 + k < 112) => ?.
+    * auto => />; do rewrite initiE 1:/#/=. 
+      rewrite -H0 /bytexor (nth_map (witness, witness)) /=; first by rewrite size_zip !size_cat !NBytes.valP size_to_list /#.
+      rewrite nth_zip; first by rewrite !size_cat !NBytes.valP size_to_list /#.
+      rewrite get_to_list.
+      do rewrite nth_cat NBytes.valP ifF 1:/#.
+      rewrite -H8 /#.
+  rewrite !initiE 1..3:/#/= !bits8E; case (96 <= 64 + k < 104) => ?.
+    * auto => />; do rewrite initiE 1:/#/=. 
+      rewrite -H0 /bytexor (nth_map (witness, witness)) /=; first by rewrite size_zip !size_cat !NBytes.valP size_to_list /#.
+      rewrite nth_zip; first by rewrite !size_cat !NBytes.valP size_to_list /#.
+      rewrite get_to_list.
+      do rewrite nth_cat NBytes.valP ifF 1:/#.
+      rewrite -H8 /#.
+  rewrite !initiE 1..3:/#/= !bits8E; case (88 <= 64 + k < 96) => ?.
+    * auto => />; do rewrite initiE 1:/#/=. 
+      rewrite -H0 /bytexor (nth_map (witness, witness)) /=; first by rewrite size_zip !size_cat !NBytes.valP size_to_list /#.
+      rewrite nth_zip; first by rewrite !size_cat !NBytes.valP size_to_list /#.
+      rewrite get_to_list.
+      do rewrite nth_cat NBytes.valP ifT 1:/#.
+      rewrite -H4 /#.
+  rewrite !initiE 1..3:/#/= !bits8E; case (80 <= 64 + k < 88) => ?.
+    * auto => />; do rewrite initiE 1:/#/=. 
+      rewrite -H0 /bytexor (nth_map (witness, witness)) /=; first by rewrite size_zip !size_cat !NBytes.valP size_to_list /#.
+      rewrite nth_zip; first by rewrite !size_cat !NBytes.valP size_to_list /#.
+      rewrite get_to_list.
+      do rewrite nth_cat NBytes.valP ifT 1:/#.
+      rewrite -H4 /#.
+  rewrite !initiE 1..3:/#/= !bits8E; case (72 <= 64 + k < 80) => ?; [| rewrite !initiE 1..3:/#/= !bits8E ifT 1:/#]; (
+        auto => />; do rewrite initiE 1:/#/=; 
+        (rewrite -H0 /bytexor (nth_map (witness, witness)) /=; first by rewrite size_zip !size_cat !NBytes.valP size_to_list /#);
+        (rewrite nth_zip; first by rewrite !size_cat !NBytes.valP size_to_list /#);
+        rewrite get_to_list;
+        do rewrite nth_cat NBytes.valP ifT 1:/#;
+        rewrite -H4 /#
+).
 qed.
 
 
