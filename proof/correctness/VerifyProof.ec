@@ -478,7 +478,7 @@ seq 2 1 : #pre; first by auto => /> &1 &2 *; rewrite andwC h_val d_val /(`<<`) /
 
 seq 1 1 : #pre.
 - auto => /> &1 &2 *.
-  rewrite (: 63 = 2^6 - 1) 1:/# and_mod // !to_uint_shr 2:/# to_uint_truncateu8 !of_uintK 1:/#.
+  rewrite !to_uint_shr 2:/# of_uintK //.
   rewrite (: (10 %% W256.modulus %% 2 ^ 6 %% W256.modulus %% W8.modulus %% 64) = 10) 1:/#.
   rewrite h_val d_val /#.
 
@@ -644,7 +644,7 @@ seq 1 1 : (
   to_uint idx{1} = to_uint idx_tree{2}
 ).
 - auto => /> &1 &2 *.
-  rewrite (: 63 = 2^6 - 1) 1:/# and_mod // !of_uintK (: 10 %% W256.modulus %% 2 ^ 6 = 10) 1:/# to_uint_shr to_uint_truncateu8 of_uintK /#.
+   rewrite (: 10 %% W256.modulus %% 2 ^ 6 = 10) 1:/# to_uint_shr of_uintK /#.
 
 seq 0 1 : (#pre /\ (sig_ots{2}, auth{2}) = nth witness s{2}.`r_sigs 0); first by auto => /> /#.
 
