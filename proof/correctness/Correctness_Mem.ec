@@ -901,30 +901,34 @@ lemma memcpy_ptr_correct (ptr : W64.t):
         res = Array32.init (fun (i : int) => loadW8 Glob.mem (to_uint ptr + i))].
 proof.
 proc.
-inline * ; wp ; sp.
-while (
-  in_ptr1  = ptr /\
-  0 <= (to_uint ptr) + 32 <= W64.modulus /\
-  0 <= to_uint ptr /\
-  
-  0 <= i <= 32 /\
-  0 <= to_uint in_ptr{hr} + 32 <= W64.modulus /\
-  forall (k : int), 0 <= k < i => (out1.[k] = loadW8 Glob.mem ((to_uint ptr) + k))
-).
-    + auto => /> &hr H0 H1 H2 H3 H4 H5 H6 H7 H8C.
-      do split; 1,2:smt().
-      move => k??.
-      rewrite get_setE //=.
-      case (k = i{hr}) => E.
-          * congr; rewrite E #smt:(@W64 pow2_64).
-          * apply H7 => /#.      
-    + auto => /> &hr H0 H1 H2. 
-      split => [/# | i0 out0 ???]. 
-      have ->: i0 = 32 by smt().
-      move => H3.
-      rewrite tP => j?.
-      rewrite initiE //=. 
-      by apply H3.
+inline *.
+sp; wp.
+unroll 1; rcondt 1; 1:auto.
+unroll 3; rcondt 3; 1:auto.
+unroll 5; rcondt 5; 1:auto.
+unroll 7; rcondt 7; 1:auto.
+rcondf 9; 1:auto.
+auto => /> &hr *.
+rewrite tP => i?.
+rewrite initiE //= bits8E initiE //=.
+case (24 <= i < 32) => ?.
+   * rewrite wordP => k?.
+     rewrite initiE //= /loadW8 /loadW64 pack8E initiE 1:/#/= initiE 1:/#/=.
+     congr => [| /#]; congr; smt(@W64 pow2_64). 
+rewrite /get8 /init8 initiE //= initiE //= /set64_direct initiE //=.
+case (16 <= i < 24) => ?.
+   * rewrite wordP => k?.
+     rewrite /loadW8 /loadW64 pack8E bits8E initiE 1:/#/= initiE 1:/#/= initiE 1:/#/=.
+     congr => [| /#]; congr; smt(@W64 pow2_64).
+rewrite initiE //= initiE //= initiE //=.
+case (8 <= i < 16) => ?.
+   * rewrite wordP => k?.
+     rewrite /loadW8 /loadW64 pack8E bits8E initiE 1:/#/= initiE 1:/#/= initiE 1:/#/=.
+     congr => [| /#]; congr; smt(@W64 pow2_64).
+do rewrite initiE //=.
+rewrite ifT 1:/# wordP => k?.
+rewrite /loadW8 /loadW64 pack8E bits8E initiE 1:/#/= initiE 1:/#/= initiE 1:/#/=.
+congr => [| /#]; congr; smt(@W64 pow2_64).
 qed.
 
 lemma memcpy_ptr_ll :
