@@ -243,8 +243,6 @@ fn copy_nbytes_from_ptr(
     reg ptr u8[XMSS_N] in
 ) -> reg u64
 {
-    inline u64 offset = XMSS_PADDING_LEN + XMSS_N;
-
     if (XMSS_N == 32 && XMSS_PADDING_LEN == 32) {
         inline int i;
 

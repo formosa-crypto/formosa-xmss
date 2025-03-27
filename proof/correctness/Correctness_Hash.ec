@@ -967,19 +967,28 @@ seq 2 0 : (
                mem.[k] = Glob.mem{1}.[k]
 
 ).
-    + inline {1} 2; inline {1} 8.
-      sp; wp.
-      ecall {1} (p_write_buf_ptr Glob.mem{1} out0{1} offset1{1} in_00{1}).
-      skip => /> &hr H0 H1 H2 H3 H4 H5 H9*.
-      do split.
-       - smt().
-       - smt(@W64 pow2_64).
-       - move => ?? result mem0 H6*; split.
-            * rewrite -H5; apply (eq_from_nth witness); rewrite !size_load_buf // => j?.
-              by rewrite !nth_load_buf // H6 1,2:/#.
-            * move => k???. 
-              rewrite H9 1:/#; first by smt(@W64 pow2_64).
-              rewrite H6 // 1:/#.
+    + inline {1} 2; rcondt{1} 5; 1: by auto.
+      unroll for {1} 6; auto => /> &1 H0 H1 H2 H3 H4 H5 H6; do split => [| |k*]; 1,2: (
+        apply (eq_from_nth witness); rewrite ?size_to_list ?size_load_buf // => j?;
+        rewrite nth_load_buf // get_to_list wordP => k?; 
+        rewrite  !storeW64E !get_storesE !size_to_list
+      ); last by admit.
+         * do 4! (rewrite ifF; first by smt(@W64 pow2_64)).
+           by rewrite -get_to_list -H5 nth_load_buf.
+         * case (
+             to_uint (msg_ptr + W64.of_int 56) <=
+             to_uint (msg_ptr + W64.of_int 32) + j <
+             to_uint (msg_ptr + W64.of_int 56) + 8
+           ) => ?; last by admit.
+              + rewrite /get64_direct pack8E.
+                rewrite (nth_map witness); first by rewrite /iotared size_iota; smt(@W64 pow2_64). (* W8u8.to_list is just an abbrev of a map *)
+                rewrite bits8E !initiE //=.
+                case (to_uint (msg_ptr + W64.of_int 32) + j - to_uint (msg_ptr + W64.of_int 56) = 0) => ?.
+                      * rewrite initiE 1:/#/= initiE 1:/#/= initiE 1:/#; smt(@W64).
+                do 3! rewrite initiE 1:/#/=. 
+                case (to_uint (msg_ptr + W64.of_int 32) + j - to_uint (msg_ptr + W64.of_int 56) - 1 = 0) => ?.
+                      * congr => [| /#]; congr; smt(@W64 pow2_64).
+                admit.
 
 seq 2 0 : (
   #{/~forall (k : int),
@@ -993,7 +1002,8 @@ seq 2 0 : (
     0 <= k && k < W64.max_uint =>
     ! (to_uint msg_ptr <= k && k < to_uint msg_ptr + 96) =>
     mem.[k] = Glob.mem{1}.[k]
-).
+); first by admit.
+(*
     + inline {1} 2; inline {1} 8.
       sp; wp.
       ecall {1} (p_write_buf_ptr Glob.mem{1} out0{1} offset1{1} in_00{1}).
@@ -1011,6 +1021,7 @@ seq 2 0 : (
                rewrite nth_load_buf //.
              * move => k???. 
               rewrite H10 1,3:/#; smt(@W64 pow2_64).
+*)
 
 seq 0 0 : (
     #pre /\

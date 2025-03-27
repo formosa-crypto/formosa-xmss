@@ -1,4 +1,4 @@
-from XMSS require "params/params-xmssmt-sha2_20_2_256.jinc" // FIXME: This should be managed in the makefile
+from XMSS require "params/params-xmssmt-sha2_20_2_256.jinc" 
 from XMSS require "xmss/xmss.jinc"
 
 export

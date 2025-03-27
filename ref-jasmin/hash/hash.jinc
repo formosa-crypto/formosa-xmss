@@ -286,6 +286,21 @@ fn __thash_h(
 
     () = #unspill(in);
 
+    // if XMSS_N == 32 and XMSS_PADDING_LEN == 32, then the size of buf is 32 + 32*32 = 128
+    // meaning that we can operate on 64 bits at a time instead of 32
+    // This is true for the implementation we're verifying
+    if (XMSS_N == 32 && XMSS_PADDING_LEN == 32) { /* This if resolved at compile time */
+        reg u64 t;
+
+        i = 0;
+        while (i < 8) { // (2 * XMSS_N) / 8 = 8
+            t = in[u64 i];
+            t ^= bitmask[u64 i];
+            buf[u64 8 + i] = t; // (XMSS_PADDING_LEN + XMSS_N) / 8 = 64/8 = 8
+            i += 1;
+        }
+
+    } else {
         reg u8 t;
 
         i = 0;
@@ -296,6 +311,8 @@ fn __thash_h(
             buf[XMSS_PADDING_LEN + XMSS_N + i] = t;
             i += 1;
         }
+
+    }
 
     // core_hash(params, out, buf, params->padding_len + 3 * params->n);
     () = #unspill(out);
@@ -390,6 +407,20 @@ fn __thash_f(
 
     () = #unspill(out);
 
+    // Same as before
+    if (XMSS_N == 32 && XMSS_PADDING_LEN == 32) { /* This if resolved at compile time */
+        reg u64 t; 
+
+        i = 0;
+        while (i < 4) { /* XMSS_ N /8 = 32/8 = 4 */
+            // buf[params->padding_len + params->n + i] = in[i] ^ bitmask[i];
+            t = out[u64 i];
+            t ^= bitmask[u64 i];
+            buf[u64 8 + i] = t; // (XMSS_PADDING_LEN + XMSS_N) / 8 = 64/8 = 8
+            i += 1;
+        }
+
+    } else {
         reg u8 t;
         
         i = 0;
@@ -400,7 +431,7 @@ fn __thash_f(
             buf[XMSS_PADDING_LEN + XMSS_N + i] = t;
             i += 1;
         }
-    
+    }
 
     //core_hash(params, out, buf, params->padding_len + 2 * params->n);
     out = hash_plen_2n::__sha256(out, buf);
