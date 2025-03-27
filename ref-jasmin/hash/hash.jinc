@@ -243,7 +243,6 @@ fn __thash_h(
     stack u8[2*XMSS_N] bitmask;
     stack u8[32] addr_as_bytes;
 
-    reg u8 t ;
     reg u64 i;
 
     // ull_to_bytes(buf, params->padding_len, XMSS_HASH_PADDING_H);
@@ -287,13 +286,33 @@ fn __thash_h(
     bitmask[XMSS_N : XMSS_N] = __prf_(bitmask[XMSS_N : XMSS_N], addr_as_bytes, pub_seed);
 
     () = #unspill(in);
-    i = 0;
-    while (i < 2 * XMSS_N) {
-        // buf[params->padding_len + params->n + i] = in[i] ^ bitmask[i];
-        t = in[i];
-        t ^= bitmask[i];
-        buf[XMSS_PADDING_LEN + XMSS_N + i] = t;
-        i += 1;
+
+    // if XMSS_N == 32 and XMSS_PADDING_LEN == 32, then the size of buf is 32 + 32*32 = 128
+    // meaning that we can operate on 64 bits at a time instead of 32
+    // This is true for the implementation we're verifying
+    if (XMSS_N == 32 && XMSS_PADDING_LEN == 32) { /* This if resolved at compile time */
+        reg u64 t;
+
+        i = 0;
+        while (i < 8) { // (2 * XMSS_N) / 8 = 8
+            t = in[u64 i];
+            t ^= bitmask[u64 i];
+            buf[u64 8 + i] = t; // (XMSS_PADDING_LEN + XMSS_N) / 8 = 64/8 = 8
+            i += 1;
+        }
+
+    } else {
+        reg u8 t;
+
+        i = 0;
+        while (i < 2 * XMSS_N) {
+            // buf[params->padding_len + params->n + i] = in[i] ^ bitmask[i];
+            t = in[i];
+            t ^= bitmask[i];
+            buf[XMSS_PADDING_LEN + XMSS_N + i] = t;
+            i += 1;
+        }
+
     }
 
     // core_hash(params, out, buf, params->padding_len + 3 * params->n);
@@ -342,9 +361,9 @@ fn __thash_h_(
 // NOTE: The `in` argument is not used in this function
 inline
 fn __thash_f(
-    #spill_to_mmx reg ptr u8[XMSS_N] out,
-    #spill_to_mmx reg ptr u8[XMSS_N] pub_seed,
-    #spill_to_mmx reg ptr u32[8] addr
+    reg ptr u8[XMSS_N] out,
+    reg ptr u8[XMSS_N] pub_seed,
+    reg ptr u32[8] addr
 ) -> reg ptr u8[XMSS_N], reg ptr u32[8] 
 {
     stack u8[XMSS_PADDING_LEN + 2*XMSS_N] buf;
@@ -353,7 +372,6 @@ fn __thash_f(
 
     reg ptr u8[XMSS_PADDING_LEN] padding;
 
-    reg u8 t;
     reg u64 i;
 
     // buf = XMSS_HASH_PADDING_F || PRF (addr_as_bytes)
@@ -389,13 +407,30 @@ fn __thash_f(
     bitmask = __prf_(bitmask, addr_as_bytes, pub_seed);
 
     () = #unspill(out);
-    i = 0;
-    while (i < XMSS_N) {
-        // buf[params->padding_len + params->n + i] = in[i] ^ bitmask[i];
-        t = out[i];
-        t ^= bitmask[i];
-        buf[XMSS_PADDING_LEN + XMSS_N + i] = t;
-        i += 1;
+
+    if (XMSS_N == 32 && XMSS_PADDING_LEN == 32) { /* This if resolved at compile time */
+        reg u64 t; 
+
+        i = 0;
+        while (i < 4) { /* XMSS_ N /8 = 32/8 = 4 */
+            // buf[params->padding_len + params->n + i] = in[i] ^ bitmask[i];
+            t = out[u64 i];
+            t ^= bitmask[u64 i];
+            buf[u64 8 + i] = t; // (XMSS_PADDING_LEN + XMSS_N) / 8 = 64/8 = 8
+            i += 1;
+        }
+
+    } else {
+        reg u8 t;
+        
+        i = 0;
+        while (i < XMSS_N) {
+            // buf[params->padding_len + params->n + i] = in[i] ^ bitmask[i];
+            t = out[i];
+            t ^= bitmask[i];
+            buf[XMSS_PADDING_LEN + XMSS_N + i] = t;
+            i += 1;
+        }
     }
 
     //core_hash(params, out, buf, params->padding_len + 2 * params->n);
