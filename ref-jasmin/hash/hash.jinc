@@ -164,7 +164,6 @@ fn __hash_message(
     inline int offset;
     stack u8[XMSS_PADDING_LEN] buf;
     stack u8[XMSS_N] buf_n;
-
     // ull_to_bytes(m_with_prefix, params->padding_len, XMSS_HASH_PADDING_HASH);
     buf = bytes_pad::ull_to_bytes(buf, XMSS_HASH_PADDING_HASH);
 
@@ -173,11 +172,11 @@ fn __hash_message(
 
     // memcpy(m_with_prefix + params->padding_len, R, params->n);
     offset = XMSS_PADDING_LEN;
-    m_with_prefix_ptr = memcpy_u8pu8_n::_x_memcpy_u8pu8(m_with_prefix_ptr, offset, R);
+    m_with_prefix_ptr = copy_nbytes_from_ptr(m_with_prefix_ptr, offset, R);
     
     // memcpy(m_with_prefix + params->padding_len + params->n, root, params->n);
     offset = XMSS_PADDING_LEN + XMSS_N;
-    m_with_prefix_ptr = memcpy_u8pu8_n::_x_memcpy_u8pu8(m_with_prefix_ptr, offset, root);
+    m_with_prefix_ptr = copy_nbytes_from_ptr(m_with_prefix_ptr, offset, root);
 
     // ull_to_bytes(m_with_prefix + params->padding_len + 2*params->n, params->n, idx);
     buf_n = bytes_n::ull_to_bytes(buf_n, idx);
@@ -287,21 +286,6 @@ fn __thash_h(
 
     () = #unspill(in);
 
-    // if XMSS_N == 32 and XMSS_PADDING_LEN == 32, then the size of buf is 32 + 32*32 = 128
-    // meaning that we can operate on 64 bits at a time instead of 32
-    // This is true for the implementation we're verifying
-    if (XMSS_N == 32 && XMSS_PADDING_LEN == 32) { /* This if resolved at compile time */
-        reg u64 t;
-
-        i = 0;
-        while (i < 8) { // (2 * XMSS_N) / 8 = 8
-            t = in[u64 i];
-            t ^= bitmask[u64 i];
-            buf[u64 8 + i] = t; // (XMSS_PADDING_LEN + XMSS_N) / 8 = 64/8 = 8
-            i += 1;
-        }
-
-    } else {
         reg u8 t;
 
         i = 0;
@@ -312,8 +296,6 @@ fn __thash_h(
             buf[XMSS_PADDING_LEN + XMSS_N + i] = t;
             i += 1;
         }
-
-    }
 
     // core_hash(params, out, buf, params->padding_len + 3 * params->n);
     () = #unspill(out);
@@ -408,19 +390,6 @@ fn __thash_f(
 
     () = #unspill(out);
 
-    if (XMSS_N == 32 && XMSS_PADDING_LEN == 32) { /* This if resolved at compile time */
-        reg u64 t; 
-
-        i = 0;
-        while (i < 4) { /* XMSS_ N /8 = 32/8 = 4 */
-            // buf[params->padding_len + params->n + i] = in[i] ^ bitmask[i];
-            t = out[u64 i];
-            t ^= bitmask[u64 i];
-            buf[u64 8 + i] = t; // (XMSS_PADDING_LEN + XMSS_N) / 8 = 64/8 = 8
-            i += 1;
-        }
-
-    } else {
         reg u8 t;
         
         i = 0;
@@ -431,7 +400,7 @@ fn __thash_f(
             buf[XMSS_PADDING_LEN + XMSS_N + i] = t;
             i += 1;
         }
-    }
+    
 
     //core_hash(params, out, buf, params->padding_len + 2 * params->n);
     out = hash_plen_2n::__sha256(out, buf);

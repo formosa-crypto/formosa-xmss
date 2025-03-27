@@ -133,7 +133,6 @@ fn __xmssmt_core_sign(
     stack u8 exit = FALSE;
 
     inline int j i;
-
     // uint32_t ots_addr[8] = {0};
     // set_type(ots_addr, XMSS_ADDR_TYPE_OTS);
     ots_addr = __zero_address_(ots_addr);
@@ -198,7 +197,7 @@ fn __xmssmt_core_sign(
         buf = __prf_(buf, index_bytes, sk_prf);
 
         // sm_ptr, _ = memcpy_u8pu8_n::_x_memcpy_u8pu8(sm_ptr, XMSS_INDEX_BYTES, buf); // Write R to the signature 
-        signature[XMSS_INDEX_BYTES : XMSS_N] = #copy_8(buf);
+        signature[XMSS_INDEX_BYTES : XMSS_N] = copy_nbytes_unaligned_left(signature[XMSS_INDEX_BYTES : XMSS_N], buf);
 
         // hash_message(params, mhash, sm + params->index_bytes, pub_root, idx, sm + params->sig_bytes - 
         // Compute the message hash 
@@ -210,8 +209,8 @@ fn __xmssmt_core_sign(
         ots_addr = __set_type(ots_addr, XMSS_ADDR_TYPE_OTS);
         ots_addr = __set_layer_addr(ots_addr, 0);
 
-        // idx_tree = idx >> params->tree_height;               /* (h - h / d) most significant bits of idx_sig */
-        // idx_leaf = (idx & ((1 << params->tree_height) - 1)); /* (h - h / d) least significant bits of idx_sig */
+        // idx_tree = idx >> params->tree_height;               // (h - h / d) most significant bits of idx_sig 
+        // idx_leaf = (idx & ((1 << params->tree_height) - 1)); // (h - h / d) least significant bits of idx_sig 
         () = #unspill(idx);
         idx_tree = idx; idx_tree >>= XMSS_TREE_HEIGHT;
         idx_leaf = ((1 << XMSS_TREE_HEIGHT) - 1); idx_leaf &= idx;   
@@ -235,8 +234,8 @@ fn __xmssmt_core_sign(
             ots_addr[4] = 0; // set the padding. This is already 0 but having this assignment here simplifies the proof 
             root = __treehash_(root, sk_seed, pub_seed, 0, XMSS_TREE_HEIGHT, ots_addr);
 
-                        // idx_tree = idx_tree >> params->tree_height;          /* (h - h / d) most significant bits of idx_sig */
-            // idx_leaf = (idx_tree & ((1 << params->tree_height) - 1)); /* (h - h / d) least significant bits of idx_sig */
+                        // idx_tree = idx_tree >> params->tree_height;          // (h - h / d) most significant bits of idx_sig 
+            // idx_leaf = (idx_tree & ((1 << params->tree_height) - 1));        // (h - h / d) least significant bits of idx_sig 
             () = #unspill(idx_tree);
             idx_tree >>= XMSS_TREE_HEIGHT;
             idx_leaf = ((1 << XMSS_TREE_HEIGHT) - 1); idx_leaf &= idx_tree;  
