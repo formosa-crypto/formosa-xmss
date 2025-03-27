@@ -10,7 +10,7 @@ require import BitEncoding.
 (*---*) import W4u8.Pack.
 
 require import Array4 Array8 Array32.
-require import WArray4.
+require import WArray4 WArray32.
 
 require import Params Address Repr Utils Bytes.
 require import XMSS_IMPL.
@@ -22,25 +22,32 @@ proof.
 split ; smt(@List). (* Without the split, smt doesnt work *)
 qed.
 
-
-lemma zero_addr_op_impl (address : adrs) :
-    hoare[M(Syscall)._zero_address : true ==> res = zero_addr].
+lemma zero_addr_res (address : adrs) :
+    phoare[M(Syscall)._zero_address : true ==> res = zero_addr] = 1%r.
 proof.
 proc.
-while (
-  0 <= i <= 8 /\ 
-  (forall (k : int), 0 <= k < i => (addr.[k] = W32.zero))
-); auto => /> &hr *; (split => [/# | *]); [rewrite get_setE //= /# | rewrite /zero_addr tP => ??; rewrite Array8.initiE //#]. 
+unroll for 2; auto => /> &hr; rewrite tP => i?. 
+rewrite initiE //= !set64E zero_addr_i //= get32E pack4E /= wordP => k?. 
+rewrite initiE //=; do (rewrite initiE 1:/# /=); rewrite bits8E.
+case (24 <= 4 * i + k %/ 8 < 32) => H; first by rewrite initiE 1:/#.
+rewrite get32E pack4E bits8E; do (rewrite initiE 1:/# /=); rewrite bits8E.
+case (
+    16 <=
+    4 * ((4 * i + k %/ 8) %/ 4) + ((4 * i + k %/ 8) %% 4 * 8 + k %% 8) %/ 8 <
+    24
+) => ?; first by rewrite initiE 1:/#.
+rewrite get32E pack4E bits8E; do (rewrite initiE 1:/# /=); rewrite bits8E.
+case (
+8 <=
+    4 *
+    ((4 * ((4 * i + k %/ 8) %/ 4) + ((4 * i + k %/ 8) %% 4 * 8 + k %% 8) %/ 8) %/
+     4) +
+    ((4 * ((4 * i + k %/ 8) %/ 4) + ((4 * i + k %/ 8) %% 4 * 8 + k %% 8) %/ 8) %%
+     4 * 8 + ((4 * i + k %/ 8) %% 4 * 8 + k %% 8) %% 8) %/
+    8 < 16
+) =>?; first by rewrite initiE 1:/#.
+rewrite get32E pack4E bits8E; do (rewrite initiE 1:/# /=); rewrite bits8E ifT 1:/# initiE /#.
 qed.
-
-lemma zero_addr_ll : islossless M(Syscall)._zero_address by proc; while (true) (8 - i); auto => /> /#.
-
-lemma zero_addr_res (address : adrs) :
-    phoare[M(Syscall)._zero_address : true ==> res = zero_addr] = 1%r
-      by conseq zero_addr_ll (zero_addr_op_impl address) => //=. 
-
-op addrToBytes (a : adrs) : W8.t list = flatten (map W32toBytes (to_list a)).
-
 
 lemma u32_to_bytes_correct (x : W32.t) :
     phoare [

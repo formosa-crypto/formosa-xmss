@@ -36,7 +36,6 @@ fn __memcpy_u8u8p(
     return out;
 }
 
-#[returnaddress="stack"]
 fn _memcpy_u8u8p(
     reg ptr u8[XMSS_N] out,
     reg u64 in_ptr
@@ -190,4 +189,24 @@ namespace nbytes_copy_offset_sk {
     param int OUTLEN = XMSS_SK_BYTES;
     param int INLEN  = XMSS_N;
     require "__memcpy.jinc"
+}
+
+fn copy_nbytes (reg ptr u8[XMSS_N] out in) -> reg ptr u8[XMSS_N] {
+    // true for the implementation we are working on
+    if (XMSS_N == 32) {
+        // This has to use unaligned accesses. Otherwise we get a 
+        // "variable allocation: bad range alignment" error
+
+        out[u64 0] = in.[u64 0]; // copies in[0..7]
+        out[u64 1] = in.[u64 1 * 8]; // copies in[8..15]
+        out[u64 2] = in.[u64 2 * 8]; // copies in[16..23]
+        out[u64 3] = in.[u64 3 * 8]; // copies in[24..31]
+    } else {
+        reg u64 i = 0;
+        while (i < XMSS_N) {
+            out[i] = in[i];
+            i += 1;
+        }
+    }
+    return out;
 }

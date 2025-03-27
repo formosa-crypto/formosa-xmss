@@ -14,7 +14,7 @@ require import Utils Repr.
 
 require import Array4 Array8 Array32 Array64 Array96 Array128.
 
-require import WArray32 WArray64.
+require import WArray32 WArray64 WArray128.
 
 (*---*) import StdBigop.Bigint.
 
@@ -66,7 +66,7 @@ lemma prf_correctness (a b : W8.t Array32.t) :
 proof.
 rewrite /XMSS_N /XMSS_HASH_PADDING_PRF /XMSS_PADDING_LEN => [#] n_val pval plen.
 proc => /=.
-seq 7 2 : (buf{2} = to_list buf{1}); last by rcondt {1} 1 => //; ecall {1} (hash_96 buf{1}); auto => /> /#.
+seq 8 2 : (buf{2} = to_list buf{1});last by rcondt {1} 1 => //; ecall {1} (hash_96 buf{1}); auto => /> /#.
 seq 3 0 : #pre; 1:auto. 
 seq 1 1 : (#pre /\ padding{2} = to_list padding_buf{1}).
   + outline {1} [1] { padding_buf <@ M(Syscall).bytes_32__ull_to_bytes (padding_buf, W64.of_int 3); }.
@@ -84,6 +84,8 @@ seq 1 0 : (
       move => k??.
       rewrite initiE 1:/# => />.  
       by rewrite ifT. 
+
+seq 1 0 : (#pre /\ aux{1} = key{1}); first by ecall {1} (copy_nbytes_eq key{1}); auto.
 
 auto => /> &1 &2 H0 H1 H2 *; apply (eq_from_nth witness); rewrite !size_cat !size_to_list !NBytes.valP n_val //= => j?.
 
@@ -142,6 +144,10 @@ seq 1 0 : (
          * move => k??.
            rewrite initiE 1:/# => />. 
            by rewrite ifT.
+
+rcondt{1} 1 => //.
+
+seq 1 0 : (#pre /\ aux{1} = key{1}); first by ecall {1} (copy_nbytes_eq key{1}); auto.
 
 auto => /> &1 &2 H0 H1; apply (eq_from_nth witness); rewrite !size_cat H0 !size_to_list //= => i?.
 case (0 <= i < 32).
@@ -260,8 +266,8 @@ seq 1 1 : (
       call {1} (prf_correctness _P1 _P2) => [/# |].  
       skip => /> &1 &2 ?? <- ? <- ?.
       by rewrite !NBytes.valKd.
-
-seq 11 6 : ( 
+ 
+seq 10 6 : ( 
   addr{1} = address{2} /\
   sub addr{1} 0 7 = sub a1 0 7 /\
   to_list buf{1} = padding{2} ++ (NBytes.val key{2}) ++ bytexor ((NBytes.val _left{2}) ++ (NBytes.val _right{2})) ((NBytes.val bitmask_0{2}) ++ (NBytes.val bitmask_1{2}))
@@ -396,65 +402,76 @@ conseq (: _ ==>
         * rewrite nth_cat size_cat NBytes.valP H3 nval /= ifT 1:/# nth_cat ifF /#. 
           rewrite nth_cat size_cat NBytes.valP H3 nval /= ifF 1:/# -H11 /#.
 
-while {1}
-( 
-  0 <= to_uint i{1} <= 64 /\
-  size padding{2} = 32 /\ 
-  addr{1} = address{2} /\
-  sub addr{1} 0 7 = sub a1 0 7 /\
-  to_list in_0{1} = NBytes.val _left{2} ++ NBytes.val _right{2} /\
-  to_list bitmask{1} = NBytes.val bitmask_0{2} ++ NBytes.val bitmask_1{2} /\
-  (forall (k : int), 0 <= k < 32 => buf{1}.[k] = nth witness padding{2} k) /\
-  (forall (k : int), 0 <= k < 32 => buf{1}.[32 + k] = nth witness (NBytes.val key{2}) k) /\
-  (forall (k : int), 0 <= k < to_uint i{1} => 
-    buf{1}.[64 + k] = 
-      nth witness (NBytes.val _left{2} ++ NBytes.val _right{2}) (k) `^` nth witness (NBytes.val bitmask_0{2} ++ NBytes.val bitmask_1{2}) (k))
-) 
-(64 - to_uint i{1}).
-  + auto => /> &hr H0 H1 H2 H3 H4 H5 H6 H7 H8 H9. 
-    rewrite ultE /= in H9.
-    (do split ; 1,2: by rewrite to_uintD_small /#); 1,2: by (move => k??; rewrite to_uintD_small of_uintK 1:/# /= get_setE 1:/# ifF /#).
-       - move => k?.
-         rewrite to_uintD_small 1:/#/= => ?.         
-         rewrite to_uintD_small 1:/# of_uintK /=. 
-         have E0: forall (k : int), 0 <= k < 32 => in_0{hr}.[k] = nth witness (NBytes.val _left{m}) k by move => *; rewrite -get_to_list H4 nth_cat NBytes.valP nval ifT 1:/#.
-         have E1: forall (k : int), 0 <= k < 32 => in_0{hr}.[32 + k] = nth witness (NBytes.val _right{m}) k by move => *; rewrite -get_to_list H4 nth_cat NBytes.valP ifF /#.
-         have E2: forall (k : int), 0 <= k < 32 => bitmask{hr}.[k] = nth witness (NBytes.val bitmask_0{m}) k by move => *; rewrite -get_to_list H5 nth_cat NBytes.valP ifT 1:/#.
-         have E3: forall (k : int), 0 <= k < 32 => bitmask{hr}.[32 + k] = nth witness (NBytes.val bitmask_1{m}) k by move => *; rewrite -get_to_list H5 nth_cat NBytes.valP ifF /#.
-         rewrite get_setE 1:/#.
-         case (64 + k = 64 + to_uint i{hr}) => ?; last by apply H8 => /#. 
-         congr; first by rewrite -get_to_list H4 /#.
-         rewrite nth_cat NBytes.valP nval.
-         case (0 <= k < 32) => ?.
-            * rewrite ifT /#.
-            * rewrite ifF 1:/# -E3 /#.
-       - rewrite to_uintD /#.
-  + auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8. 
-    do split; 2: by smt().
-       - apply (eq_from_nth witness); first by rewrite size_to_list size_cat !NBytes.valP nval. 
-         rewrite size_to_list => i?.
-         rewrite get_to_list nth_cat NBytes.valP nval.
-         case (0 <= i < 32) => ?; [rewrite ifT | rewrite ifF] => /#.
-       - move => bufL iL. 
-         split; first by rewrite ultE /#.
-         rewrite ultE => H9 H10 H11 H12 H13 H14 H15 k??.
-         rewrite H15 1:#smt:(@W64 pow2_64) /bytexor. 
-         case (0 <= k < 32) => ?.
-             - rewrite !nth_cat !NBytes.valP ifT 1:/# ifT 1:/# (nth_map witness) /=; first by rewrite size_zip !size_cat !NBytes.valP /#.
-               pose S := (NBytes.val _left{2} ++ NBytes.val _right{2}).
-               pose T := (NBytes.val bitmask_0{2} ++ NBytes.val bitmask_1{2}).
-               have ->: nth witness (zip S T) k = nth (witness, witness) (zip S T) k
-                        by apply nth_change_dfl ; rewrite size_zip /S /T !size_cat !NBytes.valP nval /= /#.  
-               by rewrite !nth_zip //= /S /T ?size_cat ?NBytes.valP // !nth_cat !NBytes.valP !ifT 1,2:/#.
-         rewrite (nth_map witness) .
-               - rewrite size_zip !size_cat !NBytes.valP /#.
-         rewrite nth_cat NBytes.valP ifF 1:/#.
-         rewrite nth_cat NBytes.valP ifF 1:/# /=.
-               pose S := (NBytes.val _left{2} ++ NBytes.val _right{2}).
-               pose T := (NBytes.val bitmask_0{2} ++ NBytes.val bitmask_1{2}).
-               have ->: nth witness (zip S T) k = nth (witness, witness) (zip S T) k
-                        by apply nth_change_dfl ; rewrite size_zip /S /T !size_cat !NBytes.valP nval /= /#.  
-               by rewrite !nth_zip //= /S /T ?size_cat ?NBytes.valP // !nth_cat !NBytes.valP !ifF 1,2:/#.
+rcondt{1} 1 => //.
+
+unroll{1} 2; rcondt{1} 2; 1: by auto.
+unroll{1} 6; rcondt{1} 6; 1: by auto.
+unroll{1} 10; rcondt{1} 10; 1: by auto.
+unroll{1} 14; rcondt{1} 14; 1: by auto.
+unroll{1} 18; rcondt{1} 18; 1: by auto.
+unroll{1} 22; rcondt{1} 22; 1: by auto.
+unroll{1} 26; rcondt{1} 26; 1: by auto.
+unroll{1} 30; rcondt{1} 30; 1: by auto.
+rcondf{1} 34; 1: by auto.
+
+auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8; do split => k ??; 1,2: by (
+    rewrite initiE 1:/# !get64E !pack8E wordP =>?; 
+    rewrite /get8 /set64_direct !initiE 1:/#/= !bits8E ifF 1:/#; 
+    do rewrite !initiE 1..3:/#/= ifF 1:/#; 
+    rewrite initiE /#
+).
+- rewrite initiE 1:/# !get64E !pack8E wordP => j?.
+  rewrite /get8 /set64_direct !initiE 1:/#/= !bits8E. 
+  case (120 <= 64 + k < 128) => ?.
+    * auto => />; do rewrite initiE 1:/#/=. 
+      rewrite -H0 /bytexor (nth_map (witness, witness)) /=; first by rewrite size_zip !size_cat !NBytes.valP size_to_list /#.
+      rewrite nth_zip; first by rewrite !size_cat !NBytes.valP size_to_list /#.
+      rewrite get_to_list.
+      do rewrite nth_cat NBytes.valP ifF 1:/#.
+      rewrite -H8 /#.
+  rewrite !initiE 1..3:/#/= !bits8E; case (112 <= 64 + k < 120) => ?.
+    * auto => />; do rewrite initiE 1:/#/=. 
+      rewrite -H0 /bytexor (nth_map (witness, witness)) /=; first by rewrite size_zip !size_cat !NBytes.valP size_to_list /#.
+      rewrite nth_zip; first by rewrite !size_cat !NBytes.valP size_to_list /#.
+      rewrite get_to_list.
+      do rewrite nth_cat NBytes.valP ifF 1:/#.
+      rewrite -H8 /#.
+  rewrite !initiE 1..3:/#/= !bits8E; case (104 <= 64 + k < 112) => ?.
+    * auto => />; do rewrite initiE 1:/#/=. 
+      rewrite -H0 /bytexor (nth_map (witness, witness)) /=; first by rewrite size_zip !size_cat !NBytes.valP size_to_list /#.
+      rewrite nth_zip; first by rewrite !size_cat !NBytes.valP size_to_list /#.
+      rewrite get_to_list.
+      do rewrite nth_cat NBytes.valP ifF 1:/#.
+      rewrite -H8 /#.
+  rewrite !initiE 1..3:/#/= !bits8E; case (96 <= 64 + k < 104) => ?.
+    * auto => />; do rewrite initiE 1:/#/=. 
+      rewrite -H0 /bytexor (nth_map (witness, witness)) /=; first by rewrite size_zip !size_cat !NBytes.valP size_to_list /#.
+      rewrite nth_zip; first by rewrite !size_cat !NBytes.valP size_to_list /#.
+      rewrite get_to_list.
+      do rewrite nth_cat NBytes.valP ifF 1:/#.
+      rewrite -H8 /#.
+  rewrite !initiE 1..3:/#/= !bits8E; case (88 <= 64 + k < 96) => ?.
+    * auto => />; do rewrite initiE 1:/#/=. 
+      rewrite -H0 /bytexor (nth_map (witness, witness)) /=; first by rewrite size_zip !size_cat !NBytes.valP size_to_list /#.
+      rewrite nth_zip; first by rewrite !size_cat !NBytes.valP size_to_list /#.
+      rewrite get_to_list.
+      do rewrite nth_cat NBytes.valP ifT 1:/#.
+      rewrite -H4 /#.
+  rewrite !initiE 1..3:/#/= !bits8E; case (80 <= 64 + k < 88) => ?.
+    * auto => />; do rewrite initiE 1:/#/=. 
+      rewrite -H0 /bytexor (nth_map (witness, witness)) /=; first by rewrite size_zip !size_cat !NBytes.valP size_to_list /#.
+      rewrite nth_zip; first by rewrite !size_cat !NBytes.valP size_to_list /#.
+      rewrite get_to_list.
+      do rewrite nth_cat NBytes.valP ifT 1:/#.
+      rewrite -H4 /#.
+  rewrite !initiE 1..3:/#/= !bits8E; case (72 <= 64 + k < 80) => ?; [| rewrite !initiE 1..3:/#/= !bits8E ifT 1:/#]; (
+        auto => />; do rewrite initiE 1:/#/=; 
+        (rewrite -H0 /bytexor (nth_map (witness, witness)) /=; first by rewrite size_zip !size_cat !NBytes.valP size_to_list /#);
+        (rewrite nth_zip; first by rewrite !size_cat !NBytes.valP size_to_list /#);
+        rewrite get_to_list;
+        do rewrite nth_cat NBytes.valP ifT 1:/#;
+        rewrite -H4 /#
+).
 qed.
 
 
@@ -469,6 +486,382 @@ module M_Hash = {
 
 require import Bytes.
 
+lemma write_buf_ptr_ll : islossless M(Syscall).memcpy_u8pu8_n____memcpy_u8pu8 by proc; rcondt 1 => //; unroll for 2; auto.
+
+lemma _p_write_buf_ptr mem (ptr o : W64.t) (buf : W8.t Array32.t) :
+    hoare [
+      M(Syscall).memcpy_u8pu8_n____memcpy_u8pu8 :
+      0 <= to_uint ptr + to_uint o + 32 < W64.max_uint /\
+      Glob.mem = mem /\ 
+      arg = (ptr, o, buf)  
+
+      ==>
+      
+      res = ptr /\ (* No fim, o apontaodor aponta para o mm sitio *)
+
+      load_buf Glob.mem (ptr + o) 32 = to_list buf /\
+
+      (* O resto da memoria fica igual *)
+      forall (k : int), 0 <= k < W64.max_uint => 
+         !(to_uint ptr + to_uint o <= k < to_uint ptr + to_uint o + 32) => 
+             Glob.mem.[k] = mem.[k]
+    ].
+proof.
+proc; rcondt 1=> //; unroll for 2; auto => /> *; split => *; last by rewrite !storeW64E !get_storesE ifF; smt(@W64 pow2_64).
+apply (eq_from_nth witness); rewrite size_load_buf ?size_to_list // => j?.
+rewrite nth_load_buf // get_to_list !storeW64E !get_storesE !size_to_list.
+
+(* primeiros 64 bits *)
+case (j = 0) => ?.
+  * rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64). 
+    rewrite ifT; first by smt(@W64 pow2_64).    
+    rewrite get64E pack8E => />.
+    rewrite !bits8E ifT 1:/# wordP => k?.
+    (do rewrite initiE 1:/#/=) => /#.
+case (j = 1) => ?.
+  * rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64). 
+    rewrite ifT; first by smt(@W64 pow2_64).    
+    rewrite get64E pack8E => />.
+    rewrite !bits8E ifF 1:/# ifT 1:/# wordP => k?.
+    (do rewrite initiE 1:/#/=) => /#.
+case (j = 2) => ?.
+  * rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64). 
+    rewrite ifT; first by smt(@W64 pow2_64).    
+    rewrite get64E pack8E => />.
+    rewrite !bits8E ifF 1:/# ifF 1:/# ifT 1:/# wordP => k?.
+    (do rewrite initiE 1:/#/=) => /#.
+case (j = 3) => ?.
+  * rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64). 
+    rewrite ifT; first by smt(@W64 pow2_64).    
+    rewrite get64E pack8E => />.
+    rewrite !bits8E ifF 1:/# ifF 1:/# ifF 1:/# ifT 1:/# wordP => k?.
+    (do rewrite initiE 1:/#/=) => /#.
+case (j = 4) => ?.
+  * rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64). 
+    rewrite ifT; first by smt(@W64 pow2_64).    
+    rewrite get64E pack8E => />.
+    rewrite !bits8E ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# ifT 1:/# wordP => k?.
+    (do rewrite initiE 1:/#/=) => /#.
+case (j = 5) => ?.
+  * rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64). 
+    rewrite ifT; first by smt(@W64 pow2_64).    
+    rewrite get64E pack8E => />.
+    rewrite !bits8E ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# ifT 1:/# wordP => k?.
+    (do rewrite initiE 1:/#/=) => /#.
+case (j = 6) => ?.
+  * rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64). 
+    rewrite ifT; first by smt(@W64 pow2_64).    
+    rewrite get64E pack8E => />.
+    rewrite !bits8E ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# ifT 1:/# wordP => k?.
+    (do rewrite initiE 1:/#/=) => /#.
+case (j = 7) => ?.
+  * rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64). 
+    rewrite ifT; first by smt(@W64 pow2_64).    
+    rewrite get64E pack8E => />.
+    rewrite !bits8E ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# ifT 1:/# wordP => k?.
+    (do rewrite initiE 1:/#/=) => /#.
+
+
+(* 64 bits a seguir *)
+case (j = 8) => ?.
+  * rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64). 
+    rewrite ifT; first by smt(@W64 pow2_64).    
+    rewrite get64E pack8E => />.
+    rewrite !bits8E. 
+    rewrite ifT; first by smt(@W64 pow2_64).
+    rewrite wordP=> k?.
+    (do rewrite initiE 1:/#/=) => /#.
+case (j = 9) => ?.
+  * rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64). 
+    rewrite ifT; first by smt(@W64 pow2_64).    
+    rewrite get64E pack8E => />.
+    rewrite !bits8E. 
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifT; first by smt(@W64 pow2_64).
+    rewrite wordP=> k?.
+    (do rewrite initiE 1:/#/=) => /#.
+case (j = 10) => ?.
+  * rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64). 
+    rewrite ifT; first by smt(@W64 pow2_64).    
+    rewrite get64E pack8E => />.
+    rewrite !bits8E. 
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifT; first by smt(@W64 pow2_64).
+    rewrite wordP=> k?.
+    (do rewrite initiE 1:/#/=) => /#.
+case (j = 11) => ?.
+  * rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64). 
+    rewrite ifT; first by smt(@W64 pow2_64).    
+    rewrite get64E pack8E => />.
+    rewrite !bits8E. 
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifT; first by smt(@W64 pow2_64).
+    rewrite wordP=> k?.
+    (do rewrite initiE 1:/#/=) => /#.
+case (j = 12) => ?.
+  * rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64). 
+    rewrite ifT; first by smt(@W64 pow2_64).    
+    rewrite get64E pack8E => />.
+    rewrite !bits8E. 
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifT; first by smt(@W64 pow2_64).
+    rewrite wordP=> k?.
+    (do rewrite initiE 1:/#/=) => /#.
+case (j = 13) => ?.
+  * rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64). 
+    rewrite ifT; first by smt(@W64 pow2_64).    
+    rewrite get64E pack8E => />.
+    rewrite !bits8E. 
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifT; first by smt(@W64 pow2_64).
+    rewrite wordP=> k?.
+    (do rewrite initiE 1:/#/=) => /#.
+case (j = 14) => ?.
+  * rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64). 
+    rewrite ifT; first by smt(@W64 pow2_64).    
+    rewrite get64E pack8E => />.
+    rewrite !bits8E. 
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifT; first by smt(@W64 pow2_64).
+    rewrite wordP=> k?.
+    (do rewrite initiE 1:/#/=) => /#.
+case (j = 15) => ?.
+  * rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64). 
+    rewrite ifT; first by smt(@W64 pow2_64).    
+    rewrite get64E pack8E => />.
+    rewrite !bits8E. 
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifT; first by smt(@W64 pow2_64).
+    rewrite wordP=> k?.
+    (do rewrite initiE 1:/#/=) => /#.
+
+(* Mais 64 bits a seguir *)
+case (j = 16) => ?.
+  * rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifT; first by smt(@W64 pow2_64).    
+    rewrite get64E pack8E => />.
+    rewrite !bits8E. 
+    rewrite ifT; first by smt(@W64 pow2_64).
+    rewrite wordP=> k?.
+    (do rewrite initiE 1:/#/=) => /#.
+case (j = 17) => ?.
+  * rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifT; first by smt(@W64 pow2_64).    
+    rewrite get64E pack8E => />.
+    rewrite !bits8E. 
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifT; first by smt(@W64 pow2_64).
+    rewrite wordP=> k?.
+    (do rewrite initiE 1:/#/=) => /#.
+case (j = 18) => ?.
+  * rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifT; first by smt(@W64 pow2_64).    
+    rewrite get64E pack8E => />.
+    rewrite !bits8E. 
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifT; first by smt(@W64 pow2_64).
+    rewrite wordP=> k?.
+    (do rewrite initiE 1:/#/=) => /#.
+case (j = 19) => ?.
+  * rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifT; first by smt(@W64 pow2_64).    
+    rewrite get64E pack8E => />.
+    rewrite !bits8E. 
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifT; first by smt(@W64 pow2_64).
+    rewrite wordP=> k?.
+    (do rewrite initiE 1:/#/=) => /#.
+case (j = 20) => ?.
+  * rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifT; first by smt(@W64 pow2_64).    
+    rewrite get64E pack8E => />.
+    rewrite !bits8E. 
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifT; first by smt(@W64 pow2_64).
+    rewrite wordP=> k?.
+    (do rewrite initiE 1:/#/=) => /#.
+case (j = 21) => ?.
+  * rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifT; first by smt(@W64 pow2_64).    
+    rewrite get64E pack8E => />.
+    rewrite !bits8E. 
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifT; first by smt(@W64 pow2_64).
+    rewrite wordP=> k?.
+    (do rewrite initiE 1:/#/=) => /#.
+case (j = 22) => ?.
+  * rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifT; first by smt(@W64 pow2_64).    
+    rewrite get64E pack8E => />.
+    rewrite !bits8E. 
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifT; first by smt(@W64 pow2_64).
+    rewrite wordP=> k?.
+    (do rewrite initiE 1:/#/=) => /#.
+case (j = 23) => ?.
+  * rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifT; first by smt(@W64 pow2_64).    
+    rewrite get64E pack8E => />.
+    rewrite !bits8E. 
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifT; first by smt(@W64 pow2_64).
+    rewrite wordP=> k?.
+    (do rewrite initiE 1:/#/=) => /#.
+
+
+(* ultimos 64 bits *)
+case (j = 24) => ?.
+  * rewrite ifT; first by smt(@W64 pow2_64).    
+    rewrite get64E pack8E => />.
+    rewrite ifT; first by smt(@W64 pow2_64).
+    rewrite wordP=> k?.
+    rewrite bits8E.
+    (do rewrite initiE 1:/#/=) => /#.
+case (j = 25) => ?.
+  * rewrite ifT; first by smt(@W64 pow2_64).    
+    rewrite get64E pack8E => />.
+    rewrite !bits8E. 
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifT; first by smt(@W64 pow2_64).
+    rewrite wordP=> k?.
+    (do rewrite initiE 1:/#/=) => /#.
+case (j = 26) => ?.
+  * rewrite ifT; first by smt(@W64 pow2_64).    
+    rewrite get64E pack8E => />.
+    rewrite !bits8E. 
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifT; first by smt(@W64 pow2_64).
+    rewrite wordP=> k?.
+    (do rewrite initiE 1:/#/=) => /#.
+case (j = 27) => ?.
+  * rewrite ifT; first by smt(@W64 pow2_64).    
+    rewrite get64E pack8E => />.
+    rewrite !bits8E. 
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifT; first by smt(@W64 pow2_64).
+    rewrite wordP=> k?.
+    (do rewrite initiE 1:/#/=) => /#.
+case (j = 28) => ?.
+  * rewrite ifT; first by smt(@W64 pow2_64).    
+    rewrite get64E pack8E => />.
+    rewrite !bits8E. 
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifT; first by smt(@W64 pow2_64).
+    rewrite wordP=> k?.
+    (do rewrite initiE 1:/#/=) => /#.
+case (j = 29) => ?.
+  * rewrite ifT; first by smt(@W64 pow2_64).    
+    rewrite get64E pack8E => />.
+    rewrite !bits8E. 
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifT; first by smt(@W64 pow2_64).
+    rewrite wordP=> k?.
+    (do rewrite initiE 1:/#/=) => /#.
+case (j = 30) => ?.
+  * rewrite ifT; first by smt(@W64 pow2_64).    
+    rewrite get64E pack8E => />.
+    rewrite !bits8E. 
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifT; first by smt(@W64 pow2_64).
+    rewrite wordP=> k?.
+    (do rewrite initiE 1:/#/=) => /#.
+case (j = 31) => [| /#].
+  * rewrite ifT; first by smt(@W64 pow2_64).    
+    rewrite get64E pack8E => />.
+    rewrite !bits8E. 
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifF; first by smt(@W64 pow2_64).
+    rewrite ifT; first by smt(@W64 pow2_64).
+    rewrite wordP=> k?.
+    (do rewrite initiE 1:/#/=) => /#.
+qed.
+
 lemma p_write_buf_ptr mem (ptr o : W64.t) (buf : W8.t Array32.t) :
     phoare [
       M(Syscall).memcpy_u8pu8_n____memcpy_u8pu8 :
@@ -478,7 +871,7 @@ lemma p_write_buf_ptr mem (ptr o : W64.t) (buf : W8.t Array32.t) :
 
       ==>
       
-      res.`1 = ptr /\ (* No fim, o apontaodor aponta para o mm sitio *)
+      res = ptr /\ (* No fim, o apontaodor aponta para o mm sitio *)
 
       load_buf Glob.mem (ptr + o) 32 = to_list buf /\
 
@@ -486,60 +879,7 @@ lemma p_write_buf_ptr mem (ptr o : W64.t) (buf : W8.t Array32.t) :
       forall (k : int), 0 <= k < W64.max_uint => 
          !(to_uint ptr + to_uint o <= k < to_uint ptr + to_uint o + 32) => 
              Glob.mem.[k] = mem.[k]
-    ] = 1%r.
-proof.
-proc => /=.
-while (
-  0 <= to_uint ptr + to_uint o + 32 < W64.max_uint /\ 
-  out = ptr  /\
-  offset = o + i /\
-  in_0 = buf /\ 
-  
-  0 <= to_uint i <= 32 /\
-
-  load_buf Glob.mem (ptr + o) (to_uint i) = sub buf 0 (to_uint i) /\
-  
-  forall (k : int),
-    0 <= k < W64.max_uint  =>
-      ! (to_uint ptr + to_uint o <= k < to_uint ptr + to_uint o + to_uint i) =>
-         Glob.mem.[k] = mem.[k]
-)
-(32 - to_uint i); last first.
-  + auto => /> H0 H1; split.
-       - apply (eq_from_nth witness); first by rewrite size_load_buf // size_sub.
-         rewrite size_load_buf // /#.
-    move => mem0 i0; split => [* |]; first by rewrite ultE /#.
-    rewrite ultE of_uintK /= => H2 H3 H4.
-    have ->: to_uint i0 = 32 by smt().
-    move => H5 H6.
-    split => [| /#].
-    apply (eq_from_nth witness); first by rewrite size_load_buf // size_to_list.
-    rewrite size_load_buf // => j?. 
-    by rewrite H5 nth_sub.
-
-  + auto => /> &hr H0 H1 H2 H3 H4 H5 H6.
-    do split; 2,3,6: by smt(@W64 pow2_64).
-      - ring.
-      - apply (eq_from_nth witness). 
-          * rewrite size_load_buf; first by smt(@W64 pow2_64).
-            rewrite size_sub; first by smt(@W64 pow2_64).
-            reflexivity.
-        rewrite size_load_buf; first by smt(@W64 pow2_64).
-        move => j?.
-        rewrite nth_load_buf // storeW8E get_setE.
-        rewrite ultE of_uintK /= in H6.
-        case (j = to_uint i{hr}) => [Ha | Hb].
-          * rewrite ifT; first by smt(@W64 pow2_64).
-            by rewrite nth_sub //=; congr; rewrite Ha.
-          * rewrite ifF; first by smt(@W64 pow2_64).        
-            rewrite nth_sub //=.
-            have ->: buf.[j] = nth witness (sub buf 0 (to_uint i{hr})) j by rewrite nth_sub // ; smt(@W64 pow2_64).
-            rewrite -H4 nth_load_buf //; smt(@W64 pow2_64).
-      - move => k???.
-        rewrite storeW8E get_setE ifF; first by smt(@W64 pow2_64).
-        rewrite H5 1:/# // ; smt(@W64 pow2_64).
-qed.
-
+    ] = 1%r by conseq write_buf_ptr_ll (_p_write_buf_ptr mem ptr o buf); auto.
 
 lemma hash_message_correct (mem : global_mem_t) 
                            (R _root : W8.t Array32.t) (_idx msg_ptr _mlen : W64.t) :
@@ -608,11 +948,10 @@ seq 2 0 : (
 ).
     + inline {1} 2; inline {1} 8.
       sp; wp.
-      outline {1} [1] { (out0, offset1) <@ M(Syscall).memcpy_u8pu8_n____memcpy_u8pu8 (out0, offset1, in_00); }. 
+      outline {1} [1] { out0 <@ M(Syscall).memcpy_u8pu8_n____memcpy_u8pu8 (out0, offset1, in_00); }. 
       ecall {1} (p_write_buf_ptr Glob.mem{1} out0{1} offset1{1} in_00{1}).
       skip => /> &hr H0 H1 H2 H3 H4*.
-      have := H0; rewrite n_val /= /valid_ptr_i /= => H.
-      smt().
+      have := H0; rewrite n_val /= /valid_ptr_i /= => /#.
 
 (* toByte(X, 32) || R || root || index || M */ *) 
 seq 2 0 : (
@@ -635,12 +974,12 @@ seq 2 0 : (
       do split.
        - smt().
        - smt(@W64 pow2_64).
-       - move => ?? result mem0 H6 H7 H8*; split.
+       - move => ?? result mem0 H6*; split.
             * rewrite -H5; apply (eq_from_nth witness); rewrite !size_load_buf // => j?.
-              by rewrite !nth_load_buf // H8 1,2:/# H6.
+              by rewrite !nth_load_buf // H6 1,2:/#.
             * move => k???. 
               rewrite H9 1:/#; first by smt(@W64 pow2_64).
-              rewrite H8 // 1:/#.
+              rewrite H6 // 1:/#.
 
 seq 2 0 : (
   #{/~forall (k : int),
@@ -661,18 +1000,17 @@ seq 2 0 : (
       skip => /> &hr H0 H1 H2 H3 H4 H5 H6 H10*; do split.
        - smt().
        - smt(@W64 pow2_64).
-       - move => ?? result mem0 H7 H8 H9.
+       - move => ?? result mem0 H7.
          do split.
              * apply (eq_from_nth witness); first by rewrite size_load_buf // size_to_list.
                rewrite size_load_buf // => j?.
-               rewrite nth_load_buf // -H5 H7 H9 1,2:/# nth_load_buf //.
+               rewrite nth_load_buf // -H5 H7 1,2:/# nth_load_buf //.
              * apply (eq_from_nth witness); first by rewrite size_load_buf // size_to_list.
                rewrite size_load_buf // => j?.
-               rewrite nth_load_buf // -H6 H7 H9; 1,2: by smt(@W64 pow2_64). 
+               rewrite nth_load_buf // -H6 H7; 1,2: by smt(@W64 pow2_64). 
                rewrite nth_load_buf //.
              * move => k???. 
-              rewrite H10 1:/#; first by smt(@W64 pow2_64).
-              rewrite H9 // 1:/#.
+              rewrite H10 1,3:/#; smt(@W64 pow2_64).
 
 seq 0 0 : (
     #pre /\
@@ -728,30 +1066,28 @@ seq 2 0 : (
       do split.
        - smt().
        - smt(@W64 pow2_64).
-       - move => H11 H12 result memL -> H13 H14.
+       - move => H11 result memL -> H13.
          do split.
             * apply (eq_from_nth witness); first by rewrite size_load_buf // size_to_list.
-              rewrite size_load_buf // => j?; rewrite -H5 !nth_load_buf // H14 1,2:/# //.
+              rewrite size_load_buf // => j?; rewrite -H5 !nth_load_buf ///# //.
             * apply (eq_from_nth witness); first by rewrite size_load_buf // size_to_list.
-              rewrite size_load_buf // => j?; rewrite -H6 !nth_load_buf // H14; smt(@W64 pow2_64).
+              rewrite size_load_buf // => j?; rewrite -H6 !nth_load_buf //; smt(@W64 pow2_64).
             * apply (eq_from_nth witness); first by rewrite size_load_buf // size_to_list.
-              rewrite size_load_buf // => j?; rewrite -H7 !nth_load_buf // H14; smt(@W64 pow2_64)
-.
+              rewrite size_load_buf // => j?; rewrite -H7 !nth_load_buf //; smt(@W64 pow2_64).
             * apply (eq_from_nth witness).
                 + by rewrite size_load_buf // !size_cat !size_to_list.
               rewrite size_load_buf // => j?.
-              case (0 <= j < 32) => [Hfst | ?].
+              case (0 <= j < 32) => ?.
                 + rewrite nth_cat !size_cat !size_to_list ifT 1:/#.
                   rewrite nth_cat !size_to_list ifT 1:/#.
-                  rewrite -H5 !nth_load_buf // H14 /#.
-              case (32 <= j < 64) => [Hsnd | Hthrd].
+                  rewrite -H5 !nth_load_buf // /#.
+              case (32 <= j < 64) => ?.
                 + rewrite nth_cat !size_cat !size_to_list ifT 1:/#.
                   rewrite nth_cat !size_to_list ifF 1:/#.
-                  rewrite -H6 !nth_load_buf // 1:/# H14; smt(@W64 pow2_64).
+                  rewrite -H6 !nth_load_buf // 1:/# ; smt(@W64 pow2_64).
               rewrite nth_cat size_cat !size_to_list ifF 1:/#.
-              rewrite -H7 !nth_load_buf // 1:/# H14 1,2:/#; smt(@W64 pow2_64).
-            * apply (eq_from_nth witness); first by rewrite size_load_buf // size_toByte_64.
-              by rewrite size_load_buf // => j?; rewrite H13 H10.
+              rewrite -H7 !nth_load_buf // 1:/# ; smt(@W64 pow2_64).
+            * by apply (eq_from_nth witness); rewrite size_to_list ?H10 // size_toByte_64.
        - smt().
 
 seq 0 0 : (

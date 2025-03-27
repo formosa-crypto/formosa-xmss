@@ -24,8 +24,7 @@ rewrite wordP => k?.
 by rewrite !get_to_uint (: 0 <= k < 64) //= to_uintM of_uintK /= to_uint_shl of_uintK.
 qed.
 
-lemma nth_singleton ['a] (dflt x : 'a) :
-    nth dflt [x] 0 = x by smt().
+lemma nth_singleton ['a] (dflt x : 'a) : nth dflt [x] 0 = x by [].
 
 lemma onewE i : W32.one.[i] = (i = 0).
 proof.

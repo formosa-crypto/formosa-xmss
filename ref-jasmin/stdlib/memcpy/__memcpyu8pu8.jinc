@@ -1,36 +1,40 @@
 // Obs: The two underscores at the beginning of the filename mean that the
 //      code in this file is to be requires in the body of a namespace
-
-
 inline
-fn __memcpy_u8pu8(reg u64 out offset, reg ptr u8[INLEN] in) -> reg u64, reg u64 {
-    reg u64 i;
+fn __memcpy_u8pu8(reg u64 out, reg u64 offset, reg ptr u8[INLEN] in) -> reg u64 {
+    if (INLEN == 32) {
+        inline int i;
 
-    i = 0;
-    while (i < INLEN) {
-        (u8) [out + offset] = in[i];
-        offset += 1;
-        i += 1;
+        for i=0 to 4 { /* 8*4 = 32 */
+            (u64) [out + offset] = in[u64 i];
+            offset += 8;
+        }
+    } else {
+        reg u64 i = 0;
+        
+        while (i < INLEN) {
+            (u8) [out + offset] = in[i];
+            offset += 1;
+            i += 1;
+        }
     }
 
-    return out, offset;
+    return out;
 }
 
-#[returnaddress="stack"]
-fn _memcpy_u8pu8(reg u64 out offset, reg ptr u8[INLEN] in) -> reg u64, reg u64 {
-    out, offset = __memcpy_u8pu8(out, offset, in);
-    return out, offset;
+fn _memcpy_u8pu8(reg u64 out offset, reg ptr u8[INLEN] in) -> reg u64 {
+    out = __memcpy_u8pu8(out, offset, in);
+    return out;
 }
 
 inline
-fn _x_memcpy_u8pu8(reg u64 out offset, reg ptr u8[INLEN] in) -> reg u64, reg u64 {
+fn _x_memcpy_u8pu8(reg u64 out, inline int _offset, reg ptr u8[INLEN] in) -> reg u64 {
+    reg u64 offset = _offset;
     out = out;
-    offset = offset;
     in = in;
 
-    out, offset = _memcpy_u8pu8(out, offset, in);
+    out = _memcpy_u8pu8(out, offset, in);
 
     out = out;
-    offset = offset;
-    return out, offset;
+    return out;
 }
