@@ -344,9 +344,7 @@ fn __wots_pkgen(
 inline
 fn __wots_sign(
     reg ptr u8[XMSS_WOTS_LEN * XMSS_N] sig,
-    reg ptr u8[XMSS_N] msg,
-    reg ptr u8[XMSS_N] seed,
-    reg ptr u8[XMSS_N] pub_seed,
+    reg ptr u8[XMSS_N] msg seed pub_seed,
     reg ptr u32[8] addr
 ) -> reg ptr u8[XMSS_WOTS_LEN * XMSS_N], reg ptr u32[8]
 {
@@ -378,9 +376,7 @@ fn __wots_sign(
 
 fn _wots_sign(
     reg ptr u8[XMSS_WOTS_LEN * XMSS_N] sig,
-    reg ptr u8[XMSS_N] msg,
-    reg ptr u8[XMSS_N] seed,
-    reg ptr u8[XMSS_N] pub_seed,
+    reg ptr u8[XMSS_N] msg seed pub_seed,
     reg ptr u32[8] addr
 ) -> reg ptr u8[XMSS_WOTS_LEN * XMSS_N], reg ptr u32[8]
 {
@@ -391,9 +387,7 @@ fn _wots_sign(
 inline
 fn __wots_sign_(
     reg ptr u8[XMSS_WOTS_LEN * XMSS_N] sig,
-    reg ptr u8[XMSS_N] msg,
-    reg ptr u8[XMSS_N] seed,
-    reg ptr u8[XMSS_N] pub_seed,
+    reg ptr u8[XMSS_N] msg seed pub_seed,
     reg ptr u32[8] addr
 ) -> reg ptr u8[XMSS_WOTS_LEN * XMSS_N], reg ptr u32[8]
 {
@@ -417,8 +411,7 @@ inline
 fn __wots_pk_from_sig(
     reg ptr u8[XMSS_WOTS_LEN * XMSS_N] pk,
     reg u64 sig_ptr,
-    reg ptr u8[XMSS_N] msg,
-    reg ptr u8[XMSS_N] pub_seed,
+    reg ptr u8[XMSS_N] msg pub_seed,
     reg ptr u32[8] addr
 ) -> reg ptr u8[XMSS_WOTS_LEN * XMSS_N], reg ptr u32[8]
 {
@@ -455,8 +448,7 @@ fn __wots_pk_from_sig(
 fn _wots_pk_from_sig(
     reg ptr u8[XMSS_WOTS_LEN * XMSS_N] pk,
     reg u64 sig_ptr,
-    reg ptr u8[XMSS_N] msg,
-    reg ptr u8[XMSS_N] pub_seed,
+    reg ptr u8[XMSS_N] msg pub_seed,
     reg ptr u32[8] addr
 ) -> reg ptr u8[XMSS_WOTS_LEN * XMSS_N], reg ptr u32[8]
 {
@@ -468,8 +460,7 @@ inline
 fn __wots_pk_from_sig_(
     reg ptr u8[XMSS_WOTS_LEN * XMSS_N] pk, 
     reg u64 sig_ptr,
-    reg ptr u8[XMSS_N] msg,
-    reg ptr u8[XMSS_N] pub_seed,
+    reg ptr u8[XMSS_N] msg pub_seed,
     reg ptr u32[8] addr
 ) -> reg ptr u8[XMSS_WOTS_LEN * XMSS_N], reg ptr u32[8]
 {
