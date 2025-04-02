@@ -29,13 +29,13 @@ fn _blocks_0_ref(reg ptr u32[8] _H, reg u64 in inlen) -> reg ptr u32[8], reg u64
 
   H = Hp;
 
-  while(inlen >= 64)
-  {
+  while(inlen >= 64) {
     for t=0 to 16
     { v = (u32)[in + t*4];
       v = #BSWAP_32(v);
       W[t] = v;
     }
+    
     () = #spill(in);
 
     for t=16 to 64

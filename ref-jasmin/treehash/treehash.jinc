@@ -148,6 +148,7 @@ fn __treehash(
             } else {
 	            t64 *= XMSS_N;
             }
+            () = #spill(t64);
 
             buf2, _ = memcpy_u8u8_2_treehash::__memcpy_u8u8_2(buf2, _stack, t64, 2 * XMSS_N);
 
@@ -157,14 +158,7 @@ fn __treehash(
             // We now need to copy the result to stack + (offset-2)*params->n
             () = #unspill(offset);
             
-            // FIXME: We can use the old value of t64
-            t64 = offset; t64 -= 2; 
-            #inline if (XMSS_N == 32) {
-	            t64 <<= 5;
-            } else {
-	            t64 *= XMSS_N;
-            }
-
+            () = #unspill(t64);
             _stack = memcpy_u8u8_3_treehash::__memcpy_u8u8_3(_stack, buf, t64, XMSS_N);
 
             // offset--;
@@ -180,7 +174,13 @@ fn __treehash(
     }
 
     () = #unspill(root);
-    for j=0 to XMSS_N { root[j] = _stack[j]; }
+
+    // XMSS_N is a multiple of 8 so we can copy 64 bits at a time (32/4 = 8)
+    if XMSS_N == 32 {
+        for j=0 to 4 { root[u64 j] = _stack[u64 j]; }
+    } else {
+        for j=0 to XMSS_N { root[j] = _stack[j]; }
+    }
 
     return root;
 }
@@ -229,8 +229,7 @@ fn __treehash_(
 inline 
 fn __build_auth_path(
     reg ptr u8[XMSS_TREE_HEIGHT * XMSS_N] auth_path,
-    reg ptr u8[XMSS_N] sk_seed,
-    reg ptr u8[XMSS_N] pub_seed,
+    reg ptr u8[XMSS_N] sk_seed pub_seed,
     reg u32 i,
     reg ptr u32[8] addr
 ) -> reg ptr u8[XMSS_TREE_HEIGHT * XMSS_N]
