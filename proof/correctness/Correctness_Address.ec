@@ -13,7 +13,7 @@ require import Array4 Array8 Array32.
 require import WArray4 WArray32.
 
 require import Params Address Repr Utils Bytes.
-require import XMSS_IMPL.
+require import XMSS_IMPL Parameters.
 
 lemma in_nth ['a] (x : 'a list) (P : 'a -> bool) :
     (forall (x0 : 'a ), x0 \in x => P x0) <=>
@@ -29,14 +29,13 @@ proc.
 unroll for 2; auto => /> &hr; rewrite tP => i?. 
 rewrite initiE //= !set64E zero_addr_i //= get32E pack4E /= wordP => k?. 
 rewrite initiE //=; do (rewrite initiE 1:/# /=); rewrite bits8E.
-case (24 <= 4 * i + k %/ 8 < 32) => H; first by rewrite initiE 1:/#.
-rewrite get32E pack4E bits8E; do (rewrite initiE 1:/# /=); rewrite bits8E.
+
+case (24 <= 4 * i + k %/ 8 < 32) => ?; [| rewrite get32E pack4E bits8E]; do (rewrite initiE 1:/# /=); [| rewrite bits8E ] => //.
 case (
     16 <=
     4 * ((4 * i + k %/ 8) %/ 4) + ((4 * i + k %/ 8) %% 4 * 8 + k %% 8) %/ 8 <
     24
-) => ?; first by rewrite initiE 1:/#.
-rewrite get32E pack4E bits8E; do (rewrite initiE 1:/# /=); rewrite bits8E.
+) => ?; [| rewrite get32E pack4E bits8E]; do (rewrite initiE 1:/# /=); [| rewrite bits8E ] => //.
 case (
 8 <=
     4 *
@@ -45,8 +44,7 @@ case (
     ((4 * ((4 * i + k %/ 8) %/ 4) + ((4 * i + k %/ 8) %% 4 * 8 + k %% 8) %/ 8) %%
      4 * 8 + ((4 * i + k %/ 8) %% 4 * 8 + k %% 8) %% 8) %/
     8 < 16
-) =>?; first by rewrite initiE 1:/#.
-rewrite get32E pack4E bits8E; do (rewrite initiE 1:/# /=); rewrite bits8E ifT 1:/# initiE /#.
+) => ?; [| rewrite get32E pack4E bits8E]; do (rewrite initiE 1:/# /=); [| rewrite bits8E ifT 1:/# initiE /# ] => //.
 qed.
 
 lemma u32_to_bytes_correct (x : W32.t) :
@@ -62,23 +60,18 @@ auto => /> &hr.
 apply (eq_from_nth witness).
   + by rewrite size_to_list size_rev size_to_list.
 rewrite size_to_list // => i?.
-rewrite !get_to_list initiE //.
-rewrite /get8 /set32_direct initiE //= ifT 1:/# bits8E /=.
-rewrite wordP => j?.
-rewrite initiE //= /BSWAP_32 /(\o) pack4E initiE 1:/# /= get_of_list 1:/#.
-rewrite nth_rev.
+rewrite !get_to_list initiE // /get8 /set32_direct initiE //= ifT 1:/# bits8E /= wordP => j?.
+rewrite initiE //= /BSWAP_32 /(\o) pack4E initiE 1:/# /= get_of_list 1:/# nth_rev.
   + rewrite size_to_list /#.
 congr => [| /#].
-rewrite !get_to_list !size_to_list.
-rewrite nth_rev.
+rewrite !get_to_list !size_to_list nth_rev.
   + rewrite size_to_list /#.
-rewrite size_to_list.
-rewrite /to_list nth_mkseq 1:/# /=.
+rewrite size_to_list /to_list nth_mkseq 1:/# /=.
 congr => /#.
 qed.
 
 lemma addr_to_bytes_correctness (x : W32.t Array8.t) : 
-    n = 32 =>
+    n = XMSS_N =>
     phoare[
         M(Syscall).__addr_to_bytes : 
         arg.`2 = x 
@@ -86,7 +79,7 @@ lemma addr_to_bytes_correctness (x : W32.t Array8.t) :
         to_list res = flatten (map W32toBytes (to_list x))
 ] = 1%r.
 proof.
-move => n_val.
+rewrite /XMSS_N => n_val.
 proc.
 while ( 
   addr = x /\
