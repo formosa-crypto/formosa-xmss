@@ -234,7 +234,7 @@ seq 1 1 :(
 seq 1 1 : (#pre /\ NBytes.val addr_bytes{2} = to_list addr_as_bytes{1}).
     + inline {1} M(Syscall).__set_key_and_mask.
       exists * addr{1}; elim * => P.
-      call {1} (addr_to_bytes_correctness P).
+      call {1} (addr_to_bytes_correctness P); first by rewrite nval /XMSS_N.
       auto => /> &1 &2 ????? ->.
       apply (eq_from_nth witness).
           * rewrite NBytes.valP size_flatten sumzE BIA.big_map /(\o) //=.
@@ -303,7 +303,7 @@ seq 1 1 : (
 ).
     + inline {1} M(Syscall).__set_key_and_mask.
       exists * addr{1}; elim * => P.
-      call {1} (addr_to_bytes_correctness P).
+      call {1} (addr_to_bytes_correctness P); first by rewrite nval /XMSS_N.
       auto => /> &1 &2 ?????????->.
       apply (eq_from_nth witness).
           - rewrite NBytes.valP size_flatten sumzE BIA.big_map /(\o) //=.
@@ -356,7 +356,7 @@ seq 1 1 : (
   sub addr{1} 0 7 = sub a1 0 7
 ).
     + exists * addr{1}; elim * => P.
-      call {1} (addr_to_bytes_correctness P).
+      call {1} (addr_to_bytes_correctness P); first by rewrite nval /XMSS_N.
       auto => /> &1 &2 ????????? ->.
       apply (eq_from_nth witness).
           * rewrite NBytes.valP size_flatten sumzE BIA.big_map /(\o) //=.
