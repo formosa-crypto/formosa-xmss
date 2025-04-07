@@ -8,7 +8,7 @@ Jasmin & ECLib: release-2025.02
 
 ## Benchmark results
 
-#### Hash 
+### Hash 
 
 | Function       | Median Jasmin | Median Ref | Faster Implementation | Diff (%) |
 |----------------|---------------|------------|------------------------|----------|
@@ -19,7 +19,16 @@ Jasmin & ECLib: release-2025.02
 | thash_h        | 10445         | 12702      | Jasmin                 | 17.77    |
 
 
-#### WOTS
+### WOTS
+
+| Function          | Median Jasmin | Median Ref | Faster Implementation | Diff (%) |
+|-------------------|---------------|------------|------------------------|----------|
+| expand_seed       | 253155        | 255824     | Jasmin                 | 1.04     |
+| gen_chain         | 76260         | 95971      | Jasmin                 | 20.54    |
+| wots_pk_from_sig  | 4696038       | 4943054    | Jasmin                 | 5.00     |
+| wots_pkgen        | 7358658       | 9159713    | Jasmin                 | 19.66    |
+| wots_sign         | 4075556       | 4915838    | Jasmin                 | 17.09    |
+
 
 <!-- cat .ssh/config | grep -oE "Host bench-.+" | cut -d' ' -f2-->
 Run on 
