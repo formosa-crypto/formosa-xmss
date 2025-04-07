@@ -1,7 +1,5 @@
 inline
 fn __memset_zero_u8(reg ptr u8[XMSS_INDEX_BYTES] a) -> reg ptr u8[XMSS_INDEX_BYTES] {
-    reg u64 i;
-
     // Obs: XMSS_INDEX_BVYTES \in {3,4,5,8} 
     // ==> Run `cat *.jinc | grep "param int XMSS_INDEX_BYTES" | cut -d '=' -f2 | tr -d ';' | sort -u` in ref-jasmin/params
 
@@ -11,7 +9,7 @@ fn __memset_zero_u8(reg ptr u8[XMSS_INDEX_BYTES] a) -> reg ptr u8[XMSS_INDEX_BYT
     } else if (XMSS_INDEX_BYTES == 8) {
         a[u64 0] = 0;
     } else {
-        i = 0;
+        reg u64 i = 0;
         while (i < XMSS_INDEX_BYTES) { a[i] = 0; i += 1; }
     }
 
@@ -19,11 +17,12 @@ fn __memset_zero_u8(reg ptr u8[XMSS_INDEX_BYTES] a) -> reg ptr u8[XMSS_INDEX_BYT
 }
 
 inline
-fn __memset_u8_ptr(reg u64 _ptr inlen, reg u8 value) {
+fn __memset_u8_ptr(
+    #public reg u64 _ptr inlen, /* we use the % op because the input length is public */
+    reg u8 value
+) {
     reg u64 i;
 
-    i = 0;
-    
     while (i < inlen) {
         (u8) [_ptr + i] = value;
         i += 1;

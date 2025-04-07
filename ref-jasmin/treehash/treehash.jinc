@@ -175,12 +175,8 @@ fn __treehash(
 
     () = #unspill(root);
 
-    // XMSS_N is a multiple of 8 so we can copy 64 bits at a time (32/4 = 8)
-    if XMSS_N == 32 {
-        for j=0 to 4 { root[u64 j] = _stack[u64 j]; }
-    } else {
-        for j=0 to XMSS_N { root[j] = _stack[j]; }
-    }
+    // XMSS_N is always a multiple of 8 (n \in {24, 32, 64}) so we can copy 64 bits at a time (32/4 = 8)
+    for j=0 to XMSS_N/8 { root[u64 j] = _stack[u64 j]; }
 
     return root;
 }
