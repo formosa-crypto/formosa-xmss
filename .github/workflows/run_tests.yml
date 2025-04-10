@@ -19,6 +19,12 @@ jobs:
       - name: Build docker image
         run: docker build -t jasmin-xmss .
 
-      - name: run tests for wots
+      - name: Run tests for hash address
+        run: docker run --rm jasmin-xmss make -C test/hash_address/ run
+
+      - name: Run tests for hash
+        run: docker run --rm jasmin-xmss make -C test/hash/ run
+
+      - name: Run tests for wots
         run: docker run --rm jasmin-xmss make -C test/wots/ run
 
