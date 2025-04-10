@@ -1,6 +1,5 @@
 #include <assert.h>
 #include <inttypes.h>
-#include <openssl/sha.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -9,10 +8,13 @@
 
 #include "bench_common.h"
 #include "config.h"
-#include "hash.h"
+#include "xmss_core.h"
 #include "macros.h"
 #include "params.h"
-#include "randombytes.h"
+
+#ifndef IMPL
+#error IMPL must be defined
+#endif
 
 #ifndef FILENAME
 #define FILENAME "results.txt"
@@ -22,8 +24,14 @@
 #define MESSAGE_SIZE 128
 #endif
 
-extern void sha256_96(uint8_t *, const uint8_t *);
-extern void sha256_128(uint8_t *, const uint8_t *);
+extern void treehash_jazz(uint8_t *root, const uint8_t *sk_seed, const uint8_t *pub_seed,
+                          uint32_t start, uint32_t target_height, const uint32_t *subtree_addr);
+
+extern void build_auth_path_jazz(uint8_t *auth_path, const uint8_t *sk_seed,
+                                 const uint8_t *pub_seed, uint32_t i, const uint32_t *addr);
+
+extern void treesig_jazz(uint8_t *sig, uint32_t *addr, const uint8_t *M, const uint8_t *sk,
+                         uint32_t idx_sig);
 
 bool verbose = true;
 
@@ -35,6 +43,23 @@ static size_t find_min_index(const uint64_t *array, size_t size) {
         }
     }
     return min_index;
+}
+
+xmss_params setup_params(void) {
+    xmss_params p;
+    uint32_t oid;
+
+    if (xmssmt_str_to_oid(&oid, xstr(IMPL)) == -1) {
+        fprintf(stderr, "Failed to generate oid from impl name\n");
+        exit(EXIT_FAILURE);
+    }
+
+    if (xmssmt_parse_oid(&p, oid) == -1) {
+        fprintf(stderr, "Failed to generate params from oid\n");
+        exit(EXIT_FAILURE);
+    }
+
+    return p;
 }
 
 void clearfile(const char *filename) {
@@ -110,59 +135,50 @@ void bench_function(void (*func)(uint64_t *, uint64_t *), const char *s) {
     fclose(f);
 }
 
-void bench_sha256_96_jasmin(uint64_t *before, uint64_t *after) {
-    uint8_t out[32];
-    uint8_t in[96];
+static uint32_t *setup_start_and_target_height(const xmss_params *p) {
+    assert(p != NULL);
 
-    randombytes(in, 96);
+    // sets up start and target height such that 0 < start < target < p->tree_height
+    
+    srand((unsigned int)42);
 
-    *before = cpucycles();
-    sha256_96(out, in);
-    *after = cpucycles();
+    uint32_t *r = (uint32_t *)malloc(2 * sizeof(uint32_t));
+
+    uint32_t target_height =
+        (rand() % (p->tree_height - 1)) + 1;  // Ensures target_height > 0 and < TREE_HEIGHT
+
+    // Generate start in range [1, target_height - 1]
+    uint32_t start = rand() % (target_height - 1);  // Ensures start > 0 and < target_height
+
+    r[0] = start;
+    r[1] = target_height;
+
+    return r;
 }
 
-void bench_sha256_96_c(uint64_t *before, uint64_t *after) {
-    uint8_t out[32];
-    uint8_t in[96];
+void bench_treehash_jasmin(uint64_t *before, uint64_t *after) {
+    xmss_params p = setup_params();
+    uint32_t *heights = setup_start_and_target_height(&p);
 
-    randombytes(in, 96);
-
-    *before = cpucycles();
-    SHA256(in, 96, out);
-    *after = cpucycles();
-}
-
-void bench_sha256_128_jasmin(uint64_t *before, uint64_t *after) {
-    uint8_t out[32];
-    uint8_t in[128];
-
-    randombytes(in, 128);
+    uint8_t root[p.n];
+    uint8_t sk_seed[p.n];
+    uint8_t pub_seed[p.n];
+    uint32_t start = heights[0];
+    uint32_t target_height = heights[1];
+    uint32_t subtree_addr[8];
 
     *before = cpucycles();
-    sha256_128(out, in);
+    treehash_jazz(root, sk_seed, pub_seed, start, target_height, subtree_addr);
     *after = cpucycles();
-}
 
-void bench_sha256_128_c(uint64_t *before, uint64_t *after) {
-    uint8_t out[32];
-    uint8_t in[128];
-
-    randombytes(in, 128);
-
-    *before = cpucycles();
-    SHA256(in, 128, out);
-    *after = cpucycles();
+    free(heights);
 }
 
 int main(void) {
     clearfile(FILENAME);
     print_header(FILENAME);
 
-    bench_function(bench_sha256_96_c, "sha256_96_ref");
-    bench_function(bench_sha256_96_jasmin, "sha256_96_jasmin");
-
-    bench_function(bench_sha256_128_c, "sha256_128_ref");
-    bench_function(bench_sha256_128_jasmin, "sha256_128_jasmin");
+    bench_function(bench_treehash_jasmin, "treehash jasmin");
 
     return EXIT_SUCCESS;
 }
