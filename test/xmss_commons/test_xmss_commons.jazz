@@ -1,6 +1,5 @@
 from XMSS require "xmss_commons/xmss_commons.jinc"
 
-/*
 export
 fn l_tree_jazz(
     reg ptr u8[XMSS_N] leaf,
@@ -39,7 +38,6 @@ fn gen_leaf_wots_jazz(
     leaf, ltree_addr, ots_addr = __gen_leaf_wots_(leaf, sk_seed, pub_seed, ltree_addr, ots_addr);
     return leaf, ltree_addr, ots_addr;
 }
-*/
 
 export
 fn xmssmt_core_sign_open_jazz(
