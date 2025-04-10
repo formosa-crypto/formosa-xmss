@@ -1,0 +1,30 @@
+name: Compile Jasmin
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  run_tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Build docker image
+        run: docker build -t jasmin-xmss .
+
+      - name: Compile hash address
+        run: docker run --rm jasmin-xmss make -C test/hash_address
+
+      - name: Compile hash
+        run: docker run --rm jasmin-xmss make -C test/hash/
+
+      - name: Compile wots
+        run: docker run --rm jasmin-xmss make -C test/wots/ 
+
