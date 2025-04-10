@@ -91,17 +91,7 @@ fn __memcpy_u8u8_3(
 {
     inline int i;
 
-    if bytes == 320000 {
-        // TODO: Test this 
-        for i=0 to 32/8 {
-            out.[u64 8 * (out_offset + i)] = in[u64 i];
-        }
-    } else {
-
-        for i=0 to bytes {
-            out[out_offset + i] = in[i];
-        }
-    }
-
+    for i=0 to bytes { out[out_offset + i] = in[i]; }
+    
     return out;
 }
