@@ -18,6 +18,7 @@ jobs:
           - test/hash
           - test/wots
           - test/treehash
+          - test/xmss_commons
 
     steps:
       - name: Check out code
