@@ -374,37 +374,6 @@ fn __wots_sign(
     return sig, addr;
 }
 
-fn _wots_sign(
-    reg ptr u8[XMSS_WOTS_LEN * XMSS_N] sig,
-    reg ptr u8[XMSS_N] msg seed pub_seed,
-    reg ptr u32[8] addr
-) -> reg ptr u8[XMSS_WOTS_LEN * XMSS_N], reg ptr u32[8]
-{
-    sig, addr = __wots_sign(sig, msg, seed, pub_seed, addr);
-    return sig, addr;
-}
-
-inline
-fn __wots_sign_(
-    reg ptr u8[XMSS_WOTS_LEN * XMSS_N] sig,
-    reg ptr u8[XMSS_N] msg seed pub_seed,
-    reg ptr u32[8] addr
-) -> reg ptr u8[XMSS_WOTS_LEN * XMSS_N], reg ptr u32[8]
-{
-    sig = sig;
-    msg = msg;
-    seed = seed;
-    pub_seed = pub_seed;
-    addr = addr;
-
-    sig, addr = _wots_sign(sig, msg, seed, pub_seed, addr);
-
-    sig = sig;
-    addr = addr;
-
-    return sig, addr;
-}
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 inline
