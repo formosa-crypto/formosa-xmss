@@ -25,3 +25,8 @@ param int XMSS_SIG_BYTES = 4963;
 param int XMSS_PK_BYTES = 64;
 param int XMSS_SK_BYTES = 131;
 param int XMSS_REDUCED_SIG_BYTES = 2464;
+
+param int TRUE = 1;
+param int FALSE = 0;
+
+// TODO: Add here the parameter specifying the implementation of SHA2 to use 

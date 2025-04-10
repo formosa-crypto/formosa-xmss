@@ -18,13 +18,12 @@ fn __memset_zero_u8(reg ptr u8[XMSS_INDEX_BYTES] a) -> reg ptr u8[XMSS_INDEX_BYT
 
 inline
 fn __memset_u8_ptr(
-    #public reg u64 _ptr inlen, /* we use the % op because the input length is public */
-    reg u8 value
+    #public reg u64 _ptr inlen /* we use the % op because the input length is public */
 ) {
     reg u64 i;
 
     while (i < inlen) {
-        (u8) [_ptr + i] = value;
+        (u8) [_ptr + i] = 0;
         i += 1;
     }
 }

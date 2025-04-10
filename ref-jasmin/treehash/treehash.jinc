@@ -1,9 +1,6 @@
 from XMSS require "hash_address/hash_address.jinc"
 from XMSS require "xmss_commons/xmss_commons.jinc"
 
-param int TRUE = 1;
-param int FALSE = 0;
-
 // Obs:
 // Esta funcao calcula a condicao 
 //    offset >= 2 && heights[offset - 1] == heights[offset - 2]
@@ -18,7 +15,7 @@ param int FALSE = 0;
 // Neste caso, testo se offset >=2 e so nesse caso, e que se avalia o segundo lado 
 // da expressao. Caso contrartio, retorna se o valor de #SETcc(offset >= 2) = Zero
 //
-// Estou a assumir que o valor de offset e publico (confirmar isto mas acho que sim)
+// Isto assume q valor de offset e publico
 inline
 fn __treehash_cond(reg ptr u32[XMSS_TREE_HEIGHT + 1] heights, 
                    #public reg u64 offset) -> reg u8 {
