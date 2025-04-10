@@ -1,0 +1,24 @@
+name: Run tests
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  run_tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Build docker image
+        run: docker build -t jasmin-xmss .
+
+      - name: run tests for wots
+        run: docker run --rm jasmin-xmss make -C test/wots/ run
+
