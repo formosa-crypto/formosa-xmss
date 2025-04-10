@@ -19,7 +19,8 @@ RUN apt-get --quiet --assume-yes update && \
       autoconf debianutils libgmp-dev pkg-config zlib1g-dev \
       vim build-essential python3 python3-pip m4 libgsl-dev \ 
       libpcre3-dev jq parallel valgrind bash-completion \
-      libtext-diff-perl
+      libtext-diff-perl libssl-dev
+
 
 RUN apt-get --quiet --assume-yes clean
 
