@@ -170,7 +170,7 @@ fn __l_tree_(
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 inline
-fn __new_compute_root(
+fn __compute_root(
     reg ptr u8[XMSS_N] root,
     reg ptr u8[XMSS_N] leaf,
     reg u32 leaf_idx,
@@ -235,7 +235,7 @@ fn __new_compute_root(
     return root, addr;
 }
 
-fn _new_compute_root(
+fn _compute_root(
     reg ptr u8[XMSS_N] root,
     reg ptr u8[XMSS_N] leaf,
     reg u32 leaf_idx,
@@ -244,11 +244,11 @@ fn _new_compute_root(
     reg ptr u32[8] addr
 ) -> reg ptr u8[XMSS_N], reg ptr u32[8]
 {
-    root, addr = __new_compute_root(root, leaf, leaf_idx, auth_path_ptr, pub_seed, addr);
+    root, addr = __compute_root(root, leaf, leaf_idx, auth_path_ptr, pub_seed, addr);
     return root, addr;
 }
 
-inline fn __new_compute_root_(
+inline fn __compute_root_(
     reg ptr u8[XMSS_N] root,
     reg ptr u8[XMSS_N] leaf,
     reg u32 leaf_idx,
@@ -264,7 +264,7 @@ inline fn __new_compute_root_(
     pub_seed = pub_seed;
     addr = addr;
 
-    root, addr = _new_compute_root(root, leaf, leaf_idx, auth_path_ptr, pub_seed, addr);
+    root, addr = _compute_root(root, leaf, leaf_idx, auth_path_ptr, pub_seed, addr);
     
     root = root;
     addr = addr;
@@ -493,7 +493,7 @@ fn __xmssmt_core_sign_open(
         t64 = sm_ptr; t64 += sm_offset;
         #declassify idx_leaf = idx_leaf;
         #declassify root = root;
-        root, node_addr = __new_compute_root_(root, leaf, idx_leaf, t64, pub_seed, node_addr);   
+        root, node_addr = __compute_root_(root, leaf, idx_leaf, t64, pub_seed, node_addr);   
 
         // sm += params->tree_height * params->n;
         t64 = sm_offset;

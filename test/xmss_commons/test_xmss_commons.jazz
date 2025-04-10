@@ -22,7 +22,7 @@ fn compute_root_jazz(
     reg ptr u8[XMSS_N] pub_seed
 ) -> reg ptr u8[XMSS_N], reg ptr u32[8]
 {
-    root, addr = __new_compute_root_(root, leaf, leaf_idx, auth_path_ptr, pub_seed, addr);
+    root, addr = __compute_root_(root, leaf, leaf_idx, auth_path_ptr, pub_seed, addr);
     return root, addr;
 }
 

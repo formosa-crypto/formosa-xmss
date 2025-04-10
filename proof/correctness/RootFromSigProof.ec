@@ -143,7 +143,7 @@ lemma compute_root_equiv (_l _pub_seed : W8.t Array32.t, _idx : W32.t, path_ptr 
     prf_padding_val = XMSS_HASH_PADDING_PRF /\
     padding_len = XMSS_PADDING_LEN  =>
     equiv [
-    M(Syscall).__new_compute_root_ ~  ComputeRoot.compute_root :
+    M(Syscall).__compute_root_ ~  ComputeRoot.compute_root :
       arg{1}.`2 = _l /\ (* leaf *)
       arg{1}.`3 = _idx /\
       arg{1}.`4 = path_ptr /\

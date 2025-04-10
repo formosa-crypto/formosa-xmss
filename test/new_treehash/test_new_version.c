@@ -234,7 +234,7 @@ void test_compute_root(const xmss_params *params) {
 
         assert(!memcmp(addr_ref, addr_new, 8 * sizeof(uint32_t)));
 
-        new_compute_root(params, root_new_impl, leaf, leaf_idx, auth_path, pub_seed, addr_new);
+        compute_root(params, root_new_impl, leaf, leaf_idx, auth_path, pub_seed, addr_new);
         compute_root(params, root_ref_impl, leaf, leaf_idx, auth_path, pub_seed, addr_ref);
 
         assert(!memcmp(root_ref_impl, root_new_impl, params->n));
