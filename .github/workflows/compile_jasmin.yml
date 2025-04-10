@@ -9,22 +9,23 @@ on:
       - main
 
 jobs:
-  run_tests:
+  compile:
     runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        test_dir:
+          - test/hash_address
+          - test/hash
+          - test/wots
+          - test/treehash
 
     steps:
       - name: Check out code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4   
 
       - name: Build docker image
         run: docker build -t jasmin-xmss .
 
-      - name: Compile hash address
-        run: docker run --rm jasmin-xmss make -C test/hash_address
-
-      - name: Compile hash
-        run: docker run --rm jasmin-xmss make -C test/hash/
-
-      - name: Compile wots
-        run: docker run --rm jasmin-xmss make -C test/wots/ 
-
+      - name: Compile ${{ matrix.test_dir }}
+        run: docker run --rm jasmin-xmss make -C ${{ matrix.test_dir }}

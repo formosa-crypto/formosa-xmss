@@ -273,7 +273,7 @@ int xmssmt_core_sign_new(const xmss_params *params, unsigned char *sk, unsigned 
  * o buffer que e usado como input no thash. Em vez disos, copiamos leaf diretamente para o buffer
  *
  */
-void compute_root(const xmss_params *params, unsigned char *root, const unsigned char *leaf,
+void new_compute_root(const xmss_params *params, unsigned char *root, const unsigned char *leaf,
                       unsigned long leafidx, const unsigned char *auth_path,
                       const unsigned char *pub_seed, uint32_t addr[8]) {
     uint32_t k;

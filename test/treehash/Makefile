@@ -21,7 +21,7 @@ run: bin/test_treehash.out
 # --------------------------------------------------------------------------------------------------
 
 REF_SOURCES := $(wildcard ../*.c)
-SOURCES := test_treehash.c ../common/notrandombytes.c ../common/print.c
+SOURCES := test_treehash.c ../common/notrandombytes.c ../common/print.c ../new_treehash/new_xmss.c
 TEST_FLAGS := -DTEST_TREEHASH -DTEST_AUTH_PATH -DTEST_TREESIG
 
 # --------------------------------------------------------------------------------------------------
@@ -34,7 +34,7 @@ bin/test_treehash.s: test_treehash.jazz | bin/
 	-$(RM) tmp
 
 bin/test_treehash: bin/test_treehash.s
-	$(CC) $(CFLAGS) -o $@ -I../common -I../ -DIMPL=XMSSMT-SHA2_20/2_256 $(TEST_FLAGS) \
+	$(CC) $(CFLAGS) -o $@ -I../common -I../ -I../new_treehash/ -DIMPL=XMSSMT-SHA2_20/2_256 $(TEST_FLAGS) \
 	$(SOURCES) $(REF_SOURCES) $< $(LDLIBS)
 
 # --------------------------------------------------------------------------------------------------

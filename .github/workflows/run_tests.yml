@@ -11,20 +11,22 @@ on:
 jobs:
   run_tests:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        test_dir:
+          - test/hash_address
+          - test/hash
+          - test/wots
+          - test/treehash
 
     steps:
       - name: Check out code
         uses: actions/checkout@v4
+        with: 
+          submodules: true
 
       - name: Build docker image
         run: docker build -t jasmin-xmss .
 
-      - name: Run tests for hash address
-        run: docker run --rm jasmin-xmss make -C test/hash_address/ run
-
-      - name: Run tests for hash
-        run: docker run --rm jasmin-xmss make -C test/hash/ run
-
-      - name: Run tests for wots
-        run: docker run --rm jasmin-xmss make -C test/wots/ run
-
+      - name: Run tests in ${{ matrix.test_dir }}
+        run: docker run --rm jasmin-xmss make -C ${{ matrix.test_dir }} run

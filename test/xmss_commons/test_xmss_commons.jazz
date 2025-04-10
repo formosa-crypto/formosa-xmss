@@ -51,7 +51,6 @@ fn xmssmt_core_sign_open_jazz(
     return res;
 }
 
-/*
 export
 fn xmss_core_sign_open_jazz(
     reg u64 m_ptr mlen_ptr,
@@ -63,4 +62,3 @@ fn xmss_core_sign_open_jazz(
     res = __xmss_core_sign_open_(m_ptr, mlen_ptr, sm_ptr, smlen, pk);
     return res;
 }
-*/

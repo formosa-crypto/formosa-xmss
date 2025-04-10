@@ -1,14 +1,10 @@
 from XMSS require "treehash/treehash.jinc"
 
-/*
 export 
 fn treehash_cond_jazz(reg ptr u32[XMSS_TREE_HEIGHT + 1] heights, reg u64 offset) -> reg u8 {
     reg u8 res = __treehash_cond(heights, offset);
     return res;
 }
-*/
-
-/*
 
 export 
 fn treehash_jazz(reg ptr u8[XMSS_N] root sk_seed pub_seed,
@@ -32,8 +28,6 @@ fn build_auth_path_jazz(
     auth_path = __build_auth_path(auth_path, sk_seed, pub_seed, i, addr);
     return auth_path;
 }
-
-*/
 
 export 
 fn treesig_jazz(
