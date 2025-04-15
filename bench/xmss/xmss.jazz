@@ -30,6 +30,8 @@ fn xmssmt_sign_open_jazz(
     return res;
 }
 
+/*
+// THIS Fails because of regalloc
 export
 fn xmssmt_sign_jazz(
     reg ptr u8[XMSS_OID_LEN + XMSS_SK_BYTES] sk,
@@ -43,3 +45,4 @@ fn xmssmt_sign_jazz(
     
     return sk, res;
 }
+*/
