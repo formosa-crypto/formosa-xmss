@@ -14,8 +14,8 @@
 _thash_f_jazz:
 thash_f_jazz:
 	movq	%rsp, %rax
-	leaq	-48(%rsp), %rsp
-	andq	$-8, %rsp
+	leaq	-64(%rsp), %rsp
+	andq	$-32, %rsp
 	movq	%rbx, (%rsp)
 	movq	%rbp, 8(%rsp)
 	movq	%r12, 16(%rsp)
@@ -34,12 +34,22 @@ Lthash_f_jazz$1:
 	movq	24(%rsp), %r13
 	movq	32(%rsp), %r14
 	movq	40(%rsp), %rsp
+	movq	%rsp, %rsi
+	vpxor	%ymm2, %ymm2, %ymm2
+	andq	$-32, %rsp
+	subq	$992, %rsp
+	movq	$992, %rdi
+Lthash_f_jazz$2:
+	subq	$32, %rdi
+	vmovdqu	%ymm2, (%rsp,%rdi)
+	jne 	Lthash_f_jazz$2
+	movq	%rsi, %rsp
 	ret
 _thash_h_jazz:
 thash_h_jazz:
 	movq	%rsp, %rax
-	leaq	-48(%rsp), %rsp
-	andq	$-8, %rsp
+	leaq	-64(%rsp), %rsp
+	andq	$-32, %rsp
 	movq	%rbx, (%rsp)
 	movq	%rbp, 8(%rsp)
 	movq	%r12, 16(%rsp)
@@ -56,12 +66,22 @@ Lthash_h_jazz$1:
 	movq	24(%rsp), %r13
 	movq	32(%rsp), %r14
 	movq	40(%rsp), %rsp
+	movq	%rsp, %rsi
+	vpxor	%ymm2, %ymm2, %ymm2
+	andq	$-32, %rsp
+	subq	$1056, %rsp
+	movq	$1056, %rdi
+Lthash_h_jazz$2:
+	subq	$32, %rdi
+	vmovdqu	%ymm2, (%rsp,%rdi)
+	jne 	Lthash_h_jazz$2
+	movq	%rsi, %rsp
 	ret
 _hash_message_jazz:
 hash_message_jazz:
 	movq	%rsp, %rax
 	leaq	-224(%rsp), %rsp
-	andq	$-8, %rsp
+	andq	$-32, %rsp
 	movq	%rbx, 176(%rsp)
 	movq	%rbp, 184(%rsp)
 	movq	%r12, 192(%rsp)
@@ -341,12 +361,22 @@ Lhash_message_jazz$1:
 	movq	200(%rsp), %r13
 	movq	208(%rsp), %r14
 	movq	216(%rsp), %rsp
+	movq	%rsp, %rsi
+	vpxor	%ymm2, %ymm2, %ymm2
+	andq	$-32, %rsp
+	subq	$512, %rsp
+	movq	$512, %rdi
+Lhash_message_jazz$11:
+	subq	$32, %rdi
+	vmovdqu	%ymm2, (%rsp,%rdi)
+	jne 	Lhash_message_jazz$11
+	movq	%rsi, %rsp
 	ret
 _prf_keygen_jazz:
 prf_keygen_jazz:
 	movq	%rsp, %rax
-	leaq	-48(%rsp), %rsp
-	andq	$-8, %rsp
+	leaq	-64(%rsp), %rsp
+	andq	$-32, %rsp
 	movq	%rbx, (%rsp)
 	movq	%rbp, 8(%rsp)
 	movq	%r12, 16(%rsp)
@@ -364,12 +394,22 @@ Lprf_keygen_jazz$1:
 	movq	24(%rsp), %r13
 	movq	32(%rsp), %r14
 	movq	40(%rsp), %rsp
+	movq	%rsp, %rsi
+	vpxor	%ymm2, %ymm2, %ymm2
+	andq	$-32, %rsp
+	subq	$672, %rsp
+	movq	$672, %rdi
+Lprf_keygen_jazz$2:
+	subq	$32, %rdi
+	vmovdqu	%ymm2, (%rsp,%rdi)
+	jne 	Lprf_keygen_jazz$2
+	movq	%rsi, %rsp
 	ret
 _prf_jazz:
 prf_jazz:
 	movq	%rsp, %rax
-	leaq	-48(%rsp), %rsp
-	andq	$-8, %rsp
+	leaq	-64(%rsp), %rsp
+	andq	$-32, %rsp
 	movq	%rbx, (%rsp)
 	movq	%rbp, 8(%rsp)
 	movq	%r12, 16(%rsp)
@@ -388,6 +428,16 @@ Lprf_jazz$1:
 	movq	24(%rsp), %r13
 	movq	32(%rsp), %r14
 	movq	40(%rsp), %rsp
+	movq	%rsp, %rsi
+	vpxor	%ymm2, %ymm2, %ymm2
+	andq	$-32, %rsp
+	subq	$640, %rsp
+	movq	$640, %rdi
+Lprf_jazz$2:
+	subq	$32, %rdi
+	vmovdqu	%ymm2, (%rsp,%rdi)
+	jne 	Lprf_jazz$2
+	movq	%rsi, %rsp
 	ret
 L_thash_f$1:
 	leaq	40(%rsp), %rax

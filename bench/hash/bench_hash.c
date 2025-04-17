@@ -17,7 +17,7 @@
 #endif
 
 #ifndef FILENAME
-#define FILENAME "results.txt"
+#define FILENAME "results_no_zeroization.txt"
 #endif
 
 #ifndef MESSAGE_SIZE
@@ -122,14 +122,23 @@ void bench_function(void (*func)(uint64_t *, uint64_t *), const char *s) {
     uint64_t average_val = averages[index];
 
     FILE *f = NULL;
-    if (!(f = fopen(FILENAME, "a"))) {
-        fprintf(stderr, "Failed to open %s for writing\n", FILENAME);
+    if (!(f = fopen((xstr(FILENAME)), "a"))) {
+        fprintf(stderr, "Failed to open %s for writing\n", (xstr(FILENAME)));
         exit(EXIT_FAILURE);
     }
 
     assert(f != NULL);
 
+#ifdef ZEROIZATION_STRATEGY
+#ifndef ZEROIZATION_SIZE
+#error ZEROIZATION_SIZE must be defined when ZEROIZATION_STRATEGY is defined
+#else
+    fprintf(f, "%s_%s_%s;%" PRIu64 ";%" PRIu64 "\n", s, xstr(ZEROIZATION_STRATEGY),
+            xstr(ZEROIZATION_SIZE), average_val, median_val);
+#endif
+#else
     fprintf(f, "%s;%" PRIu64 ";%" PRIu64 "\n", s, average_val, median_val);
+#endif
     fclose(f);
 }
 
@@ -261,8 +270,8 @@ void bench_thash_f_c(uint64_t *before, uint64_t *after) {
 }
 
 int main(void) {
-    clearfile(FILENAME);
-    print_header(FILENAME);
+    clearfile(xstr(FILENAME));
+    print_header(xstr(FILENAME));
 
     bench_function(bench_prf_jasmin, "prf_jasmin");
     bench_function(bench_prf_c, "prf_ref");
