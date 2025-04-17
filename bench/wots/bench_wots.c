@@ -13,7 +13,7 @@
 #include "wots.c"
 
 #ifndef IMPL
-#define IMPL XMSSMT - SHA2_20 / 2_256
+#define IMPL XMSSMT-SHA2_20/2_256
 #endif
 
 #ifndef FILENAME
