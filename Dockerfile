@@ -1,4 +1,5 @@
 FROM debian:stable-20250407-slim
+FROM debian:stable-20250407-slim
 
 LABEL version="0.0.1"
 LABEL maintainer="rui.fernandes@mpi-sp.org" 
@@ -22,7 +23,6 @@ RUN apt-get --quiet --assume-yes update && \
       libtext-diff-perl libssl-dev
 
 
-RUN apt-get --quiet --assume-yes clean
 
 RUN echo "%sudo  ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/sudoers && \
     chown root:root /etc/sudoers.d/sudoers && \
