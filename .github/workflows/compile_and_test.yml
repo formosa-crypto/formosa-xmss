@@ -46,7 +46,6 @@ jobs:
           - test/wots
           - test/treehash
           - test/xmss_commons
-          #- test/xmss_core
           - test/xmss
 
     steps:
