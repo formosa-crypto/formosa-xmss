@@ -1379,6 +1379,15 @@ Lwots_pk_from_sig_jazz$1:
 	movq	320(%rsp), %r14
 	movq	328(%rsp), %r15
 	movq	336(%rsp), %rsp
+	movq	%rsp, %rsi
+	andq	$-8, %rsp
+	subq	$1288, %rsp
+	movq	$1288, %rdi
+Lwots_pk_from_sig_jazz$136:
+	subq	$1, %rdi
+	movb	$0, (%rsp,%rdi)
+	jne 	Lwots_pk_from_sig_jazz$136
+	movq	%rsi, %rsp
 	ret
 _wots_sign_jazz:
 wots_sign_jazz:
@@ -2151,6 +2160,15 @@ Lwots_sign_jazz$1:
 	movq	312(%rsp), %r14
 	movq	320(%rsp), %r15
 	movq	328(%rsp), %rsp
+	movq	%rsp, %rsi
+	andq	$-8, %rsp
+	subq	$1280, %rsp
+	movq	$1280, %rdi
+Lwots_sign_jazz$70:
+	subq	$1, %rdi
+	movb	$0, (%rsp,%rdi)
+	jne 	Lwots_sign_jazz$70
+	movq	%rsi, %rsp
 	ret
 _wots_pkgen_jazz:
 wots_pkgen_jazz:
@@ -3049,6 +3067,15 @@ Lwots_pkgen_jazz$1:
 	movq	48(%rsp), %r14
 	movq	56(%rsp), %r15
 	movq	64(%rsp), %rsp
+	movq	%rsp, %rsi
+	andq	$-8, %rsp
+	subq	$1016, %rsp
+	movq	$1016, %rdi
+Lwots_pkgen_jazz$69:
+	subq	$1, %rdi
+	movb	$0, (%rsp,%rdi)
+	jne 	Lwots_pkgen_jazz$69
+	movq	%rsi, %rsp
 	ret
 _gen_chain_inplace_jazz:
 gen_chain_inplace_jazz:
@@ -3073,6 +3100,15 @@ Lgen_chain_inplace_jazz$1:
 	movq	24(%rsp), %r14
 	movq	32(%rsp), %r15
 	movq	40(%rsp), %rsp
+	movq	%rsp, %rsi
+	andq	$-8, %rsp
+	subq	$992, %rsp
+	movq	$992, %rdi
+Lgen_chain_inplace_jazz$2:
+	subq	$1, %rdi
+	movb	$0, (%rsp,%rdi)
+	jne 	Lgen_chain_inplace_jazz$2
+	movq	%rsi, %rsp
 	ret
 _wots_checksum_jazz:
 wots_checksum_jazz:
@@ -3122,6 +3158,15 @@ Lwots_checksum_jazz$1:
 	cmpb	$3, %r8b
 	jb  	Lwots_checksum_jazz$2
 	movq	%r11, %rsp
+	movq	%rsp, %rsi
+	andq	$-1, %rsp
+	subq	$2, %rsp
+	movq	$2, %rdi
+Lwots_checksum_jazz$6:
+	subq	$1, %rdi
+	movb	$0, (%rsp,%rdi)
+	jne 	Lwots_checksum_jazz$6
+	movq	%rsi, %rsp
 	ret
 _expand_seed_jazz:
 expand_seed_jazz:
@@ -3147,6 +3192,15 @@ Lexpand_seed_jazz$1:
 	movq	32(%rsp), %r14
 	movq	40(%rsp), %r15
 	movq	48(%rsp), %rsp
+	movq	%rsp, %rsi
+	andq	$-8, %rsp
+	subq	$760, %rsp
+	movq	$760, %rdi
+Lexpand_seed_jazz$2:
+	subq	$1, %rdi
+	movb	$0, (%rsp,%rdi)
+	jne 	Lexpand_seed_jazz$2
+	movq	%rsi, %rsp
 	ret
 L_chain_lengths$1:
 	movq	%rdx, %r10
