@@ -7,10 +7,13 @@ CC       ?= clang
 CFLAGS   ?= -Wall -g -O3 -Wextra -Wpedantic
 LDLIBS   = -lcrypto
 
-JASMIN   ?= jasminc
-JAZZCT   ?= jasmin-ct
-JFLAGS   ?= -nowarning ${JADDFLAGS}
-JINCLUDE ?= -I XMSS:../../ref-jasmin/ -I Stdlib:../../ref-jasmin/stdlib
+JASMIN      ?= jasminc
+JAZZCT      ?= jasmin-ct
+JAZZCTFLAGS ?= --infer
+JFLAGS      ?= -nowarning ${JADDFLAGS}
+JINCLUDE    ?= -I XMSS:../../ref-jasmin/ -I Stdlib:../../ref-jasmin/stdlib
+
+JASMINPATH := JASMINPATH="XMSS=../../ref-jasmin/:Stdlib=../../ref-jasmin/stdlib"
 
 # --------------------------------------------------------------------------------------------------
 
@@ -18,6 +21,12 @@ default: test
 asm: bin/test_xmssmt-sha2_20_2_256.s
 test: bin/test_xmssmt-sha2_20_2_256
 run: bin/test_xmssmt-sha2_20_2_256.out
+
+checkCT: test_hash.jazz
+	echo "from XMSS require \"params/params-xmssmt-sha2_20_2_256.jinc\"" > tmp
+	cat $< >> tmp
+	$(JASMINPATH) $(JAZZCT) $(JAZZCTFLAGS) tmp >/dev/null 2>&1 || { rm tmp ; echo "Jasmin CT check failed"; exit 1; }
+	rm tmp
 
 # --------------------------------------------------------------------------------------------------
 
@@ -31,8 +40,8 @@ TEST_FLAGS := -DTEST_PRF -DTEST_PRF_KEYGEN -DTEST_THASH_F -DTEST_THASH_H -DTEST_
 bin/test_xmssmt-sha2_20_2_256.s: test_hash.jazz | bin/
 	echo "from XMSS require \"params/params-xmssmt-sha2_20_2_256.jinc\"" > tmp
 	cat $< >> tmp
-	$(JASMIN) $(JINCLUDE) $(JFLAGS) -o $@ tmp
-	-$(RM) tmp
+	$(JASMIN) $(JINCLUDE) $(JFLAGS) -o $@ tmp || rm tmp # remove the file even when compilation fails
+	rm tmp
 
 
 bin/test_xmssmt-sha2_20_2_256: bin/test_xmssmt-sha2_20_2_256.s

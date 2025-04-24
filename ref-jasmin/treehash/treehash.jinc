@@ -308,7 +308,7 @@ fn __tree_sig(
 
     // sig_ots = WOTS_sign(getWOTS_SK(SK, idx_sig), M', getSEED(SK), ADRS);
     () = #unspill(M);
-    sig_ots, addr = __wots_sign_(sig_ots, M, sk_seed, pub_seed, addr);
+    sig_ots, addr = __wots_sign(sig_ots, M, sk_seed, pub_seed, addr);
 
     // Sig = sig_ots || auth;
     () = #unspill(sig);

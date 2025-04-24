@@ -37,14 +37,14 @@ $(ASM_FILES):
 bin/test_SHA256_%.s: test_sha256.jazz | bin/
 	echo "param int INLEN = $*;" > tmp_$*
 	cat $< >> tmp_$*
-	$(JASMIN) $(JINCLUDE) $(JFLAGS) -o $@ tmp_$*
-	-$(RM) tmp_$*
+	$(JASMIN) $(JINCLUDE) $(JFLAGS) -o $@ tmp_$* || rm tmp_$* # remove the file even when compilation fails
+	rm tmp_$*
 
 bin/test_sha256_ptr.s: test_sha256.jazz | bin/
 	echo "param int INLEN = 42;" > tmp # placeholder 
 	cat $< >> tmp
-	$(JASMIN) $(JINCLUDE) $(JFLAGS) -o $@ tmp
-	-$(RM) tmp
+	$(JASMIN) $(JINCLUDE) $(JFLAGS) -o $@ tmp || rm tmp # remove the file even when compilation fails
+	rm tmp
 
 
 $(TESTS):

@@ -137,3 +137,27 @@ jobs:
 
       - name: Check correctness proofs
         run: docker run --rm jasmin-xmss:${{ github.sha }} make -C proof/ check_correctness_proof
+
+  checkCT:
+    needs: build_image
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        test_dir:
+          - test/hash
+          - test/wots
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Download Docker image
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image
+
+      - name: Load Docker image
+        run: |
+          gunzip -c image.tar.gz | docker load
+
+      - name: Run checkCT in ${{ matrix.test_dir }}
+        run: docker run --rm jasmin-xmss:${{ github.sha }} make -C ${{ matrix.test_dir }} checkCT

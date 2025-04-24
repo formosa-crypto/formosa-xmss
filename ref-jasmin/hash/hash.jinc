@@ -164,7 +164,6 @@ fn __hash_message(
     inline int offset;
     stack u8[XMSS_PADDING_LEN] buf;
     stack u8[XMSS_N] buf_n;
-
     // ull_to_bytes(m_with_prefix, params->padding_len, XMSS_HASH_PADDING_HASH);
     buf = bytes_pad::ull_to_bytes(buf, XMSS_HASH_PADDING_HASH);
 
@@ -173,11 +172,11 @@ fn __hash_message(
 
     // memcpy(m_with_prefix + params->padding_len, R, params->n);
     offset = XMSS_PADDING_LEN;
-    m_with_prefix_ptr = memcpy_u8pu8_n::_x_memcpy_u8pu8(m_with_prefix_ptr, offset, R);
+    m_with_prefix_ptr = copy_nbytes_from_ptr(m_with_prefix_ptr, offset, R);
     
     // memcpy(m_with_prefix + params->padding_len + params->n, root, params->n);
     offset = XMSS_PADDING_LEN + XMSS_N;
-    m_with_prefix_ptr = memcpy_u8pu8_n::_x_memcpy_u8pu8(m_with_prefix_ptr, offset, root);
+    m_with_prefix_ptr = copy_nbytes_from_ptr(m_with_prefix_ptr, offset, root);
 
     // ull_to_bytes(m_with_prefix + params->padding_len + 2*params->n, params->n, idx);
     buf_n = bytes_n::ull_to_bytes(buf_n, idx);
@@ -408,6 +407,7 @@ fn __thash_f(
 
     () = #unspill(out);
 
+    // Same as before
     if (XMSS_N == 32 && XMSS_PADDING_LEN == 32) { /* This if resolved at compile time */
         reg u64 t; 
 

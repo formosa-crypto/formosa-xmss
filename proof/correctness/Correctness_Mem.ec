@@ -36,6 +36,271 @@ rewrite /get8 !initiE //= set64E initiE //= ifT 1:/#.
 rewrite get64E /= bits8E /= initiE //= pack8E //=; do (rewrite initiE 1:/# /=); smt().
 qed.
 
+import W8u8.
+
+lemma copy_nbytes_from_ptr_ll:  islossless M(Syscall).copy_nbytes_from_ptr.
+proof.
+proc.
+rcondt 1; first by auto. 
+unroll 2; unroll 3; unroll 4; unroll 5.
+rcondf 6; first by auto.
+rcondt 5; first by auto.
+rcondt 4; first by auto.
+rcondt 3; first by auto.
+rcondt 2; auto.
+qed.
+
+lemma copy_nbytes_from_ptr_post (mem : global_mem_t) (o p : W64.t) (input : W8.t Array32.t) :
+hoare [
+    M(Syscall).copy_nbytes_from_ptr :
+        Glob.mem = mem /\
+        (* valid ptr *)
+        0 <= to_uint p + to_uint o + 32 < W64.max_uint /\
+        arg = (p, o, input) 
+        ==>
+        res = p /\
+        (load_buf Glob.mem (p + o) 32 = to_list input) /\
+          (* O resto da memoria mantem se inalterada *)
+          forall (k : int), 0 <= k < W64.max_uint =>
+             !(to_uint p + to_uint o <= k < to_uint p + to_uint o + 32) => 
+                Glob.mem.[k] = mem.[k] 
+	].
+proof.
+proc => /=.
+rcondt 1; first by auto. 
+unroll 2; unroll 3; unroll 4; unroll 5.
+rcondf 6; first by auto.
+rcondt 5; first by auto.
+rcondt 4; first by auto.
+rcondt 3; first by auto.
+rcondt 2; first by auto.
+
+auto => /> H0 H1.
+
+have E0: to_uint (p + o) = to_uint p + to_uint o by smt(@W64 pow2_64).
+have E1: to_uint (p + (o + W64.of_int 24)) = to_uint p + to_uint o + 24 by smt(@W64 pow2_64).
+have E2: to_uint (p + (o + W64.of_int 16)) = to_uint p + to_uint o + 16 by smt(@W64 pow2_64).
+have E3: to_uint (p + (o + W64.of_int 8)) = to_uint p + to_uint o + 8 by smt(@W64 pow2_64).
+
+split; last first.
+
+- move => k???. 
+  rewrite /storeW64 get_storesE size_to_list ifF 1:/#.
+  rewrite /storeW64 get_storesE size_to_list ifF 1:/#.
+  rewrite /storeW64 get_storesE size_to_list ifF 1:/#.
+  rewrite /storeW64 get_storesE size_to_list ifF 1:/#.
+  by [].
+
+- apply (eq_from_nth witness); rewrite ?size_to_list size_load_buf // => i?.
+  rewrite get_to_list nth_load_buf //.
+  rewrite /storeW64 get_storesE size_to_list E1.
+  case (i = 0) => ?.
+       * rewrite E0 ifF 1:/#.
+         rewrite /storeW64 get_storesE size_to_list ifF 1:/#.
+         rewrite /storeW64 get_storesE size_to_list ifF 1:/#.
+         rewrite /storeW64 get_storesE size_to_list ifT 1:/#.
+         rewrite  /= !bits8E ifT 1:/# /= wordP => k?.
+         rewrite /get64_direct pack8E initiE //= initiE 1:/# //= initiE 1:/# //= initiE /#.
+  case (i = 1) => ?.
+       * rewrite E0 ifF 1:/#.
+         rewrite /storeW64 get_storesE size_to_list ifF 1:/#.
+         rewrite /storeW64 get_storesE size_to_list ifF 1:/#.
+         rewrite /storeW64 get_storesE size_to_list ifT 1:/#.
+         rewrite  /= !bits8E ifF 1:/# ifT 1:/# /= wordP => k?.
+         rewrite /get64_direct pack8E initiE //= initiE 1:/# //= initiE 1:/# //= initiE /#.
+  case (i = 2) => ?.
+       * rewrite E0 ifF 1:/#.
+         rewrite /storeW64 get_storesE size_to_list ifF 1:/#.
+         rewrite /storeW64 get_storesE size_to_list ifF 1:/#.
+         rewrite /storeW64 get_storesE size_to_list ifT 1:/#.
+         rewrite  /= !bits8E ifF 1:/# ifF 1:/# ifT 1:/# /= wordP => k?.
+         rewrite /get64_direct pack8E initiE //= initiE 1:/# //= initiE 1:/# //= initiE /#.
+  case (i = 3) => ?.
+       * rewrite E0 ifF 1:/#.
+         rewrite /storeW64 get_storesE size_to_list ifF 1:/#.
+         rewrite /storeW64 get_storesE size_to_list ifF 1:/#.
+         rewrite /storeW64 get_storesE size_to_list ifT 1:/#.
+         rewrite  /= !bits8E ifF 1:/# ifF 1:/# ifF 1:/# ifT 1:/# /= wordP => k?.
+         rewrite /get64_direct pack8E initiE //= initiE 1:/# //= initiE 1:/# //= initiE /#.
+  case (i = 4) => ?.
+       * rewrite E0 ifF 1:/#.
+         rewrite /storeW64 get_storesE size_to_list ifF 1:/#.
+         rewrite /storeW64 get_storesE size_to_list ifF 1:/#.
+         rewrite /storeW64 get_storesE size_to_list ifT 1:/#.
+         rewrite  /= !bits8E ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# ifT 1:/# /= wordP => k?.
+         rewrite /get64_direct pack8E initiE //= initiE 1:/# //= initiE 1:/# //= initiE /#.
+  case (i = 5) => ?.
+       * rewrite E0 ifF 1:/#.
+         rewrite /storeW64 get_storesE size_to_list ifF 1:/#.
+         rewrite /storeW64 get_storesE size_to_list ifF 1:/#.
+         rewrite /storeW64 get_storesE size_to_list ifT 1:/#.
+         rewrite  /= !bits8E ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# ifT 1:/# /= wordP => k?.
+         rewrite /get64_direct pack8E initiE //= initiE 1:/# //= initiE 1:/# //= initiE /#.
+  case (i = 6) => ?.
+       * rewrite E0 ifF 1:/#.
+         rewrite /storeW64 get_storesE size_to_list ifF 1:/#.
+         rewrite /storeW64 get_storesE size_to_list ifF 1:/#.
+         rewrite /storeW64 get_storesE size_to_list ifT 1:/#.
+         rewrite  /= !bits8E ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# ifT 1:/# /= wordP => k?.
+         rewrite /get64_direct pack8E initiE //= initiE 1:/# //= initiE 1:/# //= initiE /#.
+  case (i = 7) => ?.
+       * rewrite E0 ifF 1:/#.
+         rewrite /storeW64 get_storesE size_to_list ifF 1:/#.
+         rewrite /storeW64 get_storesE size_to_list ifF 1:/#.
+         rewrite /storeW64 get_storesE size_to_list ifT 1:/#.
+         rewrite  /= !bits8E ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# ifT 1:/# /= wordP => k?.
+         rewrite /get64_direct pack8E initiE //= initiE 1:/# //= initiE 1:/# //= initiE /#.
+  case (i = 8) => ?.
+       * rewrite E0 ifF 1:/#.
+         rewrite /storeW64 get_storesE size_to_list ifF 1:/#.
+         rewrite /storeW64 get_storesE size_to_list ifT 1:/#.
+         rewrite  /= !bits8E ifT 1:/# /= wordP => k?.
+         rewrite /get64_direct pack8E initiE //= initiE 1:/# //= initiE 1:/# //= initiE /#.
+  case (i = 9) => ?.
+       * rewrite E0 ifF 1:/#.
+         rewrite /storeW64 get_storesE size_to_list ifF 1:/#.
+         rewrite /storeW64 get_storesE size_to_list ifT 1:/#.
+         rewrite  /= !bits8E ifF 1:/#  ifT 1:/# /= wordP => k?.
+         rewrite /get64_direct pack8E initiE //= initiE 1:/# //= initiE 1:/# //= initiE /#.
+  case (i = 10) => ?.
+       * rewrite E0 ifF 1:/#.
+         rewrite /storeW64 get_storesE size_to_list ifF 1:/#.
+         rewrite /storeW64 get_storesE size_to_list ifT 1:/#.
+         rewrite  /= !bits8E ifF 1:/# ifF 1:/#  ifT 1:/# /= wordP => k?.
+         rewrite /get64_direct pack8E initiE //= initiE 1:/# //= initiE 1:/# //= initiE /#.
+  case (i = 11) => ?.
+       * rewrite E0 ifF 1:/#.
+         rewrite /storeW64 get_storesE size_to_list ifF 1:/#.
+         rewrite /storeW64 get_storesE size_to_list ifT 1:/#.
+         rewrite  /= !bits8E ifF 1:/# ifF 1:/# ifF 1:/#  ifT 1:/# /= wordP => k?.
+         rewrite /get64_direct pack8E initiE //= initiE 1:/# //= initiE 1:/# //= initiE /#.
+  case (i = 12) => ?.
+       * rewrite E0 ifF 1:/#.
+         rewrite /storeW64 get_storesE size_to_list ifF 1:/#.
+         rewrite /storeW64 get_storesE size_to_list ifT 1:/#.
+         rewrite  /= !bits8E ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/#  ifT 1:/# /= wordP => k?.
+         rewrite /get64_direct pack8E initiE //= initiE 1:/# //= initiE 1:/# //= initiE /#.
+  case (i = 13) => ?.
+       * rewrite E0 ifF 1:/#.
+         rewrite /storeW64 get_storesE size_to_list ifF 1:/#.
+         rewrite /storeW64 get_storesE size_to_list ifT 1:/#.
+         rewrite  /= !bits8E ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/#  ifT 1:/# /= wordP => k?.
+         rewrite /get64_direct pack8E initiE //= initiE 1:/# //= initiE 1:/# //= initiE /#.
+  case (i = 14) => ?.
+       * rewrite E0 ifF 1:/#.
+         rewrite /storeW64 get_storesE size_to_list ifF 1:/#.
+         rewrite /storeW64 get_storesE size_to_list ifT 1:/#.
+         rewrite  /= !bits8E ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/#  ifT 1:/# /= wordP => k?.
+         rewrite /get64_direct pack8E initiE //= initiE 1:/# //= initiE 1:/# //= initiE /#.
+  case (i = 15) => ?.
+       * rewrite E0 ifF 1:/#.
+         rewrite /storeW64 get_storesE size_to_list ifF 1:/#.
+         rewrite /storeW64 get_storesE size_to_list ifT 1:/#.
+         rewrite  /= !bits8E ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/#  ifT 1:/# /= wordP => k?.
+         rewrite /get64_direct pack8E initiE //= initiE 1:/# //= initiE 1:/# //= initiE /#.
+  case (i = 16) => ?.
+       * rewrite E0 ifF 1:/#.
+         rewrite /storeW64 get_storesE size_to_list ifT 1:/#.
+         rewrite  /= !bits8E ifT 1:/# /= wordP => k?.
+         rewrite /get64_direct pack8E initiE //= initiE 1:/# //= initiE 1:/# //= initiE /#.
+  case (i = 17) => ?.
+       * rewrite E0 ifF 1:/#.
+         rewrite /storeW64 get_storesE size_to_list ifT 1:/#.
+         rewrite  /= !bits8E ifF 1:/#  ifT 1:/# /= wordP => k?.
+         rewrite /get64_direct pack8E initiE //= initiE 1:/# //= initiE 1:/# //= initiE /#.
+  case (i = 18) => ?.
+       * rewrite E0 ifF 1:/#.
+         rewrite /storeW64 get_storesE size_to_list ifT 1:/#.
+         rewrite  /= !bits8E ifF 1:/# ifF 1:/#  ifT 1:/# /= wordP => k?.
+         rewrite /get64_direct pack8E initiE //= initiE 1:/# //= initiE 1:/# //= initiE /#.
+  case (i = 19) => ?.
+       * rewrite E0 ifF 1:/#.
+         rewrite /storeW64 get_storesE size_to_list ifT 1:/#.
+         rewrite  /= !bits8E ifF 1:/# ifF 1:/# ifF 1:/#  ifT 1:/# /= wordP => k?.
+         rewrite /get64_direct pack8E initiE //= initiE 1:/# //= initiE 1:/# //= initiE /#.
+  case (i = 20) => ?.
+       * rewrite E0 ifF 1:/#.
+         rewrite /storeW64 get_storesE size_to_list ifT 1:/#.
+         rewrite  /= !bits8E ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/#  ifT 1:/# /= wordP => k?.
+         rewrite /get64_direct pack8E initiE //= initiE 1:/# //= initiE 1:/# //= initiE /#.
+  case (i = 21) => ?.
+       * rewrite E0 ifF 1:/#.
+         rewrite /storeW64 get_storesE size_to_list ifT 1:/#.
+         rewrite  /= !bits8E ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/#  ifT 1:/# /= wordP => k?.
+         rewrite /get64_direct pack8E initiE //= initiE 1:/# //= initiE 1:/# //= initiE /#.
+  case (i = 22) => ?.
+       * rewrite E0 ifF 1:/#.
+         rewrite /storeW64 get_storesE size_to_list ifT 1:/#.
+         rewrite  /= !bits8E ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/#  ifT 1:/# /= wordP => k?.
+         rewrite /get64_direct pack8E initiE //= initiE 1:/# //= initiE 1:/# //= initiE /#.
+  case (i = 23) => ?.
+       * rewrite E0 ifF 1:/#.
+         rewrite /storeW64 get_storesE size_to_list ifT 1:/#.
+         rewrite  /= !bits8E ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/#  ifT 1:/# /= wordP => k?.
+         rewrite /get64_direct pack8E initiE //= initiE 1:/# //= initiE 1:/# //= initiE /#.
+  case (i = 24) => ?.
+       * rewrite E0 ifT 1:/#.
+         rewrite /get64_direct pack8E wordP => k? />. 
+         rewrite /= !bits8E ifT 1:/#.
+         rewrite initiE //= initiE 1:/# //= initiE 1:/# //= initiE /#.   
+  case (i = 25) => ?.
+       * rewrite E0 ifT 1:/#.
+         rewrite /get64_direct pack8E wordP => k? />. 
+         rewrite /= !bits8E ifF 1:/#  ifT 1:/#.
+         rewrite initiE //= initiE 1:/# //= initiE 1:/# //= initiE /#.   
+  case (i = 26) => ?.
+       * rewrite E0 ifT 1:/#.
+         rewrite /get64_direct pack8E wordP => k? />. 
+         rewrite /= !bits8E ifF 1:/# ifF 1:/#  ifT 1:/#.
+         rewrite initiE //= initiE 1:/# //= initiE 1:/# //= initiE /#.   
+  case (i = 27) => ?.
+       * rewrite E0 ifT 1:/#.
+         rewrite /get64_direct pack8E wordP => k? />. 
+         rewrite /= !bits8E ifF 1:/# ifF 1:/# ifF 1:/#  ifT 1:/#.
+         rewrite initiE //= initiE 1:/# //= initiE 1:/# //= initiE /#.   
+  case (i = 28) => ?.
+       * rewrite E0 ifT 1:/#.
+         rewrite /get64_direct pack8E wordP => k? />. 
+         rewrite /= !bits8E ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/#  ifT 1:/#.
+         rewrite initiE //= initiE 1:/# //= initiE 1:/# //= initiE /#.   
+  case (i = 29) => ?.
+       * rewrite E0 ifT 1:/#.
+         rewrite /get64_direct pack8E wordP => k? />. 
+         rewrite /= !bits8E ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/#  ifT 1:/#.
+         rewrite initiE //= initiE 1:/# //= initiE 1:/# //= initiE /#.   
+  case (i = 30) => ?.
+       * rewrite E0 ifT 1:/#.
+         rewrite /get64_direct pack8E wordP => k? />. 
+         rewrite /= !bits8E ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/#  ifT 1:/#.
+         rewrite initiE //= initiE 1:/# //= initiE 1:/# //= initiE /#.   
+  case (i = 31) => ?.
+       * rewrite E0 ifT 1:/#.
+         rewrite /get64_direct pack8E wordP => k? />. 
+         rewrite /= !bits8E ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/#  ifT 1:/#.
+         rewrite initiE //= initiE 1:/# //= initiE 1:/# //= initiE /#.   
+  case (i = 32) => [?|/#].
+       * rewrite E0 ifT 1:/#.
+         rewrite /get64_direct pack8E wordP => k? />. 
+         rewrite /= !bits8E ifT 1:/#.
+         rewrite initiE //= initiE 1:/# //= initiE 1:/# //= initiE /#.   
+qed.
+
+lemma p_copy_nbytes_from_ptr_post (mem : global_mem_t) (o p : W64.t) (input : W8.t Array32.t) :
+phoare [
+    M(Syscall).copy_nbytes_from_ptr :
+        Glob.mem = mem /\
+        (* valid ptr *)
+        0 <= to_uint p + to_uint o + 32 < W64.max_uint /\
+        arg = (p, o, input) 
+        ==>
+        res = p /\
+        (load_buf Glob.mem (p + o) 32 = to_list input) /\
+          (* O resto da memoria mantem se inalterada *)
+          forall (k : int), 0 <= k < W64.max_uint =>
+             !(to_uint p + to_uint o <= k < to_uint p + to_uint o + 32) => 
+                Glob.mem.[k] = mem.[k]
+	] = 1%r by conseq copy_nbytes_from_ptr_ll (copy_nbytes_from_ptr_post mem o p input).
+
 lemma memcpy_mem_mem (mem : global_mem_t) (dst_ptr oo src_ptr oi len : W64.t) :
     phoare [
       M(Syscall)._x__memcpy_u8pu8p :
@@ -902,29 +1167,28 @@ lemma memcpy_ptr_correct (ptr : W64.t):
 proof.
 proc.
 inline * ; wp ; sp.
-while (
-  in_ptr1  = ptr /\
-  0 <= (to_uint ptr) + 32 <= W64.modulus /\
-  0 <= to_uint ptr /\
-  
-  0 <= i <= 32 /\
-  0 <= to_uint in_ptr{hr} + 32 <= W64.modulus /\
-  forall (k : int), 0 <= k < i => (out1.[k] = loadW8 Glob.mem ((to_uint ptr) + k))
-).
-    + auto => /> &hr H0 H1 H2 H3 H4 H5 H6 H7 H8C.
-      do split; 1,2:smt().
-      move => k??.
-      rewrite get_setE //=.
-      case (k = i{hr}) => E.
-          * congr; rewrite E #smt:(@W64 pow2_64).
-          * apply H7 => /#.      
-    + auto => /> &hr H0 H1 H2. 
-      split => [/# | i0 out0 ???]. 
-      have ->: i0 = 32 by smt().
-      move => H3.
-      rewrite tP => j?.
-      rewrite initiE //=. 
-      by apply H3.
+unroll 1; (rcondt 1; first by auto). 
+unroll 3; (rcondt 3; first by auto).
+unroll 5; (rcondt 5; first by auto).
+unroll 7; (rcondt 7; first by auto).
+rcondf 9; first by auto.
+auto => /> &hr H0 H1 H2.
+rewrite tP => j?.
+rewrite !initiE // get8_set64_directE //.
+case (24 <= j < 24 + 8) => ?.
+  * rewrite bits8E wordP => k?.
+    rewrite initiE //= /loadW8 /loadW64 pack8E initiE 1:/# /= initiE 1:/# /=; smt(@W64 pow2_64).
+rewrite /get8/init8 initiE // initiE //= /set64_direct initiE //=.
+case (16 <= j < 24) => ?.
+  * rewrite bits8E wordP => k?.
+    rewrite initiE //= /loadW8 /loadW64 pack8E initiE 1:/# /= initiE 1:/# /=; smt(@W64 pow2_64).
+rewrite /get8/init8 initiE // initiE //= /set64_direct initiE //=.
+case (8 <= j < 16) => ?.
+  * rewrite bits8E wordP => k?.
+    rewrite initiE //= /loadW8 /loadW64 pack8E initiE 1:/# /= initiE 1:/# /=; smt(@W64 pow2_64).
+rewrite /get8/init8 initiE // initiE //= /set64_direct initiE //=.
+rewrite ifT 1:/# bits8E //= /loadW8 wordP => k?.
+rewrite initiE //= /loadW64 pack8E initiE 1:/# /= initiE /#.
 qed.
 
 lemma memcpy_ptr_ll :
