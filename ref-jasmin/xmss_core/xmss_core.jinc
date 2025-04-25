@@ -205,7 +205,9 @@ fn __xmssmt_core_sign(
         () = #unspill(sm_ptr, mlen, idx);
         pub_root = sk[XMSS_INDEX_BYTES + 2*XMSS_N : XMSS_N];
         t64 = sm_ptr; t64 += XMSS_SIG_BYTES - XMSS_PADDING_LEN - 3*XMSS_N;
-        mhash = __hash_message_(mhash, signature[XMSS_INDEX_BYTES : XMSS_N], pub_root, idx, t64, mlen); // the __hash_message function is not used anywhere else so we can inline it
+
+        // The hash of the message is public
+        #declassify mhash = __hash_message_(mhash, signature[XMSS_INDEX_BYTES : XMSS_N], pub_root, idx, t64, mlen); 
 
         ots_addr = __set_type(ots_addr, XMSS_ADDR_TYPE_OTS);
         ots_addr = __set_layer_addr(ots_addr, 0);
