@@ -35,6 +35,8 @@ clone import XMSS_TW as XMSS_ABSTRACT with
 
 import FLXMSSTW SA WTW HtS Repro MCORO. 
 
+op bs2block(a : nbytes) = DigestBlock.insubd (BytesToBits (NBytes.val a)).
+
 module FakeRO : POracle = {
    var root : nbytes
 
@@ -42,7 +44,7 @@ module FakeRO : POracle = {
       var t,idx_bytes;
       idx_bytes <- toByte (W32.of_int x.`1.`2) 4;   
       t <- (ThreeNBytesBytes.insubd (NBytes.val x.`1.`1 ++ NBytes.val root ++ idx_bytes));
-      return DigestBlock.insubd (BytesToBits (NBytes.val (H_msg t x.`2)));
+      return bs2block (H_msg t x.`2);
    }
 }.
 
@@ -59,6 +61,38 @@ op pkrel(apk : pkXMSSTW, pk : xmss_pk) =
    apk.`2 = pk.`pk_pub_seed
    (* apk.`3 = ??? Why is the address in the sk/pk? *)
    (* ??? = pk.`pk_oid I guess abstract proofs fon't care about oid *).
+
+op hw(p : bool list) = size (filter idfun p).
+
+op lpath(lidx : int) = rev (BS2Int.int2bs h lidx).
+
+op paths_from_leaf(lidx : int) : bool list list = 
+   foldl (fun (paths : bool list list) (bi : _*_) => 
+     if bi.`1 
+     then paths ++ [(take bi.`2 (lpath lidx)) ++ [false]] 
+     else paths) [] (zip (lpath lidx) (iota_ 0 h)).
+
+op leaves_from_path(p : bool list) =
+   let hsub = h - size p in
+   let start = foldl (fun i acc => acc + 2^i) 0 (iota_ 0 (hw p)) in 
+   iota_ start (2^hsub).
+
+op leafnode_from_idx(ss ps : Params.nbytes, ad : SA.adrs, lidx : int) : dgstblock.
+
+op stack_from_leaf(lidx : int,ss ps : Params.nbytes, ad : SA.adrs) : (dgstblock * int) list = 
+   map (fun p =>
+     let ls = leaves_from_path p in
+     let nls = map (leafnode_from_idx ss ps ad) ls in
+     let subtree = list2tree nls in
+        (val_bt_trh subtree ps (set_typeidx ad trhtype) (h - size p) (head witness ls), (h - size p))) 
+          (paths_from_leaf lidx).
+
+op first_subtree_leaves(lidx : int,ss ps : Params.nbytes, ad : SA.adrs) = 
+   let lps = (paths_from_leaf lidx) in
+   let p1 = head witness lps in
+   let lp1 = leaves_from_path p1 in
+     map (leafnode_from_idx ss ps ad) lp1.
+
 
 (* FD + WR *)
 equiv kg_eq : XMSS_TW(FakeRO).keygen ~ XMSS_PRF.kg : ={arg} ==> pkrel res{1}.`1 res{2}.`2 /\ skrel res{1}.`2 res{2}.`1.
@@ -78,14 +112,17 @@ swap {2} [5..7] -4; seq 3 3 : (NBytes.val ms{1} = sk_seed0{2} /\ NBytes.val ss{1
 sp 7 14;wp;conseq 
     (: _ ==> (val_bt_trh (list2tree leafl0{1}) ps{1} (set_typeidx (XAddress.val witness) trhtype) h 0 =
               DigestBlock.insubd (BytesToBits (NBytes.val (nth witness stack{2} 0))))).
-+ by auto => /> &1 *;smt(NBytes.valK).
-while ( true
-  (* We can write a function that fully defines the stack based on the leaf index :
-    -> The size of the stack is the hamming weight of the index i
-    -> Suppose that hamming weight is k.
-    -> Then, let b_0 ... b_k denote the positions of the one bits in (
-       At position j in the stack we have the node of the hash tree with path ((rev (bits i))[0..h-b_j-1]++[0])). *)
-).
++ by auto => /> &1 *;smt(NBytes.valK). print dgstblock.
+while (size leafl0{1} = i{2}
+    /\ (let firstleaves = first_subtree_leaves i{2} ss{1} ps{1} ad{1} in
+           take (size firstleaves) leafl0{1} = firstleaves)
+    /\ (let stacklist = stack_from_leaf i{2} ss{1} ps{1} ad{1} in 
+      to_uint offset{2} = size stacklist /\
+      forall k, 0 <= k < size stacklist =>
+        bs2block (nth witness stack{2} k) = 
+          (nth witness stacklist k).`1 /\
+        to_uint (nth witness heights{2} k) = 
+          (nth witness stacklist k).`2)).
 admitted.
 
 (* Signature type is abused with two index copies because I need this to simulate
