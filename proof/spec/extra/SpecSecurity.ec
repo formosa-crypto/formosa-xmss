@@ -66,7 +66,15 @@ proof.
 proc. inline {1} 2. inline {1} 5. inline {1} 8.
 inline {2} 5. inline {2} 10.
 swap {2} [5..7] -4; seq 3 3 : (NBytes.val ms{1} = sk_seed0{2} /\ NBytes.val ss{1} = sk_prf0{2} /\ NBytes.val ps{1} = pub_seed0{2}).
-+ do 3!(rnd NBytes.val NBytes.insubd); auto => />. admit.
++ do 3!(rnd NBytes.val NBytes.insubd); auto => />.
+   have H := supp_dlist W8.dword n.
+   have Hn:= Params.ge0_n. 
+   split => *;1: smt(NBytes.insubdK NBytes.valK Params.ge0_n supp_dlist).
+   split => *;1: (rewrite dmapE; apply mu_eq_support => x Hx;smt(NBytes.valK)). 
+   split => *;1:smt(NBytes.valP supp_dmap).
+   split => *;1: smt(NBytes.insubdK NBytes.valK Params.ge0_n supp_dlist).
+   smt(NBytes.valP supp_dmap).
+
 sp 7 14;wp;conseq 
     (: _ ==> (val_bt_trh (list2tree leafl0{1}) ps{1} (set_typeidx (XAddress.val witness) trhtype) h 0 =
               DigestBlock.insubd (BytesToBits (NBytes.val (nth witness stack{2} 0))))).
