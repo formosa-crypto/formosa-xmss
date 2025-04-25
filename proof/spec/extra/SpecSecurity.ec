@@ -88,11 +88,21 @@ op stack_from_leaf(lidx : int,ss ps : Params.nbytes, ad : SA.adrs) : (dgstblock 
           (paths_from_leaf lidx).
 
 op first_subtree_leaves(lidx : int,ss ps : Params.nbytes, ad : SA.adrs) = 
+   if lidx = 0 then [] else
    let lps = (paths_from_leaf lidx) in
    let p1 = head witness lps in
    let lp1 = leaves_from_path p1 in
      map (leafnode_from_idx ss ps ad) lp1.
 
+lemma pfl0 : paths_from_leaf 0 = [].
+rewrite /paths_from_leaf.
+rewrite (foldl_in_eq (fun (paths : bool list list) (bi : bool * int) =>
+     if bi.`1 then paths ++ [take bi.`2 (lpath 0) ++ [false]] else paths) (fun (paths : bool list list) (bi : bool * int) => paths)).
++ move => path;rewrite /lpath =>  bi H /=.
+  have := mem_zip  (lpath 0) (iota_ 0 h) bi.`1 bi.`2 _;1:smt().
+  rewrite /lpath mem_rev BS2Int.int2bs0 mem_nseq /#.
+  by elim (zip (lpath 0) (iota_ 0 h)) => //=.
+qed.
 
 (* FD + WR *)
 equiv kg_eq : XMSS_TW(FakeRO).keygen ~ XMSS_PRF.kg : ={arg} ==> pkrel res{1}.`1 res{2}.`2 /\ skrel res{1}.`2 res{2}.`1.
@@ -113,7 +123,7 @@ sp 7 14;wp;conseq
     (: _ ==> (val_bt_trh (list2tree leafl0{1}) ps{1} (set_typeidx (XAddress.val witness) trhtype) h 0 =
               DigestBlock.insubd (BytesToBits (NBytes.val (nth witness stack{2} 0))))).
 + by auto => /> &1 *;smt(NBytes.valK). print dgstblock.
-while (size leafl0{1} = i{2}
+while (size leafl0{1} = i{2} /\ 0 <= i{2} <= 2^h
     /\ (let firstleaves = first_subtree_leaves i{2} ss{1} ps{1} ad{1} in
            take (size firstleaves) leafl0{1} = firstleaves)
     /\ (let stacklist = stack_from_leaf i{2} ss{1} ps{1} ad{1} in 
@@ -122,7 +132,16 @@ while (size leafl0{1} = i{2}
         bs2block (nth witness stack{2} k) = 
           (nth witness stacklist k).`1 /\
         to_uint (nth witness heights{2} k) = 
-          (nth witness stacklist k).`2)).
+          (nth witness stacklist k).`2)); last first. auto => /> &1;do split.
++ admit.
++ by rewrite /stack_from_leaf pfl0 /= /#.
++ by move => h ?; rewrite /stack_from_leaf pfl0 /= /#.
++ move => leafs1 hs1 o1 st2 ??????H.
+  move : (H 0 _). admit.
+  rewrite /bs2block => ->.
+  rewrite /stack_from_leaf nth0_head /paths_from_leaf /=.
+  admit. 
+     
 admitted.
 
 (* Signature type is abused with two index copies because I need this to simulate
