@@ -47,9 +47,9 @@ module FakeRO : POracle = {
 }.
 
 op skrel(ask : skXMSSTW, sk : xmss_sk) =
-   ask.`1 = sk.`sk_prf /\
+   ask.`1 = sk.`sk_seed /\
    ask.`2.`1 = Index.insubd (to_uint sk.`idx) /\
-   ask.`2.`2 = sk.`sk_seed /\
+   ask.`2.`2 = sk.`sk_prf  /\
    ask.`2.`3 = sk.`pub_seed_sk
    (* ask.`2.`4 = ??? Why is the address in/not in the sk/pk? *)
    (* ??? = sk.`pk_root Why is the root not in/in the sk? *).
@@ -65,6 +65,19 @@ equiv kg_eq : XMSS_TW(FakeRO).keygen ~ XMSS_PRF.kg : ={arg} ==> pkrel res{1}.`1 
 proof.
 proc. inline {1} 2. inline {1} 5. inline {1} 8.
 inline {2} 5. inline {2} 10.
+swap {2} [5..7] -4; seq 3 3 : (NBytes.val ms{1} = sk_seed0{2} /\ NBytes.val ss{1} = sk_prf0{2} /\ NBytes.val ps{1} = pub_seed0{2}).
++ do 3!(rnd NBytes.val NBytes.insubd); auto => />. admit.
+sp 7 14;wp;conseq 
+    (: _ ==> (val_bt_trh (list2tree leafl0{1}) ps{1} (set_typeidx (XAddress.val witness) trhtype) h 0 =
+              DigestBlock.insubd (BytesToBits (NBytes.val (nth witness stack{2} 0))))).
++ by auto => /> &1 *;smt(NBytes.valK).
+while ( true
+  (* We can write a function that fully defines the stack based on the leaf index :
+    -> The size of the stack is the hamming weight of the index i
+    -> Suppose that hamming weight is k.
+    -> Then, let b_0 ... b_k denote the positions of the one bits in (
+       At position j in the stack we have the node of the hash tree with path ((rev (bits i))[0..h-b_j-1]++[0])). *)
+).
 admitted.
 
 (* Signature type is abused with two index copies because I need this to simulate
@@ -93,5 +106,5 @@ equiv ver_eq : XMSS_TW(FakeRO).verify ~ XMSS_PRF.verify : pkrel pk{1} pk{2} /\ =
 proof.
 proc.
 inline {1} 4. inline {1} 7. inline {1} 13.
-inline {2} 10.
+inline {2} 10. 
 admitted.
