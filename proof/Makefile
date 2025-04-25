@@ -26,8 +26,8 @@ extract: extraction/XMSS_IMPL.ec
 extraction/XMSS_IMPL.ec: ../ref-jasmin/xmss/xmss.jinc | common/
 	printf "from XMSS require \"params/params-xmssmt-sha2_20_2_256.jinc\"" > tmp
 	cat $< >> tmp
-	$(JPATH) $(JASMIN2EC) $(JASMIN2EC_FLAGS) tmp -o $@
-	-$(RM) tmp
+	$(JPATH) $(JASMIN2EC) $(JASMIN2EC_FLAGS) tmp -o $@ || rm tmp # remove the file even when jasmin2ec fails
+	rm tmp
 	mv extraction/WArray* common/
 	mv extraction/Array* common/
 

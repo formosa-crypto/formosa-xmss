@@ -339,9 +339,8 @@ seq 1 1 : (
   sig_ots{2} = EncodeWotsSignature sig_ots{1} /\ 
   auth{2} = EncodeAuthPath (to_list auth_path{1})
 ).
-    + inline {1} M(Syscall).__wots_sign_ M(Syscall)._wots_sign.
-      sp; wp.
-      exists * msg0{1}, seed0{1}, pub_seed{1}, addr1{1}, address{2}.
+    + sp; wp.
+      exists * m{1}, sk_seed{1}, pub_seed{1}, addr{1}, address{2}.
       elim * => P0 P1 P2 P3 P4.
       call {1} (wots_sign_seed_addr P0 P1 P2 P3 P4) => [/# |].
       skip => /> &1 &2 H0 <- <- H1 H2 *; rewrite !NBytes.valKd /= NBytes.insubdK /P // ?size_to_list ?n_val //= => *.

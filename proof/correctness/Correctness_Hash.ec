@@ -234,8 +234,7 @@ seq 1 1 :(
 seq 1 1 : (#pre /\ NBytes.val addr_bytes{2} = to_list addr_as_bytes{1}).
     + inline {1} M(Syscall).__set_key_and_mask.
       exists * addr{1}; elim * => P.
-      call {1} (addr_to_bytes_correctness P).
-      auto => /> &1 &2 ????? ->.
+      call {1} (addr_to_bytes_correctness P); auto => /> &1 &2 ????? ->.
       apply (eq_from_nth witness).
           * rewrite NBytes.valP size_flatten sumzE BIA.big_map /(\o) //=.
             rewrite -(StdBigop.Bigint.BIA.eq_big_seq (fun _ => 4)) /=; last first.
@@ -303,8 +302,7 @@ seq 1 1 : (
 ).
     + inline {1} M(Syscall).__set_key_and_mask.
       exists * addr{1}; elim * => P.
-      call {1} (addr_to_bytes_correctness P).
-      auto => /> &1 &2 ?????????->.
+      call {1} (addr_to_bytes_correctness P); auto => /> &1 &2 ?????????->.
       apply (eq_from_nth witness).
           - rewrite NBytes.valP size_flatten sumzE BIA.big_map /(\o) //=.
             rewrite -(StdBigop.Bigint.BIA.eq_big_seq (fun _ => 4)) /=; last first.
@@ -356,8 +354,7 @@ seq 1 1 : (
   sub addr{1} 0 7 = sub a1 0 7
 ).
     + exists * addr{1}; elim * => P.
-      call {1} (addr_to_bytes_correctness P).
-      auto => /> &1 &2 ????????? ->.
+      call {1} (addr_to_bytes_correctness P); auto => /> &1 &2 ????????? ->.
       apply (eq_from_nth witness).
           * rewrite NBytes.valP size_flatten sumzE BIA.big_map /(\o) //=.
             rewrite -(StdBigop.Bigint.BIA.eq_big_seq (fun _ => 4)) /=; last first.
@@ -965,21 +962,12 @@ seq 2 0 : (
           0 <= k && k < W64.max_uint =>
            ! (to_uint msg_ptr <= k && k < to_uint msg_ptr + 64) =>
                mem.[k] = Glob.mem{1}.[k]
-
 ).
-    + inline {1} 2; inline {1} 8.
-      sp; wp.
-      ecall {1} (p_write_buf_ptr Glob.mem{1} out0{1} offset1{1} in_00{1}).
-      skip => /> &hr H0 H1 H2 H3 H4 H5 H9*.
-      do split.
-       - smt().
-       - smt(@W64 pow2_64).
-       - move => ?? result mem0 H6*; split.
-            * rewrite -H5; apply (eq_from_nth witness); rewrite !size_load_buf // => j?.
-              by rewrite !nth_load_buf // H6 1,2:/#.
-            * move => k???. 
-              rewrite H9 1:/#; first by smt(@W64 pow2_64).
-              rewrite H6 // 1:/#.
+    + sp. exists * m_with_prefix_ptr{1}, (W64.of_int offset{1}), r{1}; elim * => P0 P1 P2.
+      ecall {1} (p_copy_nbytes_from_ptr_post Glob.mem{1} P1 P0 P2); auto => /> &1 ????Ha Hb* ; do split; 1,2: by smt(@W64 pow2_64). 
+      auto => /> H0 H1 memL H2 H3; split => [| /#]. 
+      apply (eq_from_nth witness); rewrite size_load_buf // ?size_to_list // => i?.
+      rewrite -Hb !nth_load_buf // /#.
 
 seq 2 0 : (
   #{/~forall (k : int),
@@ -994,23 +982,10 @@ seq 2 0 : (
     ! (to_uint msg_ptr <= k && k < to_uint msg_ptr + 96) =>
     mem.[k] = Glob.mem{1}.[k]
 ).
-    + inline {1} 2; inline {1} 8.
-      sp; wp.
-      ecall {1} (p_write_buf_ptr Glob.mem{1} out0{1} offset1{1} in_00{1}).
-      skip => /> &hr H0 H1 H2 H3 H4 H5 H6 H10*; do split.
-       - smt().
-       - smt(@W64 pow2_64).
-       - move => ?? result mem0 H7.
-         do split.
-             * apply (eq_from_nth witness); first by rewrite size_load_buf // size_to_list.
-               rewrite size_load_buf // => j?.
-               rewrite nth_load_buf // -H5 H7 1,2:/# nth_load_buf //.
-             * apply (eq_from_nth witness); first by rewrite size_load_buf // size_to_list.
-               rewrite size_load_buf // => j?.
-               rewrite nth_load_buf // -H6 H7; 1,2: by smt(@W64 pow2_64). 
-               rewrite nth_load_buf //.
-             * move => k???. 
-              rewrite H10 1,3:/#; smt(@W64 pow2_64).
+    + sp; exists * m_with_prefix_ptr{1}, (W64.of_int offset{1}), root{1}; elim * => P0 P1 P2.
+      ecall {1} (p_copy_nbytes_from_ptr_post Glob.mem{1} P1 P0 P2); auto => /> &1 ?????Ha Hb* ; do split; 1,2: by smt(@W64 pow2_64). 
+      auto => /> H0 H1 memL H2 H3; split => [| /#]; split; apply (eq_from_nth witness); rewrite size_load_buf // ?size_to_list // => i?;
+      [rewrite -Ha | rewrite -Hb]; rewrite !nth_load_buf // ?to_uintD /#.
 
 seq 0 0 : (
     #pre /\
@@ -1198,4 +1173,3 @@ case (96 <= j < 128) => [H_4 | H_5].
       rewrite nth_load_buf 1:/#.
 rewrite n_val /=  H11 ; smt(@W64 pow2_64).
 qed.
-

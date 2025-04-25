@@ -1,3 +1,4 @@
+from XMSS require "params/params-xmssmt-sha2_20_2_256.jinc"
 from XMSS require "wots/wots.jinc"
 
 export
@@ -32,20 +33,6 @@ fn gen_chain_inplace_jazz(
     out, addr = __gen_chain_inplace_(out, 0, steps, pub_seed, addr);
     return out, addr;
 }
-
-export
-fn gen_chain_jazz(
-    reg ptr u8[XMSS_N] out,
-    reg ptr u32[8] addr,
-    reg u64 in_ptr,
-    reg u32 start steps, 
-    reg ptr u8[XMSS_N] pub_seed
-) -> reg ptr u8[XMSS_N], reg ptr u32[8]
-{
-    out = _x_memcpy_u8u8p(out, in_ptr);
-    out, addr = __gen_chain_inplace_(out, start, steps, pub_seed, addr);
-    return out, addr;
-} 
 
 export
 fn wots_pkgen_jazz(

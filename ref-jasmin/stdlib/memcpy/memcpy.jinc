@@ -8,7 +8,7 @@ fn __memcpy_u8u8_offset(
 ) -> reg ptr u8[XMSS_WOTS_SIG_BYTES]
 {
     reg u64 i;
-    
+    /* TODO: Copiar 64bits de cada vez */
     i = 0;
     while (i < XMSS_N) {
         out[offset] = in[i];
@@ -29,9 +29,8 @@ fn __memcpy_u8u8p(
 {
     inline int i;
 
-    for i = 0 to XMSS_N {
-        out[i] = (u8) [in_ptr + i];
-    }
+    // 4 is XMSS_N/8 but having the 4 instead of XMSS_N/8 simplifies the proof
+    for i = 0 to 4 { out[u64 i] = (u64) [in_ptr + 8*i]; }
 
     return out;
 }
@@ -74,9 +73,8 @@ fn __memcpy_u8pu8p(
     reg u64 bytes
 )
 {
-    reg u64 i;
-
-    i = 0;
+    // TODO: Copy u64 and only then u8
+    reg u64 i = 0;
     
     while(i < bytes) {
         (u8) [out_ptr + out_offset] = (u8) [in_ptr + in_offset];
@@ -209,4 +207,59 @@ fn copy_nbytes (reg ptr u8[XMSS_N] out in) -> reg ptr u8[XMSS_N] {
         }
     }
     return out;
+}
+
+// Same as copy_nbytes but the unaligned accesses are on the left side of = 
+// This function is inlined because if is only used once
+inline
+fn copy_nbytes_unaligned_left (reg ptr u8[XMSS_N] out in) -> reg ptr u8[XMSS_N] {
+    // true for the implementation we are working on
+    if (XMSS_N == 32) {
+        // This has to use unaligned accesses. Otherwise we get a 
+        // "variable allocation: bad range alignment" error
+
+        out.[u64 0*8] = in[u64 0]; // copies in[0..7]
+        out.[u64 1*8] = in[u64 1]; // copies in[8..15]
+        out.[u64 2*8] = in[u64 2]; // copies in[16..23]
+        out.[u64 3*8] = in[u64 3]; // copies in[24..31]
+    } else {
+        reg u64 i = 0;
+        while (i < XMSS_N) {
+            out[i] = in[i];
+            i += 1;
+        }
+    }
+    return out;
+}
+
+// This is different than memcpy_u8pu8_n::_x_memcpy_u8pu8 because it uses a 
+// unaligned accesess. We use this when the compiler rejects the function
+// with the aligned access
+//
+// This function is inline because it is only used once
+inline
+fn copy_nbytes_from_ptr(
+    reg u64 out_ptr,
+    reg u64 offset,
+    reg ptr u8[XMSS_N] in
+) -> reg u64
+{
+    if (XMSS_N == 32 && XMSS_PADDING_LEN == 32) {
+        inline int i;
+
+        for i=0 to 4 { 
+            (u64) [out_ptr + offset + 8*i] = in.[u64 8*i]; 
+        }
+
+    } else {
+        reg u64 i = 0;
+        
+        while (i < XMSS_N) {
+            (u8) [out_ptr + offset] = in[i];
+            offset += 1;
+            i += 1;
+        }
+    }
+
+    return out_ptr;
 }
