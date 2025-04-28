@@ -294,7 +294,7 @@ fn __thash_h(
 
         i = 0;
         while (i < 8) { // (2 * XMSS_N) / 8 = 8
-            t = in[u64 i];
+            t = in.[u64 8*i];
             t ^= bitmask[u64 i];
             buf[u64 8 + i] = t; // (XMSS_PADDING_LEN + XMSS_N) / 8 = 64/8 = 8
             i += 1;
@@ -414,7 +414,7 @@ fn __thash_f(
         i = 0;
         while (i < 4) { /* XMSS_ N /8 = 32/8 = 4 */
             // buf[params->padding_len + params->n + i] = in[i] ^ bitmask[i];
-            t = out[u64 i];
+            t = out.[u64 8*i];
             t ^= bitmask[u64 i];
             buf[u64 8 + i] = t; // (XMSS_PADDING_LEN + XMSS_N) / 8 = 64/8 = 8
             i += 1;

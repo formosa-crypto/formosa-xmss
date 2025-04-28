@@ -21,8 +21,6 @@ fn __l_tree(
 
     reg ptr u8[XMSS_N] tmp;
 
-    inline int j;
-
     // unsigned int l = params->wots_len;
     l = XMSS_WOTS_LEN;
 
@@ -53,7 +51,7 @@ fn __l_tree(
             // thash_h(params, wots_pk + i*params->n, wots_pk + (i*2)*params->n, pub_seed, addr);
 
             // First we need to copy wots_pk + i*params->n and wots_pk + (i*2)*params->n to the respective buffers
-            #inline if (XMSS_N == 32) {
+            if (XMSS_N == 32) {
                 offset_in = i;
                 offset_in <<= 6; // should be faster than a multiplication
             } else {
@@ -72,7 +70,7 @@ fn __l_tree(
             // Copy the result back to wots_pk: same as memcpy(wots_pk + i*XMSS_N, buf0, XMSS_N)
             () = #unspill(i, wots_pk);
             
-            #inline if (XMSS_N == 32) {
+            if (XMSS_N == 32) {
                 offset_out = i;
                 offset_out <<= 5;
             } else {
@@ -97,7 +95,7 @@ fn __l_tree(
             // offset_in = (l - 1) * XMSS_N   ==> same as (l - 1) << 5
             () = #unspill(wots_pk);
             
-            #inline if (XMSS_N == 32) {
+            if (XMSS_N == 32) {
                 offset_in = l; offset_in -= 1; offset_in <<= 5;  // should be faster than a multiplication
                 offset_out = l; offset_out >>= 1; offset_out <<= 5; 
             } else {
@@ -202,14 +200,14 @@ fn __new_compute_root(
         // set the input buffer of thash 
         if (t == 0) {
             // node || auth[k]
-            #inline if (k == 0) { thash_in[0 : XMSS_N] = #copy(leaf); } else { thash_in[0 : XMSS_N] = #copy(node); }
+            if (k == 0) { thash_in[0 : XMSS_N] = #copy(leaf); } else { thash_in[0 : XMSS_N] = #copy(node); }
 
             () = #unspill(_auth_path_ptr);
             _ptr = _auth_path_ptr; _ptr += k * XMSS_N;
             thash_in[XMSS_N : XMSS_N] = _x_memcpy_u8u8p(thash_in[XMSS_N : XMSS_N], _ptr);
         
         } else {
-            #inline if (k == 0) { thash_in[XMSS_N : XMSS_N] = #copy(leaf); } else { thash_in[XMSS_N : XMSS_N] = #copy(node); }
+            if (k == 0) { thash_in[XMSS_N : XMSS_N] = #copy(leaf); } else { thash_in[XMSS_N : XMSS_N] = #copy(node); }
 
             () = #unspill(_auth_path_ptr);
             _ptr = _auth_path_ptr; _ptr += k * XMSS_N;
@@ -220,7 +218,7 @@ fn __new_compute_root(
 
         () = #unspill(pub_seed);
 
-        #inline if (k == XMSS_TREE_HEIGHT - 1) {
+        if (k == XMSS_TREE_HEIGHT - 1) {
             () = #unspill(root);
             root, addr = __thash_h_(root, thash_in, pub_seed, addr);
 
@@ -379,33 +377,22 @@ fn __xmssmt_core_sign_open(
     reg ptr u8[XMSS_PK_BYTES] pk
 ) -> reg u64
 {
+    reg u8 are_equal;
+    reg u32 i idx_leaf;
+    reg u64 idx t64 res bytes;
+
+    stack u64 sm_offset = 0;
+
     stack u8[XMSS_WOTS_SIG_BYTES] wots_pk;
     stack u8[XMSS_N] leaf root buf;
     stack u32[8] ots_addr ltree_addr node_addr;
 
-    reg ptr u8[XMSS_N] pub_root pub_seed;
-
-    reg u32 idx_leaf;
-    reg u64 idx;
-    reg u64 t64 offset_in offset_out bytes;
-    reg u8 are_equal;
-    reg u64 res;
-
-    reg u32 i;
-    stack u64 sm_offset;
-
-    sm_offset = 0;
-
-    // const unsigned char *pub_root = pk;
-    pub_root = pk[0 : XMSS_N];
+    reg ptr u8[XMSS_N] pub_root;
 
     // const unsigned char *pub_seed = pk + params->n;
-    pub_seed = pk[XMSS_N : XMSS_N];
+    reg ptr u8[XMSS_N] pub_seed = pk[XMSS_N : XMSS_N];
 
-    // unsigned long long idx = 0;
-    // idx = 0; // This assignemnt is dead
-
-    () = #spill(mlen_ptr, m_ptr, sm_ptr, pub_seed, pub_root);
+    () = #spill(mlen_ptr, m_ptr, sm_ptr, pub_seed, pk);
 
     // uint32_t ots_addr[8] = {0};
     // uint32_t ltree_addr[8] = {0};
@@ -422,7 +409,7 @@ fn __xmssmt_core_sign_open(
     node_addr = __set_type(node_addr, XMSS_ADDR_TYPE_HASHTREE);
 
     // *mlen = smlen - params->sig_bytes;
-    t64 = smlen; t64 -= XMSS_SIG_BYTES;
+    t64 = smlen; t64 -= XMSS_SIG_BYTES; // TODO: Reuse this value 
     (u64) [mlen_ptr] = t64;
 
     // idx = bytes_to_ull(sm, params->index_bytes);
@@ -430,10 +417,8 @@ fn __xmssmt_core_sign_open(
     () = #spill(idx);
 
     // memcpy(m + params->sig_bytes, sm + params->sig_bytes, *mlen);
-    offset_out = XMSS_SIG_BYTES; 
-    offset_in = XMSS_SIG_BYTES;
     #declassify bytes = (u64) [mlen_ptr];
-    _x__memcpy_u8pu8p(m_ptr, offset_out, sm_ptr, offset_in, bytes);
+    _x__memcpy_u8pu8p(m_ptr, XMSS_SIG_BYTES, sm_ptr, XMSS_SIG_BYTES, bytes);
 
     // hash_message(params, mhash, sm + params->index_bytes, pk, idx,
     //              m + params->sig_bytes - params->padding_len - 3*params->n,
@@ -489,7 +474,7 @@ fn __xmssmt_core_sign_open(
         () = #unspill(sm_ptr, pub_seed);
         t64 = sm_ptr; t64 += sm_offset;
         #declassify root = root;
-        wots_pk, ots_addr = __wots_pk_from_sig_(wots_pk, t64, root, pub_seed, ots_addr);
+        wots_pk, ots_addr = __wots_pk_from_sig(wots_pk, t64, root, pub_seed, ots_addr);
 
         // sm += params->wots_sig_bytes;
         t64 = sm_offset;
@@ -503,8 +488,8 @@ fn __xmssmt_core_sign_open(
         // l_tree(params, leaf, wots_pk, pub_seed, ltree_addr);
         () = #unspill(pub_seed);
         leaf, wots_pk, ltree_addr = __l_tree_(leaf, wots_pk, pub_seed, ltree_addr);
-
-        // // compute_root(params, root, leaf, idx_leaf, sm, pub_seed, node_addr);
+        
+        // compute_root(params, root, leaf, idx_leaf, sm, pub_seed, node_addr);
         () = #unspill(idx_leaf, sm_ptr, pub_seed);
         t64 = sm_ptr; t64 += sm_offset;
         #declassify idx_leaf = idx_leaf;
@@ -515,18 +500,16 @@ fn __xmssmt_core_sign_open(
         t64 = sm_offset;
         t64 += (XMSS_TREE_HEIGHT * XMSS_N);
         sm_offset = t64;
-        
+
         () = #unspill(i);
         i += 1;
     }
-    
-    // if (memcmp(root, pub_root, params->n)) { memset(m, 0, *mlen); *mlen = 0; return -1; }
-    () = #unspill(pub_root);
+
+    () = #unspill(pk);
+    pub_root = pk[0 : XMSS_N];
     #declassify are_equal = __memcmp(root, pub_root);
 
-
     () = #unspill(mlen_ptr, m_ptr, sm_ptr);
-
     res = __set_result(are_equal, m_ptr, mlen_ptr, sm_ptr, sm_offset);
 
     return res;

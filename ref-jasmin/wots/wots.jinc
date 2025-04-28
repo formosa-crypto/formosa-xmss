@@ -384,63 +384,28 @@ fn __wots_pk_from_sig(
 {
     stack u32[XMSS_WOTS_LEN] lengths;
 
-    reg u32 chain start steps;
+    reg u32 start steps;
     reg u64 t;
     inline int i;
 
     () = #spill(pub_seed, sig_ptr);
 
     // chain_lengths(params, lengths, msg);
-    lengths = __chain_lengths_(lengths, msg);
+    lengths = __chain_lengths(lengths, msg);
 
     for i=0 to XMSS_WOTS_LEN {
         // set_chain_addr(addr, i);
-        chain = i;
-        addr = __set_chain_addr(addr, chain);
+        addr = __set_chain_addr(addr, i);
 
         // gen_chain(params, pk + i * params->n, sig + i * params->n, lengths[i], params->wots_w - 1 - lengths[i], pub_seed, addr);
-        () = #unspill(pub_seed, sig_ptr);
         start = lengths[i];
         steps = XMSS_WOTS_W - 1; steps -= lengths[i];
         
+        () = #unspill(pub_seed, sig_ptr);
         t = sig_ptr; t += i*XMSS_N;
         pk[i*XMSS_N : XMSS_N] = _x_memcpy_u8u8p(pk[i*XMSS_N : XMSS_N], t);
-
-        pk[i*XMSS_N : XMSS_N], addr = __gen_chain_inplace_(pk[i*XMSS_N : XMSS_N], start, steps, pub_seed, addr);
+        pk[i*XMSS_N : XMSS_N], addr = _gen_chain_inplace(pk[i*XMSS_N : XMSS_N], start, steps, pub_seed, addr);
     }
-
-    return pk, addr;
-}
-
-fn _wots_pk_from_sig(
-    reg ptr u8[XMSS_WOTS_LEN * XMSS_N] pk,
-    reg u64 sig_ptr,
-    reg ptr u8[XMSS_N] msg pub_seed,
-    reg ptr u32[8] addr
-) -> reg ptr u8[XMSS_WOTS_LEN * XMSS_N], reg ptr u32[8]
-{
-    pk, addr = __wots_pk_from_sig(pk, sig_ptr, msg, pub_seed, addr);
-    return pk, addr;
-}
-
-inline
-fn __wots_pk_from_sig_(
-    reg ptr u8[XMSS_WOTS_LEN * XMSS_N] pk, 
-    reg u64 sig_ptr,
-    reg ptr u8[XMSS_N] msg pub_seed,
-    reg ptr u32[8] addr
-) -> reg ptr u8[XMSS_WOTS_LEN * XMSS_N], reg ptr u32[8]
-{
-    pk = pk;
-    sig_ptr = sig_ptr;
-    msg = msg;
-    pub_seed = pub_seed;
-    addr = addr;
-
-    pk, addr = __wots_pk_from_sig(pk, sig_ptr, msg, pub_seed, addr);
-
-    pk = pk;
-    addr = addr;
-
+    
     return pk, addr;
 }

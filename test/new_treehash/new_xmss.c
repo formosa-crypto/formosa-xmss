@@ -153,7 +153,12 @@ int xmssmt_core_seed_keypair_new(const xmss_params *params, unsigned char *pk, u
     memcpy(pk + params->n, sk + 3 * params->n, params->n);
 
 #ifdef TEST_TREEHASH
+    #ifdef DEBUG
+        puts("Calling treehash (jasmin)");
+    #endif
+
     treehash_jazz(pk, sk, pk + params->n, 0, params->tree_height, top_tree_addr);
+    // treehash_new(params, pk, sk, pk + params->n, 0, params->tree_height, top_tree_addr);
 #else
     treehash_new(params, pk, sk, pk + params->n, 0, params->tree_height, top_tree_addr);
 #endif
@@ -233,6 +238,10 @@ int xmssmt_core_sign_new(const xmss_params *params, unsigned char *sk, unsigned 
     sm += params->index_bytes + params->n;
 
 #ifdef TEST_TREESIG
+    #ifdef DEBUG
+        puts("Calling treesig (jasmin)");
+    #endif
+
     treesig_jazz(sm, ots_addr, mhash, sk, idx_leaf); /* The second argument is the addr because in
                                                         jasmin, mutable arrays must come first */
 #else

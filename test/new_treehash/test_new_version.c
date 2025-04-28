@@ -285,8 +285,8 @@ int main() {
             printf("TESTING IMPL: %s\n", impls[i]);
         }
 
-        // test_kg(&p);
-        // test_sign(&p);
+        test_kg(&p);
+        test_sign(&p);
         test_compute_root(&p);
 
         if (debug) {
