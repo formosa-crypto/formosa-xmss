@@ -4,26 +4,3 @@ EasyCrypt (security) version: r2025.02
 EasyCrypt (correctness) version: r2025.02
 
 Jasmin & ECLib: release-2025.02
-
-
-# Proofs
-
-- [X] Termination
-- [X] Bytes
-- [X] DistrUtils
-- [X] Correctness Address
-- [X] Correctness Bytes 
-- [ ] Correctness Hash 
-    - [ ] 2 admits missing
-- [X] Correctness Mem 
-- [X] Correctness Treehash Condition
-- [X] Correctness Wots
-- [X] GenChainProof
-- [X] KeyGenProof
-- [X] LTreeProof
-- [X] RootFromSig
-- [X] SignProof
-- [X] TreehashProof
-- [X] TreeSigAuthPathProof
-- [X] Utils
-- [X] Repr

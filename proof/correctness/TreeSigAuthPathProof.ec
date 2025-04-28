@@ -261,20 +261,12 @@ lemma treesig_correct (_m : W8.t Array32.t, _sk : xmss_sk, _idx_sig : W32.t)
     ].
 proof.
 rewrite /XMSS_WOTS_LEN /XMSS_N /XMSS_D /XMSS_FULL_HEIGHT => [#] n_val d_val h_val *.
-
 proc => /=.
-seq 6 0 : (
+seq 8 0 : (
   #pre /\
   to_list pub_seed{1} = sub sk{1} (XMSS_INDEX_BYTES + 3*32) 32 /\
   to_list sk_seed{1} = sub sk{1} XMSS_INDEX_BYTES 32
-).
-    + auto => /> *; split.
-         * apply (eq_from_nth witness); first by rewrite size_to_list size_sub.
-           rewrite size_to_list => i?.
-           rewrite get_to_list initiE // nth_sub //.
-         * apply (eq_from_nth witness); first by rewrite size_to_list size_sub.
-           rewrite size_to_list => i?.
-           by rewrite get_to_list initiE // nth_sub.
+); first  by auto => /> *; split; apply (eq_from_nth witness); rewrite size_to_list ?size_sub // => i?; rewrite get_to_list initiE // nth_sub.
 
 seq 1 0 : (
   #{/~addr{1} = a1}pre /\
@@ -346,61 +338,8 @@ seq 1 1 : (
       skip => /> &1 &2 H0 <- <- H1 H2 *; rewrite !NBytes.valKd /= NBytes.insubdK /P // ?size_to_list ?n_val //= => *.
       apply (eq_from_nth witness); rewrite !size_sub // => ??; rewrite !nth_sub //; smt(sub_k).
 
-seq 2 0 : (#pre /\ sub sig{1} 0 XMSS_WOTS_SIG_BYTES = to_list sig_ots{1}).
-    + while {1} 
-      (#pre /\ 
-       0 <= i{1} <= 2144 /\
-       forall (k : int), 0 <= k < i{1} => sig{1}.[k] = sig_ots{1}.[k])
-      (2144 - i{1}); last first.
-           * auto => /> &1 *; split => [/# | i sig].
-             split => [/# | ???].
-             have ->: i = 2144 by smt().
-             move => H. 
-             apply (eq_from_nth witness); first by rewrite size_to_list size_sub.
-             rewrite size_sub // => j?.
-             rewrite nth_sub //=. 
-             by apply H.
-      auto => /> &hr ?? H*; do split; 1,2,4: by smt().
-      move => k??.
-      rewrite get_setE 1:/#.
-      case (k = i{hr}) => [-> // | /#].
- 
-seq 3 0 : (#pre /\ sub sig{1} XMSS_WOTS_SIG_BYTES 320 = to_list auth_path{1}).
-    + while {1} 
-      (#pre /\ 
-       inc{1} = 320 /\
-       0 <= i{1} <= 320 /\
-       forall (k : int), 0 <= k < i{1} => sig{1}.[XMSS_WOTS_SIG_BYTES + k] = auth_path{1}.[k])
-      (320 - i{1}); last first.
-           * auto => /> &1 *; split => [/# | i sig].
-             split => [/# | ????].
-             have ->: i = 320 by smt().
-             move => H. 
-             apply (eq_from_nth witness); first by rewrite size_to_list size_sub.
-             rewrite size_sub // => j?.
-             rewrite nth_sub //=. 
-             by apply H.
-      auto => /> &hr ? H *; do split; 2,3,5: by smt().
-           * apply (eq_from_nth witness); first by rewrite size_to_list size_sub.
-             rewrite size_sub // /XMSS_WOTS_SIG_BYTES => j?.
-             by rewrite nth_sub // -H get_setE 1:/# ifF 1:/# /= nth_sub 1:/#.
-           * move => k??.
-             rewrite get_setE 1:/#.
-             case (k = i{hr}) => [-> // | ?].
-             rewrite ifF /#.
-
-auto => /> &1 ? H0 H1 *.
-rewrite /EncodeReducedSignature.
-rewrite /XMSS_WOTS_SIG_BYTES in H0.
-rewrite /XMSS_WOTS_SIG_BYTES in H1.
-congr.
-        + rewrite encodewotssig_list_array; congr.
-          rewrite -H0.
-          apply (eq_from_nth witness); first by rewrite size_sub // size_sub_list /#.
-          rewrite size_sub // => j?.
-          by rewrite nth_sub // /sub_list nth_mkseq /#.
-        + congr.
-          apply (eq_from_nth witness); first by rewrite size_to_list size_sub_list /#.
-          rewrite size_to_list => j?.
-          by rewrite -H1 nth_sub // /sub_list nth_mkseq /#.
+auto => /> &1 H; rewrite /EncodeReducedSignature ?encodewotssig_list_array; do 2! congr; 
+apply (eq_from_nth witness); 1,3: (by rewrite size_to_list size_sub_list /#); 
+rewrite size_to_list => i?; rewrite get_to_list nth_sub_list 1:/# /= initiE 1:/# /=;
+[rewrite ifF 1:/# initiE | rewrite ifT] => /#.
 qed.

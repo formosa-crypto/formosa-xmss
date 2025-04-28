@@ -603,29 +603,29 @@ seq 1 8 : (
     forall (k : int), 0 <= k < size msg{2} => 0 <= nth witness msg{2} k < w
 ).
 (* A prova do chain lengths comeca aqui *)
-    + inline M(Syscall).__chain_lengths_ M(Syscall)._chain_lengths M(Syscall).__chain_lengths.
+    + inline M(Syscall).__chain_lengths.
       conseq /> => [/# |]; sp.
   
       seq 1 1 : (
-            #{/~t0{1} = (init (fun (i0 : int) => lengths2{1}.[0 + i0]))%Array64}pre /\ 
+            #{/~t0{1} = (init (fun (i0 : int) => lengths0{1}.[0 + i0]))%Array64}pre /\ 
             map W32.to_uint (to_list t0{1}) = msg{2} /\
             size msg{2} = 64 /\
             forall (k : int), 0 <= k < 64 => 0 <= nth witness msg{2} k < w
       ).
-        * exists * msg2{1}; elim * => P0.
+        * exists * msg0{1}; elim * => P0.
           call {1} (base_w_results_64 P0) => [/# |].
           auto => /> *.
           rewrite size_map size_to_list; split => // k??.
           rewrite (nth_map witness); first by rewrite size_to_list.
           rewrite get_to_list /#.       
 
-      seq 1 0 : (#{/~lengths2{1} = lengths1{1}}pre /\ sub lengths2{1} 0 64 = to_list t0{1}).
+      seq 1 0 : (#{/~lengths0{1} = lengths{1}}pre /\ sub lengths0{1} 0 64 = to_list t0{1}).
         * auto => /> &1 &2 *.
           apply (eq_from_nth witness); first by rewrite size_sub // size_to_list.
           rewrite size_sub // => j?.
           by rewrite nth_sub // initiE 1:/# /= ifT. 
           
-      seq 1 0 : (#{/~t1{1} = witness}pre /\ to_list t1{1} = sub lengths2{1} 64 3).
+      seq 1 0 : (#{/~t1{1} = witness}pre /\ to_list t1{1} = sub lengths0{1} 64 3).
         * auto => /> *.
           apply (eq_from_nth witness); first by rewrite size_to_list size_sub.
           rewrite size_to_list => j?.
@@ -646,7 +646,7 @@ seq 1 8 : (
           split.
             - move => k??. 
               rewrite !initiE //=. 
-              have ->: to_uint lengths2{1}.[k] = nth witness (map W32.to_uint (to_list t0{1})) k. 
+              have ->: to_uint lengths0{1}.[k] = nth witness (map W32.to_uint (to_list t0{1})) k. 
                + rewrite -H8 (nth_map witness); first by rewrite size_sub.
                  by rewrite nth_sub.
               smt().
@@ -685,8 +685,8 @@ seq 1 8 : (
           ecall {1} (ull_to_bytes2_post P0 P1). 
           auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 ? result ->.
           rewrite toByte_32_64 //; do congr.
-          smt(@W32 @W64).
-
+          rewrite wordP => w?.
+          by rewrite !get_to_uint (: 0 <= w < 64) //= to_uint_zeroextu64 H12.             
 
      seq 1 1 : (
           #{/~csum_base_w{1} = t1{1}}pre /\ 
@@ -762,8 +762,8 @@ do split; 1,3: by smt().
    have ->: pkL.[k] = nth witness (sub pkL 0 (32 * 67)) k by rewrite nth_sub /#.
    by rewrite H8 /sub_list nth_mkseq.
 (* === last subgoal of while ends here === *)
-
-seq 2 1 : (#pre /\ sub addr{1} 0 6 = sub address{2} 0 6).
+ 
+seq 1 1 : (#pre /\ sub addr{1} 0 6 = sub address{2} 0 6).
 - inline {1}; auto => /> &1 &2*.
   rewrite /set_chain_addr.
   do split; (apply (eq_from_nth witness); rewrite !size_sub // => j?; rewrite !nth_sub //= !get_setE //; case (j = 5) => [/# |]; smt(sub_k)).
@@ -779,10 +779,10 @@ seq 2 0 : (#pre /\ to_uint steps{1} = w - 1 - msg_i{2}).
   rewrite to_uintB; last by rewrite of_uintK /=.
   rewrite uleE of_uintK /=. 
   have ->: to_uint lengths{1}.[i{2}] = nth witness (map W32.to_uint (to_list lengths{1})) i{2}; last by smt().
-  rewrite (nth_map witness); by rewrite ?size_to_list ?get_to_list. (* O primeiro subgoal usa o size to list e o segundo usa o get to list *)
+  rewrite (nth_map witness); by rewrite ?size_to_list ?get_to_list.
 
 seq 2 0 : (#pre /\ to_uint t{1} = to_uint sig_ptr{1} + 32 * i{1}); first by auto => /> *; rewrite to_uintD of_uintK /#.
-
+ 
 seq 1 1 : (#pre /\ to_list aux{1} = NBytes.val sig_i{2}).
 - ecall {1} (p_memcpy_ptr_correct t{1}).
   auto => /> &1 &2 *; do split; 1..3: by smt().
@@ -799,10 +799,8 @@ seq 1 1 : (#pre /\ to_list aux{1} = NBytes.val sig_i{2}).
   rewrite /= nth_take // 1:/# nth_drop 1,2:/# get_to_list initiE 1:/# /=.
   congr => /#.
 
-conseq />.
-inline {1} M(Syscall).__gen_chain_inplace_ M(Syscall)._gen_chain_inplace. 
-sp; wp.
-exists * out0{1}, start1{1}, steps1{1}, pub_seed1{1}, addr1{1}, address{2}.
+conseq />; inline {1} M(Syscall)._gen_chain_inplace; sp; wp.
+exists * out{1}, start0{1}, steps0{1}, pub_seed0{1}, addr0{1}, address{2}.
 elim * => P0 P1 P2 P3 P4 P5; auto.
 call (gen_chain_correct P0 P1 P2 P3 P4 P5) => [/# |].
 auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16.

@@ -7,8 +7,10 @@ CFLAGS   ?= -Wall -g -O3 -Wextra -Wpedantic
 
 JASMIN   ?= jasminc
 JAZZCT   ?= jasmin-ct
+JAZZCTFLAGS ?= --infer
 JFLAGS   ?= ${JADDFLAGS}
 JINCLUDE ?= -I XMSS:../../ref-jasmin/
+JASMINPATH := JASMINPATH="XMSS=../../ref-jasmin/:Stdlib=../../ref-jasmin/stdlib"
 
 # --------------------------------------------------------------------------------------------------
 
@@ -20,8 +22,10 @@ SOURCE_FILES := test_hash_address.c ../../submodules/xmss-reference/hash_address
 default: bin/test_hash_address
 run: bin/test_hash_address.out
 
-asm_files: bin/test_hash_address.s
-ct:  bin/test_hash_address.check_ct
+asm: bin/test_hash_address.s
+
+checkCT: test_hash_address.jazz
+	$(JASMINPATH) $(JAZZCT) $(JAZZCTFLAGS) $< >/dev/null 2>&1 || { echo "Jasmin CT check failed"; exit 1; }
 
 # --------------------------------------------------------------------------------------------------
 

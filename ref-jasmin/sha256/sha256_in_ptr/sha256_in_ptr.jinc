@@ -9,7 +9,7 @@ fn __store_ref_array(reg ptr u8[32] out, stack u32[8] H) -> reg ptr u8[32] {
   for i=0 to 8 { 
     v = H[i];
     v = #BSWAP_32(v); 
-    out[u32 i] = v;
+    out.[u32 4*i] = v;
   }
   return out;
 }

@@ -1,7 +1,5 @@
 name: CI (compile jasmin code & run testes & run XMSS/XMSS^MT equivalence proof & run correctness proof)
 
-# TODO: Check CT
-
 on:
   push:
     branches:
@@ -44,14 +42,11 @@ jobs:
       matrix:
         test_dir:
           - test/hash_address
+          - test/sha256
           - test/hash
           - test/wots
-          # - test/treehash
-          # - test/xmss_commons
-          # - test/xmss_core
-          # - test/xmss_core
-          # - test/xmss
-
+          - test/treehash
+          - test/xmss
     steps:
       - name: Check out code
         uses: actions/checkout@v4
@@ -68,7 +63,7 @@ jobs:
           gunzip -c image.tar.gz | docker load
 
       - name: Compile ${{ matrix.test_dir }}
-        run: docker run --rm jasmin-xmss:${{ github.sha }} make -C ${{ matrix.test_dir }}
+        run: docker run --rm jasmin-xmss:${{ github.sha }} make -C ${{ matrix.test_dir }} asm
 
   run_tests:
     needs: build_image
@@ -77,11 +72,11 @@ jobs:
       matrix:
         test_dir:
           - test/hash_address
+          - test/sha256
           - test/hash
           - test/wots
-          # - test/treehash
-          # - test/xmss_commons
-
+          - test/treehash
+          - test/xmss
     steps:
       - name: Check out code
         uses: actions/checkout@v4
@@ -144,8 +139,11 @@ jobs:
     strategy:
       matrix:
         test_dir:
+          - test/hash_address
           - test/hash
           - test/wots
+          - test/treehash
+          - test/xmss
     steps:
       - name: Check out code
         uses: actions/checkout@v4

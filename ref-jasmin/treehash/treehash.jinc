@@ -18,7 +18,7 @@ param int FALSE = 0;
 // Neste caso, testo se offset >=2 e so nesse caso, e que se avalia o segundo lado 
 // da expressao. Caso contrartio, retorna se o valor de #SETcc(offset >= 2) = Zero
 //
-// Estou a assumir que o valor de offset e publico (confirmar isto mas acho que sim)
+// Isto assume q valor de offset e publico (neste caso e')
 inline
 fn __treehash_cond(reg ptr u32[XMSS_TREE_HEIGHT + 1] heights, 
                    #public reg u64 offset) -> reg u8 {
@@ -85,8 +85,7 @@ fn __treehash(
     target_height = target_height; // move to rdx register
 
     i = 0;
-    upper_bound = 1;
-    upper_bound <<= (target_height & 31);
+    upper_bound = 1; upper_bound <<= (target_height & 31);
 
     while (i < upper_bound) {
         () = #spill(i, upper_bound);
@@ -148,6 +147,7 @@ fn __treehash(
             } else {
 	            t64 *= XMSS_N;
             }
+            () = #spill(t64);
 
             buf2, _ = memcpy_u8u8_2_treehash::__memcpy_u8u8_2(buf2, _stack, t64, 2 * XMSS_N);
 
@@ -157,13 +157,7 @@ fn __treehash(
             // We now need to copy the result to stack + (offset-2)*params->n
             () = #unspill(offset);
             
-            // FIXME: We can use the old value of t64
-            t64 = offset; t64 -= 2; 
-            #inline if (XMSS_N == 32) {
-	            t64 <<= 5;
-            } else {
-	            t64 *= XMSS_N;
-            }
+            () = #unspill(t64);
 
             _stack = memcpy_u8u8_3_treehash::__memcpy_u8u8_3(_stack, buf, t64, XMSS_N);
 
@@ -180,7 +174,21 @@ fn __treehash(
     }
 
     () = #unspill(root);
-    for j=0 to XMSS_N { root[j] = _stack[j]; }
+
+    // XMSS_N is always a multiple of 8 (n \in {24, 32, 64}) so we can copy 64 bits at a time (32/4 = 8)
+    // This is stupid because both branches are the same, but 
+    // having 4 instead of XMSS_N/8 is simplifies the proof
+    // TODO: Fix this later
+    if XMSS_N % 8 == 0 {
+        for j=0 to XMSS_N/8 {
+            root.[u64 8*j] = _stack[u64 j];
+        }
+    } else {
+        for j=0 to XMSS_N {
+            root[j] = _stack[j];
+        }
+    }
+
 
     return root;
 }
@@ -229,8 +237,7 @@ fn __treehash_(
 inline 
 fn __build_auth_path(
     reg ptr u8[XMSS_TREE_HEIGHT * XMSS_N] auth_path,
-    reg ptr u8[XMSS_N] sk_seed,
-    reg ptr u8[XMSS_N] pub_seed,
+    reg ptr u8[XMSS_N] sk_seed pub_seed,
     reg u32 i,
     reg ptr u32[8] addr
 ) -> reg ptr u8[XMSS_TREE_HEIGHT * XMSS_N]
@@ -245,9 +252,7 @@ fn __build_auth_path(
         () = #unspill(i);
 
         // k = ((i >> j) ^ 1) << j;
-        k = i >> j; 
-        k ^= 1; 
-        k <<= j;
+        k = i >> j; k ^= 1; k <<= j;
 
         () = #unspill(auth_path);
         node = auth_path[j*XMSS_N:XMSS_N];
@@ -283,21 +288,20 @@ fn __tree_sig(
 ) -> reg ptr u8[XMSS_WOTS_SIG_BYTES + (XMSS_TREE_HEIGHT * XMSS_N)],
      reg ptr u32[8] 
 {
-    stack u8[XMSS_WOTS_SIG_BYTES] sig_ots;
-    stack u8[XMSS_TREE_HEIGHT * XMSS_N] auth_path;
+    reg ptr u8[XMSS_WOTS_SIG_BYTES] sig_ots = sig[0 : XMSS_WOTS_SIG_BYTES];
+    reg ptr u8[XMSS_TREE_HEIGHT * XMSS_N] auth_path = sig[XMSS_WOTS_SIG_BYTES : XMSS_TREE_HEIGHT * XMSS_N];
 
-    stack u8[XMSS_N] pub_seed = #copy_8(sk[XMSS_INDEX_BYTES + 3 * XMSS_N : XMSS_N]);
-    stack u8[XMSS_N] sk_seed  = #copy_8(sk[XMSS_INDEX_BYTES : XMSS_N]);
-
-    inline int i;
+    reg ptr u8[XMSS_N] pub_seed = sk[XMSS_INDEX_BYTES + 3 * XMSS_N : XMSS_N];
+    reg ptr u8[XMSS_N] sk_seed  = sk[XMSS_INDEX_BYTES : XMSS_N];
 
     addr[4] = 0;
 
-    () = #spill(sig, addr, idx_sig, M);
+    () = #spill(sig, addr, idx_sig, M, pub_seed, sk_seed, sig_ots);
 
     // auth = buildAuth(SK, idx_sig, ADRS);
     auth_path = __build_auth_path(auth_path, sk_seed, pub_seed, idx_sig, addr);
 
+    () = #spill(auth_path);
     () = #unspill(addr, idx_sig);
 
     // ADRS.setType(0);   // Type = OTS hash address
@@ -307,15 +311,15 @@ fn __tree_sig(
     addr = __set_ots_addr(addr, idx_sig);
 
     // sig_ots = WOTS_sign(getWOTS_SK(SK, idx_sig), M', getSEED(SK), ADRS);
-    () = #unspill(M);
+    () = #unspill(M, pub_seed, sk_seed, sig_ots);
     sig_ots, addr = __wots_sign(sig_ots, M, sk_seed, pub_seed, addr);
 
     // Sig = sig_ots || auth;
-    () = #unspill(sig);
+    () = #unspill(sig, auth_path);
 
-    for i=0 to XMSS_WOTS_SIG_BYTES { sig[i] = sig_ots[i]; }
-    for i=0 to XMSS_TREE_HEIGHT * XMSS_N { sig[(XMSS_WOTS_LEN * XMSS_N) + i] = auth_path[i]; }
-    
+    sig[0 : XMSS_WOTS_SIG_BYTES] = sig_ots;
+    sig[XMSS_WOTS_SIG_BYTES : (XMSS_TREE_HEIGHT * XMSS_N)] = auth_path;
+
     return sig, addr;
 }
 
