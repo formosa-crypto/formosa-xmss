@@ -94,6 +94,21 @@ move => H.
 rewrite /lpathl size_rev BS2Int.size_int2bs; smt(h_g0).   
 qed.
 
+lemma count_eq_nth ['a] (p : 'a -> bool) :
+   forall (s : int) (s1 s2 : 'a list), 
+   size s1 = s =>   size s2 = s =>
+   (forall k, 0 <= k < s =>
+      p (nth witness s1 k) = p (nth witness s2 k)) =>
+        count p s1 = count p s2.
+proof. 
+move => s.
+elim /natind:s; 1: by smt(size_ge0 count_size).
+move => n nge0 Hi s1 s2 Hs1 Hs2 Hp.
+rewrite -(head_behead  s1 witness) 1:/# -(head_behead  s2 witness) 1:/# /=.
+congr; 1: by smt(mem_head).
+by apply (Hi (behead s1) (behead s2));smt(size_behead nth_behead).
+qed.
+
 lemma pfl_size (lidx : int) :
    lidx <= 2^h =>
    size (paths_from_leaf lidx) = hw (lpath lidx).
@@ -107,7 +122,11 @@ case (lidx = 2 ^ h) => /= Hh.
 rewrite /hw.
 have -> : h = size (lpath lidx) by smt(size_lpath).
 rewrite pmap_map size_map size_filter.
-admit.
+rewrite count_map /preim /= /predC1 /=.
+have -> : count (pred1 true) (lpath lidx) =
+    count (pred1 true) (unzip1  (zip (lpath lidx) (iota_ 0 (size (lpath lidx))))).
++ by congr;rewrite unzip1_zip;1:smt(size_iota size_ge0). 
+by rewrite count_map;apply eq_in_count => x memx /= /#.
 qed.
 
 (* The list of leaves that are under a node given by a path *)
@@ -122,9 +141,11 @@ lemma lfp_leaf lidx :
   lidx < 2^h =>
   (leaves_from_path (lpath lidx)) = [lidx].
 move => Hh.
-rewrite /leaves_from_path ifF /=. admit.
+rewrite /leaves_from_path ifF /=;1: 
+   by rewrite /lpath size_rev BS2Int.size_int2bs /=; 
+      smt(StdOrder.IntOrder.expr_ge0 h_g0).
 rewrite size_lpath 1:/# /= ifF 1:/# /= iota1;congr.
-admit. 
+admit. (* annoying *)
 qed.
 
 (* The leaf node corresponding to a leaf path
@@ -163,8 +184,14 @@ case (lidx = 2 ^ h) => H /=.
   rewrite nseq0 /= rev_cat rev1 count_cat /pred1 /= /b2i /=.
   rewrite (eq_in_count _ pred0);1: by move => x;rewrite rev_nseq mem_nseq /#.
   by rewrite count_pred0 /=.
-rewrite pmap_map size_map size_filter /hw /predC1 /= count_map /preim /=.
-admit.
+rewrite /hw.
+have -> : h = size (lpath lidx) by smt(size_lpath).
+rewrite pmap_map size_map size_filter.
+rewrite count_map /preim /= /predC1 /=.
+have -> : count (pred1 true) (lpath lidx) =
+    count (pred1 true) (unzip1  (zip (lpath lidx) (iota_ 0 (size (lpath lidx))))).
++ by congr;rewrite unzip1_zip;1:smt(size_iota size_ge0). 
+by rewrite count_map;apply eq_in_count => x memx /= /#.
 qed.
 
 (* The list of leaves that fall under the first node in the stack when one starts to process leaf lidx
