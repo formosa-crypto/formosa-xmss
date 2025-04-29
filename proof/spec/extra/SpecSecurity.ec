@@ -374,13 +374,22 @@ do split.
     case (_hw < _hw1) => /= *.
     + (* hw increased by 1, so we have to show that the previous stack plus
          the new leaf is really the stack that we will end up with *)
-      admit.
+      rewrite /stack_from_leaf !(nth_map witness) /=;1:by rewrite pfl_size; smt(sfl_size).
+      rewrite !nth_put. admit.  admit. (* need to add size stack{2} and heights{2} to inv *)
+      case(to_uint offset{2} = k).
+      + admit. (* this is the leaf just added *)
+      + admit. (* this is the previous stack *)
     + (* reductions will be needed, but we haven't started
          so we have the old stack in the first positions and a
          new leaf at the next position *)
-      rewrite !nth_cat.
+      rewrite !nth_cat. 
       case (k < size _olds) => *;1: smt(sfl_size nth_put).
-      rewrite !ifT.   admit. (* to do *)
+      rewrite !ifT.  
+      + have : size (stack_increment _lidx ss{1} ps{1} ad{1} (to_uint offset{2} + 1 - hw (lpath _lidx) - 1)) = _hw+1; last by smt().
+        have -> : (to_uint offset{2} + 1 - hw (lpath _lidx) - 1) = 0 by smt(sfl_size pfl_size). 
+        rewrite /stack_increment /= ifF 1:/#; rewrite size_cat /=; congr.
+        have -> : (hw (lpath (_lidx + 1)) + (hw (lpath _lidx) - hw (lpath (_lidx + 1)))) = (hw (lpath _lidx)) by ring.
+        by  smt(take_size sfl_size).
       rewrite !size_take /=; 1:smt(h_g0).
       rewrite !size_lpath /=;1:smt().
       rewrite !ifF /=;1..3:smt().
@@ -397,7 +406,8 @@ do split.
       done.
 
 move => hs o2 s2;do split => H H0 H1 H2 H3.
-+ rewrite /(\ule) /= H1.  admit.  (* ?!? something about termination condition? *)
++ rewrite /(\ule) /= H1.
+  admit.  (* ?!? something about termination condition? *)
 + do split.
   + smt(size_rcons).
   + smt().
