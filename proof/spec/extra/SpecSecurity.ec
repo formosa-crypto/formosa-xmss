@@ -62,16 +62,14 @@ op pkrel(apk : pkXMSSTW, pk : xmss_pk) =
    (* ??? = pk.`pk_oid I guess abstract proofs fon't care about oid *).
 
 (* Notes:
-- We have a full binary tree with height h+1, so 2^h nodes.
-  MM: Shouldn't it be:
-    height h -> 2^h leaves, 2^h - 1 non-leaf nodes -> 2^(h + 1) - 1 nodes
+- We have a full binary tree with  h+1 levels (height = h), so 2^h nodes.
 - Levels are indexed from bottom to top, leaves at level 0, root at level h
 - The length of a full path to a leaf is h
 - The length of the path to a node at level l \in [0..h] is h - l (root path is [])
 - The path to a leaf can be extracted from the bit representation of its index:
     the i-th leaf can be found at path rev (bits h i)
 - throughout we will need the corner case of the leaf with index 2^h when
-  we exit the loop, where everything works in a tree of height h+2
+  we exit the loop, where everything works in a tree of height h+1
 *)
 
 (* The hamming weight of a path determines the size of the stack *)
@@ -79,6 +77,17 @@ op hw(p : bool list) = count (pred1 true) p.
 
 (* The path of a leaf; we need the corner case of leaf 2^h for exiting the loop *)
 op lpath(lidx : int) = rev (BS2Int.int2bs (if lidx = 2^h then (h+1) else h) lidx).
+
+(*
+                     +
+               +           +
+           +      +     +     +
+          0 1    2 3   4 5   6 7 
+
+path to 5 = 1 0 1 => stack contains [0] and [1 0 0]
+path to 6 = 1 1 0 => stack contains [0] and [1 0]
+
+*)
 
 (* The paths of all the sibling nodes of 1-bit choices in a leaf path *)
 op paths_from_leaf(lidx : int) : bool list list =
@@ -95,6 +104,7 @@ move => H.
 rewrite /lpathl size_rev BS2Int.size_int2bs; smt(h_g0).
 qed.
 
+(* Move to List *)
 lemma count_eq_nth ['a] (p : 'a -> bool) :
    forall (s : int) (s1 s2 : 'a list), 
    size s1 = s =>   size s2 = s =>
@@ -220,6 +230,8 @@ qed.
    The loop performs as many iterations as needed to reduce the
    hamming weight of lidx to hamming weight of lidx+1, if any. *)
 op stack_increment(lidx : int,ss ps : Params.nbytes, ad : SA.adrs, i : int) =
+  (* the stack configuration is the state encountered for lidx
+     with the extra node computed for lidx at the end *)
   let hwi = hw (lpath lidx) in
   let hwi1 = hw (lpath (lidx + 1)) in
   if hwi < hwi1
