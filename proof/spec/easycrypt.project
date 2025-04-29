@@ -8,3 +8,4 @@ provers = Alt-Ergo@2.5.2
 rdirs   = .
 idirs   = ../common
 idirs   = ../security/acai
+idirs   = Jasmin:../eclib
