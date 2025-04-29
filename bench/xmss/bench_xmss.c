@@ -9,7 +9,7 @@
 #include "xmss.h"
 
 #ifndef DATA_POINTS
-#define DATA_POINTS 10000
+#define DATA_POINTS 100
 #endif
 
 #ifndef IMPL
