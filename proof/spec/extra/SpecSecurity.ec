@@ -13,6 +13,25 @@ op BytesToBits (bytes : W8.t list) : bool list = flatten (map W8.w2bits bytes).
 op W64toBytes_ext (x : W64.t) (l : int) : W8.t list =
   rev (mkseq (fun i => nth W8.zero (to_list (W8u8.unpack8 x)) i) l).
 
+
+(*
+  Instantiate properly, using following correspondences
+  (gives equivalence between hash function computation):
+  Hash.prf = prf_sk
+  Hash._F = f
+  Hash.rand_hash = trh
+  LTree.ltree = pkco
+
+  -->
+
+  thfc i ps ad x
+  =
+  if i = n then Hash._F
+  else if i = n * 2 then Hash.rand_hash
+  else if i = n * len then Ltree.ltree
+  else witness
+*)
+
 (* Get checksum from XMSS_Checksum and then plug those results
    here *)
 clone import XMSS_TW as XMSS_ABSTRACT with
@@ -24,7 +43,7 @@ clone import XMSS_TW as XMSS_ABSTRACT with
    op FLXMSSTW.SA.WTW.dpseed <- (dmap ((dlist W8.dword n)) NBytes.insubd),
    type FLXMSSTW.SA.WTW.sseed <- nbytes,
    op FLXMSSTW.SA.WTW.dsseed <- (dmap ((dlist W8.dword n)) NBytes.insubd),
-   type FLXMSSTW.SA.WTW.adrs <- adrs,
+   type FLXMSSTW.SA.HAX.Adrs.sT <- adrs,
    op FLXMSSTW.n <- n,
    op FLXMSSTW.h <- h,
    op mkg = (fun (ms : nbytes) (i : FLXMSSTW.SA.index) =>
@@ -297,7 +316,7 @@ while (size leafl0{1} = i{2} /\ 0 <= i{2} <= 2^h /\ t{2} = h
           (nth witness stacklist k).`2)); last first.
 + auto => /> &1;do split.
   + by apply StdOrder.IntOrder.expr_ge0 => //.
-  + by rewrite /leaf_range iota0 /=.
+  + by rewrite /leaf_range /range iota0 /=.
   + by rewrite /stack_from_leaf pfl0 /= /#.
   + by move => h ?; rewrite /stack_from_leaf pfl0 /= /#.
   + move => leafs1 hs1 o1 st2 ????Hl??H.
@@ -455,7 +474,49 @@ admitted.
 equiv ver_eq : XMSS_TW(FakeRO).verify ~ XMSS_PRF.verify : pkrel pk{1} pk{2} /\ ={m} /\ sigrel sig{1} s{2} ==>
    ={res}.
 proof.
-proc.
-inline {1} 4. inline {1} 7. inline {1} 13.
-inline {2} 10.
+proc=> /=.
+inline{1} 3.
+sp.
+(*
+- inline *; auto=> &1 &2 |> *.
+  rewrite DigestBlock.insubdK.
+  - admit.
+  do! split.
+  - admit.
+  - do! congr.
+    - smt().                      (* FIXME: hint lemmas *)
+    - admit.                      (* Where FakeRO is initialezd? *)
+    - rewrite NBytes.insubdK.
+      - admit.                    (* FIXME: hint lemmas *)
+      - admit.                    (* Why n should be equal to 4 *)
+*)
+inline {1} 1.
+inline {1} 4.
+wp.
+sp.
+inline {1} 1.
+inline {2} 1.
+sp.
+seq 2 6 : (   #pre
+           /\ map DigestBlock.val (DBLL.val pkWOTS0{1}) =
+              map (BytesToBits \o NBytes.val) (LenNBytes.val pk_ots{2})
+           /\ DigestBlock.val leaf{1} = (BytesToBits \o NBytes.val) nodes0{2}
+           /\ set_typeidx ad0{1} trhtype = address0{2}).
++ admit.
+wp -1 -1.
+conseq (_: true ==> root0{1} = bs2block nodes0{2}) => />.
++ move=> &1 &2 _ + * => ->.
+  rewrite /bs2block.
+  + admit.
+while{2} (k{2} <= h) (h - k{2}).
++ admit.
+(* Instatiate pr*)
+
+(* FIXME: fixpoint pretty-printing *)
+
+(* LTree -> write a functional spec *)
+
+(* Why the RHS is using reals?? *)
+(* Why having a distinction between parent index calculation *)
+
 admitted.
