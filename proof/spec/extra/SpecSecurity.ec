@@ -1,4 +1,4 @@
-require import AllCore List Distr DList.
+require import AllCore IntDiv List Distr DList StdOrder.
 require import BitEncoding.
 (*---*) import BitChunking.
 
@@ -7,6 +7,8 @@ from Jasmin require import JModel.
 require (****) XMSS_TW.
 require import XMSS_PRF.
 import Params Types XMSS_Types Hash WOTS Address LTree BaseW.
+
+import IntOrder.
 
 op BitsToBytes (bits : bool list) : W8.t list = map W8.bits2w (chunk W8.size bits).
 op BytesToBits (bytes : W8.t list) : bool list = flatten (map W8.w2bits bytes).
@@ -118,16 +120,19 @@ op paths_from_leaf (lidx : int) : path list =
   pmap (fun i =>
     let p = take i (lpath lidx) in
     if   last false p
-    then Some (take (i - 1) p ++ [false])
+    then Some (rcons (take (i - 1) p) false)
     else None
-  ) (range 0 h).
+  ) (range 0 (h + 1)).
 
-lemma size_lpath (lidx) :
-   lidx <= 2^h =>
-     size (lpath lidx) = if lidx = 2^h then (h+1) else h.
+lemma size_lpath (lidx : int) :
+  0 <= lidx <= 2^h => size (lpath lidx) = if lidx = 2^h then (h+1) else h.
 proof.
 by move=> hle @/lpath; rewrite size_rev BS2Int.size_int2bs; smt(h_g0).
 qed.
+
+lemma size_lpath_lt (lidx : int) :
+  0 <= lidx < 2^h => size (lpath lidx) = h.
+proof. by move=> ?; rewrite size_lpath /#. qed.
 
 (* Move to List *)
 lemma count_eq_nth ['a] (p : 'a -> bool) (s1 s2 : 'a list) :
@@ -139,47 +144,85 @@ elim: s1 s2 => [|x1 s1 ih] [|x2 s2] //=; ~-1:smt(size_ge0).
 by move/addzI => eq_sz heqp; rewrite (heqp 0) ?(ih s2); smt(size_ge0).
 qed.
 
-lemma pfl_size (lidx : int) :
-   lidx <= 2^h =>
-   size (paths_from_leaf lidx) = hw (lpath lidx).
+lemma paths_from_leaf_root : paths_from_leaf (2^h) = [[]].
+proof. by done. qed.
+
+hint simplify paths_from_leaf_root.
+
+lemma lpath_root : lpath (2 ^ h) = true :: nseq h false.
 proof.
-(*
-rewrite /paths_from_leaf => Hs.
-case (lidx = 2 ^ h) => /= Hh.
-+ rewrite /lpath /= Hh /= /hw BS2Int.int2bs_pow2;1:smt(mem_range h_g0).
-  have -> : (h + 1 - 1 - h) = 0 by ring.
-  rewrite nseq0 /= rev_cat rev1 count_cat /pred1 /= /b2i /=.
-  rewrite (eq_in_count _ pred0);1: by move => x;rewrite rev_nseq mem_nseq /#.
-  by rewrite count_pred0 /=.
-rewrite /hw.
-have -> : h = size (lpath lidx) by smt(size_lpath).
-rewrite pmap_map size_map size_filter.
-rewrite count_map /preim /= /predC1 /=.
-have -> : count (pred1 true) (lpath lidx) =
-    count (pred1 true) (unzip1  (zip (lpath lidx) (iota_ 0 (size (lpath lidx))))).
-+ by congr;rewrite unzip1_zip;1:smt(size_iota size_ge0). 
-by rewrite count_map;apply eq_in_count => x memx /= /#.
-*)
-admitted.
+have h_g0 := h_g0; move=> @/lpath @/b2i /=.
+rewrite BS2Int.int2bs_pow2 ?mem_range 1:/# /=.
+by rewrite nseq0 rev_cat /= rev_nseq.
+qed.
+
+hint simplify lpath_root.
+
+lemma size_pmap ['a 'b] (p : 'a -> 'b option) (s : 'a list) :
+  size (pmap p s) = count (fun x => is_some (p x)) s.
+proof. by elim: s => //= x s ih; case: (p x) => /=; rewrite ih. qed.
+
+lemma rev_iota i j : rev (iota_ i j) = map (fun k => (i + j) - (k + 1)) (iota_ 0 j).
+proof.
+elim/natind: j i => [j le0_j|j ge0_j ih] i; first by rewrite !iota0.
+rewrite iotaSr // iotaS // rev_rcons map_cons ih /=; split; first smt().
+by rewrite (iota_addl 1 0) -map_comp /(\o) /#.
+qed.
+
+lemma rev_mkseq ['a] (f : int -> 'a) (n : int) :
+  rev (mkseq f n) = mkseq (fun i => f (n - (i + 1))) n.
+proof. by rewrite /mkseq -map_rev rev_iota map_comp. qed.
+
+lemma lpath_intdivE (lidx : int) : 0 <= lidx < 2^h =>
+  lpath lidx = mkseq (fun i => (lidx %/ 2^(h - (i + 1))) %% 2 <> 0) h.
+proof.
+move=> rg @/lpath; rewrite [lidx = _]ltr_eqF 1:/# b2i0 /=.
+by rewrite /BS2Int.int2bs rev_mkseq.
+qed.
+
+lemma hw_lpathE (lidx : int) : 0 <= lidx < 2^h =>
+  hw (lpath lidx) = count (fun i => lidx %/ 2^(h - (i + 1)) %% 2 <> 0) (range 0 h).
+proof. by move=> hrg; rewrite lpath_intdivE // /hw count_map /#. qed.
+
+lemma pfl_size (lidx : int) :
+  0 <= lidx <= 2^h => size (paths_from_leaf lidx) = hw (lpath lidx).
+proof.
+have h_ge0 := h_g0; move=> [ge0_lidx] /lez_eqVlt [->> /=|lt_lidx].
+- by rewrite /hw /= count_nseq iffalse //=.
+rewrite /paths_from_leaf iffalse 1:/# size_pmap /=.
+rewrite -(eq_in_count (fun i => nth false (false :: lpath lidx) i)) /=.
+- move=> i /mem_range rg_i; rewrite fun_if /= (last_nth false).
+  rewrite size_take_condle 1:/# iftrue 1:size_lpath_lt ~-1://#.
+  by case: (i = 0) => -> //=; rewrite nth_take //#.
+rewrite /hw range_ltn 1:/# /= add0z (range_add 0 _ 1) count_map.
+rewrite /preim /= -(eq_in_count (nth false (lpath lidx))) /=.
+- by move=> i /mem_range /#.
+have ->: nth false (lpath lidx) = preim (nth false (lpath lidx)) (pred1 true).
+- by apply/fun_ext => i @/preim /#.
+rewrite -count_map; congr; have ->: h = size (lpath lidx).
+- by rewrite size_lpath_lt //.
+by apply: (map_nth_range false (lpath lidx)).
+qed.
 
 (* The list of leaves that are under a node given by a path *)
-op leaves_from_path(p : bool list) =
-   if size p = h+1 then witness (* we should never need this *)
-   else
-     let hsub = h - size p in
-     let start = foldl (fun acc (bi : _ * _) => acc + if bi.`1 then 2^(h - bi.`2) else 0) 0 (zip p (iota_ 0 (size p))) in
-         iota_ start (2^hsub).
+op leaves_from_path (p : path) =
+ if 0 <= size p <= h then
+    let hsub = h - size p in
+    mkseq (fun i => BS2Int.bs2int (rev p) * 2^hsub + i) (2^hsub)
+ else witness.
 
-lemma lfp_leaf lidx :
-  lidx < 2^h =>
-  (leaves_from_path (lpath lidx)) = [lidx].
-move => Hh.
-rewrite /leaves_from_path ifF /=;1: 
-   by rewrite /lpath size_rev BS2Int.size_int2bs /=; 
-      smt(StdOrder.IntOrder.expr_ge0 h_g0).
-rewrite size_lpath 1:/# /= ifF 1:/# /= iota1;congr.
-admit. (* annoying *)
-admitted.
+lemma lfp_leaf lidx : 0 <= lidx < 2^h => (leaves_from_path (lpath lidx)) = [lidx].
+proof.
+move=> rg_lidx @/leaves_from_path; rewrite size_lpath_lt 1:/# /=.
+have h_gt0 := h_g0; rewrite iftrue 1:/# mkseq1 /=.
+by rewrite /lpath revK BS2Int.int2bsK /#.
+qed.
+
+lemma lfp_nil : leaves_from_path [] = range 0 (2^h).
+proof.
+have h_gt0 := h_g0; rewrite /leaves_from_path ifT 1:/# /=.
+by rewrite rev_nil BS2Int.bs2int_nil /= /mkseq id_map //#.
+qed.
 
 (* The leaf node corresponding to a leaf path
    The semantics of this needs to be computed from wots using
@@ -190,65 +233,46 @@ op leafnode_from_idx(ss ps : Params.nbytes, ad : SA.adrs, lidx : int) : dgstbloc
 op leaf_range(ss ps : Params.nbytes, ad : SA.adrs, lidx : int) =
    map (leafnode_from_idx ss ps ad) (range 0 lidx).
 
+lemma leaf_range0 ss ps ad : leaf_range ss ps ad 0 = [].
+proof. by rewrite /leaf_range range_geq. qed.
+
 (* The node corresponding to an arbitrary path  *)
-op node_from_path(p : bool list,ss ps : Params.nbytes, ad : SA.adrs) : dgstblock =
-   if size p = h+1 then witness (* we should never need this *)
-   else
-      let ls = leaves_from_path p in
-      let nls = map (leafnode_from_idx ss ps ad) ls in
-      let subtree = list2tree nls in
-         (val_bt_trh subtree ps (set_typeidx ad trhtype) (h - size p) (head witness ls)).
+op node_from_path (p : bool list, ss ps : Params.nbytes, ad : SA.adrs) : dgstblock =
+ if 0 <= size p <= h then
+   let ls = leaves_from_path p in
+   let nls = map (leafnode_from_idx ss ps ad) ls in
+   let subtree = list2tree nls in
+   (val_bt_trh subtree ps (set_typeidx ad trhtype) (h - size p) (head witness ls))
+  else witness.
 
 (* The full stack state when one starts to process leaf lidx *)
-op stack_from_leaf(lidx : int,ss ps : Params.nbytes, ad : SA.adrs) : (dgstblock * int) list =
-   map (fun p =>
-     (node_from_path p ss ps ad, (h - size p))) (paths_from_leaf lidx).
-
+op stack_from_leaf (lidx : int, ss ps : Params.nbytes, ad : SA.adrs) : (dgstblock * int) list =
+  map (fun p => (node_from_path p ss ps ad, (h - size p))) (paths_from_leaf lidx).
 
 lemma sfl_size lidx ss ps ad :
-  lidx <= 2^h =>
-  size (stack_from_leaf lidx ss ps ad) = hw (lpath lidx).
-proof.
-(*
-move => Hi.
-rewrite  /stack_from_leaf size_map /paths_from_leaf.
-case (lidx = 2 ^ h) => H /=.
-+ rewrite /lpath /= H /= /hw BS2Int.int2bs_pow2;1:smt(mem_range h_g0).
-  have -> : (h + 1 - 1 - h) = 0 by ring.
-  rewrite nseq0 /= rev_cat rev1 count_cat /pred1 /= /b2i /=.
-  rewrite (eq_in_count _ pred0);1: by move => x;rewrite rev_nseq mem_nseq /#.
-  by rewrite count_pred0 /=.
-rewrite /hw.
-have -> : h = size (lpath lidx) by smt(size_lpath).
-rewrite pmap_map size_map size_filter.
-rewrite count_map /preim /= /predC1 /=.
-have -> : count (pred1 true) (lpath lidx) =
-    count (pred1 true) (unzip1  (zip (lpath lidx) (iota_ 0 (size (lpath lidx))))).
-+ by congr;rewrite unzip1_zip;1:smt(size_iota size_ge0). 
-by rewrite count_map;apply eq_in_count => x memx /= /#.
-*)
-admitted.
+  0 <= lidx <= 2^h => size (stack_from_leaf lidx ss ps ad) = hw (lpath lidx).
+proof. by move=> hrg; rewrite /stack_from_leaf size_map pfl_size //#. qed.
 
 (* The list of leaves that fall under the first node in the stack when one starts to process leaf lidx
    The case o lidx=0 is a corner case, as the stack is empty *)
 op first_subtree_leaves(lidx : int,ss ps : Params.nbytes, ad : SA.adrs) =
-   if lidx = 0 then [] else
+ if lidx = 0 then
+   []
+ else
    let lps = (paths_from_leaf lidx) in
    let p1 = head witness lps in
    let lp1 = leaves_from_path p1 in
-     map (leafnode_from_idx ss ps ad) lp1.
+   map (leafnode_from_idx ss ps ad) lp1.
 
 (* The hamming weight of 0 is 0, so stack is empty *)
 lemma pfl0 : paths_from_leaf 0 = [].
 proof.
-(*
-rewrite /paths_from_leaf ifF;1:smt(StdOrder.IntOrder.expr_gt0 h_g0).
-rewrite (eq_in_pmap _ (fun _ => None)).
-+ move => bi H; have := mem_zip  (lpath 0) (iota_ 0 h) bi.`1 bi.`2 _; 1:smt().
-  rewrite /lpath mem_rev BS2Int.int2bs0 mem_nseq /#.
-by apply pmap_none.
-*)
-admitted.
+have expr_gt0 := expr_gt0; apply/size_eq0.
+by rewrite pfl_size 1?hw_lpathE /= -1:count_pred0 //#.
+qed.
+
+lemma stack_from_leaf0 ss ps ad : stack_from_leaf 0 ss ps ad = [].
+proof. by rewrite /stack_from_leaf pfl0. qed.
 
 (* This op describes the state of the stack in the inner loop, while
    reducing, where i is the number of the iteration we are in.
@@ -256,7 +280,7 @@ admitted.
    the stack.
    The loop performs as many iterations as needed to reduce the
    hamming weight of lidx to hamming weight of lidx+1, if any. *)
-op stack_increment(lidx : int,ss ps : Params.nbytes, ad : SA.adrs, i : int) =
+op stack_increment (lidx : int, ss ps : Params.nbytes, ad : SA.adrs, i : int) =
   (* the stack configuration is the state encountered for lidx
      with the extra node computed for lidx at the end *)
   let hwi = hw (lpath lidx) in
@@ -287,6 +311,7 @@ axiom h_max : h < 64.
 (* FD + WR *)
 equiv kg_eq : XMSS_TW(FakeRO).keygen ~ XMSS_PRF.kg : ={arg} ==> pkrel res{1}.`1 res{2}.`2 /\ skrel res{1}.`2 res{2}.`1.
 proof.
+have ? := h_g0; have ? := expr_gt0.
 proc. inline {1} 2. inline {1} 5. inline {1} 8.
 inline {2} 5. inline {2} 10.
 swap {2} [5..7] -4; seq 3 3 : (NBytes.val ms{1} = sk_seed0{2} /\ NBytes.val ss{1} = sk_prf0{2} /\ NBytes.val ps{1} = pub_seed0{2}).
@@ -314,23 +339,17 @@ while (size leafl0{1} = i{2} /\ 0 <= i{2} <= 2^h /\ t{2} = h
           (nth witness stacklist k).`1 /\
         to_uint (nth witness heights{2} k) =
           (nth witness stacklist k).`2)); last first.
-+ auto => /> &1;do split.
-  + by apply StdOrder.IntOrder.expr_ge0 => //.
-  + by rewrite /leaf_range /range iota0 /=.
-  + by rewrite /stack_from_leaf pfl0 /= /#.
-  + by move => h ?; rewrite /stack_from_leaf pfl0 /= /#.
-  + move => leafs1 hs1 o1 st2 ????Hl??H.
-    move : (H 0 _) => /=;1: by smt().
-    rewrite /bs2block => ->.
-    rewrite /stack_from_leaf nth0_head /paths_from_leaf /=.
-    rewrite ifT 1:/# /=.
-    rewrite /node_from_path /= /leaves_from_path !ifF /=;1,2:smt(h_g0).
-    congr;last first.
-    + rewrite iotaS_minus /=;1:smt(StdOrder.IntOrder.expr_gt0).
-      by rewrite /hw /= /idfun /= iota0 //.
-    + congr;rewrite Hl.
-      rewrite /leaf_range;congr.
-      rewrite /hw /= /idfun /= (iota0 0 0) //= /#.
++ auto => /> &1; do split.
+  + by smt(expr_ge0).
+  + by rewrite leaf_range0.
+  + by rewrite stack_from_leaf0.
+  + by move=> 2?; rewrite stack_from_leaf0 /= /#.
+  + move => leafs1 hs1 o1 st2 4? Hl 2? H.
+    have @/bs2block -> := (H 0 _) => /=; first by smt().
+    rewrite /stack_from_leaf nth0_head /paths_from_leaf /= ifT 1:/# /=.
+    rewrite /node_from_path /= ifT 1:/# lfp_nil; congr; last first.
+    - by rewrite -nth0_head nth_range //#.
+    + by congr; rewrite Hl /leaf_range; congr => /#.
 
 seq 3 6 : (#pre /\
   leaf{1} = leafnode_from_idx ss{1} ps{1} ad{1} i{2} /\ leaf{1} = bs2block node{2}).
@@ -391,10 +410,10 @@ do split.
   + have -> : (_hw1 + (_hw - _hw1)) = size _olds by smt().
     by rewrite take_size.
   have -> : node_from_path (take h (lpath _lidx)) ss{1} ps{1} ad{1} = bs2block node{2}.
-  + rewrite -Hn /node_from_path /= ifF ;1: smt(size_take h_g0).
-    have -> : (take h (lpath _lidx) = (lpath _lidx));1: smt(take_size BS2Int.size_int2bs h_g0 size_rev).
-    rewrite lfp_leaf /=;1:smt().
-    rewrite -/_lidx size_lpath /=;1:smt().
+  + rewrite -Hn /node_from_path /= ifT; first smt(size_ge0 size_take h_g0).
+    have ->: take h (lpath _lidx) = (lpath _lidx).
+    - by rewrite take_oversize // size_lpath_lt.
+    rewrite lfp_leaf /= 1:/# -/_lidx size_lpath /= 1:/#.
     rewrite ifF 1:/# /list2tree /= ifT;1: by exists 0 =>/=.
     admit. (* we need to know that evaluation at level 0 is the leaf *)
   + (* this is the initialization of the inner loop *)
