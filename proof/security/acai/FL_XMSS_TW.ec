@@ -4037,9 +4037,9 @@ rewrite -addrA ler_add 2:ler_add.
                /\ (forall (j : int), 0 <= j < l =>
                      nth witness O_MEUFGCMA_WOTSTWES.qs{2} j
                      =
-                     (set_kpidx (set_typeidx ad{1} chtype) j
-                      nth witness ml{1} j
-                      DBLL.insubd (nth witness pkWOTSl{1} j)
+                     (set_kpidx (set_typeidx ad{1} chtype) j,
+                      nth witness ml{1} j,
+                      DBLL.insubd (nth witness pkWOTSl{1} j),
                       DBLL.insubd (nth witness sigWOTSl{1} j)))).
   - while (   ={leafl, msigl}
            /\ ps{1} = ps0{2}
@@ -4083,9 +4083,9 @@ rewrite -addrA ler_add 2:ler_add.
            /\ (forall (j : int), 0 <= j < size O_MEUFGCMA_WOTSTWES.qs{2} =>
                  nth witness O_MEUFGCMA_WOTSTWES.qs{2} j
                  =
-                 (set_kpidx (set_typeidx ad{1} chtype) j
-                  nth witness ml{1} j
-                  DBLL.insubd (nth witness pkWOTSl{1} j)
+                 (set_kpidx (set_typeidx ad{1} chtype) j,
+                  nth witness ml{1} j,
+                  DBLL.insubd (nth witness pkWOTSl{1} j),
                   DBLL.insubd (nth witness sigWOTSl{1} j)))).
     * inline{2} 2.
       wp.
