@@ -254,7 +254,7 @@ op stack_increment(lidx : int,ss ps : Params.nbytes, ad : SA.adrs, i : int) =
       in (take (hwi1 + red - i) (stack_from_leaf lidx ss ps ad)) ++
                         [(node_from_path carrypath ss ps ad, h - size carrypath)].
 
-(* Overflows may happen unless h is upper bounded *)
+(* Overflows may happen unless h is upper bounded. anything up to 2^63 works *)
 axiom h_max : h < 64.
 
 (* FD + WR *)
@@ -406,14 +406,14 @@ do split.
       done.
 
 move => hs o2 s2;do split => H H0 H1 H2 H3.
-+ rewrite /(\ule) /= H1.
-  admit.  (* ?!? something about termination condition? *)
++ by rewrite /(\ule) /=; smt(W64.to_uint_cmp).
 + do split.
   + smt(size_rcons).
   + smt().
   + smt().
+  + rewrite /leaf_range iotaSr 1:/# /= map_rcons /#.
   + admit. (* to do *)
-  + admit. (* to do  *)
+  + rewrite H2.
   + admit. (* to do *)
   + admit. (* to do *)
   + admit. (* to do *)
