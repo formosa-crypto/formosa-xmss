@@ -1,19 +1,13 @@
 require import AllCore List.
 require Subtype.
 
-(* Generic auxiliary properties *)
-lemma neq_from_nth (x0 : 'a) (s1 s2 : 'a list) (i : int) :
-     nth x0 s1 i <> nth x0 s2 i 
-  => s1 <> s2.
-proof. by apply contra => ->. qed.
-
 const l : { int | 1 <= l } as ge1_l.
 
 type index.
 
 op valid_idxvals : index list -> bool.
 
-op valid_adrsidxs (adidxs : index list) = 
+op valid_adrsidxs (adidxs : index list) =
   size adidxs = l /\ valid_idxvals adidxs.
 
 clone import Subtype as Adrs with
@@ -24,7 +18,7 @@ type adrs = Adrs.sT.
 
 op get_idx (ad : adrs) (i : int) : index =
   nth witness (val ad) i.
-    
+
 op set_idx (ad : adrs) (i : int) (x : index) : adrs =
   insubd (put (val ad) i x).
 
@@ -34,19 +28,19 @@ op valid_setidx (ad : adrs) (i : int) (x : index) : bool =
 op eq_idx (ad ad' : adrs) (i : int) : bool =
   get_idx ad i = get_idx ad' i.
 
-    
+
 lemma eq_adrs_idxs (ad ad' : adrs) :
   val ad = val ad' <=> ad = ad'.
 proof. smt(val_inj). qed.
-    
+
 lemma eq_adrs_idxsq (ad ad' : adrs) :
   (forall (i : int), eq_idx ad ad' i) <=> ad = ad'.
-proof. 
+proof.
 rewrite -eq_adrs_idxs /eq_idx; split => [eqidx | eqvad].
 + by apply (eq_from_nth witness); smt(valP).
 by move=> i @/get_idx; rewrite eqvad.
 qed.
-      
+
 lemma getidx_df_setidx (ad : adrs) (i j : int) (x : index) :
      i <> j
   => valid_setidx ad i x
@@ -57,7 +51,7 @@ case (0 <= i < l) => rng_i.
 + by rewrite nth_put 2:neqi_k; 1: smt(valP).
 by rewrite put_out; 1: smt(valP).
 qed.
-    
+
 lemma valin_getidx_setidx (ad : adrs) (i : int) (x : index) :
      0 <= i < l
   => valid_setidx ad i x
@@ -76,8 +70,8 @@ case (i <> j) => [neqi_j | /= eqi_j].
 + move: (getidx_df_setidx ad i j x neqi_j valset) => @/get_idx <-.
   move: (getidx_df_setidx ad' i j x neqi_j valsetp) => @/get_idx <-.
   by move: (equti j neqi_j) => @/eq_idx.
-move: eqi_j valset valsetp => -> valset valsetp. 
-move: (valin_getidx_setidx ad j x rng_j valset) (valin_getidx_setidx ad' j x rng_j valsetp). 
+move: eqi_j valset valsetp => -> valset valsetp.
+move: (valin_getidx_setidx ad j x rng_j valset) (valin_getidx_setidx ad' j x rng_j valsetp).
 by rewrite /get_idx => -> ->.
 qed.
 

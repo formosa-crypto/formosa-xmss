@@ -24,6 +24,36 @@ op toByte_64(x : W64.t) (l : int) : W8.t list =
 op bytexor(a b : W8.t list) : W8.t list = 
    map (fun (ab : W8.t * W8.t) => ab.`1 `^` ab.`2) (zip a b).
 
+op prf (in_0 key : nbytes): nbytes =
+  let padding = toByte_64 prf_padding_val padding_len in
+  let buf = padding ++ NBytes.val key ++ NBytes.val in_0 in
+  Hash buf.
+
+op prf_keygen (in_0 : W8.t list) (key : nbytes): nbytes =
+  let padding = toByte_64 prf_kg_padding_val padding_len in
+  let buf = padding ++ NBytes.val key ++ in_0 in
+  Hash buf.
+
+op _F (key t : nbytes): nbytes =
+  let padding = toByte_64 F_padding_val padding_len in
+  let buf = padding ++ NBytes.val key ++ NBytes.val t in
+  Hash buf.
+
+op rand_hash (_left _right : nbytes) (_seed : nbytes) (address : adrs) : nbytes =
+  let padding = toByte_64 rand_hash_padding  padding_len in
+  let address = set_key_and_mask address 0 in
+  let addr_bytes = addr_to_bytes address in
+  let key = prf addr_bytes _seed in
+  let address = set_key_and_mask address 1 in
+  let addr_bytes = addr_to_bytes address in
+  let bitmask_0 = prf addr_bytes _seed in
+  let address = set_key_and_mask address 2 in
+  let addr_bytes = addr_to_bytes address in
+  let bitmask_1 = prf addr_bytes _seed in
+  let t = bytexor (NBytes.val _left ++ NBytes.val _right) (NBytes.val bitmask_0 ++ NBytes.val bitmask_1) in
+  let buf = padding ++ NBytes.val key ++ t in
+  Hash buf.
+
 module Hash = {
   proc prf (in_0  key : nbytes) : nbytes = {
     var r : nbytes;
@@ -96,3 +126,24 @@ module Hash = {
   }
 }.
 
+hoare prf_eq in0 k:
+  Hash.prf: in_0 = in0 /\ key = k ==> res = prf in0 k.
+proof. by proc; auto. qed.
+
+hoare prf_kg_eq in0 k:
+  Hash.prf_keygen: in_0 = in0 /\ key = k ==> res = prf_keygen in0 k.
+proof. by proc; auto. qed.
+
+hoare _F_eq k t0:
+  Hash._F: key = k /\ t = t0 ==> res = _F k t0.
+proof. by proc; auto. qed.
+
+hoare rand_hash_eq l r s a:
+  Hash.rand_hash: _left = l /\ _right = r /\ _seed = s /\ address = a ==> res = rand_hash l r s a.
+proof.
+proc.
+wp; ecall (prf_eq addr_bytes _seed).
+wp; ecall (prf_eq addr_bytes _seed).
+wp; ecall (prf_eq addr_bytes _seed).
+by auto.
+qed.
