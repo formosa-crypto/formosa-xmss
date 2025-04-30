@@ -329,7 +329,10 @@ op stack_increment (lidx : int, ss ps : Params.nbytes, ad : SA.adrs, i : int) =
                         [(node_from_path carrypath ss ps ad, h - size carrypath)].
 
 (* Overflows may happen unless h is upper bounded *)
-axiom h_max : h < 64.
+(* axiom h_max : h < 64. *)
+axiom h_max : h <= 32.
+
+
 
 (* FD + WR *)
 equiv kg_eq : XMSS_TW(FakeRO).keygen ~ XMSS_PRF.kg : ={arg} ==> pkrel res{1}.`1 res{2}.`2 /\ skrel res{1}.`2 res{2}.`1.
@@ -496,7 +499,15 @@ qed.
    the actual operation of the implementation *)
 
 op sigrel(asig : sigXMSSTW, sig : sig_t) =
-   (* asig.`1 = ??? /\ why is the public seed in the signature ? *)
+   (*
+     asig.`1 = ??? /\ why is the public seed in the signature ?
+     MM: it is not, it is the "message key" (generated with "mkg"
+     during signing based on the "message seed" and index), which is
+     used as the key given to "mco" to compress the message an
+     arbitrary-length message to a fixed-length one
+     (and this is not the same as the public seed, which is sampled
+     in key generation and is used to index the THFs).
+   *)
    asig.`1.`1 = sig.`r /\
    asig.`1.`2 = to_uint sig.`sig_idx /\
    asig.`2.`1 = Index.insubd (to_uint sig.`sig_idx) /\
@@ -510,59 +521,91 @@ equiv sig_eq : XMSS_TW(FakeRO).sign ~ XMSS_PRF.sign : skrel sk{1} sk{2} /\ ={m} 
    sigrel res{1}.`1 res{2}.`1 /\  skrel res{1}.`2 res{2}.`2.
 proof.
 proc. inline {1} 6. inline {1} 8. inline {1} 14. inline {1} 20. inline {2} 7. inline {2} 16. inline {2} 22.
-admitted.
+admit.
+qed.
 
 (* PY *)
-equiv ver_eq : XMSS_TW(FakeRO).verify ~ XMSS_PRF.verify : pkrel pk{1} pk{2} /\ ={m} /\ sigrel sig{1} s{2} ==>
-   ={res}.
+equiv ver_eq : XMSS_TW(FakeRO).verify ~ XMSS_PRF.verify :
+  pkrel pk{1} pk{2} /\ ={m} /\ sigrel sig{1} s{2} ==> ={res}.
 proof.
 proc=> /=.
 inline{1} 3.
-sp.
-(*
-- inline *; auto=> &1 &2 |> *.
-  rewrite DigestBlock.insubdK.
-  - admit.
-  do! split.
-  - admit.
-  - do! congr.
-    - smt().                      (* FIXME: hint lemmas *)
-    - admit.                      (* Where FakeRO is initialezd? *)
-    - rewrite NBytes.insubdK.
-      - admit.                    (* FIXME: hint lemmas *)
-      - admit.                    (* Why n should be equal to 4 *)
-*)
-inline {1} 1.
-inline {1} 4.
-wp.
-sp.
-inline {1} 1.
-inline {2} 1.
-sp.
-seq 2 6 : (   #pre
-           /\ map DigestBlock.val (DBLL.val pkWOTS0{1}) =
-              map (BytesToBits \o NBytes.val) (LenNBytes.val pk_ots{2})
-           /\ DigestBlock.val leaf{1} = (BytesToBits \o NBytes.val) nodes0{2}
-           /\ set_typeidx ad0{1} trhtype = address0{2}).
-+ conseq => />.
-  wp.
-  seq 1 3 : (   #pre
-             /\ map DigestBlock.val (DBLL.val pkWOTS0{1}) =
-                map (BytesToBits \o NBytes.val) (LenNBytes.val pk_ots{2})).
-  + admit.
-  exlim pk_ots{2}, address0{2}, _seed0{2} => wpk2 add02 ps02.
-  have ltree_ll : islossless LTree.ltree. admit.	(* FIXME: Prove this *)
-  call{2} (_: arg = (wpk2, add02, ps02) ==> res = ltree wpk2 add02 ps02).
-  + by conseq ltree_ll (Eqv_Ltree_ltree wpk2 add02 ps02).
-  skip => />.
+seq 6 9 : (   pkrel pk{1} pk{2}
+           /\ Index.val sigfl{1}.`1 = to_uint idx_sig{2}
+           /\ (map DigestBlock.val (DBLL.val sigfl{1}.`2)) = map (BytesToBits \o NBytes.val) (LenNBytes.val sig_ots{2})
+           /\ (map DigestBlock.val (DBHL.val sigfl{1}.`3) = map (BytesToBits \o NBytes.val) (AuthPath.val auth{2}))
+           /\ DigestBlock.val cm{1} = BytesToBits (NBytes.val _M'{2})
+           /\ address{2} = zero_address
+           /\ DigestBlock.val pk{1}.`1 = BytesToBits (NBytes.val root{2})
+           /\ pk{1}.`2 = _seed{2}
+           /\ root{2} = pk{2}.`pk_root).
++ auto => &1 &2 /> eqpk11 eqpk12 eqsig11 eqsig12 eqsig21 eqsig22 eqsig23.
+  do ! split.
+  + rewrite eqsig21 Index.insubdK 2://.
+    admit. (* smt(gt_exprsbde W32.to_uint_cmp).*)
+  + rewrite eqsig22 DBLL.insubdK.
+    + admit.
+    rewrite -map_comp /=.
+    apply eq_map => x @/(\o).
+    apply DigestBlock.insubdK.
+    admit.
+  + rewrite eqsig23 DBHL.insubdK. admit.
+    rewrite -map_comp /=.
+    apply eq_map => x @/(\o).
+    apply DigestBlock.insubdK.
+    admit.
+  + rewrite /bs2block.
+    rewrite DigestBlock.insubdK.
+    admit.
+    do 4! congr.
+    rewrite eqsig11 eqsig12.
+    congr; 1: congr.
+    admit.
+    rewrite to_uintK NBytes.insubdK.
+    admit.
+    admit (* n = 4? *).
+  rewrite eqpk11.
+  rewrite DigestBlock.insubdK //.
   admit.
-
-(* FIXME: fixpoint pretty-printing *)
-
-(* LTree -> write a functional spec *)
-
-(* Why the RHS is using reals?? *)
-(* Why having a distinction between parent index calculation *)
-
-admitted.
-
+inline{1} verify; inline{2} rootFromSig.
+wp.
+swap{1} ^pk1<- @^pk0<- & +1.
+swap{1} ^root<- @^pk1<- & +1.
+sp 3 0.
+conseq (_: _ ==> DigestBlock.val root'{1} = BytesToBits (NBytes.val nodes0{2})).
++ move=> /> &1 &2 eqpk1 eqpk2 eqsigfl1 eqsigfl2 eqsigfl3 eqcm eqvpk1.
+  move=> r0 r1 eqrs.
+  rewrite -DigestBlock.valKd eqrs eqpk1.
+  admit.
+inline{1} root_from_sigFLXMSSTW.
+wp.
+seq 14 14 : (true).
++ admit.
+exlim nodes0{2} => lf.
+print BS2Int.int2bs.
+while{2} (BytesToBits (NBytes.val nodes0{2})
+          =
+          (let app = (map bs2block (AuthPath.val auth0{2})) in
+           let idp = (rev (BS2Int.int2bs k{2} (to_uint idx_sig0{2}))) in
+           let lfp = bs2block lf in
+           DigestBlock.val (val_ap_trh_gen app idp lfp _seed0{2} address0{2} k{2} (to_uint idx_sig0{2} %/ 2 ^ k{2})))
+          /\ k{2} <= h)
+         (h - k{2}).
++ admit.
+auto => &1 &2 />.
+progress.
+admit.
+smt(ge0_h).
+smt(ge0_h).
+rewrite H0.
+rewrite /val_ap_trh.
+congr.
+congr.
+admit.
+admit.
+admit.
+admit.
+admit.
+smt().
+admit.
+qed.
