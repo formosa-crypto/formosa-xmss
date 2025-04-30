@@ -329,7 +329,9 @@ op stack_increment (lidx : int, ss ps : Params.nbytes, ad : SA.adrs, i : int) =
                         [(node_from_path carrypath ss ps ad, h - size carrypath)].
 
 (* Overflows may happen unless h is upper bounded *)
+(* axiom h_max : h < 64. *)
 axiom h_max : h <= 32.
+
 
 (* FD + WR *)
 equiv kg_eq : XMSS_TW(FakeRO).keygen ~ XMSS_PRF.kg : ={arg} ==> pkrel res{1}.`1 res{2}.`2 /\ skrel res{1}.`2 res{2}.`1.
@@ -352,6 +354,7 @@ sp 7 14;wp;conseq
               DigestBlock.insubd (BytesToBits (NBytes.val (nth witness stack{2} 0))))).
 + by auto => /> &1 *;smt(NBytes.valK).
 while (size leafl0{1} = i{2} /\ 0 <= i{2} <= 2^h /\ t{2} = h
+    /\  size stack{2} = h + 1 /\ size heights{2} = h + 1
     /\ leafl0{1} = leaf_range  ss{1} ps{1} ad{1} i{2}
     /\ (let firstleaves = first_subtree_leaves i{2} ss{1} ps{1} ad{1} in
            take (size firstleaves) leafl0{1} = firstleaves)
@@ -364,10 +367,12 @@ while (size leafl0{1} = i{2} /\ 0 <= i{2} <= 2^h /\ t{2} = h
           (nth witness stacklist k).`2)); last first.
 + auto => /> &1; do split.
   + by smt(expr_ge0).
+  + by smt(size_nseq).
+  + by smt(size_nseq).
   + by rewrite leaf_range0.
   + by rewrite stack_from_leaf0.
   + by move=> 2?; rewrite stack_from_leaf0 /= /#.
-  + move => leafs1 hs1 o1 st2 4? Hl 2? H.
+  + move => leafs1 hs1 o1 st2 6? Hl 2? H.
     have @/bs2block -> := (H 0 _) => /=; first by smt().
     rewrite /stack_from_leaf nth0_head /paths_from_leaf /= ifT 1:/# /=.
     rewrite /node_from_path /= ifT 1:/# lfp_nil; congr; last first.
@@ -381,7 +386,7 @@ seq 3 6 : (#pre /\
 wp.
 while {2} ((hw (lpath i{2}) < hw (lpath (i{2} + 1)) => to_uint offset{2} = hw (lpath (i{2} + 1))) /\
            (hw (lpath (i{2} + 1)) <= hw (lpath i{2}) => hw (lpath (i{2} + 1)) <= to_uint offset{2} <= hw (lpath i{2}) + 1) /\
-    i{2} = size leafl0{1} /\
+    i{2} = size leafl0{1} /\ size stack{2} = h + 1 /\ size heights{2} = h + 1 /\
     0 <= i{2} < 2 ^ h /\
     t{2} = h /\
     leafl0{1} = leaf_range ss{1} ps{1} ad{1} i{2} /\
@@ -395,34 +400,13 @@ while {2} ((hw (lpath i{2}) < hw (lpath (i{2} + 1)) => to_uint offset{2} = hw (l
           to_uint (nth witness heights{2} k) = (nth witness stacklist k).`2 /\
   leaf{1} = leafnode_from_idx ss{1} ps{1} ad{1} i{2} /\ leaf{1} = bs2block node{2})
     (to_uint offset{2}); last first.
-+ auto => /> &1 &2 ????Ho Hs??Hn; pose _lidx := size leafl0{1}.
++ auto => /> &1 &2 ??????Ho Hs??Hn; pose _lidx := size leafl0{1}.
   have -> /= : offset{2} + W64.one - W64.one = offset{2} by ring.
   rewrite /= !W64.to_uintD_small /=;1: by
    rewrite Ho sfl_size 1:/# /hw; smt(size_lpath count_size BS2Int.size_int2bs h_max).
-do split.
-+ admit. (* hw property: increase by exactly one *)
-+ by smt(sfl_size).
-+ rewrite Ho /stack_increment /=.
-  case (hw (lpath _lidx) < hw (lpath (_lidx + 1))).
-  + admit. (* hw property: increase by exactly one *)
-  move => ?;rewrite -/_lidx.
-  pose _olds := (stack_from_leaf _lidx ss{1} ps{1} ad{1}).
-  pose _hw1 := (hw (lpath (_lidx + 1))).
-  pose _hw := (hw (lpath (_lidx))).
-  have Hsos : size _olds = _hw
-   by rewrite /olds /stack_from_leaf size_map; smt(pfl_size h_g0).
-  rewrite Hsos /=.
-  have -> : (_hw1 + (_hw - _hw1) - (_hw + 1 - _hw - 1)) = _hw by ring.
-  have -> /= : (h - (_hw + 1 - _hw - 1)) = h by ring.
-  rewrite size_cat /= size_take /=;1:by smt(count_ge0).
-  by smt().
-+ move => k kbl.
-  move => kbh; move :  (Hs k _). admit. (* lemma that stack decreases in reduction *)
-  move => [H1 H2].
-  have -> : (to_uint offset{2} + to_uint W64.one - hw (lpath _lidx) - 1)    = 0.
-  + rewrite Ho /=.
-    have -> : size (stack_from_leaf (size leafl0{1}) ss{1} ps{1} ad{1}) = hw (lpath _lidx);last by ring.
-    by smt(sfl_size h_g0).
+split. 
+(* initialization of inner loop invariant *)
++ have -> : (to_uint offset{2} + 1 - hw (lpath _lidx) - 1) = 0 by smt(sfl_size).
   rewrite /stack_increment /=.
   pose _olds := (stack_from_leaf _lidx ss{1} ps{1} ad{1}).
   pose _hw1 := (hw (lpath (_lidx + 1))).
@@ -439,12 +423,20 @@ do split.
     rewrite lfp_leaf /= 1:/# -/_lidx size_lpath /= 1:/#.
     rewrite ifF 1:/# /list2tree /= ifT;1: by exists 0 =>/=.
     admit. (* we need to know that evaluation at level 0 is the leaf *)
-  + (* this is the initialization of the inner loop *)
-    case (_hw < _hw1) => /= *.
-    + (* hw increased by 1, so we have to show that the previous stack plus
+  do split.
++ admit. (* hw property: increase by exactly one *)
++ by smt(sfl_size).
++ by smt(size_put).
++ by smt(size_put).
++ case (_hw < _hw1).
+  + rewrite sfl_size 1:/#. admit. (* hw property: increase by exactly one *)
+  by move => ?;rewrite -/_lidx size_cat /= /#.
++ move => k kbl kbh.
+  case (_hw < _hw1) => /= *.
+  + (* hw increased by 1, so we have to show that the previous stack plus
          the new leaf is really the stack that we will end up with *)
       rewrite /stack_from_leaf !(nth_map witness) /=;1:by rewrite pfl_size; smt(sfl_size).
-      rewrite !nth_put. admit.  admit. (* need to add size stack{2} and heights{2} to inv *)
+      rewrite !nth_put;1,2: by rewrite Ho sfl_size 1:/# /hw /lpath; smt(size_ge0 size_rev count_size BS2Int.size_int2bs).
       case(to_uint offset{2} = k).
       + admit. (* this is the leaf just added *)
       + admit. (* this is the previous stack *)
@@ -453,36 +445,24 @@ do split.
          new leaf at the next position *)
       rewrite !nth_cat. 
       case (k < size _olds) => *;1: smt(sfl_size nth_put).
-      rewrite !ifT.  
-      + have : size (stack_increment _lidx ss{1} ps{1} ad{1} (to_uint offset{2} + 1 - hw (lpath _lidx) - 1)) = _hw+1; last by smt().
-        have -> : (to_uint offset{2} + 1 - hw (lpath _lidx) - 1) = 0 by smt(sfl_size pfl_size). 
-        rewrite /stack_increment /= ifF 1:/#; rewrite size_cat /=; congr.
-        have -> : (hw (lpath (_lidx + 1)) + (hw (lpath _lidx) - hw (lpath (_lidx + 1)))) = (hw (lpath _lidx)) by ring.
-        by  smt(take_size sfl_size).
-      rewrite !size_take /=; 1:smt(h_g0).
-      rewrite !size_lpath /=;1:smt().
-      rewrite !ifF /=;1..3:smt().
+      rewrite !ifT;1: smt(size_cat).
       have -> : k = to_uint offset{2}.
       + have ? : to_uint offset{2} = _hw by smt(sfl_size).
         move : kbh.
-        have -> : (to_uint offset{2} + to_uint W64.one - hw (lpath _lidx) - 1) = to_uint offset{2} - _hw by rewrite /=;smt().
         rewrite /stack_increment /= ifF 1:/#.
         rewrite -/_hw -/_hw1 -/_lidx size_cat /=.
-        have -> : (_hw1 + (_hw - _hw1) - (to_uint offset{2} - _hw))= _hw by smt().
-        rewrite size_take;1: smt(count_ge0).
         smt(sfl_size).
-      rewrite !nth_put /=.  admit.  admit. (* need to add size stack{2} and heights{2} to inv *)
-      done.
+      rewrite !nth_put;1,2: by rewrite Ho sfl_size 1:/# /hw /lpath; smt(size_ge0 size_rev count_size BS2Int.size_int2bs).
+      by smt(size_take size_lpath).
 
-move => hs o2 s2;do split => H H0 H1 H2 H3.
+move => hs o2 s2;do split => H H0 H1 H2 H3 H4 H5.
 + by rewrite /(\ule) /=; smt(W64.to_uint_cmp).
 + do split.
   + smt(size_rcons).
   + smt().
   + smt().
-  + rewrite /leaf_range iotaSr 1:/# /= map_rcons /#.
-  + admit. (* to do *)
-  + rewrite H2.
+  + by rewrite /leaf_range /range /= iotaSr 1:/# /= map_rcons /#. 
+  + admit. (* do do *)
   + admit. (* to do *)
   + admit. (* to do *)
   + admit. (* to do *)
