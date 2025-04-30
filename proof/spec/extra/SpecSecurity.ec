@@ -16,36 +16,7 @@ op W64toBytes_ext (x : W64.t) (l : int) : W8.t list =
   rev (mkseq (fun i => nth W8.zero (to_list (W8u8.unpack8 x)) i) l).
 
 
-print Chain.
-print WOTS.
-(*
-  Instantiate properly, using following correspondences
-  (gives equivalence between hash function computation):
-  Hash.prf_keygen = prf_sk
-  Hash._F = f
-  Hash.rand_hash = trh
-  LTree.ltree = pkco
-
-  -->
-
-  thfc i ps ad x
-  =
-  if i = n then Hash._F
-  else if i = n * 2 then Hash.rand_hash
-  else if i = n * len then Ltree.ltree
-  else witness
-*)
-
-(*
-  if i = 8 * n then
-    let adbytes0 = addr_to_bytes (set_key_and_mask ad 0) in
-    let k = prf adbytes0 ps in
-    let adbytes1 = addr_to_bytes (set_key_and_mask ad 1) in
-    let bitmask = prf adbytes1 ps in
-    _F k (nbytexor x bitmask)
-*)
-
-(* Axiomatize operator for now) *)
+(* Axiomitize operator for now) *)
 (* FIXME: Proper ltree operator *)
 op ltree : Top.WOTS.wots_pk -> adrs -> Top.WOTS.seed -> Params.nbytes.
 (* FIXME: Prove this with proper operator *)
@@ -70,6 +41,13 @@ clone import XMSS_TW as XMSS_ABSTRACT with
         let padding =  W64toBytes_ext prf_padding_val padding_len in
         let in_0 = toByte (W32.of_int (FLXMSSTW.SA.Index.val i)) 4 in
         (Hash (padding ++ NBytes.val ms ++ in_0), FLXMSSTW.SA.Index.val i)),
+  op FLXMSSTW.SA.WTW.prf_sk =
+    (fun (ss : nbytes) (psad : nbytes * adrs) =>
+     let adbytes = addr_to_bytes (set_key_and_mask psad.`2 0) in
+     (DigestBlock.insubd
+      (BytesToBits
+       (NBytes.val
+        (prf_keygen (NBytes.val psad.`1 ++ NBytes.val adbytes) ss))))),
   op FLXMSSTW.SA.WTW.thfc =
     (fun (i : int) (ps : nbytes) (ad : adrs) (x : bool list) =>
      if i = 8 * n then
@@ -96,6 +74,7 @@ clone import XMSS_TW as XMSS_ABSTRACT with
          (NBytes.val
           (ltree wpk ad ps))))) (* FIXME: Proper ltree operator *)
      else witness).
+
 
 import FLXMSSTW SA WTW HtS Repro MCORO.
 
@@ -371,7 +350,7 @@ swap {2} [5..7] -4; seq 3 3 : (NBytes.val ms{1} = sk_seed0{2} /\ NBytes.val ss{1
 sp 7 14;wp;conseq
     (: _ ==> (val_bt_trh (list2tree leafl0{1}) ps{1} (set_typeidx (XAddress.val witness) trhtype) h 0 =
               DigestBlock.insubd (BytesToBits (NBytes.val (nth witness stack{2} 0))))).
-+ by auto => /> &1 *;smt(NBytes.valK). print dgstblock.
++ by auto => /> &1 *;smt(NBytes.valK).
 while (size leafl0{1} = i{2} /\ 0 <= i{2} <= 2^h /\ t{2} = h
     /\ leafl0{1} = leaf_range  ss{1} ps{1} ad{1} i{2}
     /\ (let firstleaves = first_subtree_leaves i{2} ss{1} ps{1} ad{1} in
@@ -533,7 +512,6 @@ proof.
 proc. inline {1} 6. inline {1} 8. inline {1} 14. inline {1} 20. inline {2} 7. inline {2} 16. inline {2} 22.
 admitted.
 
-print LTree.
 (* PY *)
 equiv ver_eq : XMSS_TW(FakeRO).verify ~ XMSS_PRF.verify : pkrel pk{1} pk{2} /\ ={m} /\ sigrel sig{1} s{2} ==>
    ={res}.
