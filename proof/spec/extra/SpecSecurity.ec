@@ -16,10 +16,12 @@ op W64toBytes_ext (x : W64.t) (l : int) : W8.t list =
   rev (mkseq (fun i => nth W8.zero (to_list (W8u8.unpack8 x)) i) l).
 
 
+print Chain.
+print WOTS.
 (*
   Instantiate properly, using following correspondences
   (gives equivalence between hash function computation):
-  Hash.prf = prf_sk
+  Hash.prf_keygen = prf_sk
   Hash._F = f
   Hash.rand_hash = trh
   LTree.ltree = pkco
@@ -34,25 +36,66 @@ op W64toBytes_ext (x : W64.t) (l : int) : W8.t list =
   else witness
 *)
 
+(*
+  if i = 8 * n then
+    let adbytes0 = addr_to_bytes (set_key_and_mask ad 0) in
+    let k = prf adbytes0 ps in
+    let adbytes1 = addr_to_bytes (set_key_and_mask ad 1) in
+    let bitmask = prf adbytes1 ps in
+    _F k (nbytexor x bitmask)
+*)
+
+(* Axiomatize operator for now) *)
+(* FIXME: Proper ltree operator *)
+op ltree : Top.WOTS.wots_pk -> adrs -> Top.WOTS.seed -> Params.nbytes.
+(* FIXME: Prove this with proper operator *)
+axiom Eqv_Ltree_ltree (pkWOTS : Top.WOTS.wots_pk) (ad : adrs) (ps : Top.WOTS.seed) :
+  hoare[LTree.ltree : arg = (pkWOTS, ad, ps) ==> ltree pkWOTS ad ps = res].
+
 (* Get checksum from XMSS_Checksum and then plug those results
    here *)
 clone import XMSS_TW as XMSS_ABSTRACT with
-   type mseed <- nbytes,
-   op dmseed <- (dmap ((dlist W8.dword Params.n)) NBytes.insubd),
-   type mkey <- nbytes * int,
-   type msgXMSSTW <- W8.t list,
-   type FLXMSSTW.SA.WTW.pseed <- nbytes,
-   op FLXMSSTW.SA.WTW.dpseed <- (dmap ((dlist W8.dword n)) NBytes.insubd),
-   type FLXMSSTW.SA.WTW.sseed <- nbytes,
-   op FLXMSSTW.SA.WTW.dsseed <- (dmap ((dlist W8.dword n)) NBytes.insubd),
-   type FLXMSSTW.SA.HAX.Adrs.sT <- adrs,
-   op FLXMSSTW.n <- n,
-   op FLXMSSTW.h <- h,
-   op mkg = (fun (ms : nbytes) (i : FLXMSSTW.SA.index) =>
-          let padding =  W64toBytes_ext prf_padding_val padding_len in
-          let in_0 = toByte (W32.of_int (FLXMSSTW.SA.Index.val i)) 4 in
-          (Hash (padding ++ NBytes.val ms ++ in_0),FLXMSSTW.SA.Index.val i)).
-
+  type mseed <- nbytes,
+  op dmseed <- (dmap ((dlist W8.dword Params.n)) NBytes.insubd),
+  type mkey <- nbytes * int,
+  type msgXMSSTW <- W8.t list,
+  type FLXMSSTW.SA.WTW.pseed <- nbytes,
+  op FLXMSSTW.SA.WTW.dpseed <- (dmap ((dlist W8.dword n)) NBytes.insubd),
+  type FLXMSSTW.SA.WTW.sseed <- nbytes,
+  op FLXMSSTW.SA.WTW.dsseed <- (dmap ((dlist W8.dword n)) NBytes.insubd),
+  type FLXMSSTW.SA.HAX.Adrs.sT <- adrs,
+  op FLXMSSTW.n <- n,
+  op FLXMSSTW.h <- h,
+  op mkg = (fun (ms : nbytes) (i : FLXMSSTW.SA.index) =>
+        let padding =  W64toBytes_ext prf_padding_val padding_len in
+        let in_0 = toByte (W32.of_int (FLXMSSTW.SA.Index.val i)) 4 in
+        (Hash (padding ++ NBytes.val ms ++ in_0), FLXMSSTW.SA.Index.val i)),
+  op FLXMSSTW.SA.WTW.thfc =
+    (fun (i : int) (ps : nbytes) (ad : adrs) (x : bool list) =>
+     if i = 8 * n then
+      (let adbytes0 = addr_to_bytes (set_key_and_mask ad 0) in
+       let k = prf adbytes0 ps in
+       let adbytes1 = addr_to_bytes (set_key_and_mask ad 1) in
+       let bitmask = prf adbytes1 ps in
+       (DigestBlock.insubd
+        (BytesToBits
+         (NBytes.val
+          (_F k (NBytes.insubd (bytexor (BitsToBytes x) (NBytes.val bitmask))))))))
+     else if i = 8 * n * 2 then
+      (let xw = BitsToBytes x in
+       let l = take (size xw %/ 2) xw in
+       let r = drop (size xw %/ 2) xw in
+       (DigestBlock.insubd
+        (BytesToBits
+         (NBytes.val
+          (rand_hash (NBytes.insubd l) (NBytes.insubd r) ps ad)))))
+     else if i = 8 * n * len then
+      (let wpk = LenNBytes.insubd (map NBytes.insubd (chunk n (BitsToBytes x))) in
+       (DigestBlock.insubd
+        (BytesToBits
+         (NBytes.val
+          (ltree wpk ad ps))))) (* FIXME: Proper ltree operator *)
+     else witness).
 
 import FLXMSSTW SA WTW HtS Repro MCORO.
 
@@ -83,7 +126,8 @@ op pkrel(apk : pkXMSSTW, pk : xmss_pk) =
    (* ??? = pk.`pk_oid I guess abstract proofs fon't care about oid *).
 
 (* Notes:
-- We have a full binary tree with  h+1 levels (height = h), so 2^h nodes.
+- We have a full binary tree with  h+1 levels (height = h), so 2^h leaves
+  (and 2^(h + 1) - 1 total nodes, i.e., leaves and inner nodes combined).
 - Levels are indexed from bottom to top, leaves at level 0, root at level h
 - The length of a full path to a leaf is h
 - The length of the path to a node at level l \in [0..h] is h - l (root path is [])
@@ -489,6 +533,7 @@ proof.
 proc. inline {1} 6. inline {1} 8. inline {1} 14. inline {1} 20. inline {2} 7. inline {2} 16. inline {2} 22.
 admitted.
 
+print LTree.
 (* PY *)
 equiv ver_eq : XMSS_TW(FakeRO).verify ~ XMSS_PRF.verify : pkrel pk{1} pk{2} /\ ={m} /\ sigrel sig{1} s{2} ==>
    ={res}.
@@ -521,15 +566,18 @@ seq 2 6 : (   #pre
               map (BytesToBits \o NBytes.val) (LenNBytes.val pk_ots{2})
            /\ DigestBlock.val leaf{1} = (BytesToBits \o NBytes.val) nodes0{2}
            /\ set_typeidx ad0{1} trhtype = address0{2}).
-+ admit.
-wp -1 -1.
-conseq (_: true ==> root0{1} = bs2block nodes0{2}) => />.
-+ move=> &1 &2 _ + * => ->.
-  rewrite /bs2block.
++ conseq => />.
+  wp.
+  seq 1 3 : (   #pre
+             /\ map DigestBlock.val (DBLL.val pkWOTS0{1}) =
+                map (BytesToBits \o NBytes.val) (LenNBytes.val pk_ots{2})).
   + admit.
-while{2} (k{2} <= h) (h - k{2}).
-+ admit.
-(* Instatiate pr*)
+  exlim pk_ots{2}, address0{2}, _seed0{2} => wpk2 add02 ps02.
+  have ltree_ll : islossless LTree.ltree. admit.	(* FIXME: Prove this *)
+  call{2} (_: arg = (wpk2, add02, ps02) ==> res = ltree wpk2 add02 ps02).
+  + by conseq ltree_ll (Eqv_Ltree_ltree wpk2 add02 ps02).
+  skip => />.
+  admit.
 
 (* FIXME: fixpoint pretty-printing *)
 
@@ -539,3 +587,4 @@ while{2} (k{2} <= h) (h - k{2}).
 (* Why having a distinction between parent index calculation *)
 
 admitted.
+
