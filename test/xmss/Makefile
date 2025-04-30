@@ -9,16 +9,28 @@ LDLIBS   = -lcrypto
 JASMIN   ?= jasminc
 JAZZCT   ?= jasmin-ct
 JAZZCTFLAGS ?= --infer
-JFLAGS   ?= -nowarning ${JADDFLAGS}
+JFLAGS   ?= -nowarning -g ${JADDFLAGS} # -g so its easier to debug when using valgrind
 JINCLUDE ?= -I XMSS:../../ref-jasmin/ -I Stdlib:../../ref-jasmin/stdlib
 
 JASMINPATH := JASMINPATH="XMSS=../../ref-jasmin/:Stdlib=../../ref-jasmin/stdlib"
+
+# Because my valgrind is not the same version as the one in the docker image
+# The valgrind in my laptop does not reject the program, but for some reason the
+# one in docker does not accept it
+ifdef CI
+VALGRIND := valgrind
+else
+# Obs: This should match the valgrind version in the docker image
+# When we update the image tag, we should make this that this is updated as well
+VALGRIND := docker run --rm -v $(shell pwd):/work -w /work ghcr.io/steinwurf/valgrind-3.19.0:1.1.0 valgrind
+endif
+
 
 # --------------------------------------------------------------------------------------------------
 
 default: test
 asm: bin/test_xmssmt-sha2_20_2_256.s
-test: bin/test_xmssmt-sha2_20_2_256
+test: bin/test_xmssmt-sha2_20_2_256 bin/test_xmssmt-sha2_20_2_256_valgrind
 run: bin/test_xmssmt-sha2_20_2_256.out
 
 checkCT: test_xmss.jazz
@@ -30,7 +42,7 @@ checkCT: test_xmss.jazz
 # --------------------------------------------------------------------------------------------------
 
 REF_SOURCES   := $(filter-out ../../submodules/xmss-reference/xmss_core_fast.c ../../submodules/xmss-reference/randombytes.c, $(wildcard ../../submodules/xmss-reference/*.c))
-SOURCES := test_xmss.c ../common/notrandombytes.c ../common/print.c
+SOURCES := ../common/notrandombytes.c ../common/print.c
 
 # --------------------------------------------------------------------------------------------------
 
@@ -43,7 +55,11 @@ bin/test_xmssmt-sha2_20_2_256.s: test_xmss.jazz | bin/
 
 bin/test_xmssmt-sha2_20_2_256: bin/test_xmssmt-sha2_20_2_256.s
 	$(CC) $(CFLAGS) -o $@ -I../common -I../ -DIMPL=XMSSMT-SHA2_20/2_256 $(TEST_FLAGS) \
-	$(SOURCES) $(REF_SOURCES) $< $(LDLIBS)
+	test_xmss.c $(SOURCES) $(REF_SOURCES) $< $(LDLIBS)
+
+bin/test_xmssmt-sha2_20_2_256_valgrind: bin/test_xmssmt-sha2_20_2_256.s
+	$(CC) -g -O0 -o $@ -I../common -I../ -DIMPL=XMSSMT-SHA2_20/2_256  -DTESTS=2 $(TEST_FLAGS) \
+	test_valgrind.c $(SOURCES) $(REF_SOURCES) $< $(LDLIBS)
 
 # --------------------------------------------------------------------------------------------------
 
@@ -51,6 +67,9 @@ bin/%.out: bin/%
 	@./$<
 
 # --------------------------------------------------------------------------------------------------
+
+check_valgrind: bin/test_xmssmt-sha2_20_2_256_valgrind
+	$(VALGRIND) --leak-check=full --track-origins=yes --error-exitcode=1 $<
 
 bin/:
 	mkdir -p $@
