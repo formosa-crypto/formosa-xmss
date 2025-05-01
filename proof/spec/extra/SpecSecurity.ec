@@ -340,11 +340,21 @@ lemma hwinc lidx :
    hw (lpath lidx) < hw (lpath (lidx+1)) => hw (lpath (lidx+1)) = hw (lpath lidx) + 1.
 admitted.
 
-(* hw increase implies odd, so last node in paths is a leaf *)
+(* hw increase implies odd, so last node in paths is the leaf previous leaf *)
 lemma hwinc_leaflast lidx : 
    0 <= lidx < 2^h =>
     hw (lpath lidx) < hw (lpath (lidx + 1)) =>
-      size (nth witness (paths_from_leaf (lidx + 1)) (hw (lpath lidx))) = h.
+      size (nth witness (paths_from_leaf (lidx + 1)) (hw (lpath lidx))) = h /\
+      lidx = BS2Int.bs2int (rev (nth witness (paths_from_leaf (lidx + 1)) (hw (lpath lidx)))).
+admitted.
+
+(* hw increase implies all previous paths same as before *)
+lemma hwinc_pathsprev lidx k : 
+   0 <= lidx < 2^h =>
+    hw (lpath lidx) < hw (lpath (lidx + 1)) =>
+     0 <= k < hw (lpath lidx) =>
+      (nth witness (paths_from_leaf (lidx + 1)) k)
+      = (nth witness (paths_from_leaf lidx) k).
 admitted.
 
 (* FD + WR *)
@@ -448,11 +458,13 @@ split.
       case(to_uint offset{2} = k).
       + (* this is the leaf just added *)
         rewrite Ho;rewrite sfl_size 1:/# -/_hw => Hoo.
-        have Hp := hwinc_leaflast _lidx _ _;1,2: smt(). 
-        rewrite -Hp /=;split;2:by smt().
-        rewrite -Hn.  admit.
-        
-      + admit. (* this is the previous stack *)
+        by have := hwinc_leaflast _lidx _ _;smt(). 
+      + (* this is the previous stack *)
+        rewrite Ho;rewrite sfl_size 1:/# -/_hw => Hoo.
+        have := hwinc_pathsprev _lidx k _ _ _;1..3:smt(sfl_size hwinc pfl_size).
+        move : (Hs k _); 1:smt(sfl_size hwinc).  
+        move => [-> ->] ->. 
+        by rewrite /stack_from_leaf !(nth_map witness) /=;smt(sfl_size hwinc pfl_size).
     + (* reductions will be needed, but we haven't started
          so we have the old stack in the first positions and a
          new leaf at the next position *)
