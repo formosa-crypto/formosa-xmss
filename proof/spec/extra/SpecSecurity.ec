@@ -357,6 +357,18 @@ lemma hwinc_pathsprev lidx k :
       = (nth witness (paths_from_leaf lidx) k).
 admitted.
 
+(* if inner loop exited, then we have reached the final stack size *)
+lemma hwdec_exit lidx ss ps ad i : 
+   0 <= lidx < 2^h =>
+   hw (lpath (lidx + 1)) <= hw (lpath lidx) =>
+   let si = stack_increment lidx ss ps ad i in
+    ((size si < 2) \/
+     (2 <= size si /\
+       (nth witness si (size si - 1)).`2 <>
+         (nth witness si (size si - 2)).`2)) =>
+     size si = hw (lpath (lidx + 1)).
+admitted.
+
 (* FD + WR *)
 equiv kg_eq : XMSS_TW(FakeRO).keygen ~ XMSS_PRF.kg : ={arg} ==> pkrel res{1}.`1 res{2}.`2 /\ skrel res{1}.`2 res{2}.`1.
 proof.
@@ -480,16 +492,51 @@ split.
       rewrite !nth_put;1,2: by rewrite Ho sfl_size 1:/# /hw /lpath; smt(size_ge0 size_rev count_size BS2Int.size_int2bs).
       by smt(size_take size_lpath).
 
-move => hs o2 s2;do split => H H0 H1 H2 H3 H4 H5.
-+ by rewrite /(\ule) /=; smt(W64.to_uint_cmp).
-+ do split.
-  + smt(size_rcons).
-  + smt().
-  + smt().
+move => hs o2 s2;split. 
++ by move => *; rewrite /(\ule) /=;smt(W64.to_uint_cmp).
++ rewrite uleE /= => Hout. 
+  have Hout' : to_uint o2 < 2 \/ (2 <= to_uint o2 /\ nth witness hs (to_uint o2 - 1) <> nth witness hs (to_uint o2 - 2)).
+  + case (to_uint o2 < 2) => /= *; 1: by smt(). 
+    move : Hout;rewrite !to_uintB /=;1,2: by rewrite uleE /= /#. 
+    by smt().
+  move => ????Ho2  H5. 
+  rewrite /stack_increment /=.
+  pose _hw1 := (hw (lpath (_lidx + 1))).
+  pose _hw := (hw (lpath (_lidx))).
+do split.
+  + by smt(size_rcons).
+  + by smt().
+  + by smt().
   + by rewrite /leaf_range /range /= iotaSr 1:/# /= map_rcons /#. 
-  + admit. (* do do *)
-  + admit. (* to do *)
-  + admit. (* to do *)
+  + admit. (* challenging: growth of leaves under the potentially reduced subtree *)
+  + rewrite Ho2.
+    pose it := (to_uint o2 - hw (lpath _lidx) - 1).
+    case (_hw < _hw1) => *;1: by smt().
+    have /= Hex := hwdec_exit _lidx ss{1} ps{1} ad{1} it _ _ _;1..2:smt().
+    
+    have -> : size (stack_increment _lidx ss{1} ps{1} ad{1} it) = to_uint o2 by smt().
+    case (to_uint o2 < 2 ) => HH /=;1: by auto.
+    split; 1: smt().
+    move : (H5 (to_uint o2 - 1) _);1: smt(W64.to_uint_cmp).
+    move : (H5 (to_uint o2 - 2) _);1: smt(W64.to_uint_cmp).
+    move => <-. move => <-. 
+    move : Hout'; rewrite HH /=;smt(W32.to_uint_eq).
+    smt(sfl_size).
+  + move => k kbl kbh.
+    case (_hw < _hw1) => *;1: by smt().
+    pose it := (to_uint o2 - hw (lpath _lidx) - 1).
+    have /= Hex := hwdec_exit _lidx ss{1} ps{1} ad{1} it _ _ _;1..2:smt().
+    
+    have -> : size (stack_increment _lidx ss{1} ps{1} ad{1} it) = to_uint o2 by smt().
+    case (to_uint o2 < 2 ) => HH /=;1: by auto.
+    split; 1: smt().
+    move : (H5 (to_uint o2 - 1) _);1: smt(W64.to_uint_cmp).
+    move : (H5 (to_uint o2 - 2) _);1: smt(W64.to_uint_cmp).
+    move => <-. move => <-. 
+    move : Hout'; rewrite HH /=;smt(W32.to_uint_eq).
+    move : (H5 k _);1:smt(sfl_size).
+    move => [# -> ->]. 
+    admit.    
   + admit. (* to do *)
   + admit. (* to do *)
 
