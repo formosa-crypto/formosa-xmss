@@ -261,12 +261,15 @@ proof. by rewrite /leaf_range range_geq. qed.
 
 (* The node corresponding to an arbitrary path  *)
 op node_from_path (p : bool list, ss ps : Params.nbytes, ad : SA.adrs) : dgstblock =
- if 0 <= size p <= h then
-   let ls = leaves_from_path p in
-   let nls = map (leafnode_from_idx ss ps ad) ls in
-   let subtree = list2tree nls in
-   (val_bt_trh subtree ps (set_typeidx ad trhtype) (h - size p) (head witness ls))
-  else witness.
+ if size p = h 
+ then leafnode_from_idx ss ps ad (BS2Int.bs2int (rev p))
+ else if 0 <= size p <= h 
+      then let ls = leaves_from_path p in
+           let nls = map (leafnode_from_idx ss ps ad) ls in
+           let subtree = list2tree nls in
+               (val_bt_trh subtree ps (set_typeidx ad trhtype) 
+                   (h - size p) (head witness ls))   
+      else witness.
 
 (* The full stack state when one starts to process leaf lidx *)
 op stack_from_leaf (lidx : int, ss ps : Params.nbytes, ad : SA.adrs) : (dgstblock * int) list =
@@ -329,9 +332,12 @@ op stack_increment (lidx : int, ss ps : Params.nbytes, ad : SA.adrs, i : int) =
                         [(node_from_path carrypath ss ps ad, h - size carrypath)].
 
 (* Overflows may happen unless h is upper bounded *)
-(* axiom h_max : h < 64. *)
 axiom h_max : h <= 32.
 
+lemma hwinc lidx :
+   0 <= lidx < 2^h => 
+   hw (lpath lidx) < hw (lpath (lidx+1)) => hw (lpath (lidx+1)) = hw (lpath lidx) + 1.
+admitted.
 
 (* FD + WR *)
 equiv kg_eq : XMSS_TW(FakeRO).keygen ~ XMSS_PRF.kg : ={arg} ==> pkrel res{1}.`1 res{2}.`2 /\ skrel res{1}.`2 res{2}.`1.
@@ -375,7 +381,7 @@ while (size leafl0{1} = i{2} /\ 0 <= i{2} <= 2^h /\ t{2} = h
   + move => leafs1 hs1 o1 st2 6? Hl 2? H.
     have @/bs2block -> := (H 0 _) => /=; first by smt().
     rewrite /stack_from_leaf nth0_head /paths_from_leaf /= ifT 1:/# /=.
-    rewrite /node_from_path /= ifT 1:/# lfp_nil; congr; last first.
+    rewrite /node_from_path /= ifF 1:/# /= ifT 1:/# lfp_nil; congr; last first.
     - by rewrite -nth0_head nth_range //#.
     + by congr; rewrite Hl /leaf_range; congr => /#.
 
@@ -417,19 +423,18 @@ split.
   + have -> : (_hw1 + (_hw - _hw1)) = size _olds by smt().
     by rewrite take_size.
   have -> : node_from_path (take h (lpath _lidx)) ss{1} ps{1} ad{1} = bs2block node{2}.
-  + rewrite -Hn /node_from_path /= ifT; first smt(size_ge0 size_take h_g0).
-    have ->: take h (lpath _lidx) = (lpath _lidx).
-    - by rewrite take_oversize // size_lpath_lt.
-    rewrite lfp_leaf /= 1:/# -/_lidx size_lpath /= 1:/#.
-    rewrite ifF 1:/# /list2tree /= ifT;1: by exists 0 =>/=.
-    admit. (* we need to know that evaluation at level 0 is the leaf *)
+  + rewrite -Hn; 
+    have HH: take h (lpath _lidx) = (lpath _lidx).
+       - by rewrite take_oversize // size_lpath_lt.
+     rewrite /node_from_path ifT; 1: smt(size_lpath).
+     by  smt(revK BS2Int.int2bsK). 
   do split.
-+ admit. (* hw property: increase by exactly one *)
++ smt(hwinc). 
 + by smt(sfl_size).
 + by smt(size_put).
 + by smt(size_put).
 + case (_hw < _hw1).
-  + rewrite sfl_size 1:/#. admit. (* hw property: increase by exactly one *)
+  + by rewrite sfl_size;smt(hwinc).
   by move => ?;rewrite -/_lidx size_cat /= /#.
 + move => k kbl kbh.
   case (_hw < _hw1) => /= *.
