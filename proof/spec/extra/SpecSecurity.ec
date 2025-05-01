@@ -528,11 +528,15 @@ qed.
 
 (* PY *)
 equiv ver_eq : XMSS_TW(FakeRO).verify ~ XMSS_PRF.verify :
-  pkrel pk{1} pk{2} /\ ={m} /\ sigrel sig{1} s{2} ==> ={res}.
+       pkrel pk{1} pk{2} /\ ={m} /\ sigrel sig{1} s{2}
+    /\ to_uint s{2}.`sig_idx < l
+  ==>
+    ={res}.
 proof.
 proc=> /=.
 inline{1} 3.
 seq 6 9 : (   pkrel pk{1} pk{2}
+           /\ to_uint idx_sig{2} < l
            /\ Index.val sigfl{1}.`1 = to_uint idx_sig{2}
            /\ (map DigestBlock.val (DBLL.val sigfl{1}.`2)) = map (BytesToBits \o NBytes.val) (LenNBytes.val sig_ots{2})
            /\ (map DigestBlock.val (DBHL.val sigfl{1}.`3) = map (BytesToBits \o NBytes.val) (AuthPath.val auth{2}))
@@ -541,10 +545,10 @@ seq 6 9 : (   pkrel pk{1} pk{2}
            /\ DigestBlock.val pk{1}.`1 = BytesToBits (NBytes.val root{2})
            /\ pk{1}.`2 = _seed{2}
            /\ root{2} = pk{2}.`pk_root).
-+ auto => &1 &2 /> eqpk11 eqpk12 eqsig11 eqsig12 eqsig21 eqsig22 eqsig23.
++ auto => &1 &2 /> eqpk11 eqpk12 eqsig11 eqsig12 eqsig21 eqsig22 eqsig23 ltl_sig.
   do ! split.
   + rewrite eqsig21 Index.insubdK 2://.
-    admit. (* smt(gt_exprsbde W32.to_uint_cmp).*)
+    smt(W32.to_uint_cmp).
   + rewrite eqsig22 DBLL.insubdK.
     + admit.
     rewrite -map_comp /=.
@@ -575,39 +579,58 @@ swap{1} ^pk1<- @^pk0<- & +1.
 swap{1} ^root<- @^pk1<- & +1.
 sp 3 0.
 conseq (_: _ ==> DigestBlock.val root'{1} = BytesToBits (NBytes.val nodes0{2})).
-+ move=> /> &1 &2 eqpk1 eqpk2 eqsigfl1 eqsigfl2 eqsigfl3 eqcm eqvpk1.
++ move=> /> &1 &2 eqpk1 eqpk2 ltlsig eqsigfl1 eqsigfl2 eqsigfl3 eqcm eqvpk1.
   move=> r0 r1 eqrs.
   rewrite -DigestBlock.valKd eqrs eqpk1.
   admit.
 inline{1} root_from_sigFLXMSSTW.
-wp.
-seq 14 14 : (true).
+seq 15 14 : (   to_uint idx_sig0{2} < l
+             /\ ps0{1} = _seed0{2}
+             (*/\  Something on the address... *)
+             /\ set_typeidx ad0{1} trhtype = address{2}
+             /\ Index.val idx{1} = to_uint idx_sig0{2}
+             /\ leaf{1} = bs2block nodes0{2}
+             /\ (DBHL.val ap{1}) = map bs2block (AuthPath.val auth0{2})).
 + admit.
-exlim nodes0{2} => lf.
-print BS2Int.int2bs.
+exlim nodes0{2}, address{2} => lf2 ad2.
 while{2} (BytesToBits (NBytes.val nodes0{2})
           =
-          (let app = (map bs2block (AuthPath.val auth0{2})) in
+          (let app = drop (h - k{2}) (map bs2block (AuthPath.val auth0{2})) in
            let idp = (rev (BS2Int.int2bs k{2} (to_uint idx_sig0{2}))) in
-           let lfp = bs2block lf in
-           DigestBlock.val (val_ap_trh_gen app idp lfp _seed0{2} address0{2} k{2} (to_uint idx_sig0{2} %/ 2 ^ k{2})))
-          /\ k{2} <= h)
+           let lfp = bs2block lf2 in
+           DigestBlock.val (val_ap_trh_gen app idp lfp _seed0{2} ad2 k{2} (to_uint idx_sig0{2} %/ 2 ^ k{2})))
+          /\ 0 <= k{2} <= h)
          (h - k{2}).
-+ admit.
-auto => &1 &2 />.
-progress.
-admit.
-smt(ge0_h).
-smt(ge0_h).
-rewrite H0.
-rewrite /val_ap_trh.
-congr.
-congr.
-admit.
-admit.
-admit.
-admit.
-admit.
-smt().
-admit.
++ move=> _ z.
+  wp.
+  proc change 2 : (! odd (to_uint idx_sig0 %/ 2 ^ k)).
+  + admit.
+  sp.
+  have rand_hash_ll : islossless Hash.rand_hash by admit.
+  if => //.
+  + sp.
+    exlim nodes0, auth_k, _seed0, address0 => nds0 apk sd0 ad0.
+    call (_: arg = (nds0, apk, sd0, ad0) ==> res = rand_hash nds0 apk sd0 ad0).
+    by conseq rand_hash_ll (rand_hash_eq nds0 apk sd0 ad0).
+  skip => &1 /> ad01 ih ge0_k _ lth_k cut_even.
+  rewrite -!andbA; split => [| /#].
+  admit.
+  + sp.
+    exlim auth_k, nodes0, _seed0, address0 => apk nds0 sd0 ad0.
+    call (_: arg = (apk, nds0, sd0, ad0) ==> res = rand_hash apk nds0 sd0 ad0).
+    by conseq rand_hash_ll (rand_hash_eq apk nds0 sd0 ad0).
+  skip => &1 /> ad01 ih ge0_k _ lth_k cut_even.
+  rewrite -!andbA; split => [| /#].
+  admit.
+wp; skip => &1 &2 /> ltlidx eqidx eqap.
+split.
+rewrite BS2Int.int2bs0s rev_nil /val_ap_trh_gen -eqap.
+rewrite (: h = size (DBHL.val ap{1})) 1:DBHL.valP 1:// drop_size /=.
+rewrite /bs2block DigestBlock.insubdK 2://. admit.
+move => kr nds0.
+split => [/# | /lezNgt geh_kr -> ge0_kr leh_kr].
+rewrite (: kr = h) 1:/#.
+rewrite /val_ap_trh /= drop0 eqap eqidx.
+do 2! congr.
+rewrite eq_sym -divz_eq0 1:IntOrder.expr_gt0 1://; smt(W32.to_uint_cmp).
 qed.
