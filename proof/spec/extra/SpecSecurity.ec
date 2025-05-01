@@ -1,4 +1,4 @@
-require import AllCore IntDiv List Distr DList StdOrder.
+require import AllCore IntDiv List Distr DList StdOrder RealExp.
 require import BitEncoding.
 (*---*) import BitChunking.
 
@@ -25,6 +25,7 @@ axiom Eqv_Ltree_ltree (pkWOTS : Top.WOTS.wots_pk) (ad : adrs) (ps : Top.WOTS.see
 
 (* Get checksum from XMSS_Checksum and then plug those results
    here *)
+
 clone import XMSS_TW as XMSS_ABSTRACT with
   type mseed <- nbytes,
   op dmseed <- (dmap ((dlist W8.dword Params.n)) NBytes.insubd),
@@ -37,6 +38,10 @@ clone import XMSS_TW as XMSS_ABSTRACT with
   type FLXMSSTW.SA.HAX.Adrs.sT <- adrs,
   op FLXMSSTW.n <- n,
   op FLXMSSTW.h <- h,
+  op FLXMSSTW.log2_w <- ilog 2 w,
+  op FLXMSSTW.chtype <= 0,
+  op FLXMSSTW.pkcotype <= 1,
+  op FLXMSSTW.trhtype <= 2,
   op mkg = (fun (ms : nbytes) (i : FLXMSSTW.SA.index) =>
         let padding =  W64toBytes_ext prf_padding_val padding_len in
         let in_0 = toByte (W32.of_int (FLXMSSTW.SA.Index.val i)) 4 in
@@ -73,7 +78,14 @@ clone import XMSS_TW as XMSS_ABSTRACT with
         (BytesToBits
          (NBytes.val
           (ltree wpk ad ps))))) (* FIXME: Proper ltree operator *)
-     else witness).
+     else witness)
+proof FLXMSSTW.val_log2w, FLXMSSTW.dist_adrstypes.
+realize FLXMSSTW.val_log2w.
+case: w_vals => ->; [left | right; left].
++ by rewrite (: 4 = 2 ^ 2).
+by rewrite (: 16 = 2 ^ 4).
+qed.
+realize FLXMSSTW.dist_adrstypes by trivial.
 
 
 import FLXMSSTW SA WTW HtS Repro MCORO.
@@ -631,15 +643,35 @@ conseq (_: _ ==> DigestBlock.val root'{1} = BytesToBits (NBytes.val nodes0{2})).
   rewrite -DigestBlock.valKd eqrs eqpk1.
   admit.
 inline{1} root_from_sigFLXMSSTW.
-seq 15 14 : (   to_uint idx_sig0{2} < l
+seq 14 11 : (   to_uint idx_sig0{2} < l
              /\ ps0{1} = _seed0{2}
-             (*/\  Something on the address... *)
-             /\ set_typeidx ad0{1} trhtype = address{2}
+             /\ map DigestBlock.val (DBLL.val pkWOTS0{1}) =  map (BytesToBits \o NBytes.val) (LenNBytes.val pk_ots{2})
+             /\ (set_kpidx (set_typeidx ad0{1} pkcotype) (Index.val idx{1})) = address0{2}
              /\ Index.val idx{1} = to_uint idx_sig0{2}
-             /\ leaf{1} = bs2block nodes0{2}
              /\ (DBHL.val ap{1}) = map bs2block (AuthPath.val auth0{2})).
 + admit.
-exlim nodes0{2}, address{2} => lf2 ad2.
+seq 1 3 : (   to_uint idx_sig0{2} < l
+           /\ ps0{1} = _seed0{2}
+           /\ (set_thtbidx (set_typeidx ad0{1} trhtype) 0 (Index.val idx{1})) = address0{2}
+           /\ Index.val idx{1} = to_uint idx_sig0{2}
+           /\ leaf{1} = bs2block nodes0{2}
+           /\ (DBHL.val ap{1}) = map bs2block (AuthPath.val auth0{2})).
+wp.
+have ltree_ll : islossless LTree.ltree by admit.
+exlim pk_ots{2}, address0{2}, _seed0{2} => pkots2 add02 sd02.
+call{2} (_: arg = (pkots2, add02, sd02) ==> res = ltree pkots2 add02 sd02).
+by conseq ltree_ll (Eqv_Ltree_ltree pkots2 add02 sd02).
+skip => &1 &2 /> ltlidx eqpkots eqidx eqap.
+split.
+rewrite /trhtype. (* instantiate addresses so that setting entries can be matched...*)
+admit.
+rewrite /pkco /thfc /=.
+rewrite (: 8 * n * XMSS_ABSTRACT.FLXMSSTW.len <> 8 * n). admit.
+rewrite (: 8 * n * XMSS_ABSTRACT.FLXMSSTW.len <> 8 * n * 2) /=. admit. (* requires len <> 2... *)
+rewrite /bs2block /pkcotype. do 4! congr.
+rewrite eqpkots. admit.
+
+exlim nodes0{2}, address0{2} => lf2 ad2.
 while{2} (BytesToBits (NBytes.val nodes0{2})
           =
           (let app = drop (h - k{2}) (map bs2block (AuthPath.val auth0{2})) in
@@ -661,14 +693,26 @@ while{2} (BytesToBits (NBytes.val nodes0{2})
     by conseq rand_hash_ll (rand_hash_eq nds0 apk sd0 ad0).
   skip => &1 /> ad01 ih ge0_k _ lth_k cut_even.
   rewrite -!andbA; split => [| /#].
-  admit.
+  rewrite (: h - (k{1} + 1) = h - k{1} - 1) 1:/#.
+  rewrite (drop_nth witness) 1:size_map 1:AuthPath.valP 1:/# /=.
+  rewrite BS2Int.int2bsS 1:// rev_rcons /=.
+  rewrite (: to_uint idx_sig0{1} %/ 2 ^ k{1} %% 2 = 0) /=. smt(oddP).
+  rewrite (: 2 * (to_uint idx_sig0{1} %/ 2 ^ (k{1} + 1)) = (to_uint idx_sig0{1} %/ 2 ^ k{1})). admit.
+  rewrite -ih /trh /thfc (: 8 * n * 2 <> 8 * n) /=; 1: smt(ge1_n).
+  rewrite /rand_hash /=. admit.
   + sp.
     exlim auth_k, nodes0, _seed0, address0 => apk nds0 sd0 ad0.
     call (_: arg = (apk, nds0, sd0, ad0) ==> res = rand_hash apk nds0 sd0 ad0).
     by conseq rand_hash_ll (rand_hash_eq apk nds0 sd0 ad0).
   skip => &1 /> ad01 ih ge0_k _ lth_k cut_even.
   rewrite -!andbA; split => [| /#].
-  admit.
+  rewrite (: h - (k{1} + 1) = h - k{1} - 1) 1:/#.
+  rewrite (drop_nth witness) 1:size_map 1:AuthPath.valP 1:/# /=.
+  rewrite BS2Int.int2bsS 1:// rev_rcons /=.
+  rewrite (: to_uint idx_sig0{1} %/ 2 ^ k{1} %% 2 <> 0) /=. smt(oddP).
+  rewrite (: 2 * (to_uint idx_sig0{1} %/ 2 ^ (k{1} + 1)) + 1 = (to_uint idx_sig0{1} %/ 2 ^ k{1})). admit.
+  rewrite -ih /trh /thfc (: 8 * n * 2 <> 8 * n) /=; 1: smt(ge1_n).
+  rewrite /rand_hash /=. admit.
 wp; skip => &1 &2 /> ltlidx eqidx eqap.
 split.
 rewrite BS2Int.int2bs0s rev_nil /val_ap_trh_gen -eqap.
@@ -678,6 +722,10 @@ move => kr nds0.
 split => [/# | /lezNgt geh_kr -> ge0_kr leh_kr].
 rewrite (: kr = h) 1:/#.
 rewrite /val_ap_trh /= drop0 eqap eqidx.
-do 2! congr.
-rewrite eq_sym -divz_eq0 1:IntOrder.expr_gt0 1://; smt(W32.to_uint_cmp).
+rewrite (: (to_uint idx_sig0{2} %/ 2 ^ h) = 0).
+rewrite -divz_eq0 1:IntOrder.expr_gt0 1://; smt(W32.to_uint_cmp).
+have: valid_tbidx 0 (to_uint idx_sig0{2}). admit.
+move: (to_uint idx_sig0{2}) => i valtb.
+congr.
+admit. (* Annoying, but true: th and tb idx is always overwritten *)
 qed.

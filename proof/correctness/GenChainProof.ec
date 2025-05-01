@@ -107,10 +107,25 @@ inline {2} Hash._F.
 swap {2} 7 -6.
 
 seq 2 1 : (#pre /\ to_list padding{1} = padding{2}).
-  + auto.
-    outline {1} [2] { padding <@ M(Syscall).bytes_32__ull_to_bytes (padding, W64.zero); }.
-    ecall {1} (ull_to_bytes_32_correct W64.zero).
-    auto => /> &1 &2 ??->; smt(W64toBytes_ext_toByte_64).
+  + sp; wp; conseq />.
+    transitivity {1} { padding <@ M(Syscall).bytes_32__ull_to_bytes (padding, W64.zero); }
+    (={padding} ==> ={padding})
+    (
+      padding{2} = toByte_64 F_padding_val padding_len /\
+      padding{1} = Array32.init (fun (i_0 : int) => buf{1}.[0 + i_0]) /\
+      out{1} = _out_ /\
+      pub_seed{1} = _seed_ /\
+      addr{1} = a /\
+      t{2} = NBytes.insubd (to_list _out_) /\
+      seed{2} = NBytes.insubd (to_list _seed_) /\ 
+      address{2} = a /\
+      to_list addr_as_bytes{1} = NBytes.val addr_bytes{2}
+      ==>
+      to_list padding{1} = toByte_64 F_padding_val padding_len
+    ) => //; 2: by (inline; sim).
+      - auto => /> &1 &2 <-.
+        by exists a addr_as_bytes{1} buf{1} _out_ (Array32.init ("_.[_]" buf{1})) _seed_. 
+      - ecall {1} (ull_to_bytes_32_correct W64.zero); auto => /> &1 &2 ??->; smt(W64toBytes_ext_toByte_64).
 
 seq 1 0 : (#pre /\ sub buf{1} 0 n = padding{2}).
   + auto => /> &1 &2 ?.
@@ -341,7 +356,12 @@ seq 2 2 : (#pre /\ address{2} = addr{1}).
            case (j = 6) => //?; first by rewrite -H12 to_uintK.
            smt(sub_k).
 
-outline {2} [1-6] { (t, address) <@ ThashF.thash_f (t, _seed, address); }.
+
+conseq />. (* simplify #post *)
+
+outline {2} [1..6] by { 
+  (t, address) <@ ThashF.thash_f (t, _seed, address); 
+}.
 
 inline {1}  M(Syscall).__thash_f_  M(Syscall)._thash_f.
 

@@ -5,7 +5,7 @@ LABEL maintainer="rui.fernandes@mpi-sp.org"
 
 ARG USER="xmss-user"
 
-ARG EASYCRYPT_RELEASE=r2025.02 
+ARG EASYCRYPT_RELEASE=r2025.03
 ARG JASMIN_RELEASE=release-2025.02
 
 SHELL ["/bin/bash", "-c"]

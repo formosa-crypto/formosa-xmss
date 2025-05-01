@@ -423,7 +423,7 @@ seq 1 0 : (
       rewrite nth_cat !size_cat size_EncodeIdx /XMSS_INDEX_BYTES !NBytes.valP n_val ifF 1:/#.
       congr; ring.
  
-outline {2} [1-2] { 
+outline {2} [1..2] by { 
     _M' <@ M_Hash.hash (
           (ThreeNBytesBytes.insubd (NBytes.val _R ++ NBytes.val root ++ NBytes.val idx_bytes))%ThreeNBytesBytes, 
           m); 

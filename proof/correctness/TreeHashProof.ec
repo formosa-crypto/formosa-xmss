@@ -283,7 +283,7 @@ seq 1 0 : (#pre /\ ltree_addr{1}.[4] = t32{1}).
     + inline {1}; auto => /> &1 &2 *.
       split; apply (eq_from_nth witness); rewrite !size_sub // => j?; rewrite !nth_sub //= get_setE // ifF 1:/#; smt(sub_k).
 
-outline {2} [1-4] { node <@ WOTS_GenLeaf.gen_leaf (sk_seed, pub_seed, address, s, i); }.
+outline {2} [1..4] by { node <@ WOTS_GenLeaf.gen_leaf (sk_seed, pub_seed, address, s, i); }.
 
 seq 0 0 : (#pre /\ sub ltree_addr{1} 0 3 = sub address{2} 0 3).
     + auto => /> *; apply (eq_from_nth witness); rewrite !size_sub // => j?; rewrite !nth_sub //; smt(sub_k).
@@ -414,7 +414,7 @@ while (
 
 (* ============= FIRST SUBGOAL OF WHILE STARTS HERE ============= *)
 
-outline {2} [3-6] { node <@ WOTS_GenLeaf.gen_leaf (sk_seed, pub_seed, address, s, i); }.
+outline {2} [3..6] by { node <@ WOTS_GenLeaf.gen_leaf (sk_seed, pub_seed, address, s, i); }.
  
 seq 2 0 : (#pre /\ to_uint t32{1} = s{2} + i{2}).
     + auto => /> &1 &2; rewrite ultE => *; rewrite to_uintD_small //=; smt(@IntDiv @RealExp).
@@ -873,14 +873,15 @@ do split => //.
           rewrite /sub_list nth_mkseq //=.
           have ->: nth witness heights{2} j = nth witness (sub_list heights{2} 0 (min (to_uint offset{2}) (size heights{2}))) j 
                    by rewrite /sub_list nth_mkseq //=; smt(@W64 pow2_64).
+
           rewrite -H18 nth_sub; smt(@W64 pow2_64).
         * rewrite nth_sub // get_setE; first by smt(@W64 pow2_64).
           rewrite /sub_list nth_mkseq //= nth_put; first by smt(@W64 pow2_64).
           case (j = to_uint (offset{2} - (of_int 2)%W64)) => H; [rewrite ifT 1:/# | rewrite ifF 1:/#]. 
              - rewrite E //; smt(@W64 pow2_64).
-             - have ->: nth witness heights{2} j = nth witness (sub_list heights{2} 0 (min (to_uint offset{2}) (size heights{2}))) j
-                        by  rewrite /sub_list nth_mkseq //; smt(@W64 pow2_64).
-               by rewrite -H18 nth_sub //; smt(@W64 pow2_64).         
+             - have ->: nth witness heights{2} j = nth witness (sub_list heights{2} 0 (min (to_uint offset{2}) (size heights{2}))) j.
+                        by rewrite /sub_list nth_mkseq //; have := Hj; rewrite to_uintB ?uleE /#. 
+               rewrite -H18 nth_sub //; have := Hj; rewrite to_uintB ?uleE /#.  
   
     + apply (eq_from_nth witness).
         * rewrite size_sub; first by smt(@W64 pow2_64).
@@ -915,6 +916,7 @@ do split => //.
           rewrite -!E; smt(@W64 pow2_64).
 
         + have E1: min (to_uint offset{2}) (size heights{2}) = size heights{2} by smt().
+          have ?: size heights{2} = 11 by smt().
           case (0 <= to_uint (offset{2} - W64.one) < (size heights{2})) => ?.
               (* Neste caso, offset esta out of bounds, mas offset-1 e offset-2 estao in bounds *)
               * rewrite !E; first by rewrite E1; smt(@W64 pow2_64).

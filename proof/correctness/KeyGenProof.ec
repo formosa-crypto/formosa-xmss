@@ -69,7 +69,7 @@ transitivity {2} { pub_seed <$ dlist W8.dword 96; }
    generate 3*n = 96 bytes at once, and on the right side we generate n = 32 bytes three times.
    At this point, we can use the results from DListUtils.ec to prove that these are equivalent *) 
 
-outline {1} [1] { pub_seed <@ T.Program.Sample.sample(96); }.
+outline {1} 1 ~ T.Program.Sample.sample.
 transitivity {1}
  { pub_seed <@ T.SampleX.samplecat(64,32); }
  (true ==> ={pub_seed})
@@ -85,7 +85,7 @@ seq 2 2: (
 ); last by auto => /> *; smt(@DList).
 
 
-outline {1} [1-2] { x1 <@ T.Program.Sample.sample(64); }.
+outline {1} [1-2] by { x1 <@ T.Program.Sample.sample(64); }.
 
 transitivity {1}
 { x1 <@ T.SampleX.samplecat(32,32); }
@@ -279,7 +279,7 @@ seq 1 0  : (
 ).
     + exists * pk0{1}, root{1}.
       elim * => P0 P1.
-      outline {1} [1] { pk0 <@ M(Syscall).memcpy_u8u8_2N_N____nbytes_copy_offset (pk0, W64.zero, root, W64.zero); }.
+      outline {1} 1 by { pk0 <@ M(Syscall).memcpy_u8u8_2N_N____nbytes_copy_offset (pk0, W64.zero, root, W64.zero); }.
       call {1} (nbytes_copy_64_32_p P0 P1). (* We need the phoare version of the lemma here *)
       skip => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H20 result H18 H19.
       have E : forall (k : int), 0 <= k < 32 => nth witness (sub result 32 32) k = nth witness (sub P0 32 32) k by smt().

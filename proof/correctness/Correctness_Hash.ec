@@ -68,11 +68,26 @@ rewrite /XMSS_N /XMSS_HASH_PADDING_PRF /XMSS_PADDING_LEN => [#] n_val pval plen.
 proc => /=.
 seq 8 2 : (buf{2} = to_list buf{1});last by rcondt {1} 1 => //; ecall {1} (hash_96 buf{1}); auto => /> /#.
 seq 3 0 : #pre; 1:auto. 
+  
 seq 1 1 : (#pre /\ padding{2} = to_list padding_buf{1}).
-  + outline {1} [1] { padding_buf <@ M(Syscall).bytes_32__ull_to_bytes (padding_buf, W64.of_int 3); }.
-    call {1} (ull_to_bytes_32_correct (of_int 3)%W64). 
-    auto => /> ? ->. 
-    by rewrite /toByte_64 /W64toBytes_ext pval plen.
+ - transitivity {1} { padding_buf <@ M(Syscall).bytes_32__ull_to_bytes (padding_buf, W64.of_int 3); } (={padding_buf, in_0, key} ==> ={padding_buf, in_0, key})  
+(
+    in_0{1} = a /\
+    key{1} = b /\
+    in_0{2} = NBytes.insubd (to_list a) /\
+    key{2} = NBytes.insubd (to_list b)
+           ==>
+    in_0{1} = a /\
+    key{1} = b /\
+    in_0{2} = NBytes.insubd (to_list a) /\ 
+    key{2} = NBytes.insubd (to_list b) /\
+    padding{2} = to_list padding_buf{1}
+ 
+); 3: by inline; sim.
+  * by auto => /> &1; exists a b padding_buf{1}.
+  * by auto.
+  * call {1} (ull_to_bytes_32_correct (of_int 3)%W64).
+    by auto => /> ? ->; rewrite /toByte_64 /W64toBytes_ext pval plen.
 
 seq 1 0 : (
   NBytes.val key{2} = to_list key{1} /\
@@ -128,8 +143,24 @@ seq 7 2 : (buf{2} = to_list buf{1}); last by rcondt {1} 1 => // ; ecall {1} (has
 seq 3 0 : #pre; 1:auto.
 
 seq 1 1 : (#pre /\ padding{2} = to_list padding_buf{1}).
-  + outline {1} [1] { padding_buf <@ M(Syscall).bytes_32__ull_to_bytes (padding_buf, W64.of_int 4); }.
-    call {1} (ull_to_bytes_32_correct (of_int 4)%W64). 
+- transitivity {1} { padding_buf <@ M(Syscall).bytes_32__ull_to_bytes (padding_buf, W64.of_int 4); } (={padding_buf, in_0, key} ==> ={padding_buf, in_0, key})
+(
+  in_0{1} = a /\
+  key{1} = b /\
+  in_0{2} = to_list a /\ 
+  key{2} = NBytes.insubd (to_list b)
+  ==>
+  in_0{1} = a /\
+  key{1} = b /\
+  in_0{2} = to_list a /\ 
+  key{2} = NBytes.insubd (to_list b) /\
+  padding{2} = to_list padding_buf{1}
+).
+
+  + auto => /> &1; by exists a b padding_buf{1}.
+  + by auto.
+  + by inline; sim.
+  + call {1} (ull_to_bytes_32_correct (of_int 4)%W64). 
     auto => /> ? ->. 
     by rewrite /toByte_64 /W64toBytes_ext pval plen.
 
@@ -198,9 +229,28 @@ proc => /=.
 seq 3 0 : #pre; first by auto. 
 
 seq 1 1 : (#pre /\ padding{2} = to_list aux{1} /\ size padding{2} = 32).
-  + outline {1} [1] { aux <@ M(Syscall).bytes_32__ull_to_bytes (Array32.init (fun (i_0 : int) => buf.[0 + i_0]), W64.one); }.
-    call {1} (ull_to_bytes_32_correct (of_int 1)%W64). 
-    auto => /> ??->; smt(W64toBytes_ext_toByte_64 size_toByte_64).
+  + conseq />. 
+    transitivity {1} { aux <@ M(Syscall).bytes_32__ull_to_bytes (Array32.init (fun (i_0 : int) => buf.[0 + i_0]), W64.one); } 
+    (
+       ={buf}
+       ==> 
+       ={aux}
+    ) 
+    (
+        in_0{1} = merge_nbytes_to_array i0 i1 /\
+  pub_seed{1} = _pub_seed /\
+  addr{1} = a1 /\
+  _left{2} = i0 /\
+  _right{2} = i1 /\
+  _seed{2} = NBytes.insubd (to_list _pub_seed) /\
+  address{2} = a2 /\ forall (k : int), 0 <= k < 7 => a1.[k] = a2.[k]
+      ==> 
+      padding{2} = to_list aux{1} /\ size padding{2} = 32
+    ).
+       * auto => /> &1 ?; by exists a1 buf{1} (merge_nbytes_to_array i0 i1) _pub_seed. 
+       * auto.
+       * inline; sim.
+       * call {1} (ull_to_bytes_32_correct (of_int 1)%W64); auto => /> ??->; smt(W64toBytes_ext_toByte_64 size_toByte_64).
 
 swap {1} [2..3] -1.
 
@@ -927,11 +977,31 @@ seq 1 1 : (
   to_list buf{1} = padding{2} /\
   padding{2} = toByte_64 H_msg_padding_val n
 ).
-  + outline {1} [1] { buf <@ M(Syscall).bytes_32__ull_to_bytes (buf, W64.of_int 2); }.
-    call {1} (ull_to_bytes_32_correct ((of_int 2)%W64)); auto => /> ?????->.
-    apply (eq_from_nth witness); first by rewrite !size_toByte_64 //#. 
-    rewrite size_W64toBytes_ext // => j?. 
-    rewrite /toByte_64 /W64toBytes_ext; do congr => /#.
+  + conseq => />. (* to simplify #post *)
+    transitivity {1} { buf <@ M(Syscall).bytes_32__ull_to_bytes (buf, W64.of_int 2); } (={buf} ==> ={buf}) 
+    (
+      valid_ptr_i msg_ptr (4 * n + to_uint _mlen) /\
+      0 < to_uint _mlen /\
+      0 <= to_uint _idx < 2 ^ XMSS_FULL_HEIGHT /\
+      r{1} = R /\
+      root{1} = _root /\
+      idx{1} = _idx /\
+      m_with_prefix_ptr{1} = msg_ptr /\
+      mlen{1} = _mlen /\
+      Glob.mem{1} = mem /\
+      t{2} =
+      ThreeNBytesBytes.insubd (to_list R ++ to_list _root ++ toByte_64 _idx 32) /\
+      M{2} = load_buf mem (msg_ptr + W64.of_int 128) (to_uint _mlen)
+      ==>
+      to_list buf{1} = padding{2} /\ 
+      padding{2} = toByte_64 H_msg_padding_val n
+    ) => //. (* Obs: the 3rd goal is trivial *)
+       * auto => /> &1 *; by exists mem buf{1} _idx msg_ptr _mlen R _root.
+       * by inline; sim.
+       * call {1} (ull_to_bytes_32_correct ((of_int 2)%W64)); auto => /> ?????->.
+         apply (eq_from_nth witness); first by rewrite !size_toByte_64 //#. 
+         rewrite size_W64toBytes_ext // => j?. 
+         rewrite /toByte_64 /W64toBytes_ext; do congr => /#.
 
 (* toByte(X, 32) || R || root || index || M */ *) 
 seq 2 0 : (
@@ -942,13 +1012,62 @@ seq 2 0 : (
             !(to_uint msg_ptr <= k < to_uint msg_ptr + 32) => 
                mem.[k] = Glob.mem{1}.[k]
 
-).
+). 
     + inline {1} 2; inline {1} 8.
       sp; wp.
-      outline {1} [1] { out0 <@ M(Syscall).memcpy_u8pu8_n____memcpy_u8pu8 (out0, offset1, in_00); }. 
-      ecall {1} (p_write_buf_ptr Glob.mem{1} out0{1} offset1{1} in_00{1}).
-      skip => /> &hr H0 H1 H2 H3 H4*.
-      have := H0; rewrite n_val /= /valid_ptr_i /= => /#.
+      transitivity {1} { out0 <@ M(Syscall).memcpy_u8pu8_n____memcpy_u8pu8 (out0, offset1, in_00); } 
+      (={out0, offset1, in_00, buf, r, root, idx, Glob.mem, mlen} ==> ={out0, offset1, in_00, buf, r, root, idx, Glob.mem, mlen}) 
+      (
+        offset{1} = 0 /\
+        _offset{1} = 0 /\
+        offset0{1} = W64.of_int _offset{1} /\
+        out{1} = m_with_prefix_ptr{1} /\
+        in_0{1} = buf{1} /\
+        out0{1} = out{1} /\
+        offset1{1} = offset0{1} /\
+        in_00{1} = in_0{1} /\
+        valid_ptr_i msg_ptr (4 * n + to_uint _mlen) /\
+        0 < to_uint _mlen /\
+        0 <= to_uint _idx < 2 ^ XMSS_FULL_HEIGHT /\
+        r{1} = R /\
+        root{1} = _root /\
+        idx{1} = _idx /\
+        m_with_prefix_ptr{1} = msg_ptr /\
+        mlen{1} = _mlen /\
+        Glob.mem{1} = mem /\
+        t{2} = ThreeNBytesBytes.insubd (to_list R ++ to_list _root ++ toByte_64 _idx 32) /\
+        M{2} = load_buf mem (msg_ptr + W64.of_int 128) (to_uint _mlen) /\
+        to_list buf{1} = padding{2} /\ 
+        padding{2} = toByte_64 H_msg_padding_val n
+
+        ==>
+
+        valid_ptr_i msg_ptr (4 * n + to_uint _mlen) /\
+        0 < to_uint _mlen /\
+        0 <= to_uint _idx /\
+        to_uint _idx < 2 ^ XMSS_FULL_HEIGHT /\
+        r{1} = R /\
+        root{1} = _root /\
+        idx{1} = _idx /\
+        out0{1} = msg_ptr /\
+        mlen{1} = _mlen /\
+        t{2} =
+        ThreeNBytesBytes.insubd (to_list R ++ to_list _root ++ toByte_64 _idx 32) /\
+        M{2} = load_buf mem (msg_ptr + W64.of_int 128) (to_uint _mlen) /\
+        to_list buf{1} = padding{2} /\ 
+        padding{2} = toByte_64 H_msg_padding_val n /\
+        load_buf Glob.mem{1} out0{1} 32 = padding{2} /\
+        (forall (k : int),
+          0 <= k < W64.max_uint =>
+            ! to_uint msg_ptr <= k < to_uint msg_ptr + 32 =>
+              mem.[k] = Glob.mem{1}.[k])
+      ).
+        
+       * auto => /> &1 *; by exists mem 0 buf{1} _idx buf{1} buf{1} msg_ptr _mlen 0 W64.zero W64.zero msg_ptr msg_ptr R _root.
+       * by auto.
+       * inline; sim.
+       * ecall {1} (p_write_buf_ptr Glob.mem{1} out0{1} offset1{1} in_00{1}); skip => /> &hr H0*.
+         have := H0; rewrite n_val /= /valid_ptr_i /= => /#.
 
 (* toByte(X, 32) || R || root || index || M */ *) 
 seq 2 0 : (
@@ -962,7 +1081,7 @@ seq 2 0 : (
           0 <= k && k < W64.max_uint =>
            ! (to_uint msg_ptr <= k && k < to_uint msg_ptr + 64) =>
                mem.[k] = Glob.mem{1}.[k]
-).
+). 
     + sp. exists * m_with_prefix_ptr{1}, (W64.of_int offset{1}), r{1}; elim * => P0 P1 P2.
       ecall {1} (p_copy_nbytes_from_ptr_post Glob.mem{1} P1 P0 P2); auto => /> &1 ????Ha Hb* ; do split; 1,2: by smt(@W64 pow2_64). 
       auto => /> H0 H1 memL H2 H3; split => [| /#]. 
@@ -1017,9 +1136,40 @@ seq 0 0 : (
       smt(@W64 pow2_64).
 
 seq 1 0 : (#pre /\ to_list buf_n{1} = toByte_64 idx{1} 32).
-    + outline {1} [1] { buf_n <@ M(Syscall).bytes_32__ull_to_bytes(buf_n, idx); }.
-      ecall {1} (ull_to_bytes_32_correct idx{1}); auto => /> ????H*.
-      rewrite /XMSS_FULL_HEIGHT /= in H; smt().
+- sp; conseq />.
+  transitivity{1} { buf_n <@ M(Syscall).bytes_32__ull_to_bytes(buf_n, idx); }
+  (={buf_n, idx, Glob.mem} ==> ={buf_n, idx, Glob.mem})
+
+  (
+    valid_ptr_i msg_ptr (4 * n + to_uint _mlen) /\
+    0 < to_uint _mlen /\
+    0 <= to_uint _idx /\
+    to_uint _idx < 2 ^ XMSS_FULL_HEIGHT /\
+    r{1} = R /\
+    root{1} = _root /\
+    idx{1} = _idx /\
+    m_with_prefix_ptr{1} = msg_ptr /\
+    mlen{1} = _mlen /\
+    t{2} =
+    ThreeNBytesBytes.insubd (to_list R ++ to_list _root ++ toByte_64 _idx 32) /\
+    M{2} = load_buf mem (msg_ptr + W64.of_int 128) (to_uint _mlen) /\
+    to_list buf{1} = padding{2} /\
+    padding{2} = toByte_64 H_msg_padding_val n /\
+    load_buf Glob.mem{1} m_with_prefix_ptr{1} 32 = padding{2} /\
+    load_buf Glob.mem{1} (m_with_prefix_ptr{1} + W64.of_int 32) 32 = to_list R /\
+    load_buf Glob.mem{1} (m_with_prefix_ptr{1} + W64.of_int 64) 32 = to_list root{1} /\
+    load_buf Glob.mem{1} m_with_prefix_ptr{1} 96 = padding{2} ++ to_list R ++ to_list root{1} /\
+    forall (k : int),
+     0 <= k < W64.max_uint =>
+     ! to_uint msg_ptr <= k < to_uint msg_ptr + 96 =>
+     mem.[k] = Glob.mem{1}.[k]
+
+    ==>
+
+    to_list buf_n{1} = toByte_64 idx{1} 32
+  ) => //; [| by inline; sim | by  ecall {1} (ull_to_bytes_32_correct idx{1}); auto => /> ????H*; rewrite /XMSS_FULL_HEIGHT /= in H; smt()]. 
+  auto => /> &1 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9.
+  by exists Glob.mem{1} buf{1} buf_n{1} _idx msg_ptr _mlen R _root.
 
 seq 2 0 : (
   #{/~forall (k : int),

@@ -296,7 +296,7 @@ seq 3 2 : (
   rewrite nth_sub_list // nth_load_buf 1:/# /loadW8.
   congr; rewrite to_uintD /#.
 
-outline {2} [1-2] { 
+outline {2} [1..2] by { 
     _M' <@ M_Hash.hash (
           (ThreeNBytesBytes.insubd (NBytes.val _R ++ NBytes.val root ++ NBytes.val idx_bytes))%ThreeNBytesBytes, 
           m); 
@@ -544,7 +544,7 @@ seq 0 2 : (#{/~sub ltree_addr{1} 0 5 = sub address0{2} 0 5}pre /\ sub node_addr{
  
 seq 4 0 : (#pre /\ t64{1} = sm_ptr{1} + sm_offset{1}); first by auto.
 
-outline {2} [1-2] { nodes0 <@ ComputeRoot.compute_root (_seed, nodes0, address0, idx_sig0, auth0); }; 
+outline {2} [1-2] by { nodes0 <@ ComputeRoot.compute_root (_seed, nodes0, address0, idx_sig0, auth0); }; 
  
 conseq />.
 exists * leaf{1}, pub_seed{1}, idx_leaf{1}, t64{1}, node_addr{1}, address0{2}.
@@ -671,7 +671,7 @@ seq 0 2 : (#{/~sub ltree_addr{1} 0 5 = sub address0{2} 0 5}pre /\ sub node_addr{
  
 seq 4 0 : (#pre /\ t64{1} = sm_ptr{1} + sm_offset{1}); first by auto.
 
-outline {2} [1-2] { nodes0 <@ ComputeRoot.compute_root (_seed, nodes0, address0, idx_sig0, auth0); }.
+outline {2} [1-2] by { nodes0 <@ ComputeRoot.compute_root (_seed, nodes0, address0, idx_sig0, auth0); }.
 
 conseq />.
 exists * leaf{1}, pub_seed{1}, idx_leaf{1}, t64{1}, node_addr{1}, address0{2}.
