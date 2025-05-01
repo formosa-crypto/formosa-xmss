@@ -477,7 +477,7 @@ const trhtype : int.
 (* The different address types are distinct *)
 axiom dist_adrstypes : chtype <> pkcotype /\ chtype <> trhtype /\ pkcotype <> trhtype.
 
-(* l is greater than or equal to 1 *)
+(* l is greater than or equal to 2 *)
 lemma ge2_l : 2 <= l.
 proof. by rewrite /l ler_eexpr; smt(ge1_h). qed.
 
