@@ -334,9 +334,17 @@ op stack_increment (lidx : int, ss ps : Params.nbytes, ad : SA.adrs, i : int) =
 (* Overflows may happen unless h is upper bounded *)
 axiom h_max : h <= 32.
 
+(* hw increases by exactly 1 *)
 lemma hwinc lidx :
    0 <= lidx < 2^h => 
    hw (lpath lidx) < hw (lpath (lidx+1)) => hw (lpath (lidx+1)) = hw (lpath lidx) + 1.
+admitted.
+
+(* hw increase implies odd, so last node in paths is a leaf *)
+lemma hwinc_leaflast lidx : 
+   0 <= lidx < 2^h =>
+    hw (lpath lidx) < hw (lpath (lidx + 1)) =>
+      size (nth witness (paths_from_leaf (lidx + 1)) (hw (lpath lidx))) = h.
 admitted.
 
 (* FD + WR *)
@@ -422,12 +430,7 @@ split.
   have -> : take (_hw1 + (_hw - _hw1)) _olds = _olds.
   + have -> : (_hw1 + (_hw - _hw1)) = size _olds by smt().
     by rewrite take_size.
-  have -> : node_from_path (take h (lpath _lidx)) ss{1} ps{1} ad{1} = bs2block node{2}.
-  + rewrite -Hn; 
-    have HH: take h (lpath _lidx) = (lpath _lidx).
-       - by rewrite take_oversize // size_lpath_lt.
-     rewrite /node_from_path ifT; 1: smt(size_lpath).
-     by  smt(revK BS2Int.int2bsK). 
+  have -> : node_from_path (take h (lpath _lidx)) ss{1} ps{1} ad{1} = bs2block node{2}   by  smt(revK BS2Int.int2bsK size_lpath take_oversize size_lpath_lt). 
   do split.
 + smt(hwinc). 
 + by smt(sfl_size).
@@ -443,7 +446,12 @@ split.
       rewrite /stack_from_leaf !(nth_map witness) /=;1:by rewrite pfl_size; smt(sfl_size).
       rewrite !nth_put;1,2: by rewrite Ho sfl_size 1:/# /hw /lpath; smt(size_ge0 size_rev count_size BS2Int.size_int2bs).
       case(to_uint offset{2} = k).
-      + admit. (* this is the leaf just added *)
+      + (* this is the leaf just added *)
+        rewrite Ho;rewrite sfl_size 1:/# -/_hw => Hoo.
+        have Hp := hwinc_leaflast _lidx _ _;1,2: smt(). 
+        rewrite -Hp /=;split;2:by smt().
+        rewrite -Hn.  admit.
+        
       + admit. (* this is the previous stack *)
     + (* reductions will be needed, but we haven't started
          so we have the old stack in the first positions and a
