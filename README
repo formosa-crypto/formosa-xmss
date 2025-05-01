@@ -1,6 +1,6 @@
 This currently runs with the following tool versions:
 
-EasyCrypt (security) version: r2025.02
-EasyCrypt (correctness) version: r2025.02 (& main)
+EasyCrypt (security) version: r2025.03
+EasyCrypt (correctness) version: r2025.03 (& main)
 
 Jasmin & ECLib: release-2025.02

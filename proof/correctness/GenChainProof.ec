@@ -377,6 +377,5 @@ rewrite !NBytes.valKd.
 do split => _ _. (* These hypothesis are useless: t{2} = t{2} and _seed{2} = _seed{2} *)
 move => H14 H15 resultL resultR H16 H17.
 rewrite !ultE !to_uintD -H0; smt(sub_N). 
-
 qed.
 
