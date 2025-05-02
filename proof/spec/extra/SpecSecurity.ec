@@ -352,15 +352,6 @@ require import IntMin.
 
 hint simplify b2i0, b2i1.
 
-lemma hw_cat_pow2 (N k n1 n2 : int) :
-     0 <= k
-  => 0 <= n1
-  => 0 <= n2 < 2^k
-  => (n1 * 2^k + n2) < 2^N
-  =>   hw (BS2Int.int2bs N (n1 * 2^k + n2))
-     = hw (BS2Int.int2bs N n1) + hw (BS2Int.int2bs N n2).
-proof. admitted.
-
 lemma hw_rev (p : bool list) : hw (rev p) = hw p.
 proof. by rewrite /hw count_rev. qed.
 
@@ -374,6 +365,31 @@ hint simplify hw_cons.
 
 lemma hw_nseq (n : int) (b : bool) : 0 <= n => hw (nseq n b) = b2i b * n.
 proof. by move=> ge0_n @/hw; rewrite count_nseq /pred1 /=; case: b => //#. qed.
+
+lemma int2bs_enlarge (N1 N2 k : int) :
+  0 <= N1 <= N2 => k < 2^N1 => 
+    BS2Int.int2bs N2 k = BS2Int.int2bs N1 k ++ nseq (N2 - N1) false.
+proof.
+
+admitted.
+
+lemma hw_cat_pow2 (N k n1 n2 : int) :
+     0 <= k
+  => 0 <= n1
+  => 0 <= n2 < 2^k
+  => (n1 * 2^k + n2) < 2^N
+  =>   hw (BS2Int.int2bs N (n1 * 2^k + n2))
+     = hw (BS2Int.int2bs N n1) + hw (BS2Int.int2bs N n2).
+proof.
+have ? := expr_gt0; move=> *; have ?: k < N by admit.
+rewrite (BS2Int.int2bs_cat k N) ~-1:/# hw_cat addrC; congr.
+- rewrite divzMDl 1:/# pdiv_small //=.
+  rewrite (int2bs_enlarge (N - k) N) 1://#.
+  - admit.
+  by rewrite hw_cat hw_nseq /= /#.
+- rewrite -BS2Int.int2bs_mod modzMDl pmod_small //.
+  by rewrite (int2bs_enlarge k N) ~-1://# hw_cat hw_nseq /= //#.
+qed.
 
 lemma int2bs_pow2B1 (N k : int) :
   0 <= k <= N => BS2Int.int2bs N (2^k - 1) = nseq k true ++ nseq (N - k) false.
