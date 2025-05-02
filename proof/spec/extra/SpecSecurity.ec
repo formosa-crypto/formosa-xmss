@@ -373,12 +373,33 @@ admitted.
 lemma hwdec_exit lidx ss ps ad i : 
    0 <= lidx < 2^h =>
    hw (lpath (lidx + 1)) <= hw (lpath lidx) =>
+   0 <= i <= hw (lpath lidx) - hw (lpath (lidx + 1)) + 1 =>
    let si = stack_increment lidx ss ps ad i in
     ((size si < 2) \/
      (2 <= size si /\
        (nth witness si (size si - 1)).`2 <>
          (nth witness si (size si - 2)).`2)) =>
-     size si = hw (lpath (lidx + 1)).
+     (i = hw (lpath lidx) - hw (lpath (lidx + 1)) + 1 /\
+      size si = hw (lpath (lidx + 1))).
+admitted.
+
+(* final state of stack after reduction *)
+lemma stack_final lidx ss ps ad :
+  0 <= lidx < 2^h =>
+  forall k, 0 <= k < hw (lpath (lidx + 1)) =>
+  nth witness (stack_increment lidx ss ps ad (hw (lpath lidx) - hw (lpath (lidx + 1)) + 1))  k =
+  nth witness (stack_from_leaf (lidx + 1) ss ps ad) k.
+admitted.
+
+(* growth of leaves under the leftmost subtree *)
+lemma growth ss ps ad leaves lidx :
+0 <= lidx < 2^h =>
+size leaves = lidx =>
+ take (size (first_subtree_leaves (size leaves) ss ps ad)) leaves =
+   first_subtree_leaves (size leaves) ss ps ad =>
+ take (size (first_subtree_leaves (lidx + 1) ss ps ad))
+   (rcons leaves (leafnode_from_idx ss ps ad lidx)) =
+ first_subtree_leaves (lidx + 1) ss ps ad.
 admitted.
 
 (* FD + WR *)
@@ -440,7 +461,7 @@ while {2} ((hw (lpath i{2}) < hw (lpath (i{2} + 1)) => to_uint offset{2} = hw (l
     leafl0{1} = leaf_range ss{1} ps{1} ad{1} i{2} /\
     (let firstleaves = first_subtree_leaves i{2} ss{1} ps{1} ad{1} in
          take (size firstleaves) leafl0{1} = firstleaves) /\
-    let stacklist = stack_increment i{2} ss{1} ps{1} ad{1} (to_uint offset{2} - (hw (lpath i{2})) - 1) in
+    let stacklist = stack_increment i{2} ss{1} ps{1} ad{1} ((hw (lpath i{2})) + 1 - to_uint offset{2}) in
         to_uint offset{2} = size stacklist /\
       forall (k : int),
         0 <= k < size stacklist =>
@@ -454,7 +475,7 @@ while {2} ((hw (lpath i{2}) < hw (lpath (i{2} + 1)) => to_uint offset{2} = hw (l
    rewrite Ho sfl_size 1:/# /hw; smt(size_lpath count_size BS2Int.size_int2bs h_max).
 split. 
 (* initialization of inner loop invariant *)
-+ have -> : (to_uint offset{2} + 1 - hw (lpath _lidx) - 1) = 0 by smt(sfl_size).
++ have -> : (hw (lpath _lidx) + 1 - (to_uint offset{2} + 1)) = 0 by smt(sfl_size).
   rewrite /stack_increment /=.
   pose _olds := (stack_from_leaf _lidx ss{1} ps{1} ad{1}).
   pose _hw1 := (hw (lpath (_lidx + 1))).
@@ -520,37 +541,18 @@ do split.
   + by smt().
   + by smt().
   + by rewrite /leaf_range /range /= iotaSr 1:/# /= map_rcons /#. 
-  + admit. (* challenging: growth of leaves under the potentially reduced subtree *)
-  + rewrite Ho2.
-    pose it := (to_uint o2 - hw (lpath _lidx) - 1).
-    case (_hw < _hw1) => *;1: by smt().
-    have /= Hex := hwdec_exit _lidx ss{1} ps{1} ad{1} it _ _ _;1..2:smt().
-    
-    have -> : size (stack_increment _lidx ss{1} ps{1} ad{1} it) = to_uint o2 by smt().
-    case (to_uint o2 < 2 ) => HH /=;1: by auto.
-    split; 1: smt().
-    move : (H5 (to_uint o2 - 1) _);1: smt(W64.to_uint_cmp).
-    move : (H5 (to_uint o2 - 2) _);1: smt(W64.to_uint_cmp).
-    move => <-. move => <-. 
-    move : Hout'; rewrite HH /=;smt(W32.to_uint_eq).
-    smt(sfl_size).
-  + move => k kbl kbh.
-    case (_hw < _hw1) => *;1: by smt().
-    pose it := (to_uint o2 - hw (lpath _lidx) - 1).
-    have /= Hex := hwdec_exit _lidx ss{1} ps{1} ad{1} it _ _ _;1..2:smt().
-    
-    have -> : size (stack_increment _lidx ss{1} ps{1} ad{1} it) = to_uint o2 by smt().
-    case (to_uint o2 < 2 ) => HH /=;1: by auto.
-    split; 1: smt().
-    move : (H5 (to_uint o2 - 1) _);1: smt(W64.to_uint_cmp).
-    move : (H5 (to_uint o2 - 2) _);1: smt(W64.to_uint_cmp).
-    move => <-. move => <-. 
-    move : Hout'; rewrite HH /=;smt(W32.to_uint_eq).
-    move : (H5 k _);1:smt(sfl_size).
-    move => [# -> ->]. 
-    admit.    
-  + admit. (* to do *)
-  + admit. (* to do *)
+  + rewrite /first_subtree_leaves.
+  + by smt(growth). 
+  + case (_hw < _hw1) => *;1: by smt().
+    pose it := (hw (lpath _lidx) + 1 - to_uint o2).
+    have /= := hwdec_exit _lidx ss{1} ps{1} ad{1} it _ _ _;1..3:smt().
+    by smt(W32.to_uint_eq sfl_size W64.to_uint_cmp).
+  + case (_hw < _hw1) => *;1: by smt().
+    pose it := (hw (lpath _lidx) + 1 - to_uint o2).
+    have /= := hwdec_exit _lidx ss{1} ps{1} ad{1} it _ _ _;1..3:smt().
+    by smt(W32.to_uint_eq sfl_size W64.to_uint_cmp stack_final).
+  + by smt(size_rcons). 
+  + by smt(size_rcons).
 
 move => *.
 admit. (* preservation of inner loop invariant *)
