@@ -421,7 +421,7 @@ have lt_lidx' : lidx < 2 ^ (N+1) by rewrite exprSr //#.
 suff: hw (BS2Int.int2bs (N+1) (lidx + 1)) = hw (BS2Int.int2bs (N+1) lidx) + 1 - k.
 - admit.
 move: @k; (pose f i := take i (BS2Int.int2bs (N + 1) lidx)) => k.
-have := argmaxP_r f (all idfun) 0 (N+1) // _ _ _; 1,2: smt(take0).
+have := argmaxP_r f (List.all idfun) 0 (N+1) // _ _ _; 1,2: smt(take0).
 - move=> l lt_Nl @/f; apply/negP => /all_nthP.
   move/(_ false N _); first by rewrite size_take ?BS2Int.size_int2bs /#.
   rewrite nth_take ~-1:/# /BS2Int.int2bs nth_mkseq ~-1:/# /idfun /=.
@@ -613,7 +613,7 @@ while {2} (
  /\ i{2} = size leafl0{1} /\ size stack{2} = h + 1 /\ size heights{2} = h + 1 
  /\ ps{1} = pub_seed1{2}
  /\ (forall k, (0<=k<5 \/ k=7) => address0{2}.[k] = (set_type zero_address 2).[k])
- /\   0 <= i{2} < 2 ^ h /\ t{2} = h
+ /\   0 <= i{2} < 2 ^ h /\ t{2} = h /\ s{2} = 0 
  /\ leafl0{1} = leaf_range ss{1} ps{1} ad{1} i{2} /\
     (let firstleaves = first_subtree_leaves i{2} ss{1} ps{1} ad{1} in
          take (size firstleaves) leafl0{1} = firstleaves) 
@@ -723,8 +723,39 @@ conseq (: _ ==> true) (: _ ==> _);1,2:smt(); last first.
 
 seq 3  :
   (#pre 
-  /\ address0 = set_tree_index (set_tree_height (set_type zero_address 2) (to_uint (nth witness heights (to_uint offset - 1)))) 0).
-+ auto => /> &hr *. admit.
+  /\ address0 = set_tree_index (set_tree_height (set_type zero_address 2) (to_uint (nth witness heights (to_uint offset - 1)))) (BS2Int.bs2int (rev (take (h - (hw (lpath (size leafl0{m})) + 1 - to_uint offset{hr})) ( (lpath (size leafl0{m}))))))).
++ auto => /> &hr ???????????Hs; rewrite uleE /= => H H1; rewrite H1.
+  have -> : (to_uint
+     (W32.of_int (size leafl0{m}) `>>`
+      truncateu8 ((nth witness heights{hr} (to_uint (offset{hr} - W64.of_int 2)) + W32.one) `&` W32.of_int 31))) = (BS2Int.bs2int (rev (take (h - (hw (lpath (size leafl0{m})) + 1 - to_uint offset{hr})) ( (lpath (size leafl0{m})))))).
+  + rewrite to_uintB /=;1: by rewrite uleE /=; smt(). 
+    rewrite /(`>>`) /= to_uint_truncateu8.
+    move : (Hs (to_uint offset{hr} - 2) _);1:smt().
+    have -> : 31 = 2^5 - 1 by rewrite /=.
+    rewrite and_mod //= to_uintD_small /=. admit. 
+    move => [_ ->].
+    rewrite to_uint_shr /=;1: smt(W32.to_uint_cmp).
+    rewrite of_uintK  modz_small. admit.
+    rewrite of_uintK  modz_small /= 1:/#. 
+    rewrite modz_small 1:/#.
+    rewrite /lpath take_rev_int2bs. admit.
+    rewrite revK BS2Int.int2bsK. admit.  admit.
+    congr;congr.
+    rewrite modz_small.  admit.
+    congr.
+    have -> /= : b2i (size leafl0{m} = 2 ^ h) = 0 by smt().
+    have -> : h - (h - (hw (rev (BS2Int.int2bs h (size leafl0{m}))) + 1 - to_uint offset{hr})) =
+       (hw (rev (BS2Int.int2bs h (size leafl0{m})))) - to_uint offset{hr}  + 1 by ring.
+    congr. admit. (* property to externalize *)
+  split;last first.
+  + rewrite /set_tree_index tP => k kb.
+    case (k = 5); last by smt(Array8.get_setE).
+    move => ->; rewrite !get_setE //=.
+    move : H1; rewrite !to_uintB /=;1,2: by rewrite uleE /=; smt(). 
+    by smt().
+  move => k kb.
+  by smt(Array8.get_setE).
+
 seq 3 : (#pre /\ 
    node0 = nth XMSS_TreeHash.nbytes_witness stack (to_uint offset - 2)
 /\  node1 = nth XMSS_TreeHash.nbytes_witness stack (to_uint offset - 1)   
