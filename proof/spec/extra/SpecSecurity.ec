@@ -348,10 +348,141 @@ op stack_increment (lidx : int, ss ps : Params.nbytes, ad : SA.adrs, i : int) =
 (* Overflows may happen unless h is upper bounded *)
 axiom h_max : h <= 32.
 
+require import IntMin.
+
+hint simplify b2i0, b2i1.
+
+lemma hw_cat_pow2 (N k n1 n2 : int) :
+     0 <= k
+  => 0 <= n1
+  => 0 <= n2 < 2^k
+  => (n1 * 2^k + n2) < 2^N
+  =>   hw (BS2Int.int2bs N (n1 * 2^k + n2))
+     = hw (BS2Int.int2bs N n1) + hw (BS2Int.int2bs N n2).
+proof. admitted.
+
+lemma hw_rev (p : bool list) : hw (rev p) = hw p.
+proof. by rewrite /hw count_rev. qed.
+
+lemma hw_cat (p1 p2 : bool list) : hw (p1 ++ p2) = hw p1 + hw p2.
+proof. by rewrite /hw count_cat. qed.
+
+lemma hw_cons (b : bool) (p : bool list) : hw (b :: p) = b2i b + hw p.
+proof. by rewrite /hw /pred1; case: b. qed.
+
+hint simplify hw_cons.
+
+lemma hw_nseq (n : int) (b : bool) : 0 <= n => hw (nseq n b) = b2i b * n.
+proof. by move=> ge0_n @/hw; rewrite count_nseq /pred1 /=; case: b => //#. qed.
+
+lemma int2bs_pow2B1 (N k : int) :
+  0 <= k <= N => BS2Int.int2bs N (2^k - 1) = nseq k true ++ nseq (N - k) false.
+proof.
+move=> ?; apply: BS2Int.inj_bs2int_eqsize.
+- by rewrite BS2Int.size_int2bs size_cat !size_nseq /#.
+rewrite BS2Int.int2bsK 1:/#.
+- by split=> [|_]; [|rewrite ltzE /= &(ler_weexpn2l)]; smt(expr_gt0).
+by apply/eq_sym/BS2Int.bs2int_cat_nseq_true_false.
+qed.
+
+lemma hw_pow2B1 (N k : int) :
+  0 <= k <= N => hw (BS2Int.int2bs N (2^k - 1)) = k.
+proof.
+move=> rg_k; rewrite int2bs_pow2B1 // /hw count_cat.
+by rewrite !count_nseq /pred1 /=; smt().
+qed.
+
+lemma hwincSE (N lidx : int) :
+     0 <= N
+  => 0 <= lidx
+  => lidx + 1 < 2^N
+  => let k = argmax (fun i => take i (BS2Int.int2bs (N+1) lidx)) (all idfun) in
+     hw (BS2Int.int2bs N (lidx + 1)) = hw (BS2Int.int2bs N lidx) + 1 - k.
+proof.
+move=> ge0_N ge0_ldx lt_lidxS k.
+have lt_lidx: lidx < 2 ^ N by smt().
+have lt_lidx' : lidx < 2 ^ (N+1) by rewrite exprSr //#.
+suff: hw (BS2Int.int2bs (N+1) (lidx + 1)) = hw (BS2Int.int2bs (N+1) lidx) + 1 - k.
+- admit.
+move: @k; (pose f i := take i (BS2Int.int2bs (N + 1) lidx)) => k.
+have := argmaxP_r f (all idfun) 0 (N+1) // _ _ _; 1,2: smt(take0).
+- move=> l lt_Nl @/f; apply/negP => /all_nthP.
+  move/(_ false N _); first by rewrite size_take ?BS2Int.size_int2bs /#.
+  rewrite nth_take ~-1:/# /BS2Int.int2bs nth_mkseq ~-1:/# /idfun /=.
+  suff ->: lidx %/ 2^N = 0 by done.
+  by rewrite pdiv_small //#.
+rewrite -/k => [# ge0_k allones hz]; have: k <= N.
+- apply: le_argmax => // [] [j [ge0_j hj]] l lt_Nl.
+  rewrite -has_predC; apply/hasP => @/predC @/idfun /=.
+  admit.
+
+rewrite ler_eqVlt; case=> [kz|ltk].
+- admit.
+
+have: BS2Int.int2bs (N + 1) lidx =
+  nseq k true ++ false :: BS2Int.int2bs (N - k) (lidx %/ 2^(k+1)).
+- rewrite (BS2Int.int2bs_cat k (N+1)) ~-1://#; congr.
+  - rewrite &(eq_from_nth false) BS2Int.size_int2bs ?size_nseq //.
+    rewrite lez_maxr // => i rg_i; rewrite nth_nseq //.
+    move/all_nthP: allones => /(_ false i _) @/idfun /=.
+    - by rewrite /f size_take_condle // BS2Int.size_int2bs /#.
+    rewrite /f nth_take ~-1://# /BS2Int.int2bs.
+    by rewrite !nth_mkseq ~-1://# => /= ->.
+  rewrite (BS2Int.int2bs_cat 1 (N + 1 - k)) ~-1://#.
+  rewrite {1}/BS2Int.int2bs mkseq1 /=; split.
+  - move/(_ (k + 1) _): hz; ~-1:smt().
+    rewrite -has_predC => /hasP[b] [] @/predC @/idfun @/f.
+    rewrite (take_nth false) ?BS2Int.size_int2bs ~-1://#.
+    rewrite mem_rcons /=; case.
+    - by rewrite /BS2Int.int2bs nth_mkseq ~-1://# /= => -> ->.
+    by move=> b_in; move/List.allP: allones => /(_ b b_in) /#.
+  - rewrite (_ : N + 1 - k - 1 = N - k) 1:#ring.
+    by rewrite -divzMr 1?exprSr //; smt(expr_ge0).
+
+move/(congr1 BS2Int.bs2int); rewrite BS2Int.int2bsK ~-1://#.
+rewrite -cat1s catA BS2Int.bs2int_cat -nseq1.
+rewrite {1}(_ : 1 = (k + 1) - k) 1:#ring.
+rewrite BS2Int.bs2int_cat_nseq_true_false ~-1:/#.
+rewrite size_cat !size_nseq /= !lez_maxr ~-1:/#.
+rewrite BS2Int.int2bsK 1:/#; first split=> [|_].
+- by rewrite divz_ge0 // expr_gt0.
+- rewrite ltz_divLR; first smt(expr_gt0).
+  by rewrite -exprD_nneg //#.
+
+have: 0 <= lidx %/ (2 ^ (k + 1)) < 2^(N - (k+1)).
+- split=> [|_]; first by rewrite divz_ge0; smt(expr_gt0).
+  rewrite ltz_divLR; first smt(expr_gt0).
+  by rewrite -exprD_nneg //#.
+
+move: (lidx %/ (2^(k+1))) => hi rg_hi ->.
+
+have hlt: hi * 2 ^ (k + 1) + 2 ^ k < 2 ^ (N + 1).
+- rewrite [2^(N+1)]exprSr // (_ : 2^N * 2 = 2^N + 2^N) 1:#ring.
+  rewrite ltr_le_add //; last by apply: ler_weexpn2l => //#.
+  have ->: N = (N - (k + 1) + (k + 1)) by ring.
+  rewrite [2^(_ + (k+1))]exprD_nneg ~-1:/#.
+  by apply: ltr_pmul2r; smt(expr_gt0).
+ 
+rewrite addrAC ![_ + _*hi]addrC ![_*hi]mulrC !hw_cat_pow2 /=.
+- smt(). - smt(). - by rewrite exprSr //=; smt(expr_gt0).
+- smt(). - smt(). - smt().
+- by rewrite exprSr //; smt(expr_gt0). - smt().
+
+rewrite /= -!addrA; congr; rewrite hw_pow2B1 ~-1:/# addrCA /=.
+rewrite BS2Int.int2bs_pow2 ?mem_range ~-1://#.
+by rewrite hw_cat /= !hw_nseq //#.
+qed.
+
 (* hw increases by exactly 1 *)
 lemma hwinc lidx :
-   0 <= lidx < 2^h => 
-   hw (lpath lidx) < hw (lpath (lidx+1)) => hw (lpath (lidx+1)) = hw (lpath lidx) + 1.
+      0 <= lidx < 2^h
+   => hw (lpath lidx) < hw (lpath (lidx+1))
+   => hw (lpath (lidx+1)) = hw (lpath lidx) + 1.
+proof.
+(*
+move=> /hwincSE /= ->; pose k := argmax _ _.
+by (suff ge0_k: 0 <= k by smt()); smt(ge0_argmax).
+*)
 admitted.
 
 (* hw increase implies odd, so last node in paths is the leaf previous leaf *)
