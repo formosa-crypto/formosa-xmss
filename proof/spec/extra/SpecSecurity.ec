@@ -570,35 +570,34 @@ do split.
   + by smt(size_rcons).
 
 move => &m z.
-seq 3 :
+conseq (: _ ==> true) (: _ ==> _);1,2:smt(); last first. 
++ (* lossless *)
+  by inline *; auto.
+
+seq 3  :
   (#pre 
-  /\ address0 = set_tree_index (set_tree_height (set_type zero_address 2) (to_uint (nth witness heights (to_uint offset - 1)))) 0) => //.
+  /\ address0 = set_tree_index (set_tree_height (set_type zero_address 2) (to_uint (nth witness heights (to_uint offset - 1)))) 0).
 + auto => /> &hr *. admit.
-+ seq 3 : (#pre /\ 
+seq 3 : (#pre /\ 
    node0 = nth XMSS_TreeHash.nbytes_witness stack (to_uint offset - 2)
 /\  node1 = nth XMSS_TreeHash.nbytes_witness stack (to_uint offset - 1)   
 /\   new_node = block2bs  (trh pub_seed1 address0 (BytesToBits (NBytes.val node0) ++ BytesToBits (NBytes.val node1)))).
-  + by auto.
-  + admit. (* we need the semantics of the hash functions *)
-  + auto => /> &hr ????????????.
-    rewrite uleE /= => ?.
-    rewrite !to_uintB /=;1..2: by rewrite uleE /= /#.
-    + rewrite uleE /= to_uintB;by rewrite ?uleE /= /#.
-    + by rewrite uleE /= /#.
-    move => ?;split.
-    + do split. 
-      + (* we would not have entered the loop *)
-        admit. 
-      + move => *;split.  admit. admit. 
-      + by smt(size_put).
-      + by smt(size_put).
-      + admit. 
-      + admit. 
-      + by smt().
-   + hoare. admit. (* same goal as above *)
++ inline *; auto => /> &hr *. admit.
 
-+ by smt().
-hoare. admit.  (* same goal as above *)
+auto => /> &hr ??????????Ho?.
+rewrite uleE /= => ?.
+rewrite !to_uintB /=;1..2: by rewrite uleE /= /#.
++ rewrite uleE /= to_uintB;by rewrite ?uleE /= /#.
++ by rewrite uleE /= /#.
+move => ?;split.
++ do split.
+  +  (* we would not have entered the loop *)  admit. 
+  + move => *;rewrite Ho;split. admit. admit. 
+  + by smt(size_put).
+  + by smt(size_put).
+  + admit. 
+  + admit. 
+  + by smt().
 qed.
 
 (* Signature type is abused with two index copies because I need this to simulate
