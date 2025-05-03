@@ -492,7 +492,7 @@ have hlt: hi * 2 ^ (k + 1) + 2 ^ k < 2 ^ (N + 1).
   by apply: ltr_pmul2r; smt(expr_gt0).
  
 rewrite addrAC ![_ + _*hi]addrC ![_*hi]mulrC !hw_cat_pow2 /=.
-- smt(). - smt(). - by rewrite exprSr //=; smt(expr_gt0).
+- smt(). - smt(). - by rewrite exprSr //=; smt(expr_gt0). (* FIXME *)
 - smt(). - smt(). - smt().
 - by rewrite exprSr //; smt(expr_gt0). - smt().
 
@@ -507,11 +507,17 @@ lemma hwinc lidx :
    => hw (lpath lidx) < hw (lpath (lidx+1))
    => hw (lpath (lidx+1)) = hw (lpath lidx) + 1.
 proof.
-(*
-move=> /hwincSE /= ->; pose k := argmax _ _.
-by (suff ge0_k: 0 <= k by smt()); smt(ge0_argmax).
-*)
-admitted.
+have ? := h_g0; move=> [ge0_lidx lt_lidx]; have: lidx + 1 <= 2^h by smt().
+rewrite lez_eqVlt; case; last first.
+- move=> lt_Slidx; have := hwincSE h lidx _ _ _; ~-1: by move=> //#.
+  rewrite /lpath !hw_rev ![_ = 2^h]ltr_eqF //=; (pose k := argmax _ _) => ->.
+  by (have ge0_k: 0 <= k by apply: ge0_argmax) => /#.
+- move=> SlidxE @/lpath; rewrite !hw_rev SlidxE /= ltr_eqF //=.
+  have ->: lidx = 2^h - 1 by smt().
+  rewrite BS2Int.int2bs_pow2 ?mem_range ~-1:/# /= nseq0.
+  rewrite int2bs_pow2B1 ~-1:/# /= nseq0 cats0 hw_cat /=.
+  by rewrite !hw_nseq ~-1://# /= /hw /= /#.
+qed.
 
 (* hw increase implies odd, so last node in paths is the leaf previous leaf *)
 lemma hwinc_leaflast lidx : 
