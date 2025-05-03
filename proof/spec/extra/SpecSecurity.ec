@@ -346,7 +346,9 @@ op stack_increment (lidx : int, ss ps : Params.nbytes, ad : SA.adrs, i : int) =
                         [(node_from_path carrypath ss ps ad, h - size carrypath)].
 
 (* Overflows may happen unless h is upper bounded *)
-axiom h_max : h <= 32.
+axiom h_max : h < 32.
+
+lemma l_max : l < 4294967296 by rewrite -pow2_32 /l;apply WOTS_TW.gt_exprsbde;  smt(h_g0 h_max). 
 
 require import IntMin.
 
@@ -536,6 +538,7 @@ lemma hwinc_pathsprev lidx k :
       = (nth witness (paths_from_leaf lidx) k).
 admitted.
 
+
 (* if inner loop exited, then we have reached the final stack size *)
 lemma hwdec_exit lidx ss ps ad i : 
    0 <= lidx < 2^h =>
@@ -550,6 +553,17 @@ lemma hwdec_exit lidx ss ps ad i :
       size si = hw (lpath (lidx + 1))).
 admitted.
 
+lemma hwinc_noentry lidx ss ps ad i: 
+   0 <= lidx < 2^h =>
+    hw (lpath lidx) < hw (lpath (lidx + 1)) =>
+   let si = stack_increment lidx ss ps ad i in
+    ((size si < 2) \/
+     (2 <= size si /\
+       (nth witness si (size si - 1)).`2 <>
+         (nth witness si (size si - 2)).`2)).
+admitted.
+
+
 (* final state of stack after reduction *)
 lemma stack_final lidx ss ps ad :
   0 <= lidx < 2^h =>
@@ -557,6 +571,36 @@ lemma stack_final lidx ss ps ad :
   nth witness (stack_increment lidx ss ps ad (hw (lpath lidx) - hw (lpath (lidx + 1)) + 1))  k =
   nth witness (stack_from_leaf (lidx + 1) ss ps ad) k.
 admitted.
+
+lemma si_size_in_loop  lidx ss ps ad i :
+0 <= lidx < 2^h =>
+0 <= i <= hw (lpath lidx) - hw (lpath (lidx + 1)) =>
+   size (stack_increment lidx ss ps ad i) = 
+        hw (lpath lidx) + 1 - i.
+move => *; rewrite /stack_increment /= ifF 1:/#.
+rewrite size_take. admit.
+rewrite size_cat /= size_take;1: smt(count_ge0).
+have -> : hw (lpath (lidx + 1)) + (hw (lpath lidx) - hw (lpath (lidx + 1))) - i = (hw (lpath lidx)) - i by ring.
+by smt(sfl_size).
+qed.
+
+lemma si_heights_in_loop lidx ss ps ad i k :
+0 <= lidx < 2^h =>
+0 <= i <= hw (lpath lidx) - hw (lpath (lidx + 1)) =>
+0<= k < size (stack_increment lidx ss ps ad i) =>
+(nth witness
+   (stack_increment lidx ss ps ad i) 
+  (size (stack_increment lidx ss ps ad i) - 2)).`2 = i.
+admitted.
+
+lemma si_heights_in_loop_bnd lidx ss ps ad i k :
+0 <= lidx < 2^h =>
+0 <= i <= hw (lpath lidx) - hw (lpath (lidx + 1)) =>
+0<= k < size (stack_increment lidx ss ps ad i) =>
+ 0<= (nth witness
+   (stack_increment lidx ss ps ad i) k).`2 < h - 1.
+move => *.
+admitted. 
 
 (* growth of leaves under the leftmost subtree *)
 lemma growth ss ps ad leaves lidx :
@@ -737,48 +781,78 @@ do split.
 move => &m z.
 conseq (: _ ==> true) (: _ ==> _);1,2:smt(); last first. 
 + (* lossless *)
-  by inline *; auto.
-
+  by inline *; auto. 
 seq 3  :
   (#pre 
-  /\ address0 = set_tree_index (set_tree_height (set_type zero_address 2) (to_uint (nth witness heights (to_uint offset - 1)))) (BS2Int.bs2int (rev (take (h - (hw (lpath (size leafl0{m})) + 1 - to_uint offset{hr})) ( (lpath (size leafl0{m}))))))).
-+ auto => /> &hr ???????????Hs; rewrite uleE /= => H H1; rewrite H1.
-  have -> : (to_uint
-     (W32.of_int (size leafl0{m}) `>>`
-      truncateu8 ((nth witness heights{hr} (to_uint (offset{hr} - W64.of_int 2)) + W32.one) `&` W32.of_int 31))) = (BS2Int.bs2int (rev (take (h - (hw (lpath (size leafl0{m})) + 1 - to_uint offset{hr})) ( (lpath (size leafl0{m})))))).
-  + rewrite to_uintB /=;1: by rewrite uleE /=; smt(). 
-    rewrite /(`>>`) /= to_uint_truncateu8.
-    move : (Hs (to_uint offset{hr} - 2) _);1:smt().
+  /\ address0 = set_tree_index 
+      (set_tree_height (set_type zero_address 2) (to_uint (nth witness heights (to_uint offset - 1)))) 
+        (BS2Int.bs2int (rev (take (h - (hw (lpath (size leafl0{m})) - (to_uint offset - 1)) - 1) ( (lpath (size leafl0{m}))))))).
++ auto => /> &hr ??????????Ho Hs; rewrite uleE /= => H H1; rewrite H1.
+  move : (Hs (to_uint offset{hr} - 1) _);1: smt(sfl_size).
+  move : (Hs (to_uint offset{hr} - 2) _);1: smt(sfl_size).
+  move => [# Hs21 Hs22] [# Hs11 Hs12].
+  rewrite !to_uintB /=;1: by rewrite uleE /=; smt(). 
+  rewrite Hs12 Hs22.
+
+  have? : 0 <= hw (lpath (size leafl0{m})) + 1 - to_uint offset{hr} <=
+hw (lpath (size leafl0{m})) - hw (lpath (size leafl0{m} + 1)).
+  + admit.  
+  have -> : 
+     (to_uint
+         (W32.of_int (size leafl0{m}) `>>`
+          truncateu8 ((nth witness heights{hr} (to_uint offset{hr} - 2) + W32.one) `&` W32.of_int 31))) = 
+     (BS2Int.bs2int (rev (take (h - (hw (lpath (size leafl0{m})) - (to_uint offset{hr} - 1)) - 1) ( (lpath (size leafl0{m})))))); last first.  
+  + split;1: by move => *;rewrite /set_tree_index /set_tree_height /=; smt(Array8.get_setE).
+    rewrite tP => k kb;rewrite /set_tree_index /set_tree_height /=.
+    pose x:= 
+       (stack_increment (size leafl0{m}) ss{m} ps{m} ad{m} (hw (lpath (size leafl0{m})) + 1 - to_uint offset{hr})).
+    pose y := W32.of_int
+    (BS2Int.bs2int
+       (rev (take (h - (hw (lpath (size leafl0{m})) - (to_uint offset{hr} - 1)) - 1) (lpath (size leafl0{m}))))).
+     case (0<=k<5 \/ k= 7);1:by smt(Array8.get_setE).
+     case (k=6);1:by smt(Array8.get_setE).
+     move => *; have -> : k=5 by smt(). 
+     rewrite !get_setE //=. 
+     by move : H1; rewrite !to_uintB ?uleE /=;smt().
+
+  + rewrite /(`>>`) /= to_uint_truncateu8.
     have -> : 31 = 2^5 - 1 by rewrite /=.
-    rewrite and_mod //= to_uintD_small /=. admit. 
-    move => [_ ->].
+    rewrite and_mod //= to_uintD_small /=   Hs22 /=.
+    + have := si_heights_in_loop_bnd (size leafl0{m}) ss{m} ps{m} ad{m} (hw (lpath (size leafl0{m})) + 1 - to_uint offset{hr}) (to_uint offset{hr} - 2) _ _ _;smt(h_max).
     rewrite to_uint_shr /=;1: smt(W32.to_uint_cmp).
-    rewrite of_uintK  modz_small. admit.
+    rewrite of_uintK  modz_small => /=;1: smt(l_max).
     rewrite of_uintK  modz_small /= 1:/#. 
     rewrite modz_small 1:/#.
-    rewrite /lpath take_rev_int2bs. admit.
-    rewrite revK BS2Int.int2bsK. admit.  admit.
+    
+    rewrite take_rev_int2bs. 
+    + have -> /=:  b2i (size leafl0{m} = 2 ^ h) = 0 by smt().
+      split; 2: by smt().
+      rewrite Ho. admit.
+    rewrite revK BS2Int.int2bsK.  admit.
+    + split => *;1:smt().
+      + have -> /= :  b2i (size leafl0{m} = 2 ^ h) = 0 by smt().
+        have -> : (h - (h - (hw (lpath (size leafl0{m})) - (to_uint offset{hr} - 1)) - 1))  = hw (lpath (size leafl0{m})) - to_uint offset{hr} + 2  by ring.
+        have -> : h - (hw (lpath (size leafl0{m})) - (to_uint offset{hr} - 1)) - 1 = h - (hw (lpath (size leafl0{m})) - to_uint offset{hr} + 2) by ring.
+        admit.
     congr;congr.
-    rewrite modz_small.  admit.
+    rewrite modz_small.
+    + have := si_heights_in_loop_bnd (size leafl0{m}) ss{m} ps{m} ad{m} (hw (lpath (size leafl0{m})) + 1 - to_uint offset{hr}) (to_uint offset{hr} - 2) _ _ _;smt(h_max). 
     congr.
     have -> /= : b2i (size leafl0{m} = 2 ^ h) = 0 by smt().
-    have -> : h - (h - (hw (rev (BS2Int.int2bs h (size leafl0{m}))) + 1 - to_uint offset{hr})) =
-       (hw (rev (BS2Int.int2bs h (size leafl0{m})))) - to_uint offset{hr}  + 1 by ring.
-    congr. admit. (* property to externalize *)
-  split;last first.
-  + rewrite /set_tree_index tP => k kb.
-    case (k = 5); last by smt(Array8.get_setE).
-    move => ->; rewrite !get_setE //=.
-    move : H1; rewrite !to_uintB /=;1,2: by rewrite uleE /=; smt(). 
-    by smt().
-  move => k kb.
-  by smt(Array8.get_setE).
+    have -> : (h - (h - (hw (lpath (size leafl0{m})) - (to_uint offset{hr} - 1)) - 1))  = hw (lpath (size leafl0{m})) - to_uint offset{hr} + 2  by ring.
+    have  := si_heights_in_loop (size leafl0{m}) ss{m} ps{m} ad{m} (hw (lpath (size leafl0{m})) + 1 - to_uint offset{hr}) (to_uint offset{hr} - 2) _ _ _;1..3:smt(h_max).
+    pose si := (stack_increment (size leafl0{m}) ss{m} ps{m} ad{m} (hw (lpath (size leafl0{m})) + 1 - to_uint offset{hr})).
+    have -> : hw (lpath (size leafl0{m})) - to_uint offset{hr} + 2 = 
+     (hw (lpath (size leafl0{m})) + 1 - to_uint offset{hr}) + 1 by ring.
+   by smt().
 
 seq 3 : (#pre /\ 
    node0 = nth XMSS_TreeHash.nbytes_witness stack (to_uint offset - 2)
 /\  node1 = nth XMSS_TreeHash.nbytes_witness stack (to_uint offset - 1)   
 /\   new_node = block2bs  (trh pub_seed1 address0 (BytesToBits (NBytes.val node0) ++ BytesToBits (NBytes.val node1)))).
-+ inline *; auto => /> &hr *. admit.
++ inline *; auto => /> &hr ????????????; rewrite uleE /= => ?. 
+   rewrite !to_uintB /=;1,2:by  rewrite ?uleE /=; smt().
+   admit. (* semantics needs matching *)
 
 auto => /> &hr ??????????Ho?.
 rewrite uleE /= => ?.
@@ -787,12 +861,15 @@ rewrite !to_uintB /=;1..2: by rewrite uleE /= /#.
 + by rewrite uleE /= /#.
 move => ?;split.
 + do split.
-  +  (* we would not have entered the loop *)  admit. 
-  + move => *;rewrite Ho;split. admit. admit. 
+  + move => H; smt(hwinc_noentry).
+  + move => *;split;2:smt(). 
+    rewrite Ho si_size_in_loop. smt(). admit. admit.
   + by smt(size_put).
   + by smt(size_put).
-  + admit. 
-  + admit. 
+  + rewrite si_size_in_loop. smt(). admit. smt(). 
+  + move => *;split.
+    + admit. 
+    + admit.
   + by smt().
 qed.
 
