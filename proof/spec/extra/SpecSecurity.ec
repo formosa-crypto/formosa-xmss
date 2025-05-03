@@ -367,11 +367,19 @@ lemma hw_nseq (n : int) (b : bool) : 0 <= n => hw (nseq n b) = b2i b * n.
 proof. by move=> ge0_n @/hw; rewrite count_nseq /pred1 /=; case: b => //#. qed.
 
 lemma int2bs_enlarge (N1 N2 k : int) :
-  0 <= N1 <= N2 => k < 2^N1 => 
+  0 <= N1 <= N2 => 0 <= k < 2^N1 => 
     BS2Int.int2bs N2 k = BS2Int.int2bs N1 k ++ nseq (N2 - N1) false.
 proof.
-
-admitted.
+move=> [ge0_N1 leN] [ge0_k ltk]; apply/(eq_from_nth false).
+- by rewrite size_cat size_nseq !BS2Int.size_int2bs 1:/#.
+rewrite BS2Int.size_int2bs lez_maxr 1:/# => i rgi.
+rewrite nth_cat BS2Int.size_int2bs lez_maxr //.
+case: (i < N1) => [lt_iN1|ge_iN1].
+- by rewrite /int2bs !nth_mkseq /= //#.
+rewrite /int2bs nth_mkseq ?nth_nseq /= ~-1://#.
+rewrite pdiv_small // ge0_k /=; suff: 2^N1 <= 2^i by smt().
+by apply: ler_weexpn2l => //#.
+qed.
 
 lemma hw_cat_pow2 (N k n1 n2 : int) :
      0 <= k
@@ -385,7 +393,8 @@ have ? := expr_gt0; move=> *; have ?: k < N by admit.
 rewrite (BS2Int.int2bs_cat k N) ~-1:/# hw_cat addrC; congr.
 - rewrite divzMDl 1:/# pdiv_small //=.
   rewrite (int2bs_enlarge (N - k) N) 1://#.
-  - admit.
+  - split=> // _; apply: (ltr_pmul2r (2^k)); first smt().
+    by rewrite -exprD_nneg //#.
   by rewrite hw_cat hw_nseq /= /#.
 - rewrite -BS2Int.int2bs_mod modzMDl pmod_small //.
   by rewrite (int2bs_enlarge k N) ~-1://# hw_cat hw_nseq /= //#.
@@ -394,10 +403,10 @@ qed.
 lemma int2bs_pow2B1 (N k : int) :
   0 <= k <= N => BS2Int.int2bs N (2^k - 1) = nseq k true ++ nseq (N - k) false.
 proof.
-move=> ?; apply: BS2Int.inj_bs2int_eqsize.
+have ? := expr_gt0; move=> ?; apply: BS2Int.inj_bs2int_eqsize.
 - by rewrite BS2Int.size_int2bs size_cat !size_nseq /#.
 rewrite BS2Int.int2bsK 1:/#.
-- by split=> [|_]; [|rewrite ltzE /= &(ler_weexpn2l)]; smt(expr_gt0).
+- by split=> [|_]; [|rewrite ltzE /= &(ler_weexpn2l)]; smt().
 by apply/eq_sym/BS2Int.bs2int_cat_nseq_true_false.
 qed.
 
@@ -419,23 +428,21 @@ move=> ge0_N ge0_ldx lt_lidxS k.
 have lt_lidx: lidx < 2 ^ N by smt().
 have lt_lidx' : lidx < 2 ^ (N+1) by rewrite exprSr //#.
 suff: hw (BS2Int.int2bs (N+1) (lidx + 1)) = hw (BS2Int.int2bs (N+1) lidx) + 1 - k.
-- admit.
+- by rewrite !(int2bs_enlarge N (N + 1)) ~-1:/# !hw_cat hw_nseq /#.
 move: @k; (pose f i := take i (BS2Int.int2bs (N + 1) lidx)) => k.
 have := argmaxP_r f (List.all idfun) 0 (N+1) // _ _ _; 1,2: smt(take0).
 - move=> l lt_Nl @/f; apply/negP => /all_nthP.
   move/(_ false N _); first by rewrite size_take ?BS2Int.size_int2bs /#.
   rewrite nth_take ~-1:/# /BS2Int.int2bs nth_mkseq ~-1:/# /idfun /=.
-  suff ->: lidx %/ 2^N = 0 by done.
   by rewrite pdiv_small //#.
 rewrite -/k => [# ge0_k allones hz]; have: k <= N.
-- apply: le_argmax => // [] [j [ge0_j hj]] l lt_Nl.
-  rewrite -has_predC; apply/hasP => @/predC @/idfun /=.
-  admit.
+- case: (k <= N) => // /ltzNge => lt_Nk; move/List.allP: allones.
+  move/(_ (nth false (BS2Int.int2bs (N + 1) lidx) N)_).
+  - rewrite /f -(nth_take _ k) // mem_nth ge0_N /=.
+    by rewrite size_take_condle // BS2Int.size_int2bs /#.
+  by rewrite /idfun /int2bs nth_mkseq ~-1:/# /= pdiv_small.
 
-rewrite ler_eqVlt; case=> [kz|ltk].
-- admit.
-
-have: BS2Int.int2bs (N + 1) lidx =
+move=> le_kN; have: BS2Int.int2bs (N + 1) lidx =
   nseq k true ++ false :: BS2Int.int2bs (N - k) (lidx %/ 2^(k+1)).
 - rewrite (BS2Int.int2bs_cat k (N+1)) ~-1://#; congr.
   - rewrite &(eq_from_nth false) BS2Int.size_int2bs ?size_nseq //.
@@ -465,13 +472,18 @@ rewrite BS2Int.int2bsK 1:/#; first split=> [|_].
 - rewrite ltz_divLR; first smt(expr_gt0).
   by rewrite -exprD_nneg //#.
 
+move/lez_eqVlt: le_kN; case=> [->|lt_kz].
+- rewrite pdiv_small 1:exprSr ~-1://# /= => -> /=.
+  rewrite BS2Int.int2bs_pow2 ?mem_range ~-1://# /=.
+  rewrite int2bs_pow2B1 ~-1://# [N+1-N]addrAC /=.
+  by rewrite !hw_cat /= !hw_nseq //= #ring.
+
 have: 0 <= lidx %/ (2 ^ (k + 1)) < 2^(N - (k+1)).
 - split=> [|_]; first by rewrite divz_ge0; smt(expr_gt0).
   rewrite ltz_divLR; first smt(expr_gt0).
   by rewrite -exprD_nneg //#.
 
 move: (lidx %/ (2^(k+1))) => hi rg_hi ->.
-
 have hlt: hi * 2 ^ (k + 1) + 2 ^ k < 2 ^ (N + 1).
 - rewrite [2^(N+1)]exprSr // (_ : 2^N * 2 = 2^N + 2^N) 1:#ring.
   rewrite ltr_le_add //; last by apply: ler_weexpn2l => //#.
