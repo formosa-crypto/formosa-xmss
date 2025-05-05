@@ -342,10 +342,12 @@ op stack_increment (lidx : int, ss ps : Params.nbytes, ad : SA.adrs, offset : in
                         [(node_from_path carrypath ss ps ad, level)].
 
 (* Overflows may happen unless h is upper bounded *)
-axiom h_max : h < 32.
+axiom h_max : h <= 32. 
 
+(* 
 lemma l_max : l < 4294967296 
   by rewrite -pow2_32 /l;apply WOTS_TW.gt_exprsbde;  smt(h_g0 h_max). 
+*)
 
 require import IntMin.
 
@@ -546,7 +548,7 @@ lemma hwinc_pathsprev lidx k :
       = (nth witness (paths_from_leaf lidx) k).
 admitted.
 
-(* hw decrease implies even, so last node in old stack is leaf *)
+(* hw decrease implies odd, so last node in old stack is leaf *)
 lemma hwnoinc_leaflast lidx : 
    0 <= lidx < 2^h => 
     hw (lpath (lidx + 1)) <= hw (lpath lidx)  =>
@@ -758,10 +760,10 @@ split.
       rewrite !ifT;1: smt(size_cat).
       have -> /= : k = to_uint offset{2}  by smt(sfl_size).
       rewrite !nth_put /=;1,2: by rewrite Ho sfl_size 1:/# /hw /lpath; smt(size_ge0 size_rev count_size BS2Int.size_int2bs).
-      have Hnoinc :=  hwnoinc_leaflast _lidx _ _;1,2: smt().
+      have Hnoinc :=  hwnoinc_leaflast _lidx _ _;1,2: smt(). 
       have -> /= : (nth witness _olds (to_uint offset{2} - 1)).`2 = 0.
       + rewrite /_olds /stack_from_leaf.
-        by rewrite (nth_map witness) /=;smt(nth_map pfl_size sfl_size). 
+        rewrite (nth_map witness) /=;  smt(nth_map pfl_size sfl_size). 
       rewrite take_oversize; 1: smt(size_lpath).
       rewrite /node_from_path ifT;1: smt(size_lpath).
       rewrite -Hn;congr.
@@ -794,9 +796,10 @@ do split.
   + case (_hw < _hw1) => ? k *.
     + case (k < _hw) => *. 
       + have ? := hwinc_pathsprev _lidx k _ _ _;1..3: smt().
-      have ? := hwinc_leaflast _lidx _ _;1..2: smt(). 
-      
-    have /= := hwdec_exit _lidx ss{1} pub_seed1{2} ad{1} (to_uint o2) _ _ _;1..3:smt().
+        have ? := hwinc_leaflast _lidx _ _;1..2: smt(). 
+        by smt(W32.to_uint_eq sfl_size W64.to_uint_cmp stack_final).
+    by smt(W32.to_uint_eq sfl_size W64.to_uint_cmp stack_final).
+    have /= := hwdec_exit _lidx ss{1} pub_seed1{2} ad{1} (to_uint o2) _ _ _;1..3:smt(). 
     by smt(W32.to_uint_eq sfl_size W64.to_uint_cmp stack_final).
   + by smt(size_rcons). 
   + by smt(size_rcons).
@@ -846,15 +849,17 @@ hw (lpath (size leafl0{m})) - hw (lpath (size leafl0{m} + 1)).
     rewrite of_uintK  modz_small => /=;1: smt(l_max).
     rewrite of_uintK  modz_small /= 1:/#. 
     rewrite modz_small 1:/#.
-    
-    rewrite take_rev_int2bs.
-    +  admit.
-    rewrite revK BS2Int.int2bsK.  admit.
+    rewrite take_rev_int2bs. 
+    have -> : h - (hw (lpath (size leafl0{m})) - (to_uint offset{hr} - 1)) - 1 = h - (hw (lpath (size leafl0{m})) - ((to_uint offset{hr}) - 2)) by ring.
+    have ? : 0<= (hw (lpath (size leafl0{m})) - ((to_uint offset{hr}) - 2)) <= h; last by smt().
+      admit. 
+    rewrite revK BS2Int.int2bsK. 
+    have ? : 0<= (hw (lpath (size leafl0{m})) - ((to_uint offset{hr}) - 2)) <= h; last by smt(). admit. 
     + split => *;1:smt().
       + have -> /= :  b2i (size leafl0{m} = 2 ^ h) = 0 by smt().
         have -> : (h - (h - (hw (lpath (size leafl0{m})) - (to_uint offset{hr} - 1)) - 1))  = hw (lpath (size leafl0{m})) - to_uint offset{hr} + 2  by ring.
         have -> : h - (hw (lpath (size leafl0{m})) - (to_uint offset{hr} - 1)) - 1 = h - (hw (lpath (size leafl0{m})) - to_uint offset{hr} + 2) by ring.
-        admit.
+       admit. 
     congr;congr.
     rewrite modz_small.
     + admit. (* have := si_heights_in_loop_bnd (size leafl0{m}) ss{m} ps{m} ad{m} (hw (lpath (size leafl0{m})) + 1 - to_uint offset{hr}) (to_uint offset{hr} - 2) _ _ _;smt(h_max).  *)
