@@ -542,7 +542,7 @@ op valid_xidxvalslp (adidxs : int list) : bool =
 
 
 (* --- Fixed-Length XMSS-TW in an encompassing structure --- *)
-theory ES.
+abstract theory ES.
 (* Length of addresses used in tweakable hash functions (including unspecified global/context part) *)
 const adrs_len : { int | 4 <= adrs_len} as ge4_adrslen.
 
@@ -4821,7 +4821,6 @@ end ES.
 (* --- Fixed-Length XMSS-TW as standalone --- *)
 theory SA.
 
-
 (* -- Clones, includes, and imports -- *)
 (*
   Fixed-Length XMSS-TW in an encompassing structure without the global parts of addresses
@@ -4843,7 +4842,7 @@ clone include ES with
   realize WTW.WAddress.inhabited.
     rewrite /valid_wadrs /valid_wadrsidxs /valid_widxvals /predT /valid_widxvalslp.
     exists (HAX.Adrs.insubd [0; 0; 0; chtype]).
-    by rewrite ?HAX.Adrs.insubdK /valid_adrsidxs /= /valid_xidxvalslp /valid_xidxvalslpch /=; smt(ES.WTW.val_w ES.WTW.ge2_len ge2_l).
+    by rewrite ?HAX.Adrs.insubdK /valid_adrsidxs /= /valid_xidxvalslp /valid_xidxvalslpch /=; smt(WTW.val_w WTW.ge2_len ge2_l).
   qed.
   realize XAddress.inhabited.
     exists (HAX.Adrs.insubd [0; 0; 0; pkcotype]).
@@ -4852,6 +4851,8 @@ clone include ES with
   qed.
 
 import WTW XAddress.
+
+const adc : xadrs.
 
 (* Key-updating signature scheme *)
 clone import DigitalSignatures as FLXMSSTW with
@@ -4883,7 +4884,7 @@ module FL_XMSS_TW : FLXMSSTW.KeyUpdating.Scheme = {
 
     ss <$ dsseed;
     ps <$ dpseed;
-    xad <- witness;
+    xad <- adc;
 
     (pk, sk) <@ FL_XMSS_TW_ES.keygen(ss, ps, val xad);
 
@@ -4935,7 +4936,7 @@ module R_EUFRMAFLXMSSTW_EUFRMAFLXMSSTWES (A : Adv_EUFRMA) : Adv_EUFRMA_FLXMSSTWE
   proc choose() : xadrs = {
     var xad : xadrs;
 
-    xad <- witness;
+    xad <- adc;
 
     return xad;
   }
@@ -4961,7 +4962,7 @@ declare axiom A_forge_ll : islossless A.forge.
 (*
   First step: Reduce EUF-RMA for Fixed-Length XMSS-TW in an encompassing structure to EUF-RMA
   for Fixed-Length XMSS-TW as standalone
-*)
+witness*)
 local lemma Step_EUFRMA_FLXMSSTW_FLXMSSTWES &m:
   Pr[EUF_RMA(FL_XMSS_TW, A).main() @ &m : res]
   =
@@ -5005,5 +5006,111 @@ by proc; call A_forge_ll.
 qed.
 
 end section Proof_EUF_RMA_FLXMSSTW.
+
+
+(* -- Specification slightly closer aligned with the RFC -- *)
+theory RFC.
+
+type pkFLXMSSTWRFC = dgstblock * pseed.
+type skFLXMSSTWRFC = index * sseed * pkFLXMSSTWRFC.
+
+op pko2pkr (pk : pkFLXMSSTW) : pkFLXMSSTWRFC = (pk.`1, pk.`2).
+op sko2skr (sk : skFLXMSSTW) (pk : pkFLXMSSTW) : skFLXMSSTWRFC = (sk.`1, sk.`2, pko2pkr pk).
+op pkr2pko (pk : pkFLXMSSTWRFC) : pkFLXMSSTW = (pk.`1, pk.`2, val adc).
+op skr2sko (sk : skFLXMSSTWRFC) : skFLXMSSTW = (sk.`1, sk.`2, sk.`3.`2, val adc).
+
+clone import DigitalSignatures as FLXMSSTWRFC with
+  type pk_t <= pkFLXMSSTWRFC,
+  type sk_t <= skFLXMSSTWRFC,
+  type msg_t <= msgFLXMSSTW,
+  type sig_t <= sigFLXMSSTW
+
+  proof *.
+
+module FL_XMSS_TW_RFC : FLXMSSTWRFC.KeyUpdating.Scheme = {
+  proc keygen() : pkFLXMSSTWRFC * skFLXMSSTWRFC = {
+    var pkO : pkFLXMSSTW;
+    var skO : skFLXMSSTW;
+    var ss : sseed;
+    var ps : pseed;
+
+    ss <$ dsseed;
+    ps <$ dpseed;
+
+    (pkO, skO) <@ FL_XMSS_TW_ES.keygen(ss, ps, val adc);
+
+    return (pko2pkr pkO, sko2skr skO pkO);
+  }
+
+  proc sign(sk : skFLXMSSTWRFC, m : msgFLXMSSTW) : sigFLXMSSTW * skFLXMSSTWRFC = {
+    var skO : skFLXMSSTW;
+    var sig : sigFLXMSSTW;
+
+    (sig, skO) <@ FL_XMSS_TW_ES.sign(skr2sko sk, m);
+
+    return (sig, (skO.`1, skO.`2, sk.`3));
+  }
+
+  proc verify(pk : pkFLXMSSTWRFC, m : msgFLXMSSTW, sig : sigFLXMSSTW) : bool = {
+    var ver : bool;
+
+    ver <@ FL_XMSS_TW_ES.verify(pkr2pko pk, m, sig);
+
+    return ver;
+  }
+}.
+
+lemma FLXMSSTWRFC_keygen_ll: islossless FL_XMSS_TW_RFC.keygen.
+proof.
+islossless; while true (l - size leafl); auto=> [|/#].
+inline *; auto.
+while true (len - size pkWOTS0); auto; 1:smt(size_rcons).
+by while true (len - size skWOTS0); auto; smt(size_rcons).
+qed.
+
+lemma FLXMSSTWRFC_sign_ll: islossless FL_XMSS_TW_RFC.sign.
+proof.
+islossless.
++ while true (l - size leafl); auto=> [|/#].
+  inline *; auto.
+  while true (len - size pkWOTS0); auto; 1:smt(size_rcons).
+  by while true (len - size skWOTS0); auto; smt(size_rcons).
++ by while true (len - size sig); auto; smt(size_rcons).
++ by while true (len - size skWOTS); auto; smt(size_rcons).
+qed.
+
+lemma FLXMSSTWRFC_verify_ll: islossless FL_XMSS_TW_RFC.verify.
+proof. by islossless; while true (len - size pkWOTS); auto; smt(size_rcons). qed.
+
+
+equiv Eqv_FLXMSSTW_FLXMSSTWRFC_keygen :
+  FL_XMSS_TW.keygen ~ FL_XMSS_TW_RFC.keygen :
+   true
+   ==>
+   pko2pkr res{1}.`1 = res{2}.`1 /\
+   sko2skr res{1}.`2 res{1}.`1 = res{2}.`2.
+proof. by proc; call (_: true); [ sim | auto]. qed.
+
+equiv Eqv_FLXMSSTW_FLXMSSTWRFC_sign :
+  FL_XMSS_TW.sign ~ FL_XMSS_TW_RFC.sign :
+   ={m} /\ sk{1} = skr2sko sk{2}
+   ==>
+   (res{1}.`1, res{1}.`2) = (res{2}.`1, skr2sko res{2}.`2).
+proof.
+proc; inline sign. conseq />.
+wp; call (_: true); 1: by sim.
+wp; while (={sig1, skWOTS0, em, ad0, ps0}); 1: by sim.
+wp; call (_: true); 1: by sim.
+by wp; skip.
+qed.
+
+equiv Eqv_FLXMSSTW_FLXMSSTWRFC_verify :
+  FL_XMSS_TW.verify ~ FL_XMSS_TW_RFC.verify :
+   ={m, sig} /\ pk{1} = pkr2pko pk{2}
+   ==>
+   ={res}.
+proof. by proc; call (_: true); [sim | skip]. qed.
+
+end RFC.
 
 end SA.

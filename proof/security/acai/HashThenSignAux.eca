@@ -12,20 +12,41 @@ require (*--*) DigitalSignatures DigitalSignaturesROM KeyedHashFunctions Reprogr
 
 (* --- Parameters --- *)
 (* -- Proof-specific -- *)
+(* TODO: Move to section *)
 (* Number of message-signature pairs given to adversary *)
 op n : { int | 0 <= n } as ge0_n.
 
+(* Number of allowed signature queries *)
+op qS : { int | 0 <= qS <= n } as rng_qS.
 
+(* Number of allowed random oracle (hash) queries *)
+op qH : { int | 0 <= qH } as ge0_qH.
 
 (* --- Types --- *)
 (* -- General -- *)
 (* Randomness (i.e., indexing keys) used for message compression (assumed to be finite) *)
 type rco_t.
 
+(* TODO: Why finite? Fix in Reprogramming *)
 clone import FinType as RCO with
   type t <= rco_t.
 
-  
+(* Auxiliary (indexing) input used for message compression (assumed to be finite) *)
+type aux_t.
+
+(* TODO: Why finite? Fix in Reprogramming *)
+clone FinType as AUX with
+  type t <= aux_t.
+
+clone FinProdType as MCOIDX with
+  type t1 <- rco_t,
+  type t2 <- aux_t,
+  theory FT1 <- RCO,
+  theory FT2 <- AUX
+
+  proof *.
+
+
 (* -- Fixed-length digital signature scheme -- *)
 (* Public keys *)
 type pk_fl_t.
@@ -48,11 +69,12 @@ type pk_al_t = pk_fl_t.
 (* Messages (assumed to be finite) *)
 type msg_al_t.
 
-clone import FinType as MSG_AL with
+(* TODO: Why finite? Fix in Reprogramming *)
+clone FinType as MSG_AL with
   type t <= msg_al_t.
 
-(* 
-  Signatures; same as for fixed-length digital signature scheme but 
+(*
+  Signatures; same as for fixed-length digital signature scheme but
   extended with randomness/indexing key used for message compression
 *)
 type sig_al_t = rco_t * sig_fl_t.
@@ -60,16 +82,27 @@ type sig_al_t = rco_t * sig_fl_t.
 
 (* -- Miscellaneous -- *)
 (* Product type of indexing keys used for message compression and arbitrary-length messages *)
-clone import FinProdType as RCOMSGAL with
-  type t1 <- rco_t,
+clone FinProdType as MCOINPNested with
+  type t1 <- rco_t * aux_t,
   type t2 <- msg_al_t,
-  theory FT1 <- RCO,
+  theory FT1 <- MCOIDX,
   theory FT2 <- MSG_AL
-  
+
   proof *.
 
+clone import FinType as MCOINP with
+  type t <= rco_t * aux_t * msg_al_t,
+  op enum <= map (fun (ram : (_ * _) * _) => (ram.`1.`1, ram.`1.`2, ram.`2)) MCOINPNested.enum
 
-  
+proof *.
+realize enum_spec.
+move => ram; rewrite count_map /preim.
+by rewrite -(MCOINPNested.enum_spec ((ram.`1, ram.`2), ram.`3)) /#.
+qed.
+
+(* --- Operators --- *)
+op extr_aux_verify : pk_al_t -> sig_al_t -> aux_t.
+
 (* --- Distributions --- *)
 (* Proper, full, and uniform distribution over indexing keys used for message compression *)
 op [lossless full uniform] drco : rco_t distr.
@@ -82,28 +115,47 @@ op [lossless full uniform] dmsg_fl : msg_fl_t distr.
 (* --- Clones and imports --- *)
 (* -- Proof-specific -- *)
 (* Reprogramming technique and corresponding bound *)
+(* TODO: Change ROM to PROM to fix finiteness, then move to section  *)
 clone import Reprogramming as Repro with
-    type from <- rco_t * msg_al_t,
+    type from <- rco_t * aux_t * msg_al_t,
     type hash <- msg_fl_t,
-      
+
       op p_max_bound <- mu1 drco witness,
-         
+
       op dhash <- dmsg_fl,
 
-      theory FinFrom <- RCOMSGAL
-        
-      rename [theory] "ROM_" as "MCORO"
-      rename [theory] "LE" as "MCOROLE"
+    theory FinFrom <- MCOINP
 
-proof *. 
-realize dhash_ll by exact: dmsg_fl_ll.
+    rename [theory] "ROM_" as "MCORO"
+    rename [theory] "LE" as "MCOROLE"
+
+  proof *.
+  realize dhash_ll by exact: dmsg_fl_ll.
 
 (** MCORO = ROM_ **)
 import MCORO.
 import MCOROLE.
 module MCO = ERO.
 
+(*
+  (* TODO: Uncomment after moving below to section *)
+clone import DigitalSignatures as DSS_FL with
+  type pk_t <= pk_fl_t,
+  type sk_t <= sk_fl_t,
+  type msg_t <= msg_fl_t,
+  type sig_t <= sig_fl_t
+proof *.
+
+clone import DSS_FL.Stateless.EUFRMA as DSS_FL_EUFRMA with
+  op dmsg <= dmsg_fl,
+  op n_eufrma <= n
+proof *.
+realize dmsg_ll by exact: dmsg_fl_ll.
+realize ge0_neufrma by exact: ge0_n.
+*)
+
 (* Equivalence between the considered interactive EUF-RMA and regular EUF-RMA notions *)
+(* TODO: Move to section, proving everything also works with above modules *)
 clone import EUFRMA_Interactive_Equiv as EUFRMAEqv with
   type msg_t <- msg_fl_t,
   type sig_t <- sig_fl_t,
@@ -112,45 +164,45 @@ clone import EUFRMA_Interactive_Equiv as EUFRMAEqv with
 
   op n_eufrma <- n,
   op dmsg <- dmsg_fl,
- 
+
   type ClassDS.pk_t <= pk_fl_t,
   type ClassDS.sk_t <= sk_fl_t,
   type ClassDS.msg_t <= msg_fl_t,
   type ClassDS.sig_t <= sig_fl_t
-  
+
   rename [theory] "Class_EUFRMA" as "DSS_FL_EUFRMA"
   rename [theory] "ClassDS" as "DSS_FL"
-  
-  proof *. 
+
+  proof *.
   realize dmsg_ll by exact: dmsg_fl_ll.
   realize ge0_neufrma by exact: ge0_n.
-  
+
 import DSS_FL_EUFRMA.
 
 (* --- Auxiliary lemmas --- *)
-(* 
-  The maximum probility of sampling any randomness-message pair (rco, m), 
+(*
+  The maximum probility of sampling any randomness-message pair (rco, m)
   where rco is sampled according to drco and m is a fixed constant, is
-  equal to the probability of sampling some value from drco 
+  equal to the probability of sampling some value from drco
   (because drco is full and uniform)
-*) 
-lemma p_max_rcom (m : msg_al_t) :
-  Repro.p_max (dmap drco (fun (rco : rco_t) => (rco, m))) = mu1 drco witness.
+*)
+lemma p_max_rcom (aux : aux_t) (m : msg_al_t) :
+  Repro.p_max (dmap drco (fun (rco : rco_t) => (rco, aux, m))) = mu1 drco witness.
 proof.
 apply ler_anti; split => [|_].
-+ move: (listmax_in Real.(<=) RealOrder.ler_trans RealOrder.ler_total). 
-  move=> /(_ 0%r (map (fun (x : rco_t * msg_al_t) => 
-                          mu (dmap drco (fun (rco : rco_t) => (rco, m))) ((=) x)) 
-                       RCOMSGAL.enum) _).
-  - rewrite size_map; move: (enumP witness).
-    by case RCOMSGAL.enum => //=; smt(size_ge0).
++ move: (listmax_in Real.(<=) RealOrder.ler_trans RealOrder.ler_total).
+  move=> /(_ 0%r (map (fun (x : rco_t * aux_t * msg_al_t) =>
+                          mu (dmap drco (fun (rco : rco_t) => (rco, aux, m))) ((=) x))
+                       MCOINP.enum) _).
+  - rewrite size_map /MCOINP.enum; move: (enumP witness).
+    case MCOINPNested.enum => //=; smt(size_ge0).
   move/mapP => @/p_max [rcom] [rcomin /= ->].
   by rewrite dmapE /(\o) /= (drco_uni witness rcom.`1) 1,2:drco_fu /pred1 mu_le.
-apply (ler_trans (mu1 (dmap drco (fun (rco : rco_t) => (rco, m))) (witness, m))) => [| @/pred1].
+apply (ler_trans (mu1 (dmap drco (fun (rco : rco_t) => (rco, aux, m))) (witness, aux, m))) => [| @/pred1].
 + rewrite ler_eqVlt; left.
   by rewrite dmap1E /pred1 /(\o).
-by rewrite (mu_eq _ _ (fun (p : rco_t * msg_al_t) => (witness, m) = p)) 1:/# p_maxE.
-qed.  
+by rewrite (mu_eq _ _ (fun (p : rco_t * aux_t * msg_al_t) => (witness, aux, m) = p)) 1:/# p_maxE.
+qed.
 
 
 
@@ -159,23 +211,23 @@ qed.
 (* - CR (of a random oracle) - *)
 (* Class of adversaries againt CR (of a random oracle) *)
 module type Adv_CR_RO(RO : POracle) = {
-  proc find() : (rco_t * msg_al_t) * (rco_t * msg_al_t)
+  proc find() : (rco_t * aux_t * msg_al_t) * (rco_t * aux_t * msg_al_t)
 }.
 
 (* CR (of a random oracle) game *)
 module CR_RO(A : Adv_CR_RO, RO : Oracle) = {
   proc main() = {
-    var kx, kx' : rco_t * msg_al_t;
+    var x, x' : rco_t * aux_t * msg_al_t;
     var y, y' : msg_fl_t;
-    
+
     RO.init();
-    
-    (kx, kx') <@ A(RO).find();
-    
-    y <@ RO.o(kx);
-    y' <@ RO.o(kx');
-    
-    return kx <> kx' /\ y = y';
+
+    (x, x') <@ A(RO).find();
+
+    y <@ RO.o(x);
+    y' <@ RO.o(x');
+
+    return x <> x' /\ y = y';
   }
 }.
 
@@ -184,95 +236,97 @@ module CR_RO(A : Adv_CR_RO, RO : Oracle) = {
 (* Module type for "target" oracles used in the M-eTCR (of a random oracle) game *)
 module type Oracle_METCR = {
   proc init() : unit
-  proc query(x : msg_al_t) : rco_t
-  proc get(i : int) : rco_t * msg_al_t
+  proc query(a : aux_t, x : msg_al_t) : rco_t
+  proc get(i : int) : rco_t * aux_t * msg_al_t
   proc nr_targets() : int
 }.
 
-(* 
-  Module type for "target" oracles given to the adversaries 
+(*
+  Module type for "target" oracles given to the adversaries
   in the M-eTCR (of a random oracle) game
 *)
 module type TOracle_METCR = {
-  proc query(x : msg_al_t) : rco_t
+  proc query(a : aux_t, x : msg_al_t) : rco_t
 }.
 
 (* Default implementation of a "target" oracle used in the M-eTCR (of a random oracle) game  *)
 module O_METCR : Oracle_METCR = {
-  var ts : (rco_t * msg_al_t) list
-  
+  var ts : (rco_t * aux_t * msg_al_t) list
+
   proc init() : unit = {
     ts <- [];
   }
-  
-  proc query(m : msg_al_t) : rco_t = {
+
+  proc query(aux : aux_t, x : msg_al_t) : rco_t = {
     var rco : rco_t;
-    
+
     rco <$ drco;
-    
-    ts <- rcons ts (rco, m);
-      
+
+    ts <- rcons ts (rco, aux, x);
+
     return rco;
   }
-  
+
   (* Gets i-th element in list of targets; returns witness if index is out of bounds *)
-  proc get(i : int) : rco_t * msg_al_t = {
+  proc get(i : int) : rco_t * aux_t * msg_al_t = {
     return nth witness ts i;
   }
-  
+
   (* Returns the number of elements in the list of targets *)
   proc nr_targets() : int = {
-    return size ts; 
+    return size ts;
   }
 }.
 
 (* Class of adversaries against M_ETCR *)
 module type Adv_METCR_RO(RO : POracle, O : TOracle_METCR) = {
-  proc find() : int * rco_t * msg_al_t
+  proc find() : int * (rco_t * aux_t * msg_al_t)
 }.
 
 (* M-eTCR (of a random oracle) game *)
 module M_ETCR_RO(A : Adv_METCR_RO, O : Oracle_METCR, RO : Oracle) = {
   proc main() = {
-    var k, k' : rco_t;
-    var x, x' : msg_al_t;
+    var x, x' : rco_t * aux_t * msg_al_t;
     var y, y' : msg_fl_t;
     var i, nrts : int;
-    
+
     O.init();
     RO.init();
-    
-    (i, k', x') <@ A(RO, O).find();
-    
-    (k, x) <@ O.get(i);
-    
-    y <@ RO.o((k, x));
-    y' <@ RO.o((k', x'));
-    
+
+    (i, x') <@ A(RO, O).find();
+
+    x <@ O.get(i);
+
+    y <@ RO.o(x);
+    y' <@ RO.o(x');
+
     nrts <@ O.nr_targets();
-    
+
     return 0 <= i < nrts /\ x <> x' /\ y = y';
   }
 }.
 
 
 
-(* 
-  --- 
-  Hash-then-sign paradigm where the the randomness/indexing keys used for 
-  message compression are sampled 
-  --- 
-*) 
+(*
+  ---
+  Hash-then-sign paradigm where the the randomness/indexing keys used for
+  message compression are sampled
+  ---
+*)
 theory WithSampling.
   (* -- Types -- *)
   (* - Arbitrary-length digital signature scheme - *)
   (* Secret key; same as for fixed-length digital signature scheme *)
   type sk_al_t = sk_fl_t.
 
+  (* -- Operators -- *)
+  op extr_aux_sign : sk_al_t -> aux_t.
+
 
   (* -- Clones and imports -- *)
-  (* 
-    Arbitrary-length digital signature scheme (where the message compression 
+  (*
+    Arbitrary-length digital signature scheme (where the message compression
     function is considered to be an RO)
   *)
   clone import DigitalSignaturesROM as DSS_AL with
@@ -281,7 +335,7 @@ theory WithSampling.
     type msg_t <- msg_al_t,
     type sig_t <- sig_al_t,
 
-    type in_t <- rco_t * msg_al_t,
+    type in_t <- rco_t * aux_t * msg_al_t,
     type out_t <- msg_fl_t,
     type d_in_t <- int,
     type d_out_t <- bool,
@@ -296,22 +350,20 @@ theory WithSampling.
 
 
   (* -- Arbitrary-length digital signature scheme -- *)
-  (* 
-    Specification of arbitrary-length digital signature scheme based on the fixed-length
-    digital signature scheme (assuming the message compression function is an RO)
-  *)
   module (AL_KU_DSS(FL_KU_DSS : DSS_FL.KeyUpdating.Scheme) : Scheme_RO) (RO : POracle) = {
     proc keygen = FL_KU_DSS.keygen
 
     proc sign(sk : sk_al_t, m : msg_al_t) : sig_al_t * sk_al_t = {
       var rco : rco_t;
+      var aux : aux_t;
       var cm : msg_fl_t;
       var sigfl : sig_fl_t;
       var sig : sig_al_t;
 
       rco <$ drco;
+      aux <- extr_aux_sign sk;
 
-      cm <@ RO.o((rco, m));
+      cm <@ RO.o((rco, aux, m));
 
       (sigfl, sk) <@ FL_KU_DSS.sign(sk, cm);
 
@@ -322,13 +374,15 @@ theory WithSampling.
 
     proc verify(pk : pk_al_t, m : msg_al_t, sig : sig_al_t) : bool = {
       var rco : rco_t;
+      var aux : aux_t;
       var cm : msg_fl_t;
       var sigfl : sig_fl_t;
       var ver : bool;
 
       rco <- sig.`1;
+      aux <- extr_aux_verify pk sig;
 
-      cm <@ RO.o((rco, m));
+      cm <@ RO.o((rco, aux, m));
 
       sigfl <- sig.`2;
 
@@ -338,12 +392,11 @@ theory WithSampling.
     }
   }.
 
-
   (* -- Reduction Adversaries -- *)
   module (R_EUFCMARO_CRRO (FL_KU_DSS : DSS_FL.KeyUpdating.Scheme, A : Adv_EUFCMA_RO) : Adv_CR_RO) (RO : POracle) = {
     module O_CMA_R_EUFCMARO_CRRO : SOracle_CMA = {
       var sk : sk_al_t
-      var comps : (msg_fl_t * (rco_t * msg_al_t)) list
+      var comps : (msg_fl_t * (rco_t * aux_t * msg_al_t)) list
 
       proc init(sk_init : sk_al_t) = {
         sk <- sk_init;
@@ -352,29 +405,32 @@ theory WithSampling.
 
       proc sign(m : msg_al_t) : sig_al_t = {
         var rco : rco_t;
+        var aux : aux_t;
         var cm : msg_fl_t;
         var sigfl : sig_fl_t;
         var sig : sig_al_t;
 
         rco <$ drco;
-
-        cm <@ RO.o((rco, m));
+        aux <- extr_aux_sign sk;
+        cm <@ RO.o((rco, aux, m));
 
         (sigfl, sk) <@ FL_KU_DSS.sign(sk, cm);
 
         sig <- (rco, sigfl);
 
-        comps <- rcons comps (cm, (rco, m));
+        comps <- rcons comps (cm, (rco, aux, m));
 
         return sig;
       }
     }
 
-    proc find() : (rco_t * msg_al_t) * (rco_t * msg_al_t) = {
+    proc find() : (rco_t * aux_t * msg_al_t) * (rco_t * aux_t * msg_al_t) = {
       var pk : pk_al_t;
       var sk : sk_al_t;
-      var rco, rco' : rco_t;
-      var mal, mal' : msg_al_t;
+      var ram : rco_t * aux_t * msg_al_t;
+      var rco' : rco_t;
+      var aux' : aux_t;
+      var mal' : msg_al_t;
       var sig' : sig_al_t;
       var mfl' : msg_fl_t;
 
@@ -385,19 +441,20 @@ theory WithSampling.
       (mal', sig') <@ A(RO, O_CMA_R_EUFCMARO_CRRO).forge(pk);
 
       rco' <- sig'.`1;
+      aux' <- extr_aux_verify pk sig';
 
-      mfl' <@ RO.o((rco', mal'));
+      mfl' <@ RO.o((rco', aux', mal'));
 
-      (rco, mal) <- oget (assoc O_CMA_R_EUFCMARO_CRRO.comps mfl');
+      ram <- oget (assoc O_CMA_R_EUFCMARO_CRRO.comps mfl');
 
-      return ((rco, mal), (rco', mal'));
+      return (ram, (rco', aux', mal'));
     }
-  }.  
+  }.
 
   module (R_EUFCMARO_METCRRO (FL_KU_DSS : DSS_FL.KeyUpdating.Scheme, A : Adv_EUFCMA_RO) : Adv_METCR_RO) (RO : POracle, O : TOracle_METCR) = {
     module O_CMA_R_EUFCMARO_METCRRO : SOracle_CMA = {
       var sk : sk_al_t
-      var comps : (msg_fl_t * (rco_t * msg_al_t)) list
+      var comps : (msg_fl_t * (rco_t * aux_t * msg_al_t)) list
 
       proc init(sk_init : sk_al_t) = {
         sk <- sk_init;
@@ -405,30 +462,34 @@ theory WithSampling.
       }
 
       proc sign(m : msg_al_t) : sig_al_t = {
+        var aux : aux_t;
         var rco : rco_t;
         var cm : msg_fl_t;
         var sigfl : sig_fl_t;
         var sig : sig_al_t;
 
-        rco <@ O.query(m);
+        aux <- extr_aux_sign sk;
 
-        cm <@ RO.o((rco, m));
+        rco <@ O.query(aux, m);
+
+        cm <@ RO.o((rco, aux, m));
 
         (sigfl, sk) <@ FL_KU_DSS.sign(sk, cm);
 
         sig <- (rco, sigfl);
 
-        comps <- rcons comps (cm, (rco, m));
+        comps <- rcons comps (cm, (rco, aux, m));
 
         return sig;
       }
     }
 
-    proc find() : int * rco_t * msg_al_t = {
+    proc find() : int * (rco_t * aux_t * msg_al_t) = {
       var pk : pk_al_t;
       var sk : sk_al_t;
-      var rco, rco' : rco_t;
-      var mal, mal' : msg_al_t;
+      var rco' : rco_t;
+      var aux' : aux_t;
+      var mal' : msg_al_t;
       var sig' : sig_al_t;
       var mfl' : msg_fl_t;
       var i : int;
@@ -439,28 +500,32 @@ theory WithSampling.
 
       (mal', sig') <@ A(RO, O_CMA_R_EUFCMARO_METCRRO).forge(pk);
 
+      aux' <- extr_aux_verify pk sig';
       rco' <- sig'.`1;
 
-      mfl' <@ RO.o((rco', mal'));
+      mfl' <@ RO.o((rco', aux', mal'));
 
       i <- index mfl' (unzip1 O_CMA_R_EUFCMARO_METCRRO.comps);
 
-      return (i, rco', mal');
+      return (i, (rco', aux', mal'));
     }
   }.
 
   module (R_EUFCMARO_IEUFRMA(A : Adv_EUFCMA_RO) : Adv_I_EUFRMA) (O : SOracle_RMA) = {
     module O_CMA_R_EUFCMARO_IEUFRMA : SOracle_CMA = {
       var qs : msg_al_t list
-      var comps : (msg_fl_t * (rco_t * msg_al_t)) list 
+      var comps : (msg_fl_t * (rco_t * aux_t * msg_al_t)) list
+      var pk : pk_fl_t
 
-      proc init() = {
+      proc init(pk_init : pk_fl_t) = {
+        pk <- pk_init;
         qs <- [];
         comps <- [];
       }
 
       proc sign(m : msg_al_t) : sig_al_t = {
         var rco : rco_t;
+        var aux : aux_t;
         var cm : msg_fl_t;
         var sigfl : sig_fl_t;
         var sig : sig_al_t;
@@ -469,13 +534,15 @@ theory WithSampling.
 
         (cm, sigfl) <@ O.sign();
 
-        Wrapped_Oracle(MCO).set((rco, m), cm);
+        aux <- extr_aux_verify pk (rco, sigfl);
 
-        cm <@ Wrapped_Oracle(MCO).o((rco, m));
+        Wrapped_Oracle(MCO).set((rco, aux, m), cm);
+
+        cm <@ Wrapped_Oracle(MCO).o((rco, aux, m));
 
         sig <- (rco, sigfl);
 
-        comps <- rcons comps (cm, (rco, m));
+        comps <- rcons comps (cm, (rco, aux, m));
         qs <- rcons qs m;
 
         return sig;
@@ -486,19 +553,21 @@ theory WithSampling.
       var m : msg_al_t;
       var sig : sig_al_t;
       var rco : rco_t;
+      var aux : aux_t;
       var cm : msg_fl_t;
       var sigfl : sig_fl_t;
 
       MCO.init();
       Wrapped_Oracle(MCO).init();
-      O_CMA_R_EUFCMARO_IEUFRMA.init();
+      O_CMA_R_EUFCMARO_IEUFRMA.init(pk);
 
-      (m, sig) <@ A(Wrapped_Oracle(MCO), O_CMA_R_EUFCMARO_IEUFRMA).forge(pk); 
+      (m, sig) <@ A(Wrapped_Oracle(MCO), O_CMA_R_EUFCMARO_IEUFRMA).forge(pk);
 
       rco <- sig.`1;
       sigfl <- sig.`2;
+      aux <- extr_aux_verify pk sig;
 
-      cm <@ Wrapped_Oracle(MCO).o((rco, m));
+      cm <@ Wrapped_Oracle(MCO).o((rco, aux, m));
 
       return (cm, sigfl);
     }
@@ -507,7 +576,7 @@ theory WithSampling.
 
   (* -- Auxiliary modules -- *)
   (* Module used for counting queries of an EUF-CMA adversary (in the ROM) *)
-  module (QC_A(A : Adv_EUFCMA_RO) : Adv_EUFCMA_RO) (RO : POracle, O : DSS.KeyUpdating.SOracle_CMA)  = {
+  module (QC_A(A : Adv_EUFCMA_RO) : Adv_EUFCMA_RO) (RO : POracle, O : DSS.KeyUpdating.SOracle_CMA) = {
     var cS : int
     var cH : int
 
@@ -524,14 +593,14 @@ theory WithSampling.
     }
 
     module QC_RO = {
-      proc o(x : rco_t * msg_al_t) : msg_fl_t = {
+      proc o(x : rco_t * aux_t * msg_al_t) : msg_fl_t = {
         var cm : msg_fl_t;
 
         cH <- cH + 1;
 
         cm <@ RO.o(x);
 
-        return cm; 
+        return cm;
       }
     }
 
@@ -544,16 +613,16 @@ theory WithSampling.
 
       (m, sig) <@ A(QC_RO, QC_SO).forge(pk);
 
-      return (m, sig); 
+      return (m, sig);
     }
   }.
 
 
-  (* 
-    -- 
-    Proofs of EUF-CMA property for the arbitrary-length signature 
+  (*
+    --
+    Proofs of EUF-CMA property for the arbitrary-length signature
     scheme constructed as specifcied above (assuming message compression is a RO)
-    -- 
+    --
   *)
   section Proofs_EUFCMA_RO_ALKUDSS.
   (* - Declarations - *)
@@ -561,25 +630,19 @@ theory WithSampling.
   declare module FL_KU_DSS <: DSS_FL.KeyUpdating.Scheme{-ERO, -O_CMA_Default, -O_METCR, -R_EUFCMARO_CRRO, -R_EUFCMARO_METCRRO, -Wrapped_Oracle, -RepO, -O_RMA_Default, -R_EUFCMARO_IEUFRMA, -QC_A, -Lazy.LRO, -ReproGame, -R_EUFRMA_IEUFRMA}.
 
   (* Signing and verification procedure of fixed-length signature scheme always terminate *)
-  declare axiom FL_KU_DSS_sign_ll : islossless FL_KU_DSS.sign. 
-  declare axiom FL_KU_DSS_verify_ll : islossless FL_KU_DSS.verify. 
+  declare axiom FL_KU_DSS_sign_ll : islossless FL_KU_DSS.sign.
+  declare axiom FL_KU_DSS_verify_ll : islossless FL_KU_DSS.verify.
 
   (* Adversary aganst EUF-CMA in the ROM *)
   declare module A <: Adv_EUFCMA_RO{-FL_KU_DSS, -ERO, -O_CMA_Default, -O_METCR, -R_EUFCMARO_CRRO, -R_EUFCMARO_METCRRO, -Wrapped_Oracle, -RepO, -O_RMA_Default, -R_EUFCMARO_IEUFRMA, -QC_A, -Lazy.LRO, -ReproGame, -R_EUFRMA_IEUFRMA}.
 
   (* The adversary always terminates if the oracle procedures it can call terminate *)
-  declare axiom A_forge_ll (RO <: POracle{-A}) (SO <: DSS.KeyUpdating.SOracle_CMA{-A}) : 
+  declare axiom A_forge_ll (RO <: POracle{-A}) (SO <: DSS.KeyUpdating.SOracle_CMA{-A}) :
     islossless RO.o => islossless SO.sign => islossless A(RO, SO).forge.
 
-  (* Number of allowed signature queries *)
-  declare op qS : { int | 0 <= qS <= n } as rng_qS.
-
-  (* Number of allowed random oracle (hash) queries *)
-  declare op qH : { int | 0 <= qH } as ge0_qH.
-
   (* The adversary makes a limited number of queries to the given random (hash) oracle and signing oracle *)
-  declare axiom A_forge_queries (RO <: POracle{-A, -QC_A}) (SO <: SOracle_CMA{-A, -QC_A}) : 
-    hoare[A(QC_A(A, RO, SO).QC_RO, QC_A(A, RO, SO).QC_SO).forge : 
+  declare axiom A_forge_queries (RO <: POracle{-A, -QC_A}) (SO <: SOracle_CMA{-A, -QC_A}) :
+    hoare[A(QC_A(A, RO, SO).QC_RO, QC_A(A, RO, SO).QC_SO).forge :
       QC_A.cH = 0 /\ QC_A.cS = 0 ==> QC_A.cH <= qH /\ QC_A.cS <= qS].
 
   (* Convenient form of the above assumption (direct consequence) *)
@@ -596,7 +659,7 @@ theory WithSampling.
   local module O_CMA_CC = {
       var sk : sk_al_t
       var qs : msg_al_t list
-      var comps : (msg_fl_t * (rco_t * msg_al_t)) list 
+      var comps : (msg_fl_t * (rco_t * aux_t * msg_al_t)) list
 
       proc init(sk_init : sk_al_t) : unit = {
         sk <- sk_init;
@@ -606,19 +669,21 @@ theory WithSampling.
 
       proc sign(m : msg_al_t) : sig_al_t = {
         var rco : rco_t;
+        var aux : aux_t;
         var cm : msg_fl_t;
         var sigfl : sig_fl_t;
         var sig : sig_al_t;
 
         rco <$ drco;
+        aux <- extr_aux_sign sk;
 
-        cm <@ MCO.o((rco, m));
+        cm <@ MCO.o((rco, aux, m));
 
         (sigfl, sk) <@ FL_KU_DSS.sign(sk, cm);
 
         sig <- (rco, sigfl);
 
-        comps <- rcons comps (cm, (rco, m));
+        comps <- rcons comps (cm, (rco, aux, m));
         qs <- rcons qs m;
 
         return sig;
@@ -632,62 +697,67 @@ theory WithSampling.
         return size qs;
       }
 
-      proc compressions() : (msg_fl_t * (rco_t * msg_al_t)) list = {
+      proc compressions() : (msg_fl_t * (rco_t * aux_t * msg_al_t)) list = {
         return comps;
       }
   }.
-  
+
   local module O_CMA_CC_NoRepro = {
     include var O_CMA_CC [-sign]
 
     proc sign(m : msg_al_t) : sig_al_t = {
       var rco : rco_t;
+      var aux : aux_t;
       var cm : msg_fl_t;
       var sigfl : sig_fl_t;
       var sig : sig_al_t;
 
       rco <$ drco;
+      aux <- extr_aux_sign sk;
+
       cm <$ dmsg_fl;
 
-      cm <@ Wrapped_Oracle(MCO).o((rco, m));
+      cm <@ Wrapped_Oracle(MCO).o((rco, aux, m));
 
       (sigfl, sk) <@ FL_KU_DSS.sign(sk, cm);
 
       sig <- (rco, sigfl);
 
-      comps <- rcons comps (cm, (rco, m));
+      comps <- rcons comps (cm, (rco, aux, m));
       qs <- rcons qs m;
 
       return sig;
     }
   }.
-  
+
   local module O_CMA_CC_ReproSample = {
     include var O_CMA_CC [-sign]
 
     proc sign(m : msg_al_t) : sig_al_t = {
       var rco : rco_t;
+      var aux : aux_t;
       var cm : msg_fl_t;
       var sigfl : sig_fl_t;
       var sig : sig_al_t;
 
       rco <$ drco;
+      aux <- extr_aux_sign sk;
       cm <$ dmsg_fl;
 
-      Wrapped_Oracle(MCO).set((rco, m), cm);
-      cm <@ Wrapped_Oracle(MCO).o((rco, m));
+      Wrapped_Oracle(MCO).set((rco, aux, m), cm);
+      cm <@ Wrapped_Oracle(MCO).o((rco, aux, m));
 
       (sigfl, sk) <@ FL_KU_DSS.sign(sk, cm);
 
       sig <- (rco, sigfl);
 
-      comps <- rcons comps (cm, (rco, m));
+      comps <- rcons comps (cm, (rco, aux, m));
       qs <- rcons qs m;
 
       return sig;
     }
   }.
-  
+
   local module O_CMA_CC_ReproQuery = {
     include var O_CMA_CC [-init, sign]
 
@@ -698,27 +768,29 @@ theory WithSampling.
 
     proc sign(m : msg_al_t) : sig_al_t = {
       var rco : rco_t;
+      var aux : aux_t;
       var cm : msg_fl_t;
       var sigfl : sig_fl_t;
       var sig : sig_al_t;
 
       rco <$ drco;
+      aux <- extr_aux_sign sk;
 
       (cm, sigfl) <@ O_RMA_Default(FL_KU_DSS).sign();
 
-      Wrapped_Oracle(MCO).set((rco, m), cm);
-      cm <@ Wrapped_Oracle(MCO).o((rco, m));
+      Wrapped_Oracle(MCO).set((rco, aux, m), cm);
+      cm <@ Wrapped_Oracle(MCO).o((rco, aux, m));
 
       sig <- (rco, sigfl);
 
-      comps <- rcons comps (cm, (rco, m));
+      comps <- rcons comps (cm, (rco, aux, m));
       qs <- rcons qs m;
 
       return sig;
     }
   }.
 
-  
+
   (* - Auxiliary games - *)
   local module EUF_CMA_RO_CC = {
     var coll : bool
@@ -793,7 +865,7 @@ theory WithSampling.
       return is_valid /\ is_fresh;
     }
   }.
-  
+
   local module EUF_CMA_RO_CC_ReproSample = {
     var coll : bool
 
@@ -875,8 +947,8 @@ theory WithSampling.
       return nrqs <= qS /\ is_valid /\ is_fresh;
     }
   }.
-  
-  
+
+
   (* - Auxiliary reduction adversaries - *)
   local module (R_Repro_EUFCMARORepro : DistA) (WMCO : POracle, RepWMCO : RepO_t) = {
     module O_R_Repro_EUFCMARORepro = {
@@ -900,7 +972,7 @@ theory WithSampling.
         qs <- rcons qs m;
 
         return sig;
-      } 
+      }
     }
 
     proc distinguish() : bool = {
@@ -937,10 +1009,10 @@ theory WithSampling.
     }
   }.
 
-  
+
   (* - Steps - *)
-  (* 
-    Equivalence between original EUF-CMA game for the arbitrary-length digital 
+  (*
+    Equivalence between original EUF-CMA game for the arbitrary-length digital
     signature scheme and the auxiliary EUF_CMA_RO_CC game
   *)
   local equiv Equiv_EUFCMARO_EUFCMAROCC :
@@ -949,16 +1021,16 @@ theory WithSampling.
   proc; inline *.
   seq 19 20 : (={is_valid, is_fresh}); last by wp.
   seq 8 9 : (={glob FL_KU_DSS, pk, m, sig, ERO.m} /\ ={qs}(O_Base_Default, O_CMA_CC)); last by sim.
-  call (:   ={glob FL_KU_DSS, ERO.m} 
+  call (:   ={glob FL_KU_DSS, ERO.m}
          /\ ={qs}(O_Base_Default, O_CMA_CC)
          /\ ={sk}(O_CMA_Default, O_CMA_CC)); 2: by proc.
-  + proc; inline{1} 1. 
+  + proc; inline{1} 1.
     by wp; call (: true); call (: ={ERO.m}); auto.
   by wp; call (: true); while (={w, ERO.m}); auto.
   qed.
 
   (*
-    Given an adversary playing in the EUF_CAM_RO_CC game that wins and provides a forgery 
+    Given an adversary playing in the EUF_CAM_RO_CC game that wins and provides a forgery
     that allows for the extraction of a collision for the message compression RO, we can
     construct a reduction adversary against CR of the message compression RO
   *)
@@ -970,15 +1042,15 @@ theory WithSampling.
   byequiv => //.
   proc; inline{1} 6; inline{2} 2.
   conseq (: _ ==> is_fresh{1} /\ EUF_CMA_RO_CC.coll{1} => kx{2} <> kx'{2} /\ y{2} = y'{2}); 1: by smt().
-  seq 4 4 : (   ={sk, comps}(O_CMA_CC, R_EUFCMARO_CRRO.O_CMA_R_EUFCMARO_CRRO) 
+  seq 4 4 : (   ={sk, comps}(O_CMA_CC, R_EUFCMARO_CRRO.O_CMA_R_EUFCMARO_CRRO)
              /\ (glob MCO){1} = (glob ERO){2}
              /\ m{1} = mal'{2}
              /\ sig{1} = sig'{2}
              /\ (forall (mfl : msg_fl_t) (rmal : rco_t * msg_al_t), (mfl, rmal) \in O_CMA_CC.comps{1}
                    => mfl = oget (MCO.m{1}.[rmal]))
-             /\ (forall (msg : msg_fl_t), assoc O_CMA_CC.comps{1} msg <> None 
+             /\ (forall (msg : msg_fl_t), assoc O_CMA_CC.comps{1} msg <> None
                    => (oget (assoc O_CMA_CC.comps{1} msg)).`2 \in O_CMA_CC.qs{1})).
-  + call (:   ={glob FL_KU_DSS}   
+  + call (:   ={glob FL_KU_DSS}
            /\ ={sk, comps}(O_CMA_CC, R_EUFCMARO_CRRO.O_CMA_R_EUFCMARO_CRRO)
            /\ (glob MCO){1} = (glob ERO){2}
            /\ (forall (mfl : msg_fl_t) (rmal : rco_t * msg_al_t), (mfl, rmal) \in O_CMA_CC.comps{1}
@@ -1005,12 +1077,12 @@ theory WithSampling.
   split; 1: by rewrite negb_and; right => /#.
   pose cm := oget ERO.m{2}.[sig'{2}.`1, mal'{2}].
   move: (comps_def cm (oget (assoc R_EUFCMARO_CRRO.O_CMA_R_EUFCMARO_CRRO.comps{2} cm)) _).
-  + by move/assocTP: assnnone; apply assoc_get_mem. 
+  + by move/assocTP: assnnone; apply assoc_get_mem.
   by move=> {3}-> /#.
   qed.
 
   (*
-    Given an adversary playing in the EUF_CAM_RO_CC game that wins and provides a forgery 
+    Given an adversary playing in the EUF_CAM_RO_CC game that wins and provides a forgery
     that allows for the extraction of a collision for the message compression RO, we can
     construct a reduction adversary against M-eTCR of the message compression RO
   *)
@@ -1022,16 +1094,16 @@ theory WithSampling.
   byequiv => //.
   proc; inline{2} 3.
   conseq (: _ ==> is_fresh{1} /\ EUF_CMA_RO_CC.coll{1} => 0 <= i{2} < nrts{2} /\ x{2} <> x'{2} /\ y{2} = y'{2}); 1: by smt().
-  seq 4 5 : (   ={sk, comps}(O_CMA_CC, R_EUFCMARO_METCRRO.O_CMA_R_EUFCMARO_METCRRO) 
+  seq 4 5 : (   ={sk, comps}(O_CMA_CC, R_EUFCMARO_METCRRO.O_CMA_R_EUFCMARO_METCRRO)
              /\ (glob MCO){1} = (glob ERO){2}
              /\ m{1} = mal'{2}
              /\ sig{1} = sig'{2}
              /\ unzip2 R_EUFCMARO_METCRRO.O_CMA_R_EUFCMARO_METCRRO.comps{2} = O_METCR.ts{2}
              /\ (forall (mfl : msg_fl_t) (rmal : rco_t * msg_al_t), (mfl, rmal) \in O_CMA_CC.comps{1}
                    => mfl = oget (MCO.m{1}.[rmal]))
-             /\ (forall (msg : msg_fl_t), assoc O_CMA_CC.comps{1} msg <> None 
+             /\ (forall (msg : msg_fl_t), assoc O_CMA_CC.comps{1} msg <> None
                    => (oget (assoc O_CMA_CC.comps{1} msg)).`2 \in O_CMA_CC.qs{1})).
-  + call (:   ={glob FL_KU_DSS}   
+  + call (:   ={glob FL_KU_DSS}
            /\ ={sk, comps}(O_CMA_CC, R_EUFCMARO_METCRRO.O_CMA_R_EUFCMARO_METCRRO)
            /\ (glob MCO){1} = (glob ERO){2}
            /\ unzip2 R_EUFCMARO_METCRRO.O_CMA_R_EUFCMARO_METCRRO.comps{2} = O_METCR.ts{2}
@@ -1065,41 +1137,41 @@ theory WithSampling.
   split; 1: by rewrite nth_onth -assoc_zip 1:2!size_map // zip_unzip /#.
   pose cm := oget ERO.m{2}.[sig'{2}.`1, mal'{2}].
   move: (comps_def cm (oget (assoc R_EUFCMARO_METCRRO.O_CMA_R_EUFCMARO_METCRRO.comps{2} cm)) _).
-  + by move/assocTP: assnnone; apply assoc_get_mem. 
+  + by move/assocTP: assnnone; apply assoc_get_mem.
   move=> {3}->; congr; congr.
   rewrite eq_sym -{1}(zip_unzip R_EUFCMARO_METCRRO.O_CMA_R_EUFCMARO_METCRRO.comps{2}).
   by rewrite assoc_zip 1:2!size_map // nth_onth /oget /#.
   qed.
 
   (*
-    The probability of an adversary winning the EUF_CMA_RO_CC game and providing a forgery 
+    The probability of an adversary winning the EUF_CMA_RO_CC game and providing a forgery
     that does not allow for the extraction of a collision for the message compression RO
-    is equal to the probability of the analogous event in the EUF_CMA_RO_CC_NoRepro game 
+    is equal to the probability of the analogous event in the EUF_CMA_RO_CC_NoRepro game
   *)
   local lemma EUFCMAROCC_EUFCMAROCCNoRepro &m :
     Pr[EUF_CMA_RO_CC.main() @ &m : res /\ !EUF_CMA_RO_CC.coll] =
     Pr[EUF_CMA_RO_CC_NoRepro.main() @ &m : res /\ !EUF_CMA_RO_CC_NoRepro.coll].
   proof.
   byequiv => //.
-  proc; inline *. 
+  proc; inline *.
   wp; call (: true); wp => /=.
   call (: ={glob O_CMA_CC, glob MCO} /\ Wrapped_Oracle.prog_list{2} = []).
-  + proc; inline *. 
-    wp; call (: true); wp => /=. 
-    rnd{2}; rnd. 
+  + proc; inline *.
+    wp; call (: true); wp => /=.
+    rnd{2}; rnd.
     by skip.
-  + proc; inline *. 
-    by wp; skip. 
-  wp; call (: true); wp => /=. 
+  + proc; inline *.
+    by wp; skip.
+  wp; call (: true); wp => /=.
   while (={w, ERO.m}); 1: by auto.
   by wp; skip.
   qed.
 
   (*
-    Distinguishing between reprogramming and not reprogramming the message compression 
+    Distinguishing between reprogramming and not reprogramming the message compression
     RO can be reduced to distinguishing between EUF_CMA_RO_CC_NoRepro (with no collision
-    extraction) and EUF_CMA_RO_CC_ReproSample (with no collision extraction). 
-  *)  
+    extraction) and EUF_CMA_RO_CC_ReproSample (with no collision extraction).
+  *)
   local lemma EUFCMARORepro_ReproGame &m:
     `| Pr[EUF_CMA_RO_CC_NoRepro.main() @ &m : res /\ !EUF_CMA_RO_CC_NoRepro.coll] -
        Pr[EUF_CMA_RO_CC_ReproSample.main() @ &m : res /\ !EUF_CMA_RO_CC_ReproSample.coll] |
@@ -1111,14 +1183,14 @@ theory WithSampling.
   + byequiv => //.
     proc; inline *.
     wp; call (: true); wp => /=.
-    call (:   ={glob FL_KU_DSS, glob O_CMA_CC, Wrapped_Oracle.prog_list} 
+    call (:   ={glob FL_KU_DSS, glob O_CMA_CC, Wrapped_Oracle.prog_list}
            /\ RepO.b{2} = false
            /\ Wrapped_Oracle.prog_list{2} = []).
     - proc; inline *.
       rcondf{2} 7; 1: by auto.
       wp; call (: true); wp => /=.
       rnd{1}.
-      rnd (fun (rco : rco_t) => (rco, m{2})) 
+      rnd (fun (rco : rco_t) => (rco, m{2}))
           (fun (kx : rco_t * msg_al_t) => kx.`1).
       wp; skip => /> &1.
       split => [rcom | rcomeq].
@@ -1126,7 +1198,7 @@ theory WithSampling.
       split => [rcom rcomin | rcom_mu1 rco rcoin].
       * by rewrite (in_dmap1E_can _ _ (fun (x : _ * _) => x.`1)) //= /#.
       by rewrite supp_dmap; exists rco; rewrite rcoin.
-    - proc; inline *. 
+    - proc; inline *.
       by wp; skip.
     wp; call (: true); wp; while (={w, ERO.m}).
     - by wp; rnd; wp; skip.
@@ -1134,13 +1206,13 @@ theory WithSampling.
   byequiv => //.
   proc; inline *.
   wp; call (: true); wp => /=.
-  call (:   ={glob FL_KU_DSS, glob O_CMA_CC, Wrapped_Oracle.prog_list} 
+  call (:   ={glob FL_KU_DSS, glob O_CMA_CC, Wrapped_Oracle.prog_list}
          /\ RepO.b{2} = true).
   + proc; inline *.
     rcondt{2} 7; 1: by auto.
     wp; call (: true); wp => /=.
     rnd.
-    rnd (fun (rco : rco_t) => (rco, m{2})) 
+    rnd (fun (rco : rco_t) => (rco, m{2}))
         (fun (kx : rco_t * msg_al_t) => kx.`1).
     wp; skip => /> &1.
     split => [rcom | rcomeq].
@@ -1148,7 +1220,7 @@ theory WithSampling.
     split => [rcom rcomin | rcom_mu1 rco rcoin].
     * by rewrite (in_dmap1E_can _ _ (fun (x : _ * _) => x.`1)) //= /#.
     by rewrite supp_dmap; exists rco; rewrite rcoin.
-  + proc; inline *. 
+  + proc; inline *.
     by wp; skip.
   wp; call (: true); wp; while (={w, ERO.m}).
   + by wp; rnd; wp; skip.
@@ -1158,8 +1230,8 @@ theory WithSampling.
   (* Limit on the number of queries the reduction adversary against ReproGame makes *)
   local hoare R_Repro_EUFCMARORepro_Queries :
     R_Repro_EUFCMARORepro(Wrapped_Oracle(MCO), RepO(Wrapped_Oracle(MCO))).distinguish :
-      Wrapped_Oracle.ch = 0 /\ RepO.ctr = 0 /\ RepO.se 
-      ==> 
+      Wrapped_Oracle.ch = 0 /\ RepO.ctr = 0 /\ RepO.se
+      ==>
       Wrapped_Oracle.ch <= qS + qH + 1 /\ RepO.ctr <= qS /\ RepO.se.
   proof.
   proc.
@@ -1169,8 +1241,8 @@ theory WithSampling.
   wp => /=.
   call (: Wrapped_Oracle.ch = 0 /\ RepO.ctr = 0 /\ RepO.se
           ==>
-             QC_A.cH <= qH /\ QC_A.cS <= qS 
-          /\ Wrapped_Oracle.ch = QC_A.cH + QC_A.cS /\ RepO.ctr = QC_A.cS /\ RepO.se). 
+             QC_A.cH <= qH /\ QC_A.cS <= qS
+          /\ Wrapped_Oracle.ch = QC_A.cH + QC_A.cS /\ RepO.ctr = QC_A.cS /\ RepO.se).
   + conseq (: Wrapped_Oracle.ch = 0 /\ RepO.ctr = 0 /\ RepO.se
               ==>
               Wrapped_Oracle.ch = QC_A.cH + QC_A.cS /\ RepO.ctr = QC_A.cS /\ RepO.se)
@@ -1200,10 +1272,10 @@ theory WithSampling.
   qed.
 
   (*
-    The probability of an adversary winning the EUF_CMA_RO_CC_ReproSample game and providing 
-    a forgery that does not allow for the extraction of a collision for the message 
-    compression RO is equal to the probability of the analogous event in the 
-    EUF_CMA_RO_CC_ReproQuery game 
+    The probability of an adversary winning the EUF_CMA_RO_CC_ReproSample game and providing
+    a forgery that does not allow for the extraction of a collision for the message
+    compression RO is equal to the probability of the analogous event in the
+    EUF_CMA_RO_CC_ReproQuery game
   *)
   local lemma EUFRMAROCCReproSample_Query &m:
     Pr[EUF_CMA_RO_CC_ReproSample.main() @ &m : res /\ !EUF_CMA_RO_CC_ReproSample.coll]
@@ -1215,19 +1287,19 @@ theory WithSampling.
   seq 5 6 : (   ={glob FL_KU_DSS, O_CMA_CC.comps, O_CMA_CC.qs, MCO.m, Wrapped_Oracle.prog_list, pk, m, sig}
              /\ QC_A.cS{2} = size O_CMA_CC.qs{2}
              /\ QC_A.cS{2} <= qS).
-  + call (:   ={glob FL_KU_DSS, glob A, O_CMA_CC.comps, O_CMA_CC.qs, MCO.m, Wrapped_Oracle.prog_list, pk} 
+  + call (:   ={glob FL_KU_DSS, glob A, O_CMA_CC.comps, O_CMA_CC.qs, MCO.m, Wrapped_Oracle.prog_list, pk}
            /\ ={sk}(O_CMA_CC, O_RMA_Default)
            /\ O_CMA_CC.qs{2} = []
-             ==> 
+             ==>
               ={res, glob FL_KU_DSS, O_CMA_CC.comps, O_CMA_CC.qs, MCO.m, Wrapped_Oracle.prog_list}
            /\ ={sk}(O_CMA_CC, O_RMA_Default)
            /\ QC_A.cS{2} = size O_CMA_CC.qs{2}
            /\ QC_A.cS{2} <= qS).
-    - conseq (:   ={arg, glob FL_KU_DSS, glob A, O_CMA_CC.comps, O_CMA_CC.qs, MCO.m, Wrapped_Oracle.prog_list} 
+    - conseq (:   ={arg, glob FL_KU_DSS, glob A, O_CMA_CC.comps, O_CMA_CC.qs, MCO.m, Wrapped_Oracle.prog_list}
                /\ ={sk}(O_CMA_CC, O_RMA_Default)
                /\ O_CMA_CC.qs{2} = []
-                 ==> 
-                  ={res, glob FL_KU_DSS, O_CMA_CC.comps, O_CMA_CC.qs, MCO.m, Wrapped_Oracle.prog_list} 
+                 ==>
+                  ={res, glob FL_KU_DSS, O_CMA_CC.comps, O_CMA_CC.qs, MCO.m, Wrapped_Oracle.prog_list}
                /\ ={sk}(O_CMA_CC, O_RMA_Default)
                /\ QC_A.cS{2} = size O_CMA_CC.qs{2})
              _
@@ -1246,19 +1318,19 @@ theory WithSampling.
         by wp; skip.
       by wp; skip => /> /#.
     inline *.
-    wp; call (: true); wp => /=. 
+    wp; call (: true); wp => /=.
     while (={w, ERO.m}); 1: by auto.
     by wp; skip.
   inline *.
-  wp; call(: true); wp => /=.  
-  by skip => />. 
+  wp; call(: true); wp => /=.
+  by skip => />.
   qed.
 
   (*
-    Given an adversary playing in the EUF_CMA_RO_CC_ReproQuery game that wins and provides 
-    a forgery that does not allow for the extraction of a collision for the 
-    message compression RO, we can construct a reduction adversary against 
-    the interactive variant of EUF-RMA for the considered fixed-length digital 
+    Given an adversary playing in the EUF_CMA_RO_CC_ReproQuery game that wins and provides
+    a forgery that does not allow for the extraction of a collision for the
+    message compression RO, we can construct a reduction adversary against
+    the interactive variant of EUF-RMA for the considered fixed-length digital
     signature scheme
   *)
   local lemma EUFRMAROCCReproQuery_IEUFRMA &m :
@@ -1272,8 +1344,8 @@ theory WithSampling.
   call (:    ={glob FL_KU_DSS, MCO.m, Wrapped_Oracle.prog_list, O_RMA_Default.sk}
           /\ ={qs, comps}(O_CMA_CC, R_EUFCMARO_IEUFRMA.O_CMA_R_EUFCMARO_IEUFRMA)
           /\ size R_EUFCMARO_IEUFRMA.O_CMA_R_EUFCMARO_IEUFRMA.qs{2} = size DSS_FL.O_Base_Default.qs{2}
-          /\ (forall (cm : msg_fl_t), 
-                (! exists (m : msg_al_t) (rco : rco_t), (cm, (rco, m)) \in R_EUFCMARO_IEUFRMA.O_CMA_R_EUFCMARO_IEUFRMA.comps{2}) 
+          /\ (forall (cm : msg_fl_t)
+                (! exists (m : msg_al_t) (rco : rco_t), (cm, (rco, m)) \in R_EUFCMARO_IEUFRMA.O_CMA_R_EUFCMARO_IEUFRMA.comps{2})
                 =>
                 ! cm \in DSS_FL.O_Base_Default.qs{2})).
   + proc; inline *.
@@ -1283,7 +1355,7 @@ theory WithSampling.
     rewrite 2!size_rcons eqsz assoc_cons /= => cm'.
     rewrite mem_rcons /= negb_or => nex; split.
     - move: nex; apply contra => ->.
-      by exists m{2} rco; rewrite mem_rcons. 
+      by exists m{2} rco; rewrite mem_rcons.
     apply ninqs; rewrite negb_exists => m /=; rewrite negb_exists => rco' /=.
     move: nex; rewrite negb_exists => /(_ m) /=; rewrite negb_exists => /(_ rco') /=.
     by rewrite mem_rcons /= negb_or => [#].
@@ -1298,8 +1370,8 @@ theory WithSampling.
   split; 1: by rewrite -eqsz; smt(rng_qS).
   by apply: ninqsp; rewrite negb_exists /= => m; rewrite negb_exists /= => rco; smt(assoc_none).
   qed.
-  
-  
+
+
   (* - Security theorems (1/2) - *)
   (* Security theorem with CR and interactive EUF-RMA *)
   lemma ALKUDSS_EUFCMARO_CRRO_IEUFRMA &m :
@@ -1324,7 +1396,7 @@ theory WithSampling.
                       - Pr[EUF_CMA_RO_CC_ReproSample.main() @ &m : res /\ !EUF_CMA_RO_CC_ReproSample.coll] |
                     + Pr[EUF_CMA_RO_CC_ReproSample.main() @ &m : res /\ !EUF_CMA_RO_CC_ReproSample.coll])).
   + by rewrite -{4}(ger0_norm Pr[EUF_CMA_RO_CC_ReproSample.main() @ &m : res /\ !EUF_CMA_RO_CC_ReproSample.coll]) 1:Pr[mu_ge0]; smt(ler_norm_add).
-  rewrite addrC ler_add. 
+  rewrite addrC ler_add.
   + by rewrite EUFRMAROCCReproSample_Query EUFRMAROCCReproQuery_IEUFRMA.
   apply (ler_trans `| Pr[ReproGame(ERO, R_Repro_EUFCMARORepro).main(false) @ &m : res] -
                       Pr[ReproGame(ERO, R_Repro_EUFCMARORepro).main(true) @ &m : res] |).
@@ -1367,19 +1439,19 @@ theory WithSampling.
   by smt(rng_qS ge0_qH).
   qed.
 
-  
+
   (* - Additional declarations (for regular EUF-RMA) - *)
   (* Models the signing procedure of FL-XMSS-TW *)
   declare op opsign : sk_fl_t -> msg_fl_t -> sig_fl_t * sk_fl_t.
 
-  (* 
-    opsign precisely captures the semantics of the signing procedure of the 
-    fixed-length digital signature scheme 
+  (*
+    opsign precisely captures the semantics of the signing procedure of the
+    fixed-length digital signature scheme
   *)
   declare axiom FL_KU_DSS_sign_fun (sk : sk_fl_t) (cm : msg_fl_t) :
     hoare[FL_KU_DSS.sign: arg = (sk, cm) ==> res = opsign sk cm].
 
-  (* 
+  (*
     The signing procedure of the fixed-length digital signature scheme always
     terminates (and is captured by opsign)
   *)
@@ -1387,23 +1459,23 @@ theory WithSampling.
     phoare[FL_KU_DSS.sign: arg = (sk, cm) ==> res = opsign sk cm] = 1%r.
   proof. by conseq FL_KU_DSS_sign_ll (FL_KU_DSS_sign_fun sk cm). qed.
 
-  (* 
-    The key generation procedure of the fixed-length digital signature 
-    scheme is stateless (i.e., it produces the same output distribution for 
+  (*
+    The key generation procedure of the fixed-length digital signature
+    scheme is stateless (i.e., it produces the same output distribution for
     all initial memories)
   *)
   declare axiom FL_KU_DSS_keygen_stateless:
     equiv[FL_KU_DSS.keygen ~ FL_KU_DSS.keygen: true ==> ={res}].
 
-  (* 
-    The verification procedure of the fixed-length digital signature 
-    scheme is stateless (i.e., for a certain input, it produces the same output 
+  (*
+    The verification procedure of the fixed-length digital signature
+    scheme is stateless (i.e., for a certain input, it produces the same output
     distribution for all inital memories)
   *)
   declare axiom FL_KU_DSS_verify_stateless:
     equiv[FL_KU_DSS.verify ~ FL_KU_DSS.verify: ={arg} ==> ={res}].
 
-  
+
   (* - Security theorems (2/2) - *)
   (* Security theorem with CR and EUF-RMA *)
   lemma ALKUDSS_EUFCMARO_CRRO_EUFRMA &m :
@@ -1427,7 +1499,7 @@ theory WithSampling.
     - proc; inline *.
       wp; call (SOs_ll); rnd; skip => />.
       by apply drco_ll.
-    wp. 
+    wp.
     while (true) (size w).
     - move=> z.
       wp; rnd; wp; skip => /> &1 neqw.
@@ -1463,7 +1535,7 @@ theory WithSampling.
     - proc; inline *.
       wp; call (SOs_ll); rnd; skip => />.
       by apply drco_ll.
-    wp. 
+    wp.
     while (true) (size w).
     - move=> z.
       wp; rnd; wp; skip => /> &1 neqw.
@@ -1483,39 +1555,39 @@ end WithSampling.
 
 
 
-(* 
-  --- 
-  Hash-then-sign paradigm where the the randomness/indexing keys used for 
-  message compression are generated (via a PRF) 
-  --- 
+(*
+  ---
+  Hash-then-sign paradigm where the the randomness/indexing keys used for
+  message compression are generated (via a PRF)
+  ---
 *)
 theory WithPRF.
   (* -- Clones and imports (1/2) -- *)
   (* Hash-then-sign paradigm with sampling; used as basis *)
   clone import WithSampling as WS
-    
+
     proof *.
 
-  
+
   (* -- Types -- *)
-  (* 
-    Seeds (i.e., indexing keys) for PRF that produces (pseudo)randomness 
-    (i.e., indexing keys) for message compression 
+  (*
+    Seeds (i.e., indexing keys) for PRF that produces (pseudo)randomness
+    (i.e., indexing keys) for message compression
   *)
   type ms_t.
 
-  (* 
+  (*
     Identifiers (e.g., indices) contained in secret keys; used as input to PRF
   *)
   type id_t.
 
-  (* 
-    Secret keys; same as for fixed-length digital signature scheme but 
+  (*
+    Secret keys; same as for fixed-length digital signature scheme but
     extended with seed used for PRF
   *)
   type sk_al_t = ms_t * sk_fl_t.
 
-  
+
   (* -- Distributions -- *)
   (* Proper distribution over seeds used for PRF *)
   op [lossless] dms : ms_t distr.
@@ -1526,16 +1598,16 @@ theory WithPRF.
   op mkg : ms_t -> id_t -> rco_t.
 
   clone import KeyedHashFunctions as MKG with
-    type key_t <- ms_t, 
-    type in_t <- id_t,
-    type out_t <- rco_t,   
+    type key_t <- ms_t
+    type in_t <- id_t
+    type out_t <- rco_t
 
       op f <- mkg
-      
+
     proof *.
-  
+
   clone import PRF as MKG_PRF with
-      op dkey <- dms,
+      op dkey <- dms
       op doutm <- fun _ => drco
 
     proof *.
@@ -1545,23 +1617,23 @@ theory WithPRF.
   (* Extracts identifier from a secret key of the fixed-length digital signature scheme *)
   op extr_id : sk_fl_t -> id_t.
 
-  
-  (* -- Clones and imports (2/2) -- *)  
+
+  (* -- Clones and imports (2/2) -- *)
   (* - Scheme specification and security notions - *)
-  (* 
-    Arbitrary-length signature scheme (using a PRF and assuming message 
-    compression function is a RO) 
+  (*
+    Arbitrary-length signature scheme (using a PRF and assuming message
+    compression function is a RO)
   *)
   clone import DigitalSignaturesROM as DSS_AL_PRF with
-    type pk_t <- pk_al_t,
-    type sk_t <- sk_al_t,
-    type msg_t <- msg_al_t,
-    type sig_t <- sig_al_t,
+    type pk_t <- pk_al_t
+    type sk_t <- sk_al_t
+    type msg_t <- msg_al_t
+    type sig_t <- sig_al_t
 
-    type in_t <- rco_t * msg_al_t,
-    type out_t <- msg_fl_t,
-    type d_in_t <- int,
-    type d_out_t <- bool,
+    type in_t <- rco_t * msg_al_t
+    type out_t <- msg_fl_t
+    type d_in_t <- int
+    type d_out_t <- bool
 
       op doutm <- fun _ => dmsg_fl
 
@@ -1573,9 +1645,9 @@ theory WithPRF.
 
 
   (* -- Arbitrary-length signature scheme -- *)
-  (* 
+  (*
     Specification of arbitrary-length digital signature scheme based on the fixed-length
-    digital signature scheme (using a PRF and assuming the message compression function 
+    digital signature scheme (using a PRF and assuming the message compression function
     is a RO)
   *)
   module (AL_KU_DSS(FL_KU_DSS : DSS_FL.KeyUpdating.Scheme) : Scheme_RO) (RO : POracle) = {
@@ -1638,7 +1710,7 @@ theory WithPRF.
     }
   }.
 
-  
+
   (* -- Reduction Adversaries -- *)
   module (R_PRF_EUFCMARO (FL_KU_DSS : DSS_FL.KeyUpdating.Scheme, A : Adv_EUFCMA_RO) : Adv_PRF) (O : Oracle_PRF) = {
     module O_CMA_R_PRF_EUFCMARO = {
@@ -1673,7 +1745,7 @@ theory WithPRF.
       }
 
       proc fresh(m : msg_al_t) : bool = {
-        return ! m \in qs; 
+        return ! m \in qs;
       }
     }
 
@@ -1697,14 +1769,14 @@ theory WithPRF.
 
       is_fresh <@ O_CMA_R_PRF_EUFCMARO.fresh(m);
 
-      return is_valid /\ is_fresh;  
+      return is_valid /\ is_fresh;
     }
   }.
 
-  
-  (* 
+
+  (*
     --
-    Proofs of EUF-CMA property for the arbitrary-length signature 
+    Proofs of EUF-CMA property for the arbitrary-length signature
     scheme constructed as specifcied above (assuming message compression is a RO)
     --
   *)
@@ -1713,48 +1785,42 @@ theory WithPRF.
   declare module FL_KU_DSS <: DSS_FL.KeyUpdating.Scheme{-ERO, -O_CMA_Default, -O_METCR, -R_EUFCMARO_CRRO, -R_EUFCMARO_METCRRO, -Wrapped_Oracle, -RepO, -O_RMA_Default, -R_EUFCMARO_IEUFRMA, -QC_A, -Lazy.LRO, -ReproGame, -R_EUFRMA_IEUFRMA, -R_PRF_EUFCMARO, -O_PRF_Default, -DSS_AL.DSS.KeyUpdating.O_CMA_Default}.
 
   (* Signing and verification procedure of fixed-length signature scheme always terminate *)
-  declare axiom FL_KU_DSS_sign_ll : islossless FL_KU_DSS.sign. 
-  declare axiom FL_KU_DSS_verify_ll : islossless FL_KU_DSS.verify. 
+  declare axiom FL_KU_DSS_sign_ll : islossless FL_KU_DSS.sign.
+  declare axiom FL_KU_DSS_verify_ll : islossless FL_KU_DSS.verify.
 
-  (* Number of allowed signature queries *)
-  declare op qS : { int | 0 <= qS <= n } as rng_qS.
-
-  (* Number of allowed random oracle (hash) queries *)
-  declare op qH : { int | 0 <= qH } as ge0_qH.
-  
-  (* 
+  (*
     Checks whether a secret key of the fixed-length digital signature scheme is one that
     could (directly) originate from the key generation
   *)
   declare op init_sk : sk_fl_t -> bool.
-  
-  (* 
-    Captures the updating of a secret key performed by the signing procedure 
+
+  (*
+    Captures the updating of a secret key performed by the signing procedure
     of the fixed-length digital signature scheme.
   *)
   declare op skupd : sk_fl_t -> sk_fl_t.
-  
-  (* 
-    Captures the updating of a secret key performed by the signing procedure 
+
+  (*
+    Captures the updating of a secret key performed by the signing procedure
     of the fixed-length digital signature scheme.
   *)
   declare op opsign : sk_fl_t -> msg_fl_t -> sig_fl_t * sk_fl_t.
-  
-  (* 
+
+  (*
     Secret keys produced by the key generation procedure of the fixed-length digital
     signature scheme satisfy init_sk
   *)
   declare axiom FL_KU_DSS_keygen_initsk :
     hoare[FL_KU_DSS.keygen: true ==> init_sk res.`2].
 
-  (* 
-    opsign precisely captures the semantics of the signing procedure of the 
-    fixed-length digital signature scheme 
+  (*
+    opsign precisely captures the semantics of the signing procedure of the
+    fixed-length digital signature scheme
   *)
   declare axiom FL_KU_DSS_sign_fun (sk : sk_fl_t) (cm : msg_fl_t) :
     hoare[FL_KU_DSS.sign: arg = (sk, cm) ==> res = opsign sk cm].
 
-  (* 
+  (*
     The signing procedure of the fixed-length digital signature scheme always
     terminates (and is captured by opsign)
   *)
@@ -1762,16 +1828,16 @@ theory WithPRF.
     phoare[FL_KU_DSS.sign: arg = (sk, cm) ==> res = opsign sk cm] = 1%r.
   proof. by conseq FL_KU_DSS_sign_ll (FL_KU_DSS_sign_fun sk cm). qed.
 
-  (* 
-    The signing procedure of the fixed-length digital signature scheme 
+  (*
+    The signing procedure of the fixed-length digital signature scheme
     outputs a secret key that is the updated version (in accordance with skupd) of the
-    secret key provided as input 
+    secret key provided as input
   *)
   declare axiom FL_KU_DSS_sign_skupd (skf : sk_fl_t) :
     hoare[FL_KU_DSS.sign: arg.`1 = skf ==> res.`2 = skupd skf].
 
   (*
-    Starting from a secret key produced by the key generation procedure of the 
+    Starting from a secret key produced by the key generation procedure of the
     fixed-length digital signature scheme, updating in accordance with skupd results
     (at least the first qS times) in a secret key with a unique identifier.
   *)
@@ -1782,17 +1848,17 @@ theory WithPRF.
     => i <> j
     => extr_id (fold skupd sk i) <> extr_id (fold skupd sk j).
 
-  (* 
-    The key generation procedure of the fixed-length digital signature 
-    scheme is stateless (i.e., it produces the same output distribution for 
+  (*
+    The key generation procedure of the fixed-length digital signature
+    scheme is stateless (i.e., it produces the same output distribution for
     all initial memories)
   *)
   declare axiom FL_KU_DSS_keygen_stateless:
     equiv[FL_KU_DSS.keygen ~ FL_KU_DSS.keygen: true ==> ={res}].
 
-  (* 
-    The verification procedure of the fixed-length digital signature 
-    scheme is stateless (i.e., for a certain input, it produces the same output 
+  (*
+    The verification procedure of the fixed-length digital signature
+    scheme is stateless (i.e., for a certain input, it produces the same output
     distribution for all inital memories)
   *)
   declare axiom FL_KU_DSS_verify_stateless:
@@ -1802,14 +1868,14 @@ theory WithPRF.
   declare module A <: Adv_EUFCMA_RO{-FL_KU_DSS, -ERO, -O_CMA_Default, -O_METCR, -R_EUFCMARO_CRRO, -R_EUFCMARO_METCRRO, -Wrapped_Oracle, -RepO, -DSS_FL_EUFRMA.O_RMA_Default, -R_EUFCMARO_IEUFRMA, -QC_A, -Lazy.LRO, -ReproGame, -R_EUFRMA_IEUFRMA, -R_PRF_EUFCMARO, -O_PRF_Default, -DSS_AL.DSS.KeyUpdating.O_CMA_Default}.
 
   (* The adversary always terminates if the oracle procedures it can call terminate *)
-  declare axiom A_forge_ll (RO <: POracle{-A}) (SO <: SOracle_CMA{-A}) : 
+  declare axiom A_forge_ll (RO <: POracle{-A}) (SO <: SOracle_CMA{-A}) :
     islossless RO.o => islossless SO.sign => islossless A(RO, SO).forge.
 
   (* The adversary makes a limited number of queries to the given random (hash) oracle and signing oracle *)
-  declare axiom A_forge_queries (RO <: POracle{-A, -QC_A}) (SO <: SOracle_CMA{-A, -QC_A}) : 
-    hoare[A(QC_A(A, RO, SO).QC_RO, QC_A(A, RO, SO).QC_SO).forge : 
+  declare axiom A_forge_queries (RO <: POracle{-A, -QC_A}) (SO <: SOracle_CMA{-A, -QC_A}) :
+    hoare[A(QC_A(A, RO, SO).QC_RO, QC_A(A, RO, SO).QC_SO).forge :
       QC_A.cH = 0 /\ QC_A.cS = 0 ==> QC_A.cH <= qH /\ QC_A.cS <= qS].
-  
+
   (* Convenient form of the above assumption (direct consequence) *)
   local lemma A_forge_queries_init (RO <: POracle{-A, -QC_A}) (SO <: SOracle_CMA{-A, -QC_A}):
     hoare[QC_A(A, RO, SO).forge : true ==> QC_A.cH <= qH /\ QC_A.cS <= qS].
@@ -1818,8 +1884,8 @@ theory WithPRF.
   call (A_forge_queries RO SO).
   by skip.
   qed.
-  
-  
+
+
   (* - Steps - *)
   (*
     An adversary distinguishing between the EUF-CMA games for the different arbitrary-length
@@ -1847,7 +1913,7 @@ theory WithPRF.
            /\ O_CMA_Default.sk{1}.`1 = O_PRF_Default.k{2}
            /\ O_CMA_Default.sk{1}.`2 = R_PRF_EUFCMARO.O_CMA_R_PRF_EUFCMARO.skfl{2}
            /\ ! O_PRF_Default.b{2}).
-    - proc; inline *. 
+    - proc; inline *.
       wp.
       rcondf{2} 3; 1: by auto.
       call (: true).
@@ -1896,9 +1962,9 @@ theory WithPRF.
     by wp; rnd; wp; skip.
   do 2! rewrite Pr[mu_split QC_A.cS <= qS] eq_sym.
   congr; last first.
-  + byphoare => //. 
+  + byphoare => //.
     hoare.
-    - move=> _ _; byphoare => //. 
+    - move=> _ _; byphoare => //.
       hoare.
       proc; inline *.
       wp; call (: true); wp => /=.
@@ -1910,10 +1976,10 @@ theory WithPRF.
     wp; call (: true); wp => /=.
     call (A_forge_queries ERO (<: DSS_AL.DSS.KeyUpdating.O_CMA_Default(WS.AL_KU_DSS(FL_KU_DSS, ERO)))).
     wp 8; conseq (: _ ==> true); 1: smt().
-    wp; call (: true); while (true). 
+    wp; call (: true); while (true).
     + by wp; rnd; wp; skip.
     by wp; skip.
-  byequiv (: ={glob A, glob FL_KU_DSS} /\ arg{2} 
+  byequiv (: ={glob A, glob FL_KU_DSS} /\ arg{2}
              ==>
              res{1} /\ QC_A.cS{1} <= qS <=> res{2} /\ QC_A.cS{2} <= qS) => //.
   proc.
@@ -1945,7 +2011,7 @@ theory WithPRF.
   inline{1} 7; inline{2} 7.
   wp => />.
   exists* R_PRF_EUFCMARO.O_CMA_R_PRF_EUFCMARO.skfl{2}; elim* => skbc.
-  call (: qS < QC_A.cS, 
+  call (: qS < QC_A.cS
              ={glob FL_KU_DSS, ERO.m, QC_A.cH, QC_A.cS}
           /\ init_sk skbc
           /\ O_PRF_Default.b{2}
@@ -1953,9 +2019,9 @@ theory WithPRF.
           /\ DSS_AL.DSS.KeyUpdating.O_CMA_Default.sk{1} = R_PRF_EUFCMARO.O_CMA_R_PRF_EUFCMARO.skfl{2}
           /\ R_PRF_EUFCMARO.O_CMA_R_PRF_EUFCMARO.skfl{2} = (fold skupd skbc QC_A.cS{2})
           /\ DSS_AL.DSS.O_Base_Default.qs{1} = R_PRF_EUFCMARO.O_CMA_R_PRF_EUFCMARO.qs{2}
-          /\ (forall (id : id_t), 
+          /\ (forall (id : id_t),
                 id \in O_PRF_Default.m{2} <=>
-                  (exists (i : int), 0 <= i < QC_A.cS{2} /\ id = extr_id (fold skupd skbc i))), 
+                  (exists (i : int), 0 <= i < QC_A.cS{2} /\ id = extr_id (fold skupd skbc i)))
           qS < QC_A.cS{1} /\ qS < QC_A.cS{2}).
   + by move=> RO SO SOll ROll; apply (A_forge_ll RO SO ROll SOll).
   + proc; inline *.
@@ -1977,8 +2043,8 @@ theory WithPRF.
   + wp.
     call (:    ={glob FL_KU_DSS, arg}
             /\ 1 <= QC_A.cS{2}
-            /\ arg{2}.`1 = fold skupd skbc (QC_A.cS{2} - 1) 
-            ==> 
+            /\ arg{2}.`1 = fold skupd skbc (QC_A.cS{2} - 1)
+            ==>
                ={glob FL_KU_DSS, res}
             /\ res{2}.`2 = fold skupd skbc QC_A.cS{2}).
     exists* QC_A.cS{2}; elim* => i.
@@ -2021,7 +2087,7 @@ theory WithPRF.
   qed.
 
   (* - Security theorems - *)
-  (* Security theorem with PRF, CR and EUF-RMA *) 
+  (* Security theorem with PRF, CR and EUF-RMA *)
   lemma ALKUDSS_EUFCMARO_PRF_CRRO_EUFRMA &m :
     Pr[EUF_CMA_RO(AL_KU_DSS(FL_KU_DSS), A, O_CMA_Default, MCO).main() @ &m : res]
     <=
@@ -2039,19 +2105,19 @@ theory WithPRF.
   rewrite -ger0_norm 1:Pr[mu_ge0] // -subr0.
   rewrite -(subrr Pr[WS.DSS_AL.KeyUpdatingROM.EUF_CMA_RO(WS.AL_KU_DSS(FL_KU_DSS), A, WS.DSS_AL.DSS.KeyUpdating.O_CMA_Default, MCO).main() @ &m : res]).
   rewrite opprB (addrC Pr[WS.DSS_AL.KeyUpdatingROM.EUF_CMA_RO(WS.AL_KU_DSS(FL_KU_DSS), A, WS.DSS_AL.DSS.KeyUpdating.O_CMA_Default, MCO).main() @ &m : res]) addrA.
-  apply (ler_trans (`| Pr[EUF_CMA_RO(AL_KU_DSS(FL_KU_DSS), A, O_CMA_Default, MCO).main() @ &m : res] - 
+  apply (ler_trans (`| Pr[EUF_CMA_RO(AL_KU_DSS(FL_KU_DSS), A, O_CMA_Default, MCO).main() @ &m : res] -
                        Pr[DSS_AL.KeyUpdatingROM.EUF_CMA_RO(WS.AL_KU_DSS(FL_KU_DSS), A, DSS_AL.DSS.KeyUpdating.O_CMA_Default, MCO).main() @ &m : res] | +
                     `| Pr[DSS_AL.KeyUpdatingROM.EUF_CMA_RO(WS.AL_KU_DSS(FL_KU_DSS), A, DSS_AL.DSS.KeyUpdating.O_CMA_Default, MCO).main() @ &m : res] |)); 1: smt(ler_norm_add).
   rewrite -3!addrA &(ler_add) 1:ALKUDSS_EUFCMARO_PRF //.
   rewrite ger0_norm 1:Pr[mu_ge0] //.
-  move: (ALKUDSS_EUFCMARO_CRRO_EUFRMA FL_KU_DSS FL_KU_DSS_sign_ll FL_KU_DSS_verify_ll A 
-         _ qS rng_qS qH ge0_qH _ opsign FL_KU_DSS_sign_fun FL_KU_DSS_keygen_stateless FL_KU_DSS_verify_stateless &m).
+  move: (ALKUDSS_EUFCMARO_CRRO_EUFRMA FL_KU_DSS FL_KU_DSS_sign_ll FL_KU_DSS_verify_ll A
+         _ _ opsign FL_KU_DSS_sign_fun FL_KU_DSS_keygen_stateless FL_KU_DSS_verify_stateless &m).
   + by move => RO SO ROll SOll; apply (A_forge_ll RO SO ROll SOll).
   + by move => RO SO; apply (A_forge_queries RO SO).
   by rewrite !addrA.
   qed.
 
-  (* Security theorem with PRF, M-eTCR and EUF-RMA *) 
+  (* Security theorem with PRF, M-eTCR and EUF-RMA *)
   lemma ALKUDSS_EUFCMARO_PRF_METCRRO_EUFRMA &m :
     Pr[EUF_CMA_RO(AL_KU_DSS(FL_KU_DSS), A, O_CMA_Default, MCO).main() @ &m : res]
     <=
@@ -2069,18 +2135,18 @@ theory WithPRF.
   rewrite -ger0_norm 1:Pr[mu_ge0] // -subr0.
   rewrite -(subrr Pr[WS.DSS_AL.KeyUpdatingROM.EUF_CMA_RO(WS.AL_KU_DSS(FL_KU_DSS), A, WS.DSS_AL.DSS.KeyUpdating.O_CMA_Default, MCO).main() @ &m : res]).
   rewrite opprB (addrC Pr[WS.DSS_AL.KeyUpdatingROM.EUF_CMA_RO(WS.AL_KU_DSS(FL_KU_DSS), A, WS.DSS_AL.DSS.KeyUpdating.O_CMA_Default, MCO).main() @ &m : res]) addrA.
-  apply (ler_trans (`| Pr[EUF_CMA_RO(AL_KU_DSS(FL_KU_DSS), A, O_CMA_Default, MCO).main() @ &m : res] - 
+  apply (ler_trans (`| Pr[EUF_CMA_RO(AL_KU_DSS(FL_KU_DSS), A, O_CMA_Default, MCO).main() @ &m : res] -
                        Pr[DSS_AL.KeyUpdatingROM.EUF_CMA_RO(WS.AL_KU_DSS(FL_KU_DSS), A, DSS_AL.DSS.KeyUpdating.O_CMA_Default, MCO).main() @ &m : res] | +
                     `| Pr[DSS_AL.KeyUpdatingROM.EUF_CMA_RO(WS.AL_KU_DSS(FL_KU_DSS), A, DSS_AL.DSS.KeyUpdating.O_CMA_Default, MCO).main() @ &m : res] |)); 1: smt(ler_norm_add).
   rewrite -3!addrA &(ler_add) 1:ALKUDSS_EUFCMARO_PRF //.
   rewrite ger0_norm 1:Pr[mu_ge0] //.
-  move: (ALKUDSS_EUFCMARO_METCRRO_EUFRMA FL_KU_DSS FL_KU_DSS_sign_ll FL_KU_DSS_verify_ll A 
-         _ qS rng_qS qH ge0_qH _ opsign FL_KU_DSS_sign_fun FL_KU_DSS_keygen_stateless FL_KU_DSS_verify_stateless &m).
+  move: (ALKUDSS_EUFCMARO_METCRRO_EUFRMA FL_KU_DSS FL_KU_DSS_sign_ll FL_KU_DSS_verify_ll A
+         _ _ opsign FL_KU_DSS_sign_fun FL_KU_DSS_keygen_stateless FL_KU_DSS_verify_stateless &m).
   + by move => RO SO ROll SOll; apply (A_forge_ll RO SO ROll SOll).
   + by move => RO SO; apply (A_forge_queries RO SO).
   by rewrite !addrA.
   qed.
-  
+
   end section Proofs_EUFCMA_RO_ALKUDSS.
 
 end WithPRF.
