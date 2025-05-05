@@ -1,3 +1,4 @@
+(* Note: only for reference here, replaced by abstract ltree operator *)
 require import AllCore List RealExp IntDiv Distr DList.
 require (*--*) Subtype.
 
@@ -5,17 +6,20 @@ from Jasmin require import JModel.
 
 require import Params Address Hash WOTS.
 
+(*
 op H_msg_padding_val : W64.t.
 
 op H_msg (t : threen_bytes) (M : W8.t list) : nbytes =
   let padding : W8.t list = toByte_64 H_msg_padding_val n in
   Hash (padding ++ ThreeNBytesBytes.val t ++ M).
+*)
 
 subtype wots_keys as WOTSKeys = { l : wots_sk list | size l = 2^h }.
 realize inhabited.
 proof.
 exists (nseq (2^h) witness); rewrite size_nseq; smt(@IntDiv).
 qed.
+
 
 (* 4.1.5 L-Trees *)
 (* takes as input a WOTS+ public key pk and compresses it to a single

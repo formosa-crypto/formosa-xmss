@@ -1,7 +1,7 @@
 require import AllCore List Distr RealExp IntDiv DList.
 from Jasmin require import JModel.
 
-require import Params BaseW Address Hash.
+require import Params BaseW Address (*Hash*).
 
 (******************************************************************************)
 
@@ -25,7 +25,16 @@ proof.
 by exists (nseq (2^h) witness); rewrite size_nseq; smt(ge0_h @IntDiv).
 qed.
 
-op nbytexor(a b : nbytes) : nbytes = NBytes.insubd (bytexor (NBytes.val a) (NBytes.val b)).
+(* op nbytexor(a b : nbytes) : nbytes = NBytes.insubd (bytexor (NBytes.val a) (NBytes.val b)). *)
+
+(******************************************************************************)
+(* Corresponds to prf_sk in security spec *)
+op prf_keygen : nbytes -> W8.t list -> nbytes.
+
+(* Corresponds to f in security spec (modulo lifting input type to bool list) *)
+op f : seed -> adrs -> nbytes -> nbytes.
+
+(******************************************************************************)
 
 module Chain = {
    (*
@@ -48,8 +57,8 @@ module Chain = {
     (* case i + s <= w-1 is precondition *)
     while (chain_count < s) {
      address <- set_hash_addr address (i + chain_count);
-     (* TODO: Replace following (from BEGIN until END comment) by abstract THF f *)
-     (* BEGIN *)
+     (* TODO: Replace following (from BEGIN until END comment) by abstract THF f
+     BEGIN
      address <- set_key_and_mask address 0;
 
       addr_bytes <- addr_to_bytes address;
@@ -61,8 +70,8 @@ module Chain = {
      bitmask <@ Hash.prf(addr_bytes, _seed);
 
      t <@ Hash._F (_key, (nbytexor t bitmask));
-     (* END *)
-
+     END *)
+     t <- f _seed address t;
      chain_count <- chain_count + 1;
     }
 
@@ -122,8 +131,10 @@ module WOTS = {
     while (i < len) {
       address <- set_chain_addr address i;
       addr_bytes <- addr_to_bytes address;
-      (* TODO: Replace Hash.prf_keygen by abstract KHF prf_keygen (matching prs_sk from security spec) *)
+      (* TODO: Replace Hash.prf_keygen by abstract KHF prf_keygen (matching prs_sk from security spec) 
       sk_i <@ Hash.prf_keygen (NBytes.val seed ++ NBytes.val addr_bytes, sk_seed);
+      *)
+      sk_i <- prf_keygen sk_seed (NBytes.val seed ++ NBytes.val addr_bytes);
       sk <- put sk i sk_i;
       i <- i + 1;
     }

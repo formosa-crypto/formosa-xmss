@@ -1,7 +1,3 @@
-(*
-  TODO: Show BaseW.base_w is same as BaseW subtype injection considered in
-  the security spec?
-*)
 require import AllCore List RealExp IntDiv.
 
 from Jasmin require import JModel.

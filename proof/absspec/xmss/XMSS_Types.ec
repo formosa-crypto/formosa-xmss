@@ -1,5 +1,6 @@
+(* TODO: Mapping between types here and in security spec (not here, but in equivalence proof) *)
 require import AllCore List RealExp IntDiv.
-require (*  *) Subtype. 
+require (*  *) Subtype.
 
 require export XMSS_Params WOTS.
 
@@ -11,7 +12,7 @@ import Params.
 subtype auth_path as AuthPath = { l : nbytes list | size l = h }.
 realize inhabited.
 proof.
-by (exists (nseq h witness);smt(size_nseq ge0_h)).
+by exists (nseq h witness); smt(size_nseq ge0_h).
 qed.
 
 type sig_t = { sig_idx : W32.t;

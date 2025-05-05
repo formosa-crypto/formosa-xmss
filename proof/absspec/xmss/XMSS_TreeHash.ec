@@ -1,12 +1,9 @@
-pragma Goals : printall.
-
-
 require import AllCore List RealExp IntDiv Distr DList.
-require (*--*) Subtype. 
+require (*--*) Subtype.
 
 from Jasmin require import JModel.
- 
-require import Types XMSS_Types Address Hash LTree WOTS.
+
+require import Types XMSS_Types Address (* Hash LTree *) WOTS.
 import Params.
 
 (**********************************************************************************************)
@@ -19,6 +16,14 @@ pred treehash_p (s t : int) = s %% (1 `<<` t) <> 0.
 
 op nbytes_witness : nbytes = NBytes.insubd (nseq n witness).
 
+
+(******************************************************************************)
+(* Corresponds to pkco in security spec (modulo lifting input type to bool list) *)
+op ltree : seed -> adrs -> wots_pk -> nbytes.
+
+(* Corresponds to trh in security spec (modulo concatenating two inputs and lifting type to bool list) *)
+op rand_hash : seed -> adrs -> nbytes -> nbytes -> nbytes.
+
 module TreeHash = {
   (* Computes the root *)
   proc treehash(pub_seed sk_seed : seed, s t : int, address : adrs) : nbytes = {
@@ -30,7 +35,7 @@ module TreeHash = {
     var i, j : int;
     var tree_index : W32.t;
     var node0, node1, new_node : nbytes;
-    
+
 
     offset <- W64.zero;
     i <- 0;
@@ -45,35 +50,40 @@ module TreeHash = {
       address <- set_ltree_addr address (s + i);
 
       (* compress the WOTS public key into a single N-byte value *)
-      node <@ LTree.ltree(pk, address, pub_seed); 
+      (* TODO: Replace ltree with THF corresponding to `pkco` in security spec
+      node <@ LTree.ltree(pk, address, pub_seed);
+      *)
+      node <- ltree pub_seed address pk;
 
       stack <- put stack (to_uint offset) node; (* Push the node onto the stack *)
       offset <- offset + W64.one;
       heights <- put heights (to_uint (offset - W64.one)) W32.zero;
-      
+
       address <- set_type address 2;
 
       while (
           (of_int 2)%W64 \ule offset /\ (* The stack needs to have at least two nodes *)
-          nth witness heights (to_uint (offset - W64.one)) = 
+          nth witness heights (to_uint (offset - W64.one)) =
              nth witness heights (to_uint (offset - (of_int 2)%W64))
       ) {
-          tree_index <- W32.of_int(s + i) `>>` truncateu8 (((nth witness heights (to_uint (offset - W64.one))) + W32.one) `&` (of_int 31)%W32); 
-        
+          tree_index <- W32.of_int(s + i) `>>` truncateu8 (((nth witness heights (to_uint (offset - W64.one))) + W32.one) `&` (of_int 31)%W32);
+
           address <- set_tree_height address (to_uint (nth witness heights (to_uint (offset - W64.one))));
           address <- set_tree_index address (W32.to_uint tree_index);
 
           node0 <- nth nbytes_witness stack (to_uint (offset - W64.of_int 2));
           node1 <- nth nbytes_witness stack (to_uint (offset - W64.one));
-          
+          (* TODO: Replace rand_hash with THF corresponding to `trh` in security spec
           new_node <@ Hash.rand_hash(node0, node1, pub_seed, address);
+          *)
+          new_node <- rand_hash pub_seed address node0 node1;
 
           stack <- put stack (to_uint (offset - W64.of_int 2)) new_node; (* push new node onto the stack *)
           offset <- offset - W64.one; (* One less node on the stack (removed node0 and node1 and added new_node) *)
-          heights <- put heights 
-                   (to_uint (offset - W64.one)) 
+          heights <- put heights
+                   (to_uint (offset - W64.one))
                    (nth witness heights (to_uint (offset - W64.one)) + W32.one); (* The new node is one level higher than the nodes used to compute it *)
-      }      
+      }
 
       i <- i + 1;
     }
@@ -92,7 +102,7 @@ module TreeSig = {
     var j : int <- 0;
     var k : int;
     var t : nbytes <- witness;
- 
+
     authentication_path <- nseq h witness;
 
     while (j < h) {
@@ -110,7 +120,7 @@ module TreeSig = {
    Algorithm 11: treeSig - Generate a WOTS+ signature on a message with
    corresponding authentication path
 
-     Input: n-byte message M', XMSS private key SK,
+     Input: n-byte message M', XMSS private key SK
             signature index idx_sig, ADRS
      Output: Concatenation of WOTS+ signature sig_ots and
              authentication path auth
@@ -121,13 +131,13 @@ module TreeSig = {
     var ots_sk : wots_sk;
     var sk_seed : nbytes <- sk.`sk_seed;
     var pub_seed : nbytes <- sk.`pub_seed_sk;
-    
+
     auth <@ buildAuthPath (pub_seed,sk_seed, idx, address);
     address <- set_type address 0;
     address <- set_ots_addr address (W32.to_uint idx);
 
     sig_ots <@ WOTS.sign_seed(NBytes.val M, sk_seed, pub_seed, address);
-    
+
     return (sig_ots, auth);
   }
 }.
@@ -136,14 +146,14 @@ module TreeSig = {
 
 
 module RootFromSig = {
-  proc rootFromSig(idx_sig : W32.t, sig_ots : wots_signature, auth : auth_path, M : nbytes, 
-  _seed : seed, address : adrs) : nbytes = {
+  proc rootFromSig(idx_sig : W32.t, sig_ots : wots_signature, auth : auth_path, M : nbytes,
+                   _seed : seed, address : adrs): nbytes = {
     var pk_ots : wots_pk;
     var k : int;
     var nodes0, nodes1 : nbytes;
     var index : int;
     var auth_k : nbytes;
-    
+
     address <- set_type address 0;
     address <- set_ots_addr address (W32.to_uint idx_sig);
 
@@ -151,8 +161,9 @@ module RootFromSig = {
 
     address <- set_type address 1;
     address <- set_ltree_addr address (W32.to_uint idx_sig);
-
-    nodes0 <@ LTree.ltree(pk_ots, address, _seed);
+    (* TODO: Replace ltree with THF corresponding to `pkco` in security spec
+    nodes0 <@ LTr.ltree(pk_ots, address, _seed); *)
+    nodes0 <- ltree _seed address pk_ots;
 
     address <- set_type address 2;
     address <- set_tree_index address (W32.to_uint idx_sig);
@@ -166,13 +177,19 @@ module RootFromSig = {
         address <- set_tree_index address (index %/ 2);
 
         auth_k <- nth witness (AuthPath.val auth) k;
+        (* TODO: Replace rand_hash with THF corresponding to `trh` in security spec
         nodes1 <@ Hash.rand_hash (nodes0, auth_k, _seed, address);
+        *)
+        nodes1 <- rand_hash _seed address nodes0 auth_k;
       } else {
         index <- get_tree_index address;
         address <- set_tree_index address ((index - 1) %/ 2);
 
         auth_k <- nth witness (AuthPath.val auth) k;
+        (* TODO: Replace rand_hash with THF corresponding to `trh` in security spec
         nodes1 <@ Hash.rand_hash (auth_k, nodes0, _seed, address);
+        *)
+        nodes1 <- rand_hash _seed address auth_k nodes0;
       }
 
       nodes0 <- nodes1;
@@ -182,4 +199,6 @@ module RootFromSig = {
     return nodes0;
   }
 }.
+
+
 

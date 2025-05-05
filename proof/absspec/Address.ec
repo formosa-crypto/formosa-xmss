@@ -2,7 +2,7 @@
   Instantiate subtype adrs in security spec with addresses from here,
   and instantiate val and insub to be the bijection between them
   (assuming the THFs abstract away the handling of the parts that
-  aren't specified in the security spec
+  aren't specified in the security spec)
 *)
 require import AllCore List RealExp IntDiv.
 from Jasmin require import JModel_x86.
