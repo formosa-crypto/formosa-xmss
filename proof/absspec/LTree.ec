@@ -1,10 +1,8 @@
-pragma Goals : printall.
-
 require import AllCore List RealExp IntDiv Distr DList.
-require (*--*) Subtype. 
+require (*--*) Subtype.
 
 from Jasmin require import JModel.
- 
+
 require import Params Address Hash WOTS.
 
 op H_msg_padding_val : W64.t.
@@ -20,10 +18,31 @@ exists (nseq (2^h) witness); rewrite size_nseq; smt(@IntDiv).
 qed.
 
 (* 4.1.5 L-Trees *)
-(* takes as input a WOTS+ public key pk and compresses it to a single 
+(* takes as input a WOTS+ public key pk and compresses it to a single
    n-byte value pk[0].
 *)
+
+(*
+  TODO:
+  Is it an issue that the pkco THF will be instantiated with
+  something (ltree) that uses the trh THF (rand_hash)? The
+  SM-DT-TCR-C security model requires the addresses queried to the
+  challenge oracle and the collection oracle to be disjoint.
+  This prevents the adversary doing a collision-like search
+  during the challenge phase by querying the collection oracle.
+  However, if the `pkco` THF internally uses the `trh` THF, then
+  in the SM-DT-TCR-C game for `trh` (where `pkco` is in the collection),
+  the adversary can query the challenge oracle (for `trh) with a certain address,
+  and then query the collection oracle (for `pkco`) with a different address
+  that gets adjusted internally (by `pkco`) to be the same address as the one
+  in the challenge query earlier, right before it calls `trh`. The value returned
+  by the collection oracle might then be a value computed by `trh` using the
+  same address (and public seed) as one of the challenge queries, which is exactly
+  what the disjunctness/disjointness conditions are trying to prevent?
+  Then again, I feel like this might just be abstracted away in the model. Not sure.
+*)
 module LTree = {
+  (* TODO: Replace by abstract THF matching pkco in security spec *)
   proc ltree (pk : wots_pk, address : adrs, _seed : seed) : nbytes = {
     var pks : nbytes list;
     var pk_i : nbytes;

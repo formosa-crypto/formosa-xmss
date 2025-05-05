@@ -1,3 +1,4 @@
+(* TODO: Mapping between types here and those in security proof (not here, but in proof file) *)
 require import List.
 from Jasmin require import JModel.
 

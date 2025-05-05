@@ -1,5 +1,3 @@
-pragma Goals : printall.
-
 require import AllCore List Distr RealExp IntDiv DList.
 from Jasmin require import JModel.
 
@@ -20,7 +18,7 @@ type wots_sk = len_nbytes.
 type wots_keypair = wots_pk * wots_sk.
 
 (******************************************************************************)
- 
+
 subtype wots_ots_keys as OTSKeys = { l : wots_sk list | size l = 2^h }.
 realize inhabited.
 proof.
@@ -30,6 +28,10 @@ qed.
 op nbytexor(a b : nbytes) : nbytes = NBytes.insubd (bytexor (NBytes.val a) (NBytes.val b)).
 
 module Chain = {
+   (*
+     TODO: Prove proc chain (after inserting abstract THF) is equivalent to
+     cf (from abstract spec)
+   *)
    proc chain(X : nbytes, i s : int, _seed : seed, address : adrs) : nbytes = {
       (*
        *
@@ -46,30 +48,33 @@ module Chain = {
     (* case i + s <= w-1 is precondition *)
     while (chain_count < s) {
      address <- set_hash_addr address (i + chain_count);
+     (* TODO: Replace following (from BEGIN until END comment) by abstract THF f *)
+     (* BEGIN *)
      address <- set_key_and_mask address 0;
-      
+
       addr_bytes <- addr_to_bytes address;
      _key <@ Hash.prf(addr_bytes, _seed);
-     
+
      address <- set_key_and_mask address 1;
-      
+
      addr_bytes <- addr_to_bytes address;
      bitmask <@ Hash.prf(addr_bytes, _seed);
 
      t <@ Hash._F (_key, (nbytexor t bitmask));
-     
+     (* END *)
+
      chain_count <- chain_count + 1;
     }
-    
+
     return t;
    }
 }.
 
-pred chain_pre(X : nbytes, i s : int, _seed : seed, address : adrs) = 
+pred chain_pre(X : nbytes, i s : int, _seed : seed, address : adrs) =
     0 <= s <= w-1.
 
 module WOTS = {
-  (* In practise, we generate the private key from a secret seed *)
+  (* In practice, we generate the private key from a secret seed *)
   proc genSK() : wots_sk = {
     var sk : W8.t list list;
     var sk_i : W8.t list;
@@ -87,7 +92,7 @@ module WOTS = {
     return LenNBytes.insubd (map NBytes.insubd sk);
   }
 
-  (* 
+  (*
   Pseudorandom Key Generation [Section 3.1.7. of the RFC]
 
     During key generation, a uniformly random n-byte string S is
@@ -109,7 +114,7 @@ module WOTS = {
     var i : int;
 
     sk <-  nseq len witness;
-    
+
     address <- set_hash_addr address 0;
     address <- set_key_and_mask address 0;
 
@@ -117,6 +122,7 @@ module WOTS = {
     while (i < len) {
       address <- set_chain_addr address i;
       addr_bytes <- addr_to_bytes address;
+      (* TODO: Replace Hash.prf_keygen by abstract KHF prf_keygen (matching prs_sk from security spec) *)
       sk_i <@ Hash.prf_keygen (NBytes.val seed ++ NBytes.val addr_bytes, sk_seed);
       sk <- put sk i sk_i;
       i <- i + 1;
@@ -155,7 +161,6 @@ module WOTS = {
 
     pk <- nseq len witness;
     i <- 0;
-   
 
     wots_skey <@ pseudorandom_genSK(sk_seed, _seed, address); (* Generate sk from the secret key *)
     while (i < len) {
@@ -179,6 +184,7 @@ module WOTS = {
     return (pk, sk);
   }
 
+  (* TODO: Prove checksum is instance of one used in security spec *)
   proc checksum (m : int list) : int = {
     var i : int <- 0;
     var m_i : int;
@@ -274,7 +280,7 @@ module WOTS = {
     sig <- nseq len witness;
 
     (* Generate sk from the secret seed *)
-    wots_skey <@ pseudorandom_genSK(sk_seed, pub_seed, address); 
+    wots_skey <@ pseudorandom_genSK(sk_seed, pub_seed, address);
 
     (* Convert message to base w *)
     msg <@ BaseW.base_w(M, len1);
@@ -334,14 +340,14 @@ module WOTS = {
     csum_bytes <- toByte csum_32 len_2_bytes;
     csum_base_w <@ BaseW.base_w(csum_bytes, len2);
     msg <- msg ++ csum_base_w;
-        
+
     i <- 0;
     while (i < len) {
       address <- set_chain_addr address i;
       msg_i <- nth witness msg i;
       sig_i <- nth witness (LenNBytes.val sig) i;
       pk_i <@ Chain.chain (sig_i, msg_i, (w - 1 - msg_i), _seed, address);
-      tmp_pk <- put tmp_pk i pk_i; 
+      tmp_pk <- put tmp_pk i pk_i;
       i <- i + 1;
     }
 
@@ -354,4 +360,3 @@ module WOTS = {
     return pk = tmp_pk;
   }
 }.
-

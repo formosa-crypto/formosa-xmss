@@ -1,5 +1,3 @@
-pragma Goals : printall.
-
 require import AllCore List Distr RealExp IntDiv FinType.
 require import BitEncoding.
 (*---*) import BitChunking.
@@ -18,10 +16,10 @@ op rand_hash_padding : W64.t = W64.one.
 op padding_len : int.
 axiom padding_len_ge0 : 0 <= padding_len.
 
-op toByte_64(x : W64.t) (l : int) : W8.t list = 
-  rev (mkseq (fun i => nth W8.zero (to_list (W8u8.unpack8 x)) i) l). 
+op toByte_64(x : W64.t) (l : int) : W8.t list =
+  rev (mkseq (fun i => nth W8.zero (to_list (W8u8.unpack8 x)) i) l).
 
-op bytexor(a b : W8.t list) : W8.t list = 
+op bytexor(a b : W8.t list) : W8.t list =
    map (fun (ab : W8.t * W8.t) => ab.`1 `^` ab.`2) (zip a b).
 
 op prf (in_0 key : nbytes): nbytes =
@@ -78,7 +76,7 @@ module Hash = {
     buf <- padding ++ NBytes.val key ++ in_0;
 
     r <- Hash buf;
-    
+
     return r;
 
   }
@@ -101,10 +99,10 @@ module Hash = {
       var padding : W8.t list;
       var key : nbytes;
       var bitmask_0, bitmask_1 : nbytes;
-      var buf, t : W8.t list; 
+      var buf, t : W8.t list;
       var addr_bytes : nbytes;
       var r : W8.t list;
-    
+
       padding <- toByte_64 rand_hash_padding  padding_len;
 
       address <- set_key_and_mask address 0;
@@ -118,10 +116,10 @@ module Hash = {
       address <- set_key_and_mask address 2;
       addr_bytes <- addr_to_bytes address;
       bitmask_1 <@ prf (addr_bytes,  _seed);
-    
+
       t <- bytexor (NBytes.val _left ++ NBytes.val _right) (NBytes.val bitmask_0 ++ NBytes.val bitmask_1);
       buf <- padding ++ NBytes.val key ++ t;
-  
+
       return Hash buf;
   }
 }.

@@ -1,5 +1,7 @@
-pragma Goals : printall.
-
+(*
+  TODO: Show BaseW.base_w is same as BaseW subtype injection considered in
+  the security spec?
+*)
 require import AllCore List RealExp IntDiv.
 
 from Jasmin require import JModel.
@@ -7,14 +9,14 @@ from Jasmin require import JModel.
 require import Params Address.
 
 (* prefix of big endian byte representation of a 32-bit word *)
-op toByte(x : W32.t, k : int) : W8.t list =  
+op toByte(x : W32.t, k : int) : W8.t list =
     rev (mkseq (fun i => nth W8.zero (to_list (W4u8.unpack8 x)) i) k).
 
 
 (* From the RFC
-  A byte string can be considered as a string of base w numbers, i.e.,
+  A byte string can be considered as a string of base w numbers, i.e.
   integers in the set {0, ... , w - 1}.
-  In base_w(X, w, out_len), the length out_len is REQUIRED to be less than 
+  In base_w(X, w, out_len), the length out_len is REQUIRED to be less than
   or equal to 8 * len_X / lg(w).
 *)
 module BaseW = {
@@ -37,14 +39,14 @@ module BaseW = {
       }
 
       bits <- bits - floor(log2 w%r);
-      
+
       v <- (W8.to_uint ((total `>>` W8.of_int bits) `&` W8.of_int (w - 1)));
       base_w <- put base_w out v;
 
       out <- out + 1;
       consumed <- consumed + 1;
     }
-    
+
     return base_w;
   }
 }.
