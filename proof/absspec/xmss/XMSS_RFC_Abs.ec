@@ -3,7 +3,7 @@ require (*--*) Subtype.
 
 from Jasmin require import JModel.
 
-require import XMSS_Params WOTS.
+require import XMSS_RFC_Params WOTS.
 
 import Address BaseW.
 import Array8.

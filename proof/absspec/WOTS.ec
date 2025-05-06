@@ -29,7 +29,7 @@ qed.
 
 (******************************************************************************)
 (* Corresponds to prf_sk in security spec *)
-op prf_keygen : nbytes -> W8.t list -> nbytes.
+op prf_keygen : nbytes -> nbytes * adrs -> nbytes.
 
 (* Corresponds to f in security spec (modulo lifting input type to bool list) *)
 op f : seed -> adrs -> nbytes -> nbytes.
@@ -130,11 +130,11 @@ module WOTS = {
     i <- 0;
     while (i < len) {
       address <- set_chain_addr address i;
-      addr_bytes <- addr_to_bytes address;
       (* TODO: Replace Hash.prf_keygen by abstract KHF prf_keygen (matching prs_sk from security spec) 
+      addr_bytes <- addr_to_bytes address;
       sk_i <@ Hash.prf_keygen (NBytes.val seed ++ NBytes.val addr_bytes, sk_seed);
       *)
-      sk_i <- prf_keygen sk_seed (NBytes.val seed ++ NBytes.val addr_bytes);
+      sk_i <- prf_keygen sk_seed (seed, address);
       sk <- put sk i sk_i;
       i <- i + 1;
     }

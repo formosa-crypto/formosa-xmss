@@ -542,7 +542,7 @@ op valid_xidxvalslp (adidxs : int list) : bool =
 
 
 (* --- Fixed-Length XMSS-TW in an encompassing structure --- *)
-theory ES.
+abstract theory ES.
 (* Length of addresses used in tweakable hash functions (including unspecified global/context part) *)
 const adrs_len : { int | 4 <= adrs_len} as ge4_adrslen.
 
