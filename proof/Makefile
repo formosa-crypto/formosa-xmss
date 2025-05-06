@@ -33,13 +33,13 @@ extraction/XMSS_IMPL.ec: ../ref-jasmin/xmss/xmss.jinc | common/
 
 # --------------------------------------------------------------------------------------------------
 
-check_xmss_common_spec: 
+check_xmss_common_spec:
 	$(ECRUNTEST) config/tests.config common-spec
 
-check_xmss_spec: 
+check_xmss_spec:
 	$(ECRUNTEST) config/tests.config xmss-spec
 
-check_xmss_mt_spec: 
+check_xmss_mt_spec:
 	$(ECRUNTEST) config/tests.config xmss-mt-spec
 
 check_spec:  check_xmss_common_spec check_xmss_spec check_xmss_mt_spec
@@ -49,7 +49,7 @@ check_extraction: extraction/XMSS_IMPL.ec
 
 ################################### correctness proof ##############################################
 
-check_correctness_proof: extraction/XMSS_IMPL.ec 
+check_correctness_proof: extraction/XMSS_IMPL.ec
 	$(ECRUNTEST) config/tests.config correctness
 
 ####################################################################################################
@@ -59,16 +59,12 @@ check_security_proof:
 	$(ECRUNTEST) config/tests.config acai
 	$(ECRUNTEST) config/tests.config fsai
 
-# TODO: This would currently be subsumed by the xmss-spec-extra target, if activated
-check_xmss_xmssmt_proof: 
-	$(EASYCRYPT) $(EC_FLAGS) spec/extra/XMSS_vs_XMSS_MT.ec
-
 ####################################################################################################
 
-check_xmss_spec_extra: 
+check_xmss_spec_extra:
 	$(ECRUNTEST) config/tests.config spec-extra
 
-check_proofs: check_xmss_xmssmt_proof check_correctness_proof check_security_proof
+check_proofs: check_xmss_spec_extra check_correctness_proof check_security_proof
 
 # --------------------------------------------------------------------------------------------------
 

@@ -254,6 +254,9 @@ proof. by done. qed.
 
 hint simplify hw_nil.
 
+lemma ge0_hw (p : path) : 0 <= hw p.
+proof. by apply: count_ge0. qed.
+
 lemma hw_cons (b : bool) (p : bool list) : hw (b :: p) = b2i b + hw p.
 proof. by rewrite /hw /pred1; case: b. qed.
 
@@ -528,6 +531,8 @@ lemma int2bs_incSE (N lidx : int) :
         (   k < N
          /\ (forall i, 0 <= i < k => nth false (BS2Int.int2bs N lidx) i)
          /\ nth false (BS2Int.int2bs N lidx) k = false
+         /\ BS2Int.int2bs N lidx
+            = nseq k true ++ false :: drop (k + 1) (BS2Int.int2bs N lidx)
          /\ BS2Int.int2bs N (lidx + 1)
             = nseq k false ++ true :: drop (k + 1) (BS2Int.int2bs N lidx)).
 proof.
@@ -584,7 +589,10 @@ have: BS2Int.int2bs N lidx =
   rewrite (BS2Int.int2bs_cat (k+1) N) ~-1:/#.
   rewrite nth_cat BS2Int.size_int2bs lez_maxr ~-1://#.
   by rewrite iffalse 1:/# opprD !addrA.
-move/(congr1 BS2Int.bs2int); rewrite BS2Int.int2bsK ~-1://#.
+move=> ^eq {1}->; split.
+- do 2! congr; rewrite !drop_mkseq 1:/# &(eq_in_mkseq) /(\o) /=.
+  by move=> i rgi; rewrite -divz_mul 1:/# -exprD_nneg ~-1://#.
+move=> _; move/(congr1 BS2Int.bs2int): eq; rewrite BS2Int.int2bsK ~-1://#.
 rewrite -cat1s catA BS2Int.bs2int_cat -nseq1.
 rewrite {1}(_ : 1 = (k + 1) - k) 1:#ring.
 rewrite BS2Int.bs2int_cat_nseq_true_false ~-1:/#.
@@ -619,7 +627,7 @@ lemma hwincSE (N lidx : int) :
 proof.
 have ? := h_g0; move=> 3? k; have := int2bs_incSE N lidx _ _ _ => //.
 have ge0_k: 0 <= k by apply: ge0_argmax.
-rewrite -/k /= => -[# lekN hones hzero  ->]; rewrite hw_cat /= hw_nseq //=.
+rewrite -/k /= => -[# lekN hones hzero _ ->]; rewrite hw_cat /= hw_nseq //=.
 rewrite -{2}[BS2Int.int2bs N _](cat_take_drop (k+1)).
 rewrite hw_cat /= [hw (take _ _)](_ : _ = k) -1:#ring.
 rewrite [take _ _](_ : _ = rcons (nseq k true) false); last first.
@@ -713,7 +721,7 @@ have ? := h_g0; move=> ^[ge0_lidx _]; case/hwincSE_lpath.
 have := int2bs_incSE h lidx _ _ _; ~-1: by move=> //#.
 rewrite -/k' /= => [#] _ _ /=.
 have ->: k' = 0 by smt(ge0_argmax).
-rewrite nseq0 /= nth0_head => hhd eqE.
+move=> + _ +; rewrite nseq0 /= nth0_head => hhd eqE.
 rewrite /paths_from_leaf !iffalse ~-1:/#.
 pose p1 := lpath (lidx + 1); pose p2 := lpath lidx.
 have: exists s, size s = h - 1 /\ ((p1 = rcons s true) /\ (p2 = rcons s false)). (* FACTOR OUT *)
@@ -754,7 +762,7 @@ have ? := h_g0; move=> ^[ge0_lidx _]; case/hwincSE_lpath.
 have := int2bs_incSE h lidx _ _ _; ~-1: by move=> //#.
 rewrite -/k' /= => [#] _ _ /=.
 have ->: k' = 0 by smt(ge0_argmax).
-rewrite nseq0 /= nth0_head => hhd eqE.
+move=> + _ +; rewrite nseq0 /= nth0_head => hhd eqE.
 rewrite /paths_from_leaf !iffalse ~-1://#.
 pose p1 := lpath (lidx + 1); pose p2 := lpath lidx.
 have: exists s, size s = h - 1 /\ ((p1 = rcons s true) /\ (p2 = rcons s false)).
@@ -789,30 +797,119 @@ lemma hwnoinc_leaflast lidx :
     hw (lpath (lidx + 1)) <= hw (lpath lidx)  =>
      (0 < hw (lpath lidx) /\ 
      size (nth witness (paths_from_leaf lidx) ((size (paths_from_leaf lidx)) - 1)) = h).
-admitted.
+proof.
+have ? := h_g0; move=> ^[ge0_lidx _]; case/hwincSE_lpath.
+- move=> [# + -> ->] /= - ->; rewrite !hw_nseq ~-1://# /=.
+  move=> ge1_h; split; first smt().
+  admit.
+(pose k':= argmax _ _) => [# /= ? -> ?]; have ?: 0 < k' by smt().
+have := int2bs_incSE h lidx _ _ _; ~-1: by move=> //#.
+rewrite -/k' /= => [#] _ _ /= => hhd eqE1 eqE2; split.
+- rewrite /lpath hw_rev b2i0_eq 1:/# /=.
+  by rewrite eqE1 hw_cat /= hw_nseq ~-1:/# /=; smt(ge0_hw).
+rewrite pfl_size 1:/# /paths_from_leaf iffalse 1:/#.
+rewrite /lpath hw_rev b2i0_eq 1:/# /=.
+rewrite -hw_rev; have <- := pfl_r_size (rev (BS2Int.int2bs h lidx)) h.
+- by rewrite size_rev BS2Int.size_int2bs //#.
+rewrite nth_last (range_cat (h - 1)) ~-1:/# pmap_cat rangeS /=.
+pose q := extract_path _ (h - 1).
+suff ->/=: q = Some (rcons (take (h - 1) (rev (BS2Int.int2bs h lidx))) false).
+- rewrite last_cat /= size_rcons size_take_condle ~-1:/#.
+  by rewrite size_rev BS2Int.size_int2bs /#.
+rewrite /q /extract_path /= nth_rev ?BS2Int.size_int2bs 1:/# /=.
+rewrite lez_maxr 1:/# /= iftrue // eqE1 nth_cat.
+by rewrite size_nseq iftrue ~-1:/# nth_nseq /#.
+qed.
 
+lemma take_nseq ['a] (i j : int) (x : 'a) : 0 <= i <= j =>
+  take i (nseq j x) = nseq i x.
+proof. by move=> rg; rewrite -!mkseq_nseq take_mkseq. qed.
 
 (* if inner loop exited, then we have reached the final stack size *)
 lemma hwdec_exit lidx ss ps ad offset : 
-   0 <= lidx < 2^h =>
-   hw (lpath (lidx + 1)) <= hw (lpath lidx) =>
-   hw (lpath (lidx + 1)) <= offset <= hw (lpath lidx) + 1 =>
-   let si = stack_increment lidx ss ps ad offset in
-    ((size si < 2) \/
-     (2 <= size si /\
-       (nth witness si (size si - 1)).`2 <>
-         (nth witness si (size si - 2)).`2)) =>
-     (offset = hw (lpath (lidx + 1)) /\
-      size si = hw (lpath (lidx + 1))).
-admitted.
+      0 <= lidx < 2^h
+   => hw (lpath (lidx + 1)) <= hw (lpath lidx)
+   => hw (lpath (lidx + 1)) <= offset <= hw (lpath lidx) + 1
+   => let si = stack_increment lidx ss ps ad offset in
+      (   size si < 2
+       \/ (2 <= size si /\ (nth witness si (size si - 1)).`2 <> (nth witness si (size si - 2)).`2))
+   => offset = hw (lpath (lidx + 1)) /\ size si = hw (lpath (lidx + 1)).
+proof.
+have ? := h_g0; move=> ^[ge0_lidx _]; case/hwincSE_lpath.
+- admit.
+(pose k':= argmax _ _) => [# /=] ? + ^hdec - -> ?.
+have ?: 0 < k' by smt().
+have := int2bs_incSE h lidx _ _ _; ~-1: by move=> //#.
+rewrite -/k' /= => [#] ?? /= => hhd eqE1 eqE2 hoff.
+pose si := stack_increment _ _ _ _ _.
+pose oldstack := stack_from_leaf lidx ss ps ad.
+pose level :=
+  if   offset = size oldstack + 1
+  then 0
+  else (nth witness oldstack (offset - 1)).`2 + 1.
+pose carrypath := take (h - level) (lpath lidx).
+have siE : si =
+  take (offset - 1) oldstack ++ [(node_from_path carrypath ss ps ad, level)].
+- by rewrite /si /stack_increment /= iffalse //#.
+move=> hsz; rewrite -andaE; split; last first.
+- rewrite siE => -> /=; rewrite size_cat /= size_take_condle.
+  - rewrite /lpath hw_rev b2i0_eq 1:/# /=.
+    by rewrite eqE1 hw_cat /= hw_nseq 1:/# /=; smt(ge0_hw).
+  by rewrite sfl_size 1:/# iftrue /#.
+have szod: size oldstack = hw (lpath lidx).
+- by rewrite /oldstack sfl_size 1:/#.
+have ltk': k' <= hw (lpath lidx).
+- rewrite /lpath hw_rev b2i0_eq 1:/# /= eqE1.
+  by rewrite hw_cat hw_nseq 1:/# /=; smt(ge0_hw).
+have nthod: forall i, 0 <= i < k' => (nth witness (rev oldstack) i).`2 = i.
+- move=> i rgi; rewrite nth_rev /oldstack sfl_size ~-1:/#.
+  rewrite /stack_from_leaf (nth_map witness) 1:pfl_size ~-1:/# /=.
+  rewrite /paths_from_leaf iffalse 1:/# (range_cat (h - (i+1))) ~-1:/#.
+  have eqsz: hw (lpath lidx) - (i + 1) =
+    size (pmap (extract_path (lpath lidx)) (range 0 (h - (i + 1)))).
+  - rewrite &(eq_sym) /= pfl_r_size_min 1:/# {2}/lpath b2i0_eq 1:/# /=.
+    rewrite -[BS2Int.int2bs _ _](cat_take_drop (i + 1)).
+    rewrite rev_cat 2?(rev_take, rev_drop) ?BS2Int.size_int2bs ~-1:/#.
+    rewrite lez_maxr 1:/# hw_cat /lpath b2i0_eq 1:/# /=.
+    rewrite -addrA -{1}[hw _]addr0; congr; apply/eq_sym.
+    rewrite {1}[h](_ : _ = size (BS2Int.int2bs h lidx)).
+    - by rewrite BS2Int.size_int2bs /#.
+    rewrite -rev_take ?BS2Int.size_int2bs 1:/# hw_rev eqE1.
+    rewrite take_cat' take_nseq ~-1:/# hw_cat hw_nseq /= 1:/#.
+    by rewrite size_nseq iftrue 1:/# /=.
+  rewrite pmap_cat nth_cat iffalse; first by rewrite eqsz.
+  rewrite eqsz /= range_ltn 1:/# /=.
+  have ->/=: extract_path (lpath lidx) (h - (i + 1)) =
+    Some (rcons (take (h - (i + 1)) (lpath lidx)) false).
+  - rewrite /extract_path iftrue //= /lpath nth_rev.
+    - by rewrite BS2Int.size_int2bs /= b2i0_eq /#.
+    rewrite b2i0_eq 1:/# BS2Int.size_int2bs lez_maxr 1:/# /=.
+    rewrite [h - _](_ : _ = i) 1:#ring eqE1 nth_cat.
+    by rewrite size_nseq iftrue 1:/# nth_nseq //#.
+  by rewrite size_rcons /= size_take 1:/# size_lpath /#.
+case: hoff; rewrite ler_eqVlt; case=> // gtoff leoff; suff //: false.
+have ge2_offset: 2 <= offset by smt().
+have size_tk_od: size (take (offset - 1) oldstack) = offset - 1.
+- by rewrite /oldstack size_take_condle -1:sfl_size -1:iftrue //#.
+have ge2_szsi: 2 <= size si by rewrite siE size_cat /= size_tk_od.
+move: hsz; rewrite ltrNge ge2_szsi /= nth_last {1}siE last_cat /=.
+rewrite {1}siE cats1 nth_rcons iftrue; first by rewrite siE size_cat /#.
+rewrite siE size_cat /= nth_take ~-1:/# size_tk_od /=.
+have := nthod (size oldstack - (offset - 1)) _; first smt().
+rewrite nth_rev /= 1:/# !(opprB, opprD, addrA) /= => ->.
+rewrite /level; case: (offset = size oldstack + 1) => [->//|neoff].
+have := nthod (size oldstack - offset) _; first smt().
+by rewrite nth_rev /= 1:/# !opprD !addrA /= => ->; ring.
+qed.
 
 
 (* final state of stack after reduction *)
 lemma stack_final lidx ss ps ad :
-  0 <= lidx < 2^h =>
-  forall k, 0 <= k < hw (lpath (lidx + 1)) =>
-  nth witness (stack_increment lidx ss ps ad (hw (lpath (lidx + 1))))  k =
-  nth witness (stack_from_leaf (lidx + 1) ss ps ad) k.
+     0 <= lidx < 2^h
+  => forall k, 0 <= k < hw (lpath (lidx + 1)) =>
+         nth witness (stack_increment lidx ss ps ad (hw (lpath (lidx + 1))))  k
+       = nth witness (stack_from_leaf (lidx + 1) ss ps ad) k.
+proof.
 move => ? k *.
 case (hw (lpath (lidx + 1)) <= hw (lpath lidx)) => *;last first.
 + rewrite /stack_increment /= ifT 1:/#.
