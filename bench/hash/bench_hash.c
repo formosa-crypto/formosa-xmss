@@ -13,7 +13,7 @@
 #include "params.h"
 
 #ifndef IMPL
-#define IMPL XMSSMT - SHA2_20 / 2_256
+#error IMPL must be defined
 #endif
 
 #ifndef FILENAME

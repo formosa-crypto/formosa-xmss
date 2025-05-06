@@ -9,35 +9,15 @@
 #include "xmss.h"
 
 #ifndef DATA_POINTS
-#define DATA_POINTS 10000
+#define DATA_POINTS 100
 #endif
 
 #ifndef IMPL
-#define IMPL "XMSSMT-SHA2_20/2_256"
+#error IMPL must be defined
 #endif
 
-#ifndef XMSSMT_KG_FILE
-#define XMSSMT_KG_FILE "csv/xmssmt_kg.csv"
-#endif
-
-#ifndef XMSS_KG_FILE
-#define XMSS_KG_FILE "csv/xmss_kg.csv"
-#endif
-
-#ifndef XMSSMT_SIGN_FILE
-#define XMSSMT_SIGN_FILE "csv/xmssmt_sign.csv"
-#endif
-
-#ifndef XMSS_SIGN_FILE
-#define XMSS_SIGN_FILE "csv/xmss_sign.csv"
-#endif
-
-#ifndef XMSSMT_VERIFY_FILE
-#define XMSSMT_VERIFY_FILE "csv/xmssmt_verify.csv"
-#endif
-
-#ifndef XMSS_VERIFY_FILE
-#define XMSS_VERIFY_FILE "csv/xmss_verfify.csv"
+#ifndef FILENAME
+#error FILENAME must be defined
 #endif
 
 #ifndef MESSAGE_SIZE
@@ -47,6 +27,9 @@
 #ifndef RUNS
 #define RUNS 1
 #endif
+
+#define str(s) #s
+#define xstr(s) str(s)
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -181,8 +164,8 @@ void xmssmt_bench_kg(const xmss_params *params, uint32_t oid) {
 
     uint64_t cpucycles_overhead = overhead_of_cpucycles_call();
 
-    if (!file_exists(XMSSMT_KG_FILE)) {
-        write_csv_header(XMSSMT_KG_FILE, "xmssmt_keypair");
+    if (!file_exists(xstr(FILENAME))) {
+        write_csv_header(xstr(FILENAME), "xmssmt_keypair");
     }
 
     for (size_t i = 0; i + 1 < DATA_POINTS; i++) {
@@ -191,6 +174,7 @@ void xmssmt_bench_kg(const xmss_params *params, uint32_t oid) {
         }
 
         before = cpucycles();
+
         xmssmt_keypair(pk_ref, sk_ref, oid);
         after = cpucycles();
         observations_ref[i] = (after - cpucycles_overhead) - before;
@@ -205,7 +189,7 @@ void xmssmt_bench_kg(const xmss_params *params, uint32_t oid) {
     uint64_t median_jasmin = median(observations_jasmin, DATA_POINTS);
     uint64_t avg_ref = average(observations_ref, DATA_POINTS);
     uint64_t avg_jasmin = average(observations_jasmin, DATA_POINTS);
-    write_results(XMSSMT_KG_FILE, "xmssmt_keypair", median_ref, avg_ref, median_jasmin, avg_jasmin);
+    write_results(xstr(FILENAME), "xmssmt_keypair", median_ref, avg_ref, median_jasmin, avg_jasmin);
 }
 
 void xmssmt_bench_sign(const xmss_params *params, uint32_t oid) {
@@ -226,8 +210,8 @@ void xmssmt_bench_sign(const xmss_params *params, uint32_t oid) {
 
     uint64_t cpucycles_overhead = overhead_of_cpucycles_call();
 
-    if (!file_exists(XMSSMT_SIGN_FILE)) {
-        write_csv_header(XMSSMT_SIGN_FILE, "xmssmt_sign");
+    if (!file_exists(xstr(FILENAME))) {
+        write_csv_header(xstr(FILENAME), "xmssmt_sign");
     }
 
     // First we need to generate a valid keypair
@@ -254,7 +238,7 @@ void xmssmt_bench_sign(const xmss_params *params, uint32_t oid) {
     uint64_t median_jasmin = median(observations_jasmin, DATA_POINTS);
     uint64_t avg_ref = average(observations_ref, DATA_POINTS);
     uint64_t avg_jasmin = average(observations_jasmin, DATA_POINTS);
-    write_results(XMSSMT_SIGN_FILE, "xmssmt_sign", median_ref, avg_ref, median_jasmin, avg_jasmin);
+    write_results(xstr(FILENAME), "xmssmt_sign", median_ref, avg_ref, median_jasmin, avg_jasmin);
 }
 
 void xmssmt_bench_verify(const xmss_params *params, uint32_t oid) {
@@ -273,8 +257,8 @@ void xmssmt_bench_verify(const xmss_params *params, uint32_t oid) {
 
     uint64_t cpucycles_overhead = overhead_of_cpucycles_call();
 
-    if (!file_exists(XMSSMT_VERIFY_FILE)) {
-        write_csv_header(XMSSMT_VERIFY_FILE, "xmssmt_verify");
+    if (!file_exists(xstr(FILENAME))) {
+        write_csv_header(xstr(FILENAME), "xmssmt_verify");
     }
 
     // First we need to generate a keypair
@@ -300,8 +284,7 @@ void xmssmt_bench_verify(const xmss_params *params, uint32_t oid) {
     uint64_t median_jasmin = median(observations_jasmin, DATA_POINTS);
     uint64_t avg_ref = average(observations_ref, DATA_POINTS);
     uint64_t avg_jasmin = average(observations_jasmin, DATA_POINTS);
-    write_results(XMSSMT_VERIFY_FILE, "xmssmt_verify", median_ref, avg_ref, median_jasmin,
-                  avg_jasmin);
+    write_results(xstr(FILENAME), "xmssmt_verify", median_ref, avg_ref, median_jasmin, avg_jasmin);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -310,8 +293,8 @@ int main(void) {
     xmss_params params;
     uint32_t oid;
 
-    if (starts_with(IMPL, "XMSSMT")) {
-        if (xmssmt_str_to_oid(&oid, IMPL) == -1) {
+    if (starts_with(xstr(IMPL), "XMSSMT")) {
+        if (xmssmt_str_to_oid(&oid, xstr(IMPL)) == -1) {
             fprintf(stderr, "Failed to generate oid from impl name\n");
             exit(-1);
         }
