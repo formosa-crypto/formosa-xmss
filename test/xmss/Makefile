@@ -2,6 +2,7 @@
 
 # --------------------------------------------------------------------------------------------------
 
+AS       ?= as
 CC       ?= clang
 CFLAGS   ?= -Wall -g -O3 -Wextra -Wpedantic
 LDLIBS   = -lcrypto
@@ -30,6 +31,7 @@ endif
 
 default: test
 asm: bin/test_xmssmt-sha2_20_2_256.s
+jasmin_obj: bin/test_xmssmt-sha2_20_2_256.o
 test: bin/test_xmssmt-sha2_20_2_256 bin/test_xmssmt-sha2_20_2_256_valgrind
 run: bin/test_xmssmt-sha2_20_2_256.out
 
@@ -63,6 +65,12 @@ bin/test_xmssmt-sha2_20_2_256_valgrind: bin/test_xmssmt-sha2_20_2_256.s
 
 # --------------------------------------------------------------------------------------------------
 
+%.o: %.s
+	$(AS) $< -o $@
+
+ref_obj:
+	$(CC) $(CFLAGS) -c $(REF_SOURCES) 
+
 bin/%.out: bin/%
 	@./$<
 
@@ -76,7 +84,7 @@ bin/:
 
 .PHONY: clean
 clean:
-	-$(RM) -r bin/
+	-$(RM) -r bin/ *.o
 
 .PHONY: clean_executables
 clean_executables:
