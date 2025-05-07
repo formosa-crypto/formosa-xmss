@@ -54,13 +54,13 @@ check_correctness_proof: extraction/XMSS_IMPL.ec
 
 ####################################################################################################
 
-# FIXME: Only one of these is needed
 check_security_proof:
 	$(ECRUNTEST) config/tests.config acai
-	$(ECRUNTEST) config/tests.config fsai
+#	$(ECRUNTEST) config/tests.config fsai
 
 ####################################################################################################
 
+# FIXME: do we want to split the XMSSMT(1) <-> XMSS equivalence out?
 check_xmss_spec_extra:
 	$(ECRUNTEST) config/tests.config spec-extra
 
