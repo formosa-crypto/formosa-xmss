@@ -2295,6 +2295,60 @@ module WOTS_TW_ES = {
   }
 }.
 
+op gen_skWOTS (ss : sseed) (ps : pseed) (ad : adrs) : skWOTS =
+    let skWOTS =
+      iter len
+        (fun (skWOTS : dgstblock list)=>
+          let skWOTS_ele = prf_sk ss (ps, (set_hidx (set_chidx ad (size skWOTS)) 0)) in
+          rcons skWOTS skWOTS_ele)
+        []
+    in insubd skWOTS.
+
+hoare skWOTS_eq s p a:
+  WOTS_TW_ES.gen_skWOTS: ss = s /\ ps = p /\ ad = a ==> res = gen_skWOTS s p a.
+proof.
+proc.
+while (size skWOTS <= len
+    /\ skWOTS = iter (size skWOTS)
+                  (fun skWOTS=>
+                     let sk = prf_sk ss (ps, (set_hidx (set_chidx ad (size skWOTS)) 0)) in
+                     rcons skWOTS sk)
+                  []).
++ auto=> /> &0 _ ih sz_lt_len; split.
+  + by rewrite size_rcons /#.
+  + by rewrite size_rcons //= iterS 1:size_ge0 -ih.
+by auto=> />; rewrite iter0=> />; smt(ge2_len).
+qed.
+
+op pkWOTS_from_skWOTS (skWOTS : skWOTS) (ps : pseed) (ad : adrs) : pkWOTS =
+  let pkWOTS =
+    iter len
+      (fun pkWOTS=>
+         let skWOTS_ele = nth witness (val skWOTS) (size pkWOTS) in
+         let pkWOTS_ele = cf ps (set_chidx ad (size pkWOTS)) 0 (w - 1) (val skWOTS_ele) in
+         rcons pkWOTS pkWOTS_ele)
+      []
+  in
+  insubd pkWOTS.
+
+hoare pkWOTS_from_skWOTS_eq sk p a:
+  WOTS_TW_ES.pkWOTS_from_skWOTS:
+    skWOTS = sk /\ ps = p /\ ad = a
+    ==> res = pkWOTS_from_skWOTS sk p a.
+proof.
+proc.
+while (size pkWOTS <= len
+    /\ pkWOTS = iter (size pkWOTS)
+                  (fun pkWOTS=>
+                     let sk = nth witness (val skWOTS) (size pkWOTS) in
+                     let pk = cf ps (set_chidx ad (size pkWOTS)) 0 (w - 1) (val sk) in
+                     rcons pkWOTS pk)
+                  []).
++ auto=> /> &0 _ ih sz_lt_len; split.
+  + by rewrite size_rcons /#.
+  + by rewrite size_rcons //= iterS 1:size_ge0 -ih.
+by auto=> />; rewrite iter0=> />; smt(ge2_len).
+qed.
 
 (* -- Adversary classes and oracle interfaces -- *)
 (* Type of oracle given to adversaries in M-EUF-GCMA game for WOTS-TW in encompassing structure *)
