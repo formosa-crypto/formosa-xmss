@@ -95,7 +95,7 @@ jobs:
       - name: Run tests in ${{ matrix.test_dir }}
         run: docker run --rm jasmin-xmss:${{ github.sha }} make -C ${{ matrix.test_dir }} run
 
-  check_singletree_multitree_proof:
+  check_spec_equivs:
     needs: build_image
     runs-on: ubuntu-latest
     steps:
@@ -112,7 +112,7 @@ jobs:
           gunzip -c image.tar.gz | docker load
 
       - name: Check single/multi tree proof
-        run: docker run --rm jasmin-xmss:${{ github.sha }} make -C proof/ check_xmss_xmssmt_proof
+        run: docker run --rm jasmin-xmss:${{ github.sha }} make -C proof/ check_xmss_spec_extra
 
   check_correctness_proof_latest_release:
     needs: build_image
