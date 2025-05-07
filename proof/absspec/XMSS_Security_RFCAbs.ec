@@ -36,6 +36,7 @@ clone XMSS_TW as XMSS_Security with
   op FLXMSSTW.chtype <= 0,
   op FLXMSSTW.pkcotype <= 1,
   op FLXMSSTW.trhtype <= 2,
+  op FLXMSSTW.SA.dmsgFLXMSSTW <- duniform FLXMSSTW.SA.WTW.DigestBlockFT.enum,
   type FLXMSSTW.SA.WTW.pseed <- nbytes,
   type FLXMSSTW.SA.WTW.sseed <- nbytes,
   op FLXMSSTW.SA.WTW.dsseed <- dmap (dlist W8.dword Params.n) NBytes.insubd,
@@ -58,17 +59,26 @@ clone XMSS_TW as XMSS_Security with
      else if i = 8 * n * len then
       let wpk = LenNBytes.insubd (map NBytes.insubd (chunk n (BitsToBytes x))) in
       nb2db (ltree ps mad wpk)
-     else witness).
-(*
+     else witness)
 proof *.
-
-FLXMSSTW.ge1_n, FLXMSSTW.val_log2w, FLXMSSTW.ge1_h, FLXMSSTW.dist_adrstypes,
-FLXMSSTW.SA.WTW.ch0, FLXMSSTW.SA.WTW.chS, FLXMSSTW.SA.WTW.two_encodings
-FLXMSSTW.SA.dmsgFLXMSSTW_ll, FLXMSSTW.SA.dmsgFLXMSSTW_uni, FLXMSSTW.SA.dmsgFLXMSSTW_fu,
-FLXMSSTW.SA.WTW.dsseed_ll, FLXMSSTW.SA.WTW.dsseed_ll, MKey.enum_spec,
-MsgXMSSTW.enum_spec, dmkey_ll, dmkey_uni, dmkey_fu.
-*)
-(* TODO: Instantiate encoding operator *)
-(* TODO: Instantiate chain operator *)
-(* TODO: Instantiate enums for MKey and MsgXMSSTW *)
-(* TODO: In security proof, move proof parameters to section so we don't have to prove things about them *)
+realize FLXMSSTW.ge1_n by exact: ge1_n.
+realize FLXMSSTW.val_log2w by case: w_vals => ->; smt(ilog_powK).
+realize FLXMSSTW.ge1_h by smt(h_g0).
+realize FLXMSSTW.dist_adrstypes by trivial.
+realize FLXMSSTW.SA.WTW.ch0. admitted. (* TODO: instantiate chain *)
+realize FLXMSSTW.SA.WTW.chS. admitted. (* TODO: instantiate chain *)
+realize FLXMSSTW.SA.WTW.two_encodings. admitted. (* TODO: instantiate encoding *)
+realize FLXMSSTW.SA.dmsgFLXMSSTW_ll. admitted. (* TODO: can do *)
+realize FLXMSSTW.SA.dmsgFLXMSSTW_uni. admitted. (* TODO: can do *)
+realize FLXMSSTW.SA.dmsgFLXMSSTW_fu. admitted. (* TODO: can do *)
+realize FLXMSSTW.SA.WTW.dsseed_ll. admitted. (* TODO: can do *)
+realize FLXMSSTW.SA.WTW.dpseed_ll. admitted. (* TODO: can do *)
+realize FLXMSSTW.SA.WTW.ddgstblock_ll. admitted. (* TODO: Proof artifact, not needed (might instantiate just because?) *)
+realize MKey.enum_spec. admitted. (* TODO: instantiate enum and prove *)
+realize MsgXMSSTW.enum_spec. admitted. (* TODO: instantiate enum and prove *)
+realize rng_qS. admitted. (* TODO: Proof artifact, move to section *)
+realize ge0_qH. admitted. (* TODO: Proof artifact, move to section *)
+realize dmseed_ll. admitted. (* TODO: can do *)
+realize dmkey_ll. admitted. (* TODO: instantiate and can do*)
+realize dmkey_uni. admitted. (* TODO: instantiate and can do*)
+realize dmkey_fu. admitted. (* TODO: instantiate and can do*)

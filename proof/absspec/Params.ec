@@ -8,7 +8,7 @@ from Jasmin require import JModel.
 const h : { int | 0 < h } as h_g0.
 
 (* Length of the digest *)
-const n : { int | 0 <= n } as ge0_n.
+const n : { int | 1 <= n } as ge1_n.
 
 (* Winternitz parameter: the range of indices into a wots chain *)
 op w : { int | w = 4 \/ w = 16} as w_vals.
