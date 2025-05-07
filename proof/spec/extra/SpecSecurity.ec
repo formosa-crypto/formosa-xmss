@@ -376,8 +376,19 @@ op leafnode_from_idx(ss ps : Params.nbytes, ad : adrs, lidx : int) : dgstblock =
  bs2block (ltree  ps (set_kpidx (set_typeidx ad 1) lidx) (LenNBytes.insubd (map NBytes.insubd (chunk n (BitsToBytes (flatten (map DigestBlock.val (DBLL.val pk)))))))).
 
 lemma Eqv_Ltree_ltree (pkWOTS : wots_pk) (ad : adrs) (ps : seed) :
-  phoare[LTree.ltree : arg = (pkWOTS, ad, ps) ==> ltree ps ad pkWOTS = res] = 1%r. 
-admitted.
+  phoare[LTree.ltree : arg = (pkWOTS, ad, ps) ==> ltree ps ad pkWOTS = res] = 1%r.
+conseq (: _ ==> true) (: _ ==> _);1,2:smt(); last first. 
++ proc. 
+  wp; while (true) (_len).
+  + move => *.
+    wp;while (true) (_len %/ 2 - i).
+    move => *.
+    inline *;auto => /> /#.
+  by auto => /> /#.
+ by auto => /> /#.
+proc *. ecall (ltree_eq _seed address pk).
+by auto => />.
+qed.
 
 lemma Eqv_WOTS_pkgen  (ad : adrs) (ss ps : seed) :
   phoare[WOTS.pkGen : arg = (ss, ps, ad) ==>  
