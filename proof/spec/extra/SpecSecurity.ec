@@ -956,6 +956,9 @@ hw (lpath (lidx + 1)) <= hw (lpath lidx) =>
 move => *.
 admitted. 
 
+(* In the inner loop, the final node in the stack
+   is the hash of the last two nodes in the previous
+   stack *)
 lemma si_reduced_node lidx ss ps ad offset :
 0 <= lidx < 2^h =>
 hw (lpath (lidx + 1)) <= hw (lpath lidx) =>
