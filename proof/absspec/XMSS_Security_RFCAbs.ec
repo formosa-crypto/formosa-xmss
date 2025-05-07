@@ -54,7 +54,7 @@ clone XMSS_TW as XMSS_Security with
      else if i = 8 * n * len then
       let wpk = LenNBytes.insubd (map NBytes.insubd (chunk n (BitsToBytes x))) in
       DigestBlock.insubd (BytesToBits (NBytes.val (ltree ps ad wpk)))
-     else witness)
+     else witness).
 (*
 proof *.
 
