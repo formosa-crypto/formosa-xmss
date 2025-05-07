@@ -63,17 +63,24 @@ module LTree = {
     return pk_i;
   }
 
+  proc smoosh2(_seed, i, address, pks) = {
+    var pk_i, tmp;
+
+    address <- set_tree_index address i;
+    pk_i <- nth witness pks (2*i);
+    tmp <- nth witness pks (2*i + 1);
+    pk_i <@ Hash.rand_hash (pk_i, tmp, _seed, address);
+    pks <- put pks i pk_i;
+    i <- i + 1;
+    return (i, address, pks);
+  }
+
   proc smoosh_level(_seed, _len, address, pks) = {
-    var i, pk_i, tmp, tree_height;
+    var i, pk_i, tree_height;
 
     i <- 0;
     while (i < _len %/ 2) {
-      address <- set_tree_index address i;
-      pk_i <- nth witness pks (2*i);
-      tmp <- nth witness pks (2*i + 1);
-      pk_i <@ Hash.rand_hash (pk_i, tmp, _seed, address);
-      pks <- put pks i pk_i;
-      i <- i + 1;
+      (i, address, pks) <@ smoosh2(_seed, i, address, pks);
     }
 
     if (_len %% 2 = 1) {
@@ -88,16 +95,25 @@ module LTree = {
     return (_len, address, pks);
   }
 
-  proc smoosh2(_seed, i, address, pks) = {
-    var pk_i, tmp;
+  proc smoosh_modular(pk : wots_pk, address : adrs, _seed : seed) : nbytes = {
+    var pks : nbytes list;
+    var pk_i : nbytes;
+    var tmp : nbytes;
+    var i : int;
+    var _len : int;
+    var tree_height : int;
 
-    address <- set_tree_index address i;
-    pk_i <- nth witness pks (2*i);
-    tmp <- nth witness pks (2*i + 1);
-    pk_i <@ Hash.rand_hash (pk_i, tmp, _seed, address);
-    pks <- put pks i pk_i;
-    i <- i + 1;
-    return (i, address, pks);
+    address <- set_tree_height address 0;
+    pks <- LenNBytes.val pk;
+
+    _len <- len;
+    while (1 < _len) { (* Same as _len > 1 *)
+      (_len, address, pks) <@ smoosh_level(_seed, _len, address, pks);
+    }
+
+    pk_i <- nth witness pks 0;
+
+    return pk_i;
   }
 }.
 
@@ -144,12 +160,13 @@ hoare smoosh_level_eq s0 l0 a0 p0:
     ==> res = smoosh_level s0 l0 a0 p0.
 proof.
 proc; wp.
-while (   0 <= i /\ i <= _len %/ 2
-       /\ (i, address, pks) = fold (fun st=> let (i, address, pks) = st in smoosh2 _seed i address pks) (0, a0, p0) i).
-+ wp; ecall (rand_hash_eq pk_i tmp _seed address).
-  by auto=> /> &0 ge0_i _; rewrite foldS=> /> <- /> /#.
-auto=> /> ge0_l0; rewrite fold0; split.
-+ smt().
+while (0 <= i <= _len %/ 2
+    /\ (i, address, pks) = fold (fun st=> let (i, address, pks) = st in smoosh2 _seed i address pks) (0, a0, p0) i).
++ ecall (smoosh2_eq _seed i address pks).
+  auto=> /> &0 ge0_i _ ih i_lt_half_len.
+  have ->: (smoosh2 _seed i address pks){0}.`1 = i{0} + 1 by done.
+  by rewrite foldS //= -ih /#.
+auto=> /> ge0_l0; rewrite fold0 //=; split=> [/#|].
 move=> address i pks exit ge0_i gei_div2_l0 post.
 have ->> {exit gei_div2_l0}: i = l0 %/ 2 by smt().
 rewrite /smoosh_level -post //=.
@@ -177,7 +194,40 @@ op ltree _seed address pk =
      faster than n smooshes, then that node simply gets carried up
      until the left half is all smooshed down!)
 *)
+hoare smoosh_modular_eq s0 a0 pk0:
+  LTree.smoosh_modular: pk = pk0 /\ _seed = s0 /\ address = a0 ==> res = ltree s0 a0 pk0.
+proof.
+proc; wp.
+while (1 <= _len <= len
+    /\ (_len, address, pks) = fold (fun st=> let (l, a, p) = st in smoosh_level _seed l a p) (len, set_tree_height a0 0, LenNBytes.val pk0) (ceil (log2 len%r) - ceil (log2 _len%r))).
++ ecall (smoosh_level_eq _seed _len address pks).
+  auto=> /> &0 _ _len_le_len ih gt1_len.
+  split=> [/#|_].
+  split.
+  + admit. (* ougna *)
+  have ->: ceil (log2 len%r) - ceil (log2 (smoosh_level _seed _len address pks){0}.`1%r) = ceil (log2 len%r) - ceil (log2 _len{0}%r) + 1.
+  + admit. (* ougna *)
+  rewrite foldS.
+  + admit. (* ougna *)
+  by move=> //=; rewrite -ih /#.
+auto=> />; rewrite fold0 //=; split.
++ admit. (* FIXME!!!!! this is not currently true *)
+move=> l a p H1 H2.
+have <<- {H1 H2}: 1 = l by smt().
+move=> ge1_len.
+have ->: log2 1%r = 0%r.
++ by rewrite /log2 /log ln1 RField.mul0r.
+rewrite from_int_ceil //=.
+by rewrite /ltree=> />; rewrite LenNBytes.valP=> <-.
+qed.
+
+equiv ltree_smoosh:
+  LTree.ltree ~ LTree.smoosh_modular: ={pk, _seed, address} ==> ={res}.
+proof. by proc; inline LTree.smoosh_level LTree.smoosh2; sim. qed.
+
 hoare ltree_eq s0 a0 pk0:
   LTree.ltree: pk = pk0 /\ _seed = s0 /\ address = a0 ==> res = ltree s0 a0 pk0.
 proof.
-admitted.
+conseq ltree_smoosh (smoosh_modular_eq s0 a0 pk0)=> //.
+by move=> /> &1; exists (pk, address, _seed){1}.
+qed.
