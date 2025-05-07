@@ -963,6 +963,8 @@ lemma si_reduced_node lidx ss ps ad offset :
 0 <= lidx < 2^h =>
 hw (lpath (lidx + 1)) <= hw (lpath lidx) =>
 2 <= offset =>
+(nth witness (stack_increment lidx ss ps ad offset) (offset - 1)).`2 = 
+(nth witness (stack_increment lidx ss ps ad offset) (offset - 2)).`2 =>
 let si = (stack_increment lidx ss ps ad offset) in
 let si1 = (stack_increment lidx ss ps ad (offset - 1)) in
 (nth witness si1 (offset - 2)).`1 =
@@ -970,6 +972,7 @@ trh ps (set_tree_index (set_tree_height (set_type zero_address 2) ((nth witness 
      (lidx %/ 2 ^ ((nth witness si (offset - 1)).`2 + 1))) 
   ( (DigestBlock.val (nth witness si (offset - 2)).`1) ++
     (DigestBlock.val (nth witness si (offset - 1)).`1)).
+move => ? Hw ?? /=.
 admitted.
 
 (* growth of leaves under the leftmost subtree *)
