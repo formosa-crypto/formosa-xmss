@@ -36,10 +36,6 @@ op W64toBytes_ext (x : W64.t) (l : int) : W8.t list =
   rev (mkseq (fun i => nth W8.zero (to_list (W8u8.unpack8 x)) i) l).
 
 
-(* FIXME: Prove this *) 
-axiom Eqv_Ltree_ltree (pkWOTS : wots_pk) (ad : adrs) (ps : seed) :
-  phoare[LTree.ltree : arg = (pkWOTS, ad, ps) ==> ltree ps ad pkWOTS = res] = 1%r.
-
 (* Get checksum from XMSS_Checksum and then plug those results
    here *)
 
@@ -121,9 +117,9 @@ module FakeRO : POracle = {
    }
 }.
 op skrel(ask : skXMSSTW, sk : xmss_sk) =
-   ask.`1 = sk.`sk_seed /\
+   ask.`1 = sk.`sk_prf /\
    ask.`2.`1 = Index.insubd (to_uint sk.`idx) /\
-   ask.`2.`2 = sk.`sk_prf  /\
+   ask.`2.`2 = sk.`sk_seed  /\
    ask.`2.`3 = sk.`pub_seed_sk
    (* ask.`2.`4 = ??? Why is the address in/not in the sk/pk? *)
    (* ??? = sk.`pk_root Why is the root not in/in the sk? *).
@@ -372,11 +368,22 @@ qed.
 (* The leaf node corresponding to a leaf path
    The semantics of this needs to be computed from wots using
    operators and then proved equivalent to the imperative code. *)
-op wots_pk_val(ss ps : Params.nbytes, ad : SA.adrs, lidx : int) : dgstblocklenlist. 
+op wots_pk_val(ss ps : Params.nbytes, ad : SA.adrs, lidx : int) : dgstblocklenlist =
+   pkWOTS_from_skWOTS (gen_skWOTS ss ps ad) ps ad.
 
 op leafnode_from_idx(ss ps : Params.nbytes, ad : adrs, lidx : int) : dgstblock =
  let pk = wots_pk_val ss ps (set_kpidx (set_typeidx ad 0) lidx) lidx in
  bs2block (ltree  ps (set_kpidx (set_typeidx ad 1) lidx) (LenNBytes.insubd (map NBytes.insubd (chunk n (BitsToBytes (flatten (map DigestBlock.val (DBLL.val pk)))))))).
+
+lemma Eqv_Ltree_ltree (pkWOTS : wots_pk) (ad : adrs) (ps : seed) :
+  phoare[LTree.ltree : arg = (pkWOTS, ad, ps) ==> ltree ps ad pkWOTS = res] = 1%r. 
+admitted.
+
+lemma Eqv_WOTS_pkgen  (ad : adrs) (ss ps : seed) :
+  phoare[WOTS.pkGen : arg = (ss, ps, ad) ==>  
+     LenNBytes.insubd (map NBytes.insubd (chunk n (BitsToBytes (flatten (map DigestBlock.val (DBLL.val 
+       (pkWOTS_from_skWOTS (gen_skWOTS ss ps ad) ps ad)))))))= res] = 1%r.
+admitted.
 
 (* list of all the leaves up to an index, exclusive *)
 op leaf_range(ss ps : Params.nbytes, ad : SA.adrs, lidx : int) =
@@ -928,7 +935,8 @@ admitted.
 lemma si_size_in_loop  lidx ss ps ad offset :
 0 <= lidx < 2^h =>
 hw (lpath (lidx + 1)) <= hw (lpath lidx) =>
-2 <= offset <= hw (lpath lidx) + 1 =>
+hw (lpath (lidx + 1)) <= offset <= hw (lpath lidx) + 1 =>
+2 <= offset =>
 (nth witness (stack_increment lidx ss ps ad offset) (offset - 1)).`2 = 
 (nth witness (stack_increment lidx ss ps ad offset) (offset - 2)).`2 =>
    size ((stack_increment lidx ss ps ad offset)) = offset /\
@@ -992,7 +1000,7 @@ proof.
 have ? := h_g0; have ? := expr_gt0.
 proc. inline {1} 2. inline {1} 5. inline {1} 8.
 inline {2} 5. inline {2} 10.
-swap {2} [5..7] -4; seq 3 3 : (NBytes.val ms{1} = sk_seed0{2} /\ NBytes.val ss{1} = sk_prf0{2} /\ NBytes.val ps{1} = pub_seed0{2}).
+swap {2} [5..7] -4. swap {2} 2 -1; seq 3 3 : (NBytes.val ss{1} = sk_seed0{2} /\ NBytes.val ms{1} = sk_prf0{2} /\ NBytes.val ps{1} = pub_seed0{2}).
 + do 3!(rnd NBytes.val NBytes.insubd); auto => />.
    have H := supp_dlist W8.dword n.
    have Hn:= Params.ge0_n.
@@ -1005,9 +1013,10 @@ swap {2} [5..7] -4; seq 3 3 : (NBytes.val ms{1} = sk_seed0{2} /\ NBytes.val ss{1
 sp 7 14;wp;conseq
     (: _ ==> (val_bt_trh (list2tree leafl0{1}) ps{1} (set_typeidx (XAddress.val witness) trhtype) h 0 =
               DigestBlock.insubd (BytesToBits (NBytes.val (nth witness stack{2} 0))))).
-+ by auto => /> &1 *;smt(NBytes.valK). 
++ by auto => /> &1 *; smt(NBytes.valK). 
+
 while (size leafl0{1} = i{2} /\ 0 <= i{2} <= 2^h /\ t{2} = h /\ s{2} = 0 
-    /\ ps{1} = pub_seed1{2} /\ ad{1} = ad0{1} /\ ps1{1} = ps{1}
+    /\ ps{1} = pub_seed1{2} /\ ad{1} = ad0{1} /\ ps1{1} = ps{1} /\ ss1{1} =sk_seed1{2} /\ ss1{1} = ss{1}
     /\ (forall k, 0<=k<3 => address0{2}.[k] = W32.zero)
     /\  size stack{2} = h + 1 /\ size heights{2} = h + 1
     /\ leafl0{1} = leaf_range  ss{1} ps{1} ad{1} i{2}
@@ -1023,13 +1032,14 @@ while (size leafl0{1} = i{2} /\ 0 <= i{2} <= 2^h /\ t{2} = h /\ s{2} = 0
 + auto => /> &1; do split.
   + by smt(expr_ge0).
   + by smt(NBytes.valK).
+  + by smt(NBytes.valK).
   + by smt(Array8.initiE Array8.get_setE).
   + by smt(size_nseq).
   + by smt(size_nseq).
   + by rewrite leaf_range0.
   + by rewrite stack_from_leaf0.
   + by move=> 2?; rewrite stack_from_leaf0 /= /#.
-  + move => leafs1 hs1 o1 st2 9? Hl 2? H.
+  + move => leafs1 hs1 o1 st2 10? Hl 2? H.
     have @/bs2block -> := (H 0 _) => /=; first by smt().
     rewrite /stack_from_leaf nth0_head /paths_from_leaf /= ifT 1:/# /=.
     rewrite /node_from_path /= ifF 1:/# /= ifT 1:/# lfp_nil; congr; last first.
@@ -1043,14 +1053,23 @@ seq 3 6 : (#pre /\
      (chunk n
         (BitsToBytes
            (flatten (map DigestBlock.val (DBLL.val pkWOTS{1})))))) /\
-     pkWOTS{1} =   wots_pk_val ss{1} ps1{1} (set_kpidx (set_typeidx ad0{1} 0) (size leafl0{1})) (size leafl0{1})).
-  + conseq />;1: smt(). admit. (* semantics: wait for wots operator *)
+     pkWOTS{1} =   wots_pk_val ss1{1} ps1{1} (set_kpidx (set_typeidx ad0{1} 0) (size leafl0{1})) (size leafl0{1})).
+  + conseq />;1: smt(). 
+    ecall {1} (pkWOTS_from_skWOTS_eq skWOTS0{1} ps1{1} (set_kpidx (set_typeidx ad0{1} 0) (size leafl0{1}))).
+    ecall {1} (skWOTS_eq ss1{1} ps1{1} (set_kpidx (set_typeidx ad0{1} 0) (size leafl0{1}))).
+    ecall {2} (Eqv_WOTS_pkgen address0{2} sk_seed1{2}  pub_seed1{2} ).
+    auto => /> &1 &2 ???????????;split;1:smt(Array8.get_setE).
+    congr;congr;congr;congr;congr;congr;congr;congr. 
+    + congr. rewrite /set_ots_addr /set_kpidx /set_idx. admit. (* address semantics *)
+    rewrite /set_ots_addr /set_kpidx /set_idx. admit. (* address semantics *)
   ecall {2} (Eqv_Ltree_ltree pk0{2} address0{2} pub_seed1{2}).
   auto => /> &1 &2 ???????????;split;1:smt(Array8.get_setE).
   rewrite /pkco /thfc ifF; 1: smt(@StdOrder.IntOrder gt0_n gt2_len).
-  rewrite ifF /=. pose xx := 8*n. have ? : 0 < 8*n by smt(gt0_n). admit.
+  rewrite ifF /=. pose xx := 8*n. have ? : 0 < xx by smt(gt0_n). have ? := gt2_len. 
+   have := Domain.mulfI xx _. smt(). rewrite /injective. smt().
+ 
   rewrite /leafnode_from_idx /= /bs2block;split;congr;congr;congr;congr. 
-  + admit. (* semantics *)
+  +  rewrite /set_ots_addr /set_kpidx /set_idx. admit.  (* address semantics *)
 
 wp. 
 while {2} (
@@ -1242,8 +1261,69 @@ seq 3 : (#pre /\
    rewrite BytesToBitsK NBytes.valKd /rand_hash /=.
    congr;rewrite -!catA; congr;congr.
    + by rewrite /prf /=;congr;congr;rewrite -!catA; congr.
-   congr. 
-   + admit. (* semantics *)
+   congr.
+
+     have Hs8 :  (size (BytesToBits (NBytes.val (nth XMSS_TreeHash.nbytes_witness stack{hr} (to_uint offset{hr} - 2)))) %/ 8) = size (chunk 8 (BytesToBits (NBytes.val (nth XMSS_TreeHash.nbytes_witness stack{hr} (to_uint offset{hr} - 2)))))     by rewrite size_chunk //.
+
+  have Hsd : (size (BytesToBits (NBytes.val (nth XMSS_TreeHash.nbytes_witness stack{hr} (to_uint offset{hr} - 2)))) +
+       size (BytesToBits (NBytes.val (nth XMSS_TreeHash.nbytes_witness stack{hr} (to_uint offset{hr} - 1))))) %/
+      8 %/ 2 = size (BytesToBits (NBytes.val (nth XMSS_TreeHash.nbytes_witness stack{hr} (to_uint offset{hr} - 2)))) %/ 8.
+        + have -> : size (BytesToBits (NBytes.val (nth XMSS_TreeHash.nbytes_witness stack{hr} (to_uint offset{hr} - 1)))) =
+            size (BytesToBits (NBytes.val (nth XMSS_TreeHash.nbytes_witness stack{hr} (to_uint offset{hr} - 2)))); last by smt().
+          rewrite /BytesToBits !(size_flatten_ctt 8);1,2: smt(mapP W8.size_w2bits). 
+          by rewrite !size_map !NBytes.valP.
+
+     have ? : size
+  (map W8.bits2w
+     (take
+        (size
+           (BytesToBits (NBytes.val (nth XMSS_TreeHash.nbytes_witness stack{hr} (to_uint offset{hr} - 2))) ++
+            BytesToBits (NBytes.val (nth XMSS_TreeHash.nbytes_witness stack{hr} (to_uint offset{hr} - 1)))) %/
+         8 %/ 2)
+        (chunk 8
+           (BytesToBits (NBytes.val (nth XMSS_TreeHash.nbytes_witness stack{hr} (to_uint offset{hr} - 2))) ++
+            BytesToBits (NBytes.val (nth XMSS_TreeHash.nbytes_witness stack{hr} (to_uint offset{hr} - 1))))))) =
+n.
+     + rewrite size_map size_cat 1:Hsd chunk_cat;1: by rewrite /BytesToBits !(size_flatten_ctt 8); smt(mapP W8.size_w2bits). 
+       rewrite Hs8  take_cat' /= take0 /= cats0 /= take_size size_chunk //. 
+       rewrite /BytesToBits !(size_flatten_ctt 8);1: smt(mapP W8.size_w2bits). 
+       by rewrite !size_map !NBytes.valP /= /#.
+
+     have ? : size
+  (map W8.bits2w
+     (drop
+        (size
+           (BytesToBits (NBytes.val (nth XMSS_TreeHash.nbytes_witness stack{hr} (to_uint offset{hr} - 2))) ++
+            BytesToBits (NBytes.val (nth XMSS_TreeHash.nbytes_witness stack{hr} (to_uint offset{hr} - 1)))) %/
+         8 %/ 2)
+        (chunk 8
+           (BytesToBits (NBytes.val (nth XMSS_TreeHash.nbytes_witness stack{hr} (to_uint offset{hr} - 2))) ++
+            BytesToBits (NBytes.val (nth XMSS_TreeHash.nbytes_witness stack{hr} (to_uint offset{hr} - 1))))))) =
+n.
+     + rewrite size_map size_cat 1:Hsd chunk_cat;1: by rewrite /BytesToBits !(size_flatten_ctt 8); smt(mapP W8.size_w2bits). 
+       rewrite Hs8  drop_cat /= drop0 /= /BytesToBits flattenK //;1:smt(mapP W8.size_w2bits). 
+       by rewrite !size_map !NBytes.valP /= /#.
+
+   congr.
+   + rewrite /BitsToBytes size_map size_chunk // -map_take.
+     rewrite NBytes.insubdK 1:/# map_take size_cat Hsd.
+     rewrite chunk_cat;1:by rewrite /BytesToBits !(size_flatten_ctt 8); smt(mapP W8.size_w2bits). 
+     rewrite map_cat Hs8 -(size_map W8.bits2w) take_cat' /= take0 cats0 take_size.
+     have ->: map W8.bits2w
+  (chunk 8 (BytesToBits (NBytes.val (nth XMSS_TreeHash.nbytes_witness stack{hr} (to_uint offset{hr} - 2))))) =
+     BitsToBytes (BytesToBits (NBytes.val (nth XMSS_TreeHash.nbytes_witness stack{hr} (to_uint offset{hr} - 2)))) by smt().
+     by rewrite BytesToBitsK.
+
+   + rewrite /BitsToBytes size_map size_chunk // -map_drop.
+     rewrite NBytes.insubdK 1:/# map_drop size_cat Hsd.
+     rewrite chunk_cat;1:by rewrite /BytesToBits !(size_flatten_ctt 8); smt(mapP W8.size_w2bits). 
+     rewrite map_cat Hs8 -(size_map W8.bits2w) drop_cat /= drop0 /=. 
+     have ->: map W8.bits2w
+  (chunk 8 (BytesToBits (NBytes.val (nth XMSS_TreeHash.nbytes_witness stack{hr} (to_uint offset{hr} - 1))))) =
+     BitsToBytes (BytesToBits (NBytes.val (nth XMSS_TreeHash.nbytes_witness stack{hr} (to_uint offset{hr} - 1)))) by smt().
+     by rewrite BytesToBitsK.
+
+
    congr.
    + by rewrite /prf /=;congr;congr;rewrite -!catA; congr.
    by rewrite /prf /=;congr;congr;rewrite -!catA; congr.
@@ -1262,7 +1342,7 @@ have ? :  hw (lpath (_lidx + 1)) <= hw (lpath _lidx) by
  have /=:= hwinc_noentry _lidx ss{m} ps{m} ad0{m} (to_uint offset{hr}) _;smt(). 
 
 split;last by smt().
-have Hsil := si_size_in_loop (size leafl0{m}) ss{m} ps{m} ad0{m} (to_uint offset{hr}) _ _ _ _; 1..4: smt(). 
+have Hsil := si_size_in_loop (size leafl0{m}) ss{m} ps{m} ad0{m} (to_uint offset{hr}) _ _ _ _ _; 1..5: smt(). 
   do split.
   + smt(hwinc_noentry).
   + move => *;split;2:smt().
@@ -1295,12 +1375,18 @@ have Hsil := si_size_in_loop (size leafl0{m}) ss{m} ps{m} ad0{m} (to_uint offset
       by rewrite /BitsToBytes size_map size_chunk 1:/# DigestBlock.valP /#.   
     rewrite BitsToBytesK;1: by rewrite DigestBlock.valP /=; smt().
     rewrite DigestBlock.valKd /=.
-    have /= := si_reduced_node _lidx ss{m} ps{m} ad0{m} (to_uint offset{hr}) _ _ _.
-   smt(). smt(). smt().
-    rewrite Hk => ->. congr. smt(). congr. rewrite -Hk -Hs21 /bs2block DigestBlock.insubdK. admit. congr. congr. rewrite (nth_change_dfl XMSS_TreeHash.nbytes_witness witness);  smt(count_size BS2Int.size_int2bs size_rev).
-     rewrite  -Hs11 /bs2block DigestBlock.insubdK. admit. congr. congr. rewrite (nth_change_dfl XMSS_TreeHash.nbytes_witness witness);  smt(count_size BS2Int.size_int2bs size_rev).
+    have /= := si_reduced_node _lidx ss{m} ps{m} ad0{m} (to_uint offset{hr}) _ _ _ _;1..4:smt().
+    rewrite Hk => ->; congr;1: smt(). 
+    congr.
+    + rewrite -Hk -Hs21 /bs2block DigestBlock.insubdK.
+      + rewrite /BytesToBits (size_flatten_ctt 8);  smt(mapP W8.size_w2bits size_map NBytes.valP).
+      congr; congr; rewrite (nth_change_dfl XMSS_TreeHash.nbytes_witness witness);  smt(count_size BS2Int.size_int2bs size_rev).
+     rewrite  -Hs11 /bs2block DigestBlock.insubdK.
+      + rewrite /BytesToBits (size_flatten_ctt 8);  smt(mapP W8.size_w2bits size_map NBytes.valP).
+      congr; congr; rewrite (nth_change_dfl XMSS_TreeHash.nbytes_witness witness);  smt(count_size BS2Int.size_int2bs size_rev).
   rewrite to_uintD_small /=.
-  + rewrite Hs22. admit. 
+  + rewrite Hs22. 
+    + have := si_heights_in_loop_bnd  (size leafl0{m})  ss{m} ps{m} ad0{m} (to_uint offset{hr}) (to_uint offset{hr} - 2) _ _ _ _ _;smt(h_max).
   rewrite Hs22.  
     rewrite /stack_increment /= ifF 1:/# nth_cat /=.
       have -> /= : !(hw (lpath _lidx) < hw (lpath (_lidx + 1))) by smt().
