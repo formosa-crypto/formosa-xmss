@@ -48,7 +48,10 @@ op ltree : seed -> adrs -> wots_pk -> nbytes.
 (* Corresponds to trh in security spec (modulo concatenating two inputs and lifting type to bool list) *)
 op rand_hash : seed -> adrs -> nbytes -> nbytes -> nbytes.
 
-(* Used for message compression oracle (corresponds to mco/MCO in security spec) *)
+(*
+  Used for message compression oracle, corresponds to mco/MCO in security spec
+  (modulo concatenating public values to output)
+*)
 module type Oracle = {
   proc o(mkm : threen_bytes * W8.t list) : nbytes
 }.
@@ -241,7 +244,7 @@ module RootFromSig = {
 
 
 
-module XMSS (H_msg : Oracle) = {
+module XMSS_RFC_Abs (H_msg : Oracle) = {
   proc sample_randomness () : nbytes * nbytes * nbytes = {
     var sk_seed, sk_prf, pub_seed : W8.t list;
 

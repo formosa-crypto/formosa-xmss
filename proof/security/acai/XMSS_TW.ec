@@ -282,7 +282,7 @@ declare axiom A_forge_queries (RO <: POracle{-A, -QC_A}) (SO <: SOracle_CMA{-A, 
   secure
 *)
 lemma EUFCMARO_XMSSTW_EUFRMA &m :
-  Pr[EUF_CMA_RO(XMSS_TW, A, O_CMA_Default, MCO).main() @ &m : res]  
+  Pr[EUF_CMA_RO(XMSS_TW, A, O_CMA_Default, MCO).main() @ &m : res]
   <=
   `| Pr[PRF(R_PRF_EUFCMARO(FL_XMSS_TW, A), O_PRF_Default).main(false) @ &m : res] -
      Pr[PRF(R_PRF_EUFCMARO(FL_XMSS_TW, A), O_PRF_Default).main(true) @ &m : res] |
@@ -411,3 +411,83 @@ by wp; skip => />; smt(size_eq0 size_ge0).
 qed.
 
 end section Proofs_EUF_CMA_RO_XMSSTW.
+
+(*
+
+(* TODO: Change sk type and keygen to contain root
+  perhaps change this in original proof and adjust paper, seems
+  to actually be the case in the standards, both for XMSS and Sphincs+?
+  Also, perhaps remove address from XMSS_TW/FL_XMSS_TW_SA keys, don't seem
+  to be necessary (and not in standard). Correspondingly adjust paper.
+*)
+*)
+clone import DigitalSignaturesROM as DSS_MKEY with
+  type pk_t <- pkXMSSTW,
+  type sk_t <- skXMSSTW,
+  type msg_t <- msgXMSSTW,
+  type sig_t <- sigXMSSTW,
+
+  type in_t <- (mkey * dgstblock * index) * msgXMSSTW,
+  type out_t <- msgFLXMSSTW,
+  type d_in_t <- unit,
+  type d_out_t <- bool,
+
+  op doutm <- fun _ => dmsgFLXMSSTW
+
+proof *.
+
+module XMSS_TW_MKEY (RO : DSS_MKEY.RO.POracle) = {
+    proc keygen() : pkXMSSTW * skXMSSTW = {
+    var ms : mseed;
+    var pk : pkXMSSTW;
+    var skfl : skFLXMSSTW;
+    var sk : skXMSSTW;
+
+    ms <$ dmseed;
+    (pk, skfl) <@ FL_XMSS_TW.keygen();
+    sk <- (ms, skfl);
+
+    return (pk, sk);
+  }
+
+  proc sign(sk : skXMSSTW, m : msgXMSSTW) : sigXMSSTW * skXMSSTW = {
+    var ms : mseed;
+    var skfl : skFLXMSSTW;
+    var idx : index;
+    var root : dgstblock;
+    var mk : mkey;
+    var cm : msgFLXMSSTW;
+    var sigfl : sigFLXMSSTW;
+    var sig : sigXMSSTW;
+
+    ms <- sk.`1;
+    skfl <- sk.`2;
+    idx <- skfl.`1;
+    root <- witness; (* TODO: Actually compute root here, or adjust sk to contain root as well :) *)
+    mk <- Top.mkg ms idx;
+    cm <@ RO.o((mk, root, idx), m);
+    (sigfl, skfl) <@ FL_XMSS_TW.sign(skfl, cm);
+    sig <- (mk, sigfl);
+    sk <- (ms, skfl);
+
+    return (sig, sk);
+  }
+
+  proc verify(pk : pkXMSSTW, m : msgXMSSTW, sig : sigXMSSTW) : bool = {
+    var mk : mkey;
+    var sigfl : sigFLXMSSTW;
+    var idx : index;
+    var root : dgstblock;
+    var cm : msgFLXMSSTW;
+    var ver : bool;
+
+    root <- pk.`1;
+    mk <- sig.`1;
+    sigfl <- sig.`2;
+    idx <- sigfl.`1;
+    cm <@ RO.o((mk, root, idx), m);
+    ver <@ FL_XMSS_TW.verify(pk, cm, sigfl);
+
+    return ver;
+  }
+}.
