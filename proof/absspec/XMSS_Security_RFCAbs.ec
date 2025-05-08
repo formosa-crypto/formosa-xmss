@@ -30,6 +30,8 @@ clone XMSS_TW as XMSS_Security with
     (fun (ms : nbytes) (i : FLXMSSTW.SA.index) =>
      prf ms (NBytes.insubd (toByte (W32.of_int (FLXMSSTW.SA.Index.val i)) n))),
   op dmseed <- dmap (dlist W8.dword Params.n) NBytes.insubd,
+  (* TODO: op MKey.enum <- map NBytes.insubd <all W8.t lists of length n>
+  op dmkey <- duniform MKey.enum, *)
   op FLXMSSTW.n <- n,
   op FLXMSSTW.log2_w <- ilog 2 w,
   op FLXMSSTW.h <- h,
@@ -68,17 +70,21 @@ realize FLXMSSTW.dist_adrstypes by trivial.
 realize FLXMSSTW.SA.WTW.ch0. admitted. (* TODO: instantiate chain *)
 realize FLXMSSTW.SA.WTW.chS. admitted. (* TODO: instantiate chain *)
 realize FLXMSSTW.SA.WTW.two_encodings. admitted. (* TODO: instantiate encoding *)
-realize FLXMSSTW.SA.dmsgFLXMSSTW_ll. admitted. (* TODO: can do *)
-realize FLXMSSTW.SA.dmsgFLXMSSTW_uni. admitted. (* TODO: can do *)
-realize FLXMSSTW.SA.dmsgFLXMSSTW_fu. admitted. (* TODO: can do *)
-realize FLXMSSTW.SA.WTW.dsseed_ll. admitted. (* TODO: can do *)
-realize FLXMSSTW.SA.WTW.dpseed_ll. admitted. (* TODO: can do *)
+realize FLXMSSTW.SA.dmsgFLXMSSTW_ll.
+rewrite duniform_ll -size_eq0 2!size_map size_range.
+suff /#: 0 < 2 ^ (8 * n).
+by rewrite expr_gt0.
+qed.
+realize FLXMSSTW.SA.dmsgFLXMSSTW_uni by exact: duniform_uni.
+realize FLXMSSTW.SA.dmsgFLXMSSTW_fu by apply /duniform_fu /WTW.DigestBlockFT.enumP.
+realize FLXMSSTW.SA.WTW.dsseed_ll by apply /dmap_ll /dlist_ll /W8.dword_ll.
+realize FLXMSSTW.SA.WTW.dpseed_ll by apply /dmap_ll /dlist_ll /W8.dword_ll.
 realize FLXMSSTW.SA.WTW.ddgstblock_ll. admitted. (* TODO: Proof artifact, not needed (might instantiate just because?) *)
-realize MKey.enum_spec. admitted. (* TODO: instantiate enum and prove *)
-realize MsgXMSSTW.enum_spec. admitted. (* TODO: instantiate enum and prove *)
+realize MKey.enum_spec. admitted. (* TODO: instantiate enum and prove, but shouldn't be necessary *)
+realize MsgXMSSTW.enum_spec. admitted. (* TODO: this shouldn't be necessary *)
 realize rng_qS. admitted. (* TODO: Proof artifact, move to section *)
 realize ge0_qH. admitted. (* TODO: Proof artifact, move to section *)
-realize dmseed_ll. admitted. (* TODO: can do *)
-realize dmkey_ll. admitted. (* TODO: instantiate and can do*)
-realize dmkey_uni. admitted. (* TODO: instantiate and can do*)
-realize dmkey_fu. admitted. (* TODO: instantiate and can do*)
+realize dmseed_ll by apply /dmap_ll /dlist_ll /W8.dword_ll.
+realize dmkey_ll. admitted. (* TODO: instantiate and can do *)
+realize dmkey_uni. admitted. (* TODO: instantiate and can do *)
+realize dmkey_fu. admitted. (* TODO: instantiate and can do *)
