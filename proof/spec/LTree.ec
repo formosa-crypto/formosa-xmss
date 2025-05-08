@@ -173,6 +173,20 @@ rewrite /smoosh_level -post //=.
 by case: (l0 %% 2 = 1)=> //= /#.
 qed.
 
+lemma pi1_smoosh_level_ldiv2 s l a p:
+  (smoosh_level s l a p).`1 = ceil (l%r / 2%r).
+proof.
+rewrite /smoosh_level //=.
+elim: (fold _ _ (l %/ 2))=> //=.
+move: (edivzP l 2)=> //= [] + H.
+have {H} []: l %% 2 = 0 \/ l %% 2 = 1 by smt().
++ move=> ^ + -> //=; rewrite -/(2 %| l)=> /fromint_div <- _.
+  by rewrite from_int_ceil.
+move=> -> //= {2}->.
+rewrite fromintD fromintM RField.mulrDl -RField.mulrA RField.mulrV //=.
+smt(@Real).
+qed.
+
 op ltree _seed address pk =
   let address = set_tree_height address 0 in
   let pks = LenNBytes.val pk in
@@ -203,9 +217,9 @@ while (1 <= _len <= len
 + ecall (smoosh_level_eq _seed _len address pks).
   auto=> /> &0 _ _len_le_len ih gt1_len.
   split=> [/#|_].
-  split.
-  + admit. (* ougna *)
-  have ->: ceil (log2 len%r) - ceil (log2 (smoosh_level _seed _len address pks){0}.`1%r) = ceil (log2 len%r) - ceil (log2 _len{0}%r) + 1.
+  rewrite {-4}pi1_smoosh_level_ldiv2.
+  split; 1:smt(@Real).
+  have ->: ceil (log2 len%r) - ceil (log2 (ceil (_len{0} %r / 2%r))%r) = ceil (log2 len%r) - ceil (log2 _len{0}%r) + 1.
   + admit. (* ougna *)
   rewrite foldS.
   + admit. (* ougna *)
