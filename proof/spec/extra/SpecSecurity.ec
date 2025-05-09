@@ -1590,11 +1590,14 @@ seq 2 1 : (#pre /\ ap{1} =
 + seq 0 3 : (#pre /\ sigWOTS{1} =
    DBLL.insubd
      (map (fun (b : Params.nbytes) => DigestBlock.insubd (BytesToBits (NBytes.val b))) (LenNBytes.val sig_ots{2}))). admit.  (* we need to meta-swap this *)
-   auto => /> &1; rewrite /mkg => />  *;do split.
-   + congr. congr.  congr. admit. smt().
+   auto => /> &1; rewrite /mkg => />  *;do split.  
+ + congr. congr.  congr. 
+     + by rewrite /W64toBytes_ext /toByte_64 //.
+     + by smt().
    + rewrite NBytes.insubdK /toByte.
      + rewrite size_rev size_mkseq. smt(gt0_n). 
-   + congr. admit. admit. admit. (* FIXME SOMETHING MISSING IN REL *)
+   + congr. 
+     +  admit. admit. admit. (* FIXME SOMETHING MISSING IN REL *)
 
 inline {2} 1. wp; conseq />.
 ecall {1} (leaves_correct  ps{1} ss{1} ad{1}) => /=.
