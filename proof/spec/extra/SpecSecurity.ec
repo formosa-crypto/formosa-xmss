@@ -1597,7 +1597,8 @@ seq 2 1 : (#pre /\ ap{1} =
    + congr. admit. admit. admit. (* FIXME SOMETHING MISSING IN REL *)
 
 inline {2} 1. wp; conseq />.
-admitted.
+ecall {1} (leaves_correct  ps{1} ss{1} ad{1}) => /=.
+admit.
 qed.
 
 (* PY *)
@@ -1673,9 +1674,9 @@ seq 1 3 : (   to_uint idx_sig0{2} < l
            /\ (DBHL.val ap{1}) = map bs2block (AuthPath.val auth0{2})).
 wp.
 have ltree_ll : islossless LTree.ltree by admit.
-exlim pk_ots{2}, address0{2}, _seed0{2} => pkots2 add02 sd02.
-call{2} (_: arg = (pkots2, add02, sd02) ==> res = ltree pkots2 add02 sd02).
-by conseq ltree_ll (Eqv_Ltree_ltree pkots2 add02 sd02).
+exlim pk_ots{2}, address0{2}, _seed0{2} => pkots2 add02 sd02. 
+call{2} (_: arg = (pkots2, add02, sd02) ==> res = ltree  sd02 add02 pkots2).  print Eqv_Ltree_ltree.
+by conseq ltree_ll (ltree_eq sd02 add02 pkots2).
 skip => &1 &2 /> ltlidx eqpkots eqidx eqap.
 split.
 rewrite /trhtype. (* instantiate addresses so that setting entries can be matched...*)
