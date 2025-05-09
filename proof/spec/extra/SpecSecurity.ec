@@ -392,6 +392,10 @@ have h_gt0 := h_g0; rewrite /leaves_from_path ifT 1:/# /=.
 by rewrite rev_nil BS2Int.bs2int_nil /= /mkseq id_map //#.
 qed.
 
+lemma lfp_st _lstart _sth: 
+   leaves_from_path (prefix (lpath _lstart) _sth) = range _lstart (_lstart + 2 ^ _sth).
+admitted.
+
 (* The leaf node corresponding to a leaf path
    The semantics of this needs to be computed from wots using
    operators and then proved equivalent to the imperative code. *)
@@ -1182,15 +1186,15 @@ wp;while ( #{/~_ad = zero_address}{~address = _ad}pre
        rewrite ifT /=;1:by smt(size_lpath StdOrder.IntOrder.expr_gt0 h_g0 take0).    
        rewrite ifF /=;1:by smt(size_lpath StdOrder.IntOrder.expr_gt0 h_g0 take0).    
        congr; -2: by smt(take_size size_take size_ge0 size_lpath StdOrder.IntOrder.expr_gt0). 
-       congr;congr. admit. (* semantics *)
-       admit. (* semantics *)
+       congr;congr; smt(lfp_st).
+       rewrite lfp_st /range iotaS_minus;smt(StdOrder.IntOrder.expr_gt0).
     case (_sth = 0) => H0. 
     +  rewrite /prefix ifT;smt(take_size size_take size_ge0 size_lpath StdOrder.IntOrder.expr_gt0 h_g0). 
     rewrite /prefix ifF;1:by smt(take_size size_take size_ge0 size_lpath StdOrder.IntOrder.expr_gt0 h_g0).  
     rewrite ifT /=;1:by smt(take_size size_take size_ge0 size_lpath StdOrder.IntOrder.expr_gt0 h_g0). 
     congr; -2: by smt(take_size size_take size_ge0 size_lpath StdOrder.IntOrder.expr_gt0). 
-    congr;congr. admit. (* semantics *)
-    admit. (* semantics *)
+    congr;congr; smt(lfp_st).
+    rewrite lfp_st /range iotaS_minus;smt(StdOrder.IntOrder.expr_gt0).
 
 seq 6 : (#pre /\
    bs2block node = leafnode_from_idx _ss _ps _ad (_lstart + i)).  
@@ -1203,7 +1207,7 @@ seq 6 : (#pre /\
     ecall (Eqv_WOTS_pkgen address sk_seed  pub_seed ).
     auto => /> &1 &2 ????????????;split;1:smt(Array8.get_setE). 
     congr;congr;congr;congr;congr;congr;congr. 
-    + rewrite /wots_pk_val;congr. rewrite /set_ots_addr /set_kpidx /set_idx.  admit. (* address semantics *)
+    + rewrite /wots_pk_val;congr. rewrite /set_ots_addr /set_kpidx /set_idx;congr.  admit. (* address semantics *)
     rewrite /set_ots_addr /set_kpidx /set_idx.  admit. (* address semantics *)
   ecall  (ltree_eq  pub_seed address  pk ).
   auto => /> &1 &2 ????????????;split;1: by move => *; rewrite /set_ltree_addr /set_type; smt(Array8.get_setE).
