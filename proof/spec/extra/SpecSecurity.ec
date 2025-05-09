@@ -1112,19 +1112,19 @@ size leaves = lidxo =>
  first_subtree_leaves start (lidxo + 1) t ss ps ad.
 admitted.
 
-hoare leaves_correct _ps _ss  _ad :
-  FL_XMSS_TW_ES.leaves_from_sspsad : 
+phoare leaves_correct _ps _ss  _ad :
+ [ FL_XMSS_TW_ES.leaves_from_sspsad : 
   arg = (_ss, _ps, _ad)  ==>
    res =
   map
     (leafnode_from_idx (NBytes.insubd (NBytes.val _ss)) (NBytes.insubd (NBytes.val _ps))
-       (set_layer_addr zero_address 0)) (range 0 (2 ^ h)).
+       (set_layer_addr zero_address 0)) (range 0 (2 ^ h)) ] = 1%r.
 admitted.
 
 phoare tree_hash_correct _ps _ss _lstart _sth _ad : 
 [ XMSS_TreeHash.TreeHash.treehash : 
     arg = (_ps,_ss,_lstart,_sth,_ad) 
-/\  _ad = zero_address /\ 0 <= _sth <= h /\ 0 <= _lstart < 2^h - 2^_sth  /\ 2^_sth %| _lstart 
+/\  _ad = zero_address /\ 0 <= _sth <= h /\ 0 <= _lstart <= 2^h - 2^_sth  /\ 2^_sth %| _lstart 
  ==> 
   DigestBlock.insubd (BytesToBits (NBytes.val res)) =  
    if _sth = 0 then leafnode_from_idx _ss _ps _ad (BS2Int.bs2int (rev (lpath _lstart)))
@@ -1176,15 +1176,21 @@ wp;while ( #{/~_ad = zero_address}{~address = _ad}pre
     rewrite sfl_size 1..4:/#; have-> := lpathst_root _lstart _sth _ _ _;1..3:smt(). 
     rewrite /hw /=;smt(count_ge0).
   + rewrite /stack_from_leaf nth0_head /paths_from_leaf /= ifT 1:/# /= cats0 /=.
-    rewrite /node_from_path /=. 
-    case (_sth = h) => Ht;1:smt().
+    rewrite /node_from_path. 
+    case (_sth = h) => Ht.
+    +  rewrite /prefix ifF;1:by smt(size_lpath StdOrder.IntOrder.expr_gt0 h_g0 take0).  
+       rewrite ifT /=;1:by smt(size_lpath StdOrder.IntOrder.expr_gt0 h_g0 take0).    
+       rewrite ifF /=;1:by smt(size_lpath StdOrder.IntOrder.expr_gt0 h_g0 take0).    
+       congr; -2: by smt(take_size size_take size_ge0 size_lpath StdOrder.IntOrder.expr_gt0). 
+       congr;congr. admit. (* semantics *)
+       admit. (* semantics *)
     case (_sth = 0) => H0. 
-    +  rewrite /prefix ifT;smt(take_size size_take size_ge0 size_lpath). 
-    rewrite ifF;1:smt(take_size size_take size_ge0 size_lpath). 
-    rewrite ifT;1:smt(take_size size_take size_ge0 size_lpath). 
-    congr; -2: by smt(take_size size_take size_ge0 size_lpath). 
-    + congr;congr. admit. (* semantics *)
-    + admit. (* semantics *)
+    +  rewrite /prefix ifT;smt(take_size size_take size_ge0 size_lpath StdOrder.IntOrder.expr_gt0 h_g0). 
+    rewrite /prefix ifF;1:by smt(take_size size_take size_ge0 size_lpath StdOrder.IntOrder.expr_gt0 h_g0).  
+    rewrite ifT /=;1:by smt(take_size size_take size_ge0 size_lpath StdOrder.IntOrder.expr_gt0 h_g0). 
+    congr; -2: by smt(take_size size_take size_ge0 size_lpath StdOrder.IntOrder.expr_gt0). 
+    congr;congr. admit. (* semantics *)
+    admit. (* semantics *)
 
 seq 6 : (#pre /\
    bs2block node = leafnode_from_idx _ss _ps _ad (_lstart + i)).  
@@ -1209,7 +1215,7 @@ while (
  pub_seed = _ps /\
      sk_seed = _ss /\
      s = _lstart /\
-     t = _sth /\ 0 <= _sth /\ _sth <= h /\ 0 <= _lstart /\ _lstart < 2 ^ h - 2 ^ _sth /\ 2 ^ _sth %| _lstart /\ 
+     t = _sth /\ 0 <= _sth /\ _sth <= h /\ 0 <= _lstart /\ _lstart <= 2 ^ h - 2 ^ _sth /\ 2 ^ _sth %| _lstart /\ 
     0 <= i <= 2 ^ t 
  /\   (hw (lpathst _lstart i _sth) < hw (lpathst _lstart (i + 1) _sth) => to_uint offset = hw (lpathst _lstart (i + 1) _sth)) 
  /\ (hw (lpathst _lstart (i + 1) _sth) <= hw (lpathst _lstart i _sth) => 
@@ -1533,15 +1539,22 @@ swap {2} [5..7] -4. swap {2} 2 -1; seq 3 3 : (NBytes.val ss{1} = sk_seed0{2} /\ 
    split => *;1: smt(NBytes.insubdK NBytes.valK Params.ge0_n supp_dlist).
    smt(NBytes.valP supp_dmap).
 
-sp;wp => /=. conseq
+sp;wp => /=. conseq 
     (: _ ==> (val_bt_trh (list2tree leafl{1}) ps{1} (set_typeidx (XAddress.val witness) trhtype) h 0 =
               DigestBlock.insubd (BytesToBits (NBytes.val root{2})))).
 + by auto => /> &1 *; smt(NBytes.valK). 
 
-ecall {1} (leaves_correct  ps0{1} ss0{1} ad{1}).
+ecall {1} (leaves_correct  ps0{1} ss0{1} ad{1}) => /=.
 ecall {2} (tree_hash_correct pub_seed{2} sk_seed{2} 0 h address{2}).
-auto => /> &1; split;1: by rewrite /set_layer_addr /zero_address tP => *;  smt(Array8.get_setE Array8.initiE).
-move => *;smt(NBytes.valK).
+auto => /> &1;do split. 
++ rewrite /set_layer_addr /zero_address /= tP => *;  smt(Array8.get_setE Array8.initiE).  
++ smt(h_g0). 
+move=> -> ?? rr ->; rewrite ifF; 1:smt(h_g0).
++ congr. 
+  + smt(NBytes.valK).
+rewrite /set_typeidx;congr.
+apply (eq_from_nth witness);rewrite !size_put;1: smt(HAX.Adrs.valP).
+by move => i ib;rewrite !(nth_put);smt(size_put HAX.Adrs.valP).
 qed.
 
 (* Signature type is abused with two index copies because I need this to simulate
