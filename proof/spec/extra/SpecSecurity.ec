@@ -1584,7 +1584,7 @@ wp 20 25.
 sp 8 3 => /=.  
 seq 1 1 : (skrel (ms{1},sk1{1}) sk{2} 
         /\ ={m} 
-        /\ 0 <= Index.val idx0{1} <= 2 ^ h 
+        /\ 0 <= Index.val idx0{1} < 2 ^ h
         /\ Index.val idx0{1} = to_uint idx{2}
         /\ sk_prf{2} = sk{2}.`Types.sk_prf 
         /\ Index.val skfl{1}.`1 = to_uint idx{2}).
@@ -1592,7 +1592,8 @@ seq 1 1 : (skrel (ms{1},sk1{1}) sk{2}
   + rewrite Index.insubdK 1:/# to_uintD_small;smt(pow2_32 expr_ge0 h_max gt_exprsbde h_g0).
   + smt(Index.valP).
   + move => *;rewrite Index.insubdK /#. 
-  
+  + smt().
+
 sp;conseq => />. 
 
 seq 1 0 : #pre. admit.  (* we need to meta-swap this *)
@@ -1606,7 +1607,7 @@ seq 2 1 : (#pre /\ ap{1} =
      (map (fun (b : Params.nbytes) => DigestBlock.insubd (BytesToBits (NBytes.val b))) (LenNBytes.val sig_ots{2}))). admit.  (* we need to meta-swap this *)
 
 
-   auto => /> &1 &2; rewrite /mkg => />  *.  
+   auto => /> &1 &2; rewrite /mkg => />  *; split;2:smt().
  + congr; congr.
    + by congr;rewrite /W64toBytes_ext /toByte_64 //.
    + rewrite NBytes.insubdK /toByte.
@@ -1620,6 +1621,7 @@ inline {2} 1. wp; conseq />.
 ecall {1} (leaves_correct  ps{1} ss{1} ad{1}) => /> /=.
 swap {2} [6..7] -5; seq 0 2: (#pre /\ size authentication_path{2} = h); 1: by auto => />;smt(size_nseq h_g0). 
 sp 0 4.
+
 while {2} (#pre /\ 0 <= j{2} <= h /\ forall kk, 0 <= kk < j{2} => 
         nth witness (map (fun (b : Params.nbytes) => DigestBlock.insubd (BytesToBits (NBytes.val b)))
        (AuthPath.val (AuthPath.insubd authentication_path{2}))) kk =
@@ -1640,18 +1642,35 @@ while {2} (#pre /\ 0 <= j{2} <= h /\ forall kk, 0 <= kk < j{2} =>
 
 move => &1 ?. 
 sp;wp. 
-exlim pub_seed0, sk_seed0,  (k * 2 ^ j), j,  address1 => _ps _ss _start _lidxo _ad. 
-call (tree_hash_correct _ps _ss _start _lidxo _ad).
-auto => /> &2 *;do split. 
-+ admit. 
-+ admit. 
-+ admit. 
-
-move => *; do split. 
+exlim pub_seed0, sk_seed0,  (k * 2 ^ j), j,  address1 => _ps _ss _start _sth _ad. 
+call (tree_hash_correct _ps _ss _start _sth _ad).
+auto => /> &2 ?????????????H?;do split. 
++ smt(W32.to_uint_cmp StdOrder.IntOrder.expr_ge0).
++ move => *.
+  pose xx := to_uint ((idx{2} `>>` W8.of_int _sth) `^` W32.one).
+  have -> :  xx =
+            if (to_uint idx{2} %/ 2^_sth) %% 2 = 0 
+            then (to_uint idx{2} %/ 2^_sth) + 1  
+            else (to_uint idx{2} %/ 2^_sth) - 1 by admit.
+  case (to_uint idx{2} %/ 2^ _sth %% 2 = 0) => He.
+  + have ? : to_uint idx{2} + 2*2^_sth < 2^h. admit. 
+    rewrite mulrDl /= divzE.  smt(@StdOrder).
+  + rewrite mulrDl /= divzE /=.  smt(@StdOrder).
+  + smt(@IntDiv).
+move => ???rr Hrr; do split. 
 + smt(size_put).
 + smt().
 + smt().
-+ admit.
++ move => k *. 
+  rewrite (nth_map witness) /=;1:smt(AuthPath.valP). 
+  rewrite AuthPath.insubdK;1:smt(size_put).
+  rewrite nth_put 1:/#. 
+  case (k = _sth) => Hk.
+  + rewrite Hk /= Hrr /cons_ap_trh DBHL.insubdK. 
+    + admit. 
+    + admit. (* this is not semantically correct *)
+  + rewrite ifF 1:/# /=. 
+    rewrite -H 1:/# (nth_map witness) /=;smt(AuthPath.valP AuthPath.insubdK). 
 + smt().
 qed.
 
