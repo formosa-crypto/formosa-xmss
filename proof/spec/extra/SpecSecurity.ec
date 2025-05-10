@@ -57,7 +57,7 @@ clone import XMSS_TW as XMSS_ABSTRACT with
   op FLXMSSTW.trhtype <= 2,
   op mkg = (fun (ms : nbytes) (i : FLXMSSTW.SA.index) =>
         let padding =  W64toBytes_ext prf_padding_val padding_len in
-        let in_0 = toByte (W32.of_int (FLXMSSTW.SA.Index.val i)) 4 in
+        let in_0 = toByte (W32.of_int (FLXMSSTW.SA.Index.val i)) n in
         (Hash (padding ++ NBytes.val ms ++ in_0), FLXMSSTW.SA.Index.val i)),
   op FLXMSSTW.SA.WTW.prf_sk =
     (fun (ss : nbytes) (psad : nbytes * adrs) =>
@@ -332,7 +332,7 @@ move => ???.
 have ? := h_g0; case=> ge0_lidx /lez_eqVlt [->|lt].
 - by rewrite /hw /= lpathst_root 1..3:/# /= count_nseq iffalse //=.
 rewrite /paths_from_leaf [lidxo = _]ltr_eqF //=.
-rewrite &(pfl_r_size) /lpathst /suffix size_drop;last by smt().
+rewrite &(pfl_r_size) /lpathst /suffix size_drop; last by smt().
 by rewrite /lpath size_rev BS2Int.size_int2bs lez_maxr //#.
 qed.
 
@@ -1516,7 +1516,7 @@ qed.
 
 op skrel(ask : skXMSSTW, sk : xmss_sk) =
    ask.`1 = sk.`sk_prf /\
-   ask.`2.`1 = Index.insubd (to_uint sk.`idx) /\
+   Index.val ask.`2.`1 = to_uint sk.`idx /\ 0 <= Index.val ask.`2.`1 <= 2^h /\
    ask.`2.`2 = sk.`sk_seed  /\
    ask.`2.`3 = sk.`pub_seed_sk
    (* ask.`2.`4 = ??? Why is the address in/not in the sk/pk? *)
@@ -1546,7 +1546,7 @@ swap {2} [5..7] -4. swap {2} 2 -1; seq 3 3 : (NBytes.val ss{1} = sk_seed0{2} /\ 
 sp;wp => /=. conseq 
     (: _ ==> (val_bt_trh (list2tree leafl{1}) ps{1} (set_typeidx (XAddress.val witness) trhtype) h 0 =
               DigestBlock.insubd (BytesToBits (NBytes.val root{2})))).
-+ by auto => /> &1 *; smt(NBytes.valK). 
++ auto => /> &1 *; smt(NBytes.valK Index.insubdK). 
 
 ecall {1} (leaves_correct  ps0{1} ss0{1} ad{1}) => /=.
 ecall {2} (tree_hash_correct pub_seed{2} sk_seed{2} 0 h address{2}).
@@ -1567,19 +1567,33 @@ qed.
 op sigrel(asig : sigXMSSTW, sig : sig_t) =
    asig.`1.`1 = sig.`r /\
    asig.`1.`2 = to_uint sig.`sig_idx /\
-   asig.`2.`1 = Index.insubd (to_uint sig.`sig_idx) /\
+   Index.val asig.`2.`1 = to_uint sig.`sig_idx /\ 0 <= Index.val asig.`2.`1 <= 2^h /\
    asig.`2.`2 = DBLL.insubd
      (map (fun (b : nbytes) => DigestBlock.insubd (BytesToBits (NBytes.val b))) (LenNBytes.val sig.`r_sig.`1)) /\
    asig.`2.`3 = DBHL.insubd
      (map (fun (b : nbytes) => DigestBlock.insubd (BytesToBits (NBytes.val b))) (AuthPath.val sig.`r_sig.`2)).
 
-(* FD + WR *)
-equiv sig_eq : XMSS_TW(FakeRO).sign ~ XMSS_PRF.sign : skrel sk{1} sk{2} /\ ={m} ==>
+(* FD + WR : FIXME : THERE IS SOMETHING WRONG IN THE DEFINITION OF INSUBD FOR INDEX *)
+equiv sig_eq : XMSS_TW(FakeRO).sign ~ XMSS_PRF.sign : skrel sk{1} sk{2} /\ ={m} /\ Index.val sk{1}.`2.`1 < 2^h -1  ==>
    sigrel res{1}.`1 res{2}.`1 /\  skrel res{1}.`2 res{2}.`2.
 proof.
 proc. inline {1} 6. inline {1} 8. inline {1} 5.
 swap {1} 21 -4. swap {1} [13..17] -1. swap {1} [11..16] -1. swap {1} [9..15] -6. inline {2} 7. inline {2} 16.
-wp 20 25;sp; conseq />.
+
+wp 20 25. 
+sp 8 3 => /=.  
+seq 1 1 : (skrel (ms{1},sk1{1}) sk{2} 
+        /\ ={m} 
+        /\ 0 <= Index.val idx0{1} <= 2 ^ h 
+        /\ Index.val idx0{1} = to_uint idx{2}
+        /\ sk_prf{2} = sk{2}.`Types.sk_prf 
+        /\ Index.val skfl{1}.`1 = to_uint idx{2}).
++ auto => /> &1 &2 *;do split. 
+  + rewrite Index.insubdK 1:/# to_uintD_small;smt(pow2_32 expr_ge0 h_max gt_exprsbde h_g0).
+  + smt(Index.valP).
+  + move => *;rewrite Index.insubdK /#. 
+  
+sp;conseq => />. 
 
 seq 1 0 : #pre. admit.  (* we need to meta-swap this *)
 
@@ -1590,18 +1604,55 @@ seq 2 1 : (#pre /\ ap{1} =
 + seq 0 3 : (#pre /\ sigWOTS{1} =
    DBLL.insubd
      (map (fun (b : Params.nbytes) => DigestBlock.insubd (BytesToBits (NBytes.val b))) (LenNBytes.val sig_ots{2}))). admit.  (* we need to meta-swap this *)
-   auto => /> &1; rewrite /mkg => />  *;do split.  
- + congr. congr.  congr. 
-     + by rewrite /W64toBytes_ext /toByte_64 //.
-     + by smt().
+
+
+   auto => /> &1 &2; rewrite /mkg => />  *.  
+ + congr; congr.
+   + by congr;rewrite /W64toBytes_ext /toByte_64 //.
    + rewrite NBytes.insubdK /toByte.
-     + rewrite size_rev size_mkseq. smt(gt0_n). 
-   + congr. 
-     +  admit. admit. admit. (* FIXME SOMETHING MISSING IN REL *)
+     + rewrite size_rev size_mkseq; smt(gt0_n). 
+   + congr.  
+     + congr => /=;congr;congr;congr. 
+       + apply W32.to_uint_eq=> /=; rewrite of_uintK /=.
+         by rewrite modz_small /=;smt(pow2_32 expr_ge0 h_max gt_exprsbde h_g0).
 
 inline {2} 1. wp; conseq />.
-ecall {1} (leaves_correct  ps{1} ss{1} ad{1}) => /=.
-admit.
+ecall {1} (leaves_correct  ps{1} ss{1} ad{1}) => /> /=.
+swap {2} [6..7] -5; seq 0 2: (#pre /\ size authentication_path{2} = h); 1: by auto => />;smt(size_nseq h_g0). 
+sp 0 4.
+while {2} (#pre /\ 0 <= j{2} <= h /\ forall kk, 0 <= kk < j{2} => 
+        nth witness (map (fun (b : Params.nbytes) => DigestBlock.insubd (BytesToBits (NBytes.val b)))
+       (AuthPath.val (AuthPath.insubd authentication_path{2}))) kk =
+    nth witness (DBHL.val (cons_ap_trh
+    (list2tree
+       (map
+          (leafnode_from_idx (NBytes.insubd (NBytes.val ss{1})) (NBytes.insubd (NBytes.val ps{1}))
+             (set_layer_addr zero_address 0)) (range 0 (2 ^ h)))) idx0{1} ps{1} (
+    set_typeidx ad{1} 2))) kk) (h - j{2});last first. 
++ auto => /> &1 &2 *;split;1: smt(h_g0).
+  move => ap2 j2;do split;1:smt().
+  move => ? <-?? H. 
+  rewrite -DBHL.valKd;congr.
+  apply (eq_from_nth witness);1: smt(DBHL.valP size_map AuthPath.valP).
+  move => k kb.
+  rewrite  (H k _);1:smt(DBHL.valP size_map AuthPath.valP).
+  by smt().
+
+move => &1 ?. 
+sp;wp. 
+exlim pub_seed0, sk_seed0,  (k * 2 ^ j), j,  address1 => _ps _ss _start _lidxo _ad. 
+call (tree_hash_correct _ps _ss _start _lidxo _ad).
+auto => /> &2 *;do split. 
++ admit. 
++ admit. 
++ admit. 
+
+move => *; do split. 
++ smt(size_put).
++ smt().
++ smt().
++ admit.
++ smt().
 qed.
 
 (* PY *)
