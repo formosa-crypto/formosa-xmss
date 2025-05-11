@@ -5013,20 +5013,17 @@ theory RFC.
 
 type pkFLXMSSTWRFC = dgstblock * pseed.
 type skFLXMSSTWRFC = index * sseed * pkFLXMSSTWRFC.
-type msgFLXMSSTWRFC = msgFLXMSSTW.
-type sigFLXMSSTWRFC = sigFLXMSSTW.
 
 op pko2pkr (pk : pkFLXMSSTW) : pkFLXMSSTWRFC = (pk.`1, pk.`2).
 op sko2skr (sk : skFLXMSSTW) (pk : pkFLXMSSTW) : skFLXMSSTWRFC = (sk.`1, sk.`2, pko2pkr pk).
 op pkr2pko (pk : pkFLXMSSTWRFC) : pkFLXMSSTW = (pk.`1, pk.`2, val adc).
 op skr2sko (sk : skFLXMSSTWRFC) : skFLXMSSTW = (sk.`1, sk.`2, sk.`3.`2, val adc).
 
-
 clone import DigitalSignatures as FLXMSSTWRFC with
   type pk_t <= pkFLXMSSTWRFC,
   type sk_t <= skFLXMSSTWRFC,
-  type msg_t <= msgFLXMSSTWRFC,
-  type sig_t <= sigFLXMSSTWRFC
+  type msg_t <= msgFLXMSSTW,
+  type sig_t <= sigFLXMSSTW
 
   proof *.
 
@@ -5045,16 +5042,16 @@ module FL_XMSS_TW_RFC : FLXMSSTWRFC.KeyUpdating.Scheme = {
     return (pko2pkr pkO, sko2skr skO pkO);
   }
 
-  proc sign(sk : skFLXMSSTWRFC, m : msgFLXMSSTWRFC) : sigFLXMSSTWRFC * skFLXMSSTWRFC = {
+  proc sign(sk : skFLXMSSTWRFC, m : msgFLXMSSTW) : sigFLXMSSTW * skFLXMSSTWRFC = {
     var skO : skFLXMSSTW;
-    var sig : sigFLXMSSTWRFC;
+    var sig : sigFLXMSSTW;
 
     (sig, skO) <@ FL_XMSS_TW_ES.sign(skr2sko sk, m);
 
     return (sig, (skO.`1, skO.`2, sk.`3));
   }
 
-  proc verify(pk : pkFLXMSSTWRFC, m : msgFLXMSSTWRFC, sig : sigFLXMSSTWRFC) : bool = {
+  proc verify(pk : pkFLXMSSTWRFC, m : msgFLXMSSTW, sig : sigFLXMSSTW) : bool = {
     var ver : bool;
 
     ver <@ FL_XMSS_TW_ES.verify(pkr2pko pk, m, sig);
