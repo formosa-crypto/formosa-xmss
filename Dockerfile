@@ -27,13 +27,13 @@ RUN echo "%sudo  ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/sudoers && \
     chown root:root /etc/sudoers.d/sudoers && \
     chmod 0400 /etc/sudoers.d/sudoers && \
     useradd --create-home --shell /bin/bash --home-dir /home/$USER --user-group --groups sudo --uid 1001 $USER
-    
+
 USER $USER
 WORKDIR /home/$USER
-    
+
 RUN curl -L https://nixos.org/nix/install > nix-install && \
     sh nix-install
-    
+
 # Install EasyCrypt & SMT Solvers
 RUN export OPAMYES=true OPAMVERBOSE=0 OPAMJOBS=$(nproc) && \
     opam init --disable-sandboxing && \
@@ -41,16 +41,16 @@ RUN export OPAMYES=true OPAMVERBOSE=0 OPAMJOBS=$(nproc) && \
     opam pin add -n alt-ergo 2.5.2 && \
     opam install alt-ergo && \
     opam clean
-    
+
 RUN wget --no-verbose --show-progress --progress=bar:force:noscroll --timeout=10 --waitretry=5 --tries=5 \
     -O cvc4 https://github.com/CVC4/CVC4-archived/releases/download/1.8/cvc4-1.8-x86_64-linux-opt && \ 
     sudo install -D cvc4 /usr/local/bin/
-    
+
 RUN wget --no-verbose --show-progress --progress=bar:force:noscroll --timeout=10 --waitretry=5 --tries=5 \
     https://github.com/Z3Prover/z3/releases/download/z3-4.13.0/z3-4.13.0-x64-glibc-2.35.zip && \
     unzip -j z3-4.13.0-x64-glibc-2.35.zip z3-4.13.0-x64-glibc-2.35/bin/z3 && \
     sudo install -D z3 /usr/local/bin/
-    
+
 RUN eval $(opam env) && \
     export OPAMYES=true OPAMVERBOSE=0 OPAMJOBS=$(nproc) && \
     opam pin -n add easycrypt https://github.com/EasyCrypt/easycrypt.git#${EASYCRYPT_RELEASE} && \ 
