@@ -96,13 +96,13 @@ clone import Reprogramming as Repro with
          
       op dhash <- dmsg_fl,
 
-    theory FinFrom <- RCOMSGAL
-    
-    rename [theory] "ROM_" as "MCORO"
-    rename [theory] "LE" as "MCOROLE"
-    
-  proof *. 
-  realize dhash_ll by exact: dmsg_fl_ll.
+      theory FinFrom <- RCOMSGAL
+        
+      rename [theory] "ROM_" as "MCORO"
+      rename [theory] "LE" as "MCOROLE"
+
+proof *. 
+realize dhash_ll by exact: dmsg_fl_ll.
 
 (** MCORO = ROM_ **)
 import MCORO.
@@ -115,7 +115,7 @@ clone import EUFRMA_Interactive_Equiv as EUFRMAEqv with
   type sig_t <- sig_fl_t,
   type pk_t <- pk_fl_t,
   type sk_t <- sk_fl_t,
-  
+
   op n_eufrma <- n,
   op dmsg <- dmsg_fl,
  

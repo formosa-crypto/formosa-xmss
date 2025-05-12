@@ -5060,6 +5060,29 @@ module FL_XMSS_TW_RFC : FLXMSSTWRFC.KeyUpdating.Scheme = {
   }
 }.
 
+lemma FLXMSSTWRFC_keygen_ll: islossless FL_XMSS_TW_RFC.keygen.
+proof.
+islossless; while true (l - size leafl); auto=> [|/#].
+inline *; auto.
+while true (len - size pkWOTS0); auto; 1:smt(size_rcons).
+by while true (len - size skWOTS0); auto; smt(size_rcons).
+qed.
+
+lemma FLXMSSTWRFC_sign_ll: islossless FL_XMSS_TW_RFC.sign.
+proof.
+islossless.
++ while true (l - size leafl); auto=> [|/#].
+  inline *; auto.
+  while true (len - size pkWOTS0); auto; 1:smt(size_rcons).
+  by while true (len - size skWOTS0); auto; smt(size_rcons).
++ by while true (len - size sig); auto; smt(size_rcons).
++ by while true (len - size skWOTS); auto; smt(size_rcons).
+qed.
+
+lemma FLXMSSTWRFC_verify_ll: islossless FL_XMSS_TW_RFC.verify.
+proof. by islossless; while true (len - size pkWOTS); auto; smt(size_rcons). qed.
+
+
 equiv Eqv_FLXMSSTW_FLXMSSTWRFC_keygen :
   FL_XMSS_TW.keygen ~ FL_XMSS_TW_RFC.keygen :
    true
