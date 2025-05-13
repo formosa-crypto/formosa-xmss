@@ -902,6 +902,7 @@ by move=> /(_ (R_EUFCMA_EUFCMARFC(A)) R_forge_ll R_forge_queries &m) /#.
 qed.
 
 
+(* TODO: Adapt higher-level reductions to consider RFC types *)
 (*
   Low-level security theorem (based on properties of KHFs and THFs)
   XMSS-TW is EUF-CMA secure in the ROM if mkg (i.e., the function that generates
@@ -912,7 +913,6 @@ qed.
   fucntion used to compress WOTS-TW public keys to leaves of the binary hash tree) has
   SM-DT-TCR-C; and trh (i.e., the function used to construct the full binary hash tree from
   the leaves) has SM-DT-TCR-C.
-*)
 lemma EUFCMARO_XMSSTWRFC &m :
   Pr[DSS_RFC.KeyUpdatingROM.EUF_CMA_RO(XMSS_TW_RFC, A, DSS_RFC.DSS.KeyUpdating.O_CMA_Default, MCO).main() @ &m : res]
   <=
@@ -961,69 +961,6 @@ wp; while (true) (size w).
   by elim: (w{1}) neqel_w => //= /#.
 by wp; skip => />; smt(size_eq0 size_ge0).
 qed.
-
-(**
-  Reduction adversary reducing EUF-CMA for original specification to that of
-  RFC-like specification
-**)
-module (R_EUFCMA_XMSSTW_XMSSTWRFC (A : DSS_RFC.KeyUpdatingROM.Adv_EUFCMA_RO) : DSS_AL_PRF.KeyUpdatingROM.Adv_EUFCMA_RO)
-       (RO : DSS_AL_PRF.RO.POracle) (O : DSS_AL_PRF.DSS.KeyUpdating.SOracle_CMA) = {
-  var pkroot : dgstblock
-(*
-  module RO_R : DSS_RFC.RO.POracle = {
-    var mp : ((mkey * dgstblock * index) * msgXMSSTW, msgFLXMSSTW) fmap
-
-    proc init() : unit = {
-      mp <- empty;
-    }
-
-    proc o(rm : (mkey * dgstblock * index) * msgXMSSTW) : msgFLXMSSTW = {
-      var mk : mkey;
-      var root : dgstblock;
-      var idx : index;
-      var m : msgXMSSTW;
-      var cm : msgFLXMSSTW;
-
-      (mk, root, idx) <- rm.`1;
-      m <- rm.`2;
-      if (root = pkroot) {
-       cm <@ RO.o((mk, m));
-      } else {
-        cm <$ dmsgFLXMSSTW;
-        if (rm \notin mp) {
-          mp.[rm] <- cm;
-        }
-        cm <- oget mp.[rm];
-      }
-
-      return cm;
-    }
-  }
 *)
-
-  module O_R : DSS_RFC.DSS.KeyUpdating.SOracle_CMA = {
-    var qs : msgXMSSTW list
-
-    proc init() : unit = {
-      qs <- [];
-    }
-    proc sign(m : msgXMSSTW) : sigXMSSTW = {
-      var sig : sigXMSSTW;
-
-      qs <- rcons qs m;
-
-      return witness;
-    }
-  }
-
-  proc forge(pk : pkXMSSTW) : msgXMSSTW * sigXMSSTW = {
-    var m : msgXMSSTW;
-    var sig : sigXMSSTW;
-
-    (m, sig) <@ A(DSS_RFC.RO.Lazy.LRO, O_R).forge(pko2pkr pk);
-
-    return (m, sig);
-  }
-}.
 
 end RFC.
