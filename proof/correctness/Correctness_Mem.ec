@@ -901,51 +901,6 @@ while (
                rewrite E /#.
 qed. 
 
-lemma _memcpy_u8u8_2_64_2144_post (_in : W8.t Array2144.t, oi : W64.t):
-    hoare [
-      M(Syscall).memcpy_u8u8_2_ltree____memcpy_u8u8_2 : 
-      arg.`2 = _in /\
-      arg.`3 = oi /\
-      arg.`4 = W64.of_int 64 /\
-      0 <= to_uint oi < W32.max_uint /\
-      0 <= to_uint (oi + W64.of_int 64) < 2144
-      ==>
-      to_list res.`1 = sub _in (to_uint oi) 64
-    ].
-proof.
-proc => //=.
-while (  
-  in_0 = _in /\ 
-  bytes = (of_int 64)%W64 /\
-  (0 <= to_uint oi < 2144) /\
-
-  0 <= to_uint i <= 64 /\
-  in_offset = oi + i /\
-
-  (forall (k : int), 0 <= k < to_uint i => out.[k] = in_0.[to_uint oi + k]) 
-).
-    + auto => /> &hr H0 H1 H2 H3 H4 H5.  
-      do split.
-          * rewrite to_uintD /= #smt:(modz_small).
-          * move => ?. 
-            rewrite to_uintD /= #smt:(@W64 pow2_64).
-          * ring.
-          * move => k??.
-            rewrite get_setE 1:#smt:(@W64).
-            case (k = to_uint i{hr}) => H; first by rewrite H to_uintD /#.
-            rewrite H4 // #smt:(@W64).
-    + auto => /> &hr ????; do split.
-          * smt(@W64 pow2_64). 
-          * smt().  
-          * move => i0 out0 ????. 
-            have ->: to_uint i0 = 64 by smt(@W64 pow2_64). 
-            move => H. 
-            apply (eq_from_nth witness); first by rewrite size_to_list size_sub.
-            rewrite size_to_list => j?.
-            by rewrite get_to_list H // nth_sub.
-qed.
-
-
 lemma memcpy_u8u8_2_64_2144_post (_in : W8.t Array2144.t, oi : W64.t):
     phoare [
       M(Syscall).memcpy_u8u8_2_ltree____memcpy_u8u8_2 : 
@@ -1141,17 +1096,15 @@ while (
       rewrite /loadW8 to_uintD_small of_uintK /#. 
     + auto => /> &hr H0 H1 H2 H3 H4 H5 H6.
       rewrite ultE => H7.
-      do split.
-         - rewrite to_uintD /#.
-         - rewrite to_uintD /#.
-         - rewrite to_uintD_small 1:/# => k??.
-           rewrite /loadW8 /storeW8 get_setE. 
-           case (k = to_uint i{hr}) => [-> |?].
-              + rewrite ifT // to_uintD /#.
-              + rewrite ifF; [rewrite to_uintD /# |].
-                rewrite /loadW8 in H6.
-                apply H6.
-                smt(@W64 pow2_64).
+      do split; 1,2: by rewrite to_uintD /#.
+      rewrite to_uintD_small 1:/# => k??.
+      rewrite /loadW8 /storeW8 get_setE. 
+      case (k = to_uint i{hr}) => [-> |?].
+        - rewrite ifT // to_uintD /#.
+        - rewrite ifF; [rewrite to_uintD /# |].
+          rewrite /loadW8 in H6.
+          apply H6.
+          smt(@W64 pow2_64).
 qed.
 
 (******************************************************************************)
@@ -1224,7 +1177,6 @@ wp; sp.
 while (
   0 <= to_uint i <= 32 /\ 
   (forall (k : int), 0 <= k < to_uint i => (out1.[k] = in_01.[k])) /\
-
   in_01 = x
 ).
     + auto => /> &hr H0 H1 H2 H3. 
