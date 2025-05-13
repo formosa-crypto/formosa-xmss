@@ -465,7 +465,7 @@ conseq (: _ ==>
   forall (k : int), 0 <= k < 2144 => pk{1}.[k] = nth witness (nbytes_flatten pk{2}) k
 ). 
     + auto => /> &1 &2 *.
-      rewrite /DecodeWotsPk tP => j Hj.
+      rewrite /DecodeWotsPk tP => ??.
       rewrite /of_list initE ifT //=. 
       by rewrite LenNBytes.insubdK /#.
  
@@ -521,7 +521,7 @@ seq 2 2 : (#pre /\ to_list t{1} = NBytes.val pk_i{2}).
           * smt().
           * by rewrite H11.
           * move => H12 H13 H14 H15 H16 H17 H18 resultL resultR -> H19.
-            do split; smt(sub_N).
+            smt(sub_N).
 
 auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12*; do split;2,3,6,7:smt(). 
     + rewrite size_put /#.
