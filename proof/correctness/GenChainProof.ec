@@ -164,7 +164,7 @@ seq 1 1 : (
 
 seq 1 1 : (#pre /\ to_list addr_as_bytes{1} = NBytes.val addr_bytes{2}).
   + exists * addr{1}; elim * => P1; call {1} (addr_to_bytes_correctness P1).
-auto => /> ?????????->.
+auto => /> 9? ->.
     have E : size (flatten (map Bytes.W32toBytes (to_list P1))) = 32.
       - rewrite size_flatten sumzE BIA.big_map /(\o) //= -(StdBigop.Bigint.BIA.eq_big_seq (fun _ => 4)) /=.
            * rewrite in_nth size_map size_to_list /= => i?.

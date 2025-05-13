@@ -109,7 +109,7 @@ if.
     + auto => /> &1 &2 => H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 _ H11 H12. (* H10 and H11 are equal after some rewrites *)
       rewrite logw_val !to_uintD size_put to_uintN H6 ultE !to_uintD /=.
       (do split; 1..9: by smt()); 6,7: by smt().
-        * smt(@W64 pow2_64 @IntDiv).
+        * smt(@W64 pow2_64 @IntDiv). 
         * smt(@W64 pow2_64 @IntDiv).  
         * rewrite H7; smt(@W64 pow2_64 @IntDiv).
         * have ->: (to_uint out{1} + to_uint W64.one) %% W64.modulus = to_uint out{1} + 1 by smt().
@@ -272,7 +272,7 @@ lemma expand_seed_correct (_in_seed _pub_seed : W8.t Array32.t) (a1 a2 : W32.t A
       sub res{1}.`2 0 5 = sub a1 0 5
     ].
 proof.
-rewrite /XMSS_N  => [#] len_val n_val ???.
+rewrite /XMSS_N  => [#] len_val n_val *.
 proc => /=.
 conseq (: _ ==> 
   size sk{2} = len /\
@@ -335,7 +335,7 @@ seq 2 1 : (
      0 <= k && k < 8 => k <> 5 => addr{1}.[k] = address{2}.[k]}pre /\ 
     addr{1} = address{2}
 ).
-    + inline {1}; auto => /> &1 &2 ???????? ?H??.
+    + inline {1}; auto => /> &1 &2 9? H??.
       split.
          * apply (eq_from_nth witness); first by rewrite !size_sub.
            rewrite size_sub // => j?.
@@ -464,7 +464,7 @@ conseq (: _ ==>
   sub addr{1} 0 5 = sub a1 0 5 /\
   forall (k : int), 0 <= k < 2144 => pk{1}.[k] = nth witness (nbytes_flatten pk{2}) k
 ). 
-    + auto => /> &1 &2 ??????????*.
+    + auto => /> &1 &2 *.
       rewrite /DecodeWotsPk tP => j Hj.
       rewrite /of_list initE ifT //=. 
       by rewrite LenNBytes.insubdK /#.
@@ -754,7 +754,7 @@ while (
 auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6.
 do split; 1,3: by smt().
  - apply (eq_from_nth witness); [by rewrite size_sub // size_sub_list | rewrite size_sub /#].
- - move => addrL pkL addrR iR tmpPkR ??????.
+ - move => addrL pkL addrR iR tmpPkR 6?.
    have ->: iR = 67 by smt().
    move => H7 H8.
    split => [/# |]. 
@@ -982,7 +982,7 @@ seq 1 8 : (
           + exists * csum{1}, csum_32{2}.
             elim * => P0 P1.
             call {1} (ull_to_bytes2_post P0 P1).
-            auto => /> ?????????????????->.
+            auto => /> 17? ->.
             rewrite toByte_32_64 //; do congr; smt(@W32 @W64).
 
        seq 1 1 : (#{/~csum_base_w{1} = t1{1}}pre /\ csum_base_w{2} = map W32.to_uint (to_list csum_base_w{1}) /\ 
