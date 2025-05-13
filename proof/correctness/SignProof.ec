@@ -587,17 +587,17 @@ seq 1 1 : (#{/~ots_addr{1} = zero_addr}pre /\ ots_addr{1}.[4] = W32.zero).
     + inline; auto => /> &1 &2 *; split; last first.
           * rewrite /set_tree_addr tP => j?; rewrite !get_setE //.
             case (j = 1) => [-> | ?].
-               - rewrite ifF 1:/# ifF 1:/# (: 63 = 2^6 - 1) 1:/# and_mod //=.
+               - rewrite ifF 1:/# ifF 1:/# //=.
                  rewrite /truncateu32; congr. 
-                 rewrite /truncateu8 of_uintK /=.
+                 rewrite /truncateu8 /=.
                  rewrite to_uint_shr of_uintK //= /#.
-            case (j = 2) => [? | ?]; last by smt(zero_addr_i).
+            case (j = 2) => ?; last by smt(zero_addr_i).
             rewrite /truncateu32; congr => /=; smt(@W32 pow2_32).
       rewrite /set_tree_addr tP => j?.
       rewrite !get_setE //.
       case (j = 1) => [-> /= | ?].
         - rewrite /truncateu32; congr.
-          rewrite to_uint_shr /truncateu8 !of_uintK (: 63 = 2^6 - 1) 1..3:/# and_mod // !of_uintK /#.
+          rewrite to_uint_shr /truncateu8 !of_uintK /#.
       case (j = 2) => [| ?]; [smt(@W32 pow2_32) | smt(sub_k)].
 
  
@@ -894,7 +894,7 @@ seq 2 2 : #pre.
        case (j = 0) => ?.
           * rewrite !ifF 1..4:/#; reflexivity.
        case (j = 1) => ?.
-          * rewrite !ifF 1,2:/# (: 63 = 2^6 - 1) 1:/# and_mod //= /truncateu8 of_uintK /=.
+          * rewrite !ifF 1,2:/# //= /truncateu8 /=.
             rewrite /truncateu32 to_uint_shr of_uintK //=; congr; smt().
       case (j = 2) => ?; last by smt().
       rewrite /truncateu32; congr; smt(@W32 pow2_32).

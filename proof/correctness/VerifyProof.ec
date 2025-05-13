@@ -460,15 +460,15 @@ seq 3 1 : #pre.
 seq 3 1 : #pre.
 - inline {1}; auto => /> *; rewrite /set_tree_addr; do split; apply (eq_from_nth witness); rewrite !size_sub // => i?; rewrite !nth_sub // !get_setE //=.
    + case (i = 1) => [-> /= | ?].
-       * rewrite to_uintEq to_uint_truncateu32 of_uintK (: 63 = 2^6 - 1) 1:/# and_mod // !to_uint_shr to_uint_truncateu8 !of_uintK /#.
+       * rewrite to_uintEq to_uint_truncateu32 of_uintK // !to_uint_shr !of_uintK /#.
      case (i = 2) => ?; last by smt(sub_k).
        * rewrite to_uintEq to_uint_truncateu32 of_uintK /#.
    + case (i = 1) => [-> /= | ?].
-       * rewrite to_uintEq to_uint_truncateu32 of_uintK (: 63 = 2^6 - 1) 1:/# and_mod // !to_uint_shr to_uint_truncateu8 !of_uintK /#.
+       * rewrite to_uintEq to_uint_truncateu32 of_uintK // !to_uint_shr !of_uintK /#.
      case (i = 2) => ?; last by smt(sub_k).
        * rewrite to_uintEq to_uint_truncateu32 of_uintK /#.
    + case (i = 1) => [-> /= | ?].
-       * rewrite to_uintEq to_uint_truncateu32 of_uintK (: 63 = 2^6 - 1) 1:/# and_mod // !to_uint_shr to_uint_truncateu8 !of_uintK /#.
+       * rewrite to_uintEq to_uint_truncateu32 of_uintK // !to_uint_shr !of_uintK /#.
      case (i = 2) => ?; last by smt(sub_k).
        * rewrite to_uintEq to_uint_truncateu32 of_uintK /#.
 
