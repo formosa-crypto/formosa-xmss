@@ -92,8 +92,9 @@ static inline uint64_t cpucycles(void) {
 }
 
 /*
- * Func is a wrapper around the function to be benchmarked. It sets up the
- * xmss_params and register the cycles before and after executing the function.
+ * Func is a wrapper around the function to be benchmarked. 
+ * It sets up the registers the cycles before and after executing the function and 
+ * writes the result to a file.
  */
 void bench_function(void (*func)(uint64_t *, uint64_t *), const char *s) {
     uint64_t observations[RUNS][TIMINGS] = {0};

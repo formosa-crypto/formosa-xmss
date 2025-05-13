@@ -1280,49 +1280,12 @@ lemma _x_memcpy_u8u8_64_post (x : W8.t Array64.t) :
 (******************               MEMCMP                          *************)
 (******************************************************************************)
 
-lemma memcmp_true (x y : W8.t Array32.t) :
-        hoare[M(Syscall).__memcmp : x = y /\ arg = (x, y) ==> res = W8.zero].
-proof.
-proc.
-while(0 <= to_uint i <= 32 /\ a = b /\ acc = W8.zero) ; auto => /> *; smt(@W64).
-qed.
-
-
 (* conseq is not working here so i wrote the proof twice *)
 lemma p_memcmp_true (x y : W8.t Array32.t) :
         phoare[M(Syscall).__memcmp : x = y /\ arg = (x, y) ==> res = W8.zero] = 1%r.
 proof.
 proc.
 while(0 <= to_uint i <= 32 /\ a = b /\ acc = W8.zero) (32 - to_uint i); auto => /> *; smt(@W64).
-qed.
-
-
-lemma memcmp_false (x y : W8.t Array32.t) :
-        hoare[M(Syscall).__memcmp : x<>y /\ arg = (x, y) ==> res <> W8.zero].
-proof.
-have E : exists (i : int), 0 <= i < 32 => x.[i] <> y.[i] by smt(@Array32). 
-proc.
-while (
-  #pre /\
-  (exists (i : int), 0 <= i && i < 32 => x.[i] <> y.[i]) /\
-  0 <= to_uint i <= 32 /\ 
-  (acc = W8.zero <=> forall (k : int), 0 <= k < to_uint i => x.[k] = y.[k])
-). 
-    + auto => /> &hr i0????H0. 
-      rewrite ultE of_uintK (: 32 %% W64.modulus = 32) 1:/# => ?. 
-      do split; 1,2: smt(@W64).       
-         * move => ?. 
-           have E1 : acc{hr} = W8.zero by smt(or_zero). 
-           have E2 : x.[to_uint i{hr}] `^` y.[to_uint i{hr}] = W8.zero by smt(or_zero).
-           have E3 : x.[to_uint i{hr}] = y.[to_uint i{hr}] by smt(xor_eq).
-           have E4 : forall (k : int), 0 <= k && k < to_uint i{hr} => x.[k] = y.[k] by smt(). 
-           rewrite to_uintD_small /#.
-         * rewrite to_uintD_small 1:/# (: to_uint W64.one = 1) 1:/# => H.
-           rewrite or_zero; split; [rewrite H0 | rewrite H ] => /#.
-    + auto => /> *; split => [/# | ?i0]. 
-      rewrite ultE -lezNgt of_uintK //= => [????? ->].
-      have ->: to_uint i0 = 32 by smt(). 
-      smt(@Array32). 
 qed.
 
 lemma p_memcmp_false (x y : W8.t Array32.t) :

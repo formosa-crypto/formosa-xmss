@@ -284,7 +284,7 @@ seq 1 1 :(
 seq 1 1 : (#pre /\ NBytes.val addr_bytes{2} = to_list addr_as_bytes{1}).
     + inline {1} M(Syscall).__set_key_and_mask.
       exists * addr{1}; elim * => P.
-      call {1} (addr_to_bytes_correctness P); auto => /> &1 &2 ????? ->.
+      call {1} (addr_to_bytes_correctness P); auto => /> &1 &2 5? ->.
       apply (eq_from_nth witness).
           * rewrite NBytes.valP size_flatten sumzE BIA.big_map /(\o) //=.
             rewrite -(StdBigop.Bigint.BIA.eq_big_seq (fun _ => 4)) /=; last first.
@@ -352,7 +352,7 @@ seq 1 1 : (
 ).
     + inline {1} M(Syscall).__set_key_and_mask.
       exists * addr{1}; elim * => P.
-      call {1} (addr_to_bytes_correctness P); auto => /> &1 &2 ?????????->.
+      call {1} (addr_to_bytes_correctness P); auto => /> &1 &2 9? ->.
       apply (eq_from_nth witness).
           - rewrite NBytes.valP size_flatten sumzE BIA.big_map /(\o) //=.
             rewrite -(StdBigop.Bigint.BIA.eq_big_seq (fun _ => 4)) /=; last first.

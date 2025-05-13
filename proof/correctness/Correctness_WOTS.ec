@@ -349,7 +349,7 @@ seq 2 1 : (
 seq 1 1 : (#pre /\ NBytes.val addr_bytes{2} = to_list addr_bytes{1}).
 - exists * addr{1}; elim * => P.
   call {1} (addr_to_bytes_correctness P).
-  auto => /> ??????????????->.
+  auto => /> 14? ->.
   apply (eq_from_nth witness).
     + rewrite size_flatten sumzE BIA.big_map /(\o) //= -(StdBigop.Bigint.BIA.eq_big_seq (fun _ => 4)) /=.   
         * rewrite in_nth size_map size_to_list => k?.
