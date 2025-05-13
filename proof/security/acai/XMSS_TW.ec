@@ -962,5 +962,5 @@ wp; while (true) (size w).
 by wp; skip => />; smt(size_eq0 size_ge0).
 qed.
 *)
-
+end section Proofs_EUF_CMA_RO_XMSSTW.
 end RFC.
