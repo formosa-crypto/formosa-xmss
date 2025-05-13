@@ -270,7 +270,7 @@ seq 1 1 : (#pre /\ NBytes.val root{2} = to_list root{1}).
       wp; sp. 
       call {1} (treehash_correct P0 P1 P2 P3 P4 P5) => [/# |].
       simplify.
-      auto => /> &1 &2 ???????????? -> -> *.
+      auto => /> &1 &2 12? -> -> *.
       by rewrite !NBytes.valKd //= => ????? ->. 
 
 seq 1 0  : ( 
