@@ -24,8 +24,6 @@ rewrite wordP => k?.
 by rewrite !get_to_uint (: 0 <= k < 64) //= to_uintM of_uintK /= to_uint_shl of_uintK.
 qed.
 
-lemma nth_singleton ['a] (dflt x : 'a) : nth dflt [x] 0 = x by [].
-
 lemma onewE i : W32.one.[i] = (i = 0).
 proof.
 rewrite /W32.one bits2wE initE /=.
@@ -125,10 +123,7 @@ qed.
 
 lemma pow2_leq_1 (a : int): 
     0 <= a =>
-    1 <= 2 ^ a.
-proof.
-smt(StdOrder.IntOrder.exprn_ege1).
-qed.
+    1 <= 2 ^ a by smt(StdOrder.IntOrder.exprn_ege1).
 
 (** -------------------------------------------------------------------------------------------- **)
 
@@ -158,11 +153,6 @@ qed.
 lemma truncate_1_and_63 :
     truncateu8 (W256.one `&` W256.of_int(63)) = W8.one
         by rewrite (: 63 = 2 ^ 6 - 1) 1:/# and_mod //=.
-
-
-lemma shr_1 (x : W64.t) :
-    to_uint (x `>>` W8.one) = to_uint x %/ 2
-        by rewrite shr_div (: (to_uint W8.one %% 64) = 1) 1:#smt:(@W64) //=. 
 
 lemma and_1_mod_2 (x : W64.t):
     x `&` W64.one <> W64.zero <=> to_uint x %% 2 = 1.
@@ -201,15 +191,6 @@ lemma pow2_pos (e : int) :
 
 lemma pow2_neq_0  (t : int) : 
     0 <= t => 0 <> 2^t by smt(@Real).
-
-lemma pow2_nonnegative ( t : int) :
-    0 <= t => 0 <= 2^t.
-proof.
-elim t => //.
-move => i??.
-smt(@Real).
-qed.
-
 
 (** -------------------------------------------------------------------------------------------- **)
 
@@ -258,9 +239,6 @@ pred valid_ptr_i (p : W64.t) (o : int) =
   0 <= o => 
     0 <= to_uint p /\ to_uint (p) + o < W64.modulus.
 
-pred valid_addr(p : int, o : int) = 
-  0 <= o => 0 <= p /\ p + o < W64.modulus.
-
 (** 
   This lemma asserts that two memory regions specified by their starting addresses and lengths are disjoint.
   
@@ -277,10 +255,6 @@ pred disjoint_ptr (p1 l1 p2 l2 : int) =
   forall (k1 : int), 0 <= k1 < l1 =>
     forall (k2 : int), 0 <= k2 < l2 =>
       p1 + k1 <> p2 + k2.
-
-lemma disjoint_ptr_comm (p1 l1 p2 l2 : int) : 
-    disjoint_ptr p1 l1 p2 l2 <=>
-    disjoint_ptr p2 l2 p1 l1 by smt().
 
 (* if p1 and p2 are two disjoint memory regions, p1 and p2[0]/the ptr itself are disjoint *)
 lemma disjoint_ptr_ptr (p1 l1 p2 l2 : int) : 
@@ -321,7 +295,6 @@ lemma nseq_nth (x : W8.t list) (i : int) (v : W8.t) :
     x = nseq i v => forall (k : int), 0 <= k < i => nth witness x k = v
        by move => -> k?; rewrite nth_nseq.
 
-
 lemma size_nbytes_flatten (x : nbytes list) :
     size (flatten (map NBytes.val x)) = n * size x.
 proof.
@@ -336,14 +309,6 @@ qed.
 
 require import Array32 Array64.
 require import Array131.
-
-lemma sub_nth (a : W8.t Array64.t) (b : W8.t Array32.t) :
-    sub a 0 32 = to_list b => 
-       forall (k : int), 0 <= k < 32 => a.[k] = b.[k].
-proof.
-move => H k?.
-by rewrite (: b.[k] = nth witness (to_list b) k) 1:/# -H nth_sub.
-qed.
 
 lemma ceil_3_2 : ceil (3%r / 2%r) = 2.
 proof.

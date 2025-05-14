@@ -27,14 +27,6 @@ op load_sig (mem : global_mem_t) (ptr : W64.t) : W8.t Array2144.t =
 
 (** -------------------------------------------------------------------------------------------- **)
 
-lemma nbyte_xor_val (a b : nbytes): 
-    NBytes.val (nbytexor a b) = bytexor (NBytes.val a) (NBytes.val b).
-proof.
-rewrite /nbytexor NBytes.insubdK //= /P /bytexor size_map size_zip !NBytes.valP //.
-qed.
-
-(** -------------------------------------------------------------------------------------------- **)
-
 lemma simplify_pow (a b : int) : 
     0 < a /\ 0 < b => 
       a%r ^ b%r = (a ^ b)%r.
@@ -45,11 +37,7 @@ qed.
 
 hint simplify simplify_pow. 
 
-lemma log2_16 : log2 16%r = 4%r.
-proof.
-have ->: 16%r = 2%r ^ 4%r by simplify.
-rewrite /log2 logK /#.
-qed.
+lemma log2_16 : log2 16%r = 4%r by rewrite (: 16%r = 2%r ^ 4%r) // /log2 logK /#.
 
 (** -------------------------------------------------------------------------------------------- **)
 
