@@ -22,6 +22,7 @@ OBJ := $(patsubst %.s,%.o,$(ASM))
 #             bin/bench_xmss_$(strategy)_$(size)))
 
 BIN := bin/bench_xmss \
+	   bin/bench_xmss_jasmin_base \
        bin/bench_xmss_loop_u64 \
        bin/bench_xmss_unrolled_u64
 
@@ -81,43 +82,44 @@ bin/xmss_loop_u256.s: xmss.jazz | bin/
 bin/xmss_unrolled_u256.s: xmss.jazz | bin/
 	$(JASMIN) $(JFLAGS) $(JINCLUDE) -stack-zero unrolled -stack-zero-size u256 -o $@ $< 
 
-bin/bench_xmss: bin/xmss.s bench_xmss.c 
-	$(CC) $(CFLAGS) -o $@ $(IDIRS) $(SOURCES) $^ $(LDLIBS)
+#TODO: Add ref 
+bin/bench_xmss_jasmin_base: bin/xmss.s bench_xmss_jasmin.c 
+	$(CC) $(CFLAGS) -o $@ $(IDIRS) -DFILENAME=results_loop_u8.txt $(SOURCES) $^ $(LDLIBS)
 
-bin/bench_xmss_loop_u8: bin/xmss_loop_u8.s bench_xmss.c
+bin/bench_xmss_loop_u8: bin/xmss_loop_u8.s bench_xmss_jasmin.c
 	$(CC) $(CFLAGS) -o $@ $(IDIRS) -DZEROIZATION_STRATEGY=loop -DZEROIZATION_SIZE=u8 -DFILENAME=results_loop_u8.txt $(SOURCES) $^ $(LDLIBS)
 
-bin/bench_xmss_unrolled_u8: bin/xmss_unrolled_u8.s bench_xmss.c
+bin/bench_xmss_unrolled_u8: bin/xmss_unrolled_u8.s bench_xmss_jasmin.c
 	$(CC) $(CFLAGS) -o $@ $(IDIRS) -DZEROIZATION_STRATEGY=unrolled -DZEROIZATION_SIZE=u8 -DFILENAME=results_unrolled_u8.txt $(SOURCES) $^ $(LDLIBS)
 
-bin/bench_xmss_loop_u16: bin/xmss_loop_u16.s bench_xmss.c
+bin/bench_xmss_loop_u16: bin/xmss_loop_u16.s bench_xmss_jasmin.c
 	$(CC) $(CFLAGS) -o $@ $(IDIRS) -DZEROIZATION_STRATEGY=loop -DZEROIZATION_SIZE=u16 -DFILENAME=results_loop_u16.txt $(SOURCES) $^ $(LDLIBS)
 
-bin/bench_xmss_unrolled_u16: bin/xmss_unrolled_u16.s bench_xmss.c
+bin/bench_xmss_unrolled_u16: bin/xmss_unrolled_u16.s bench_xmss_jasmin.c
 	$(CC) $(CFLAGS) -o $@ $(IDIRS) -DZEROIZATION_STRATEGY=unrolled -DZEROIZATION_SIZE=u16 -DFILENAME=results_unrolled_u16.txt $(SOURCES) $^ $(LDLIBS)
 
-bin/bench_xmss_loop_u32: bin/xmss_loop_u32.s bench_xmss.c
+bin/bench_xmss_loop_u32: bin/xmss_loop_u32.s bench_xmss_jasmin.c
 	$(CC) $(CFLAGS) -o $@ $(IDIRS) -DZEROIZATION_STRATEGY=loop -DZEROIZATION_SIZE=u32 -DFILENAME=results_loop_u32.txt $(SOURCES) $^ $(LDLIBS)
 
-bin/bench_xmss_unrolled_u32: bin/xmss_unrolled_u32.s bench_xmss.c
+bin/bench_xmss_unrolled_u32: bin/xmss_unrolled_u32.s bench_xmss_jasmin.c
 	$(CC) $(CFLAGS) -o $@ $(IDIRS) -DZEROIZATION_STRATEGY=unrolled -DZEROIZATION_SIZE=u32 -DFILENAME=results_unrolled_u32.txt $(SOURCES) $^ $(LDLIBS)
 
-bin/bench_xmss_loop_u64: bin/xmss_loop_u64.s bench_xmss.c
+bin/bench_xmss_loop_u64: bin/xmss_loop_u64.s bench_xmss_jasmin.c
 	$(CC) $(CFLAGS) -o $@ $(IDIRS) -DZEROIZATION_STRATEGY=loop -DZEROIZATION_SIZE=u64 -DFILENAME=results_loop_u64.txt $(SOURCES) $^ $(LDLIBS)
 
-bin/bench_xmss_unrolled_u64: bin/xmss_unrolled_u64.s bench_xmss.c
+bin/bench_xmss_unrolled_u64: bin/xmss_unrolled_u64.s bench_xmss_jasmin.c
 	$(CC) $(CFLAGS) -o $@ $(IDIRS) -DZEROIZATION_STRATEGY=unrolled -DZEROIZATION_SIZE=u64 -DFILENAME=results_unrolled_u64.txt $(SOURCES) $^ $(LDLIBS)
 
-bin/bench_xmss_loop_u128: bin/xmss_loop_u128.s bench_xmss.c
+bin/bench_xmss_loop_u128: bin/xmss_loop_u128.s bench_xmss_jasmin.c
 	$(CC) $(CFLAGS) -o $@ $(IDIRS) -DZEROIZATION_STRATEGY=loop -DZEROIZATION_SIZE=u128 -DFILENAME=results_loop_u128.txt $(SOURCES) $^ $(LDLIBS)
 
-bin/bench_xmss_unrolled_u128: bin/xmss_unrolled_u128.s bench_xmss.c
+bin/bench_xmss_unrolled_u128: bin/xmss_unrolled_u128.s bench_xmss_jasmin.c
 	$(CC) $(CFLAGS) -o $@ $(IDIRS) -DZEROIZATION_STRATEGY=unrolled -DZEROIZATION_SIZE=u128 -DFILENAME=results_unrolled_u128.txt $(SOURCES) $^ $(LDLIBS)
 
-bin/bench_xmss_loop_u256: bin/xmss_loop_u256.s bench_xmss.c
+bin/bench_xmss_loop_u256: bin/xmss_loop_u256.s bench_xmss_jasmin.c
 	$(CC) $(CFLAGS) -o $@ $(IDIRS) -DZEROIZATION_STRATEGY=loop -DZEROIZATION_SIZE=u256 -DFILENAME=results_loop_u256.txt $(SOURCES) $^ $(LDLIBS)
 
-bin/bench_xmss_unrolled_u256: bin/xmss_unrolled_u256.s bench_xmss.c
+bin/bench_xmss_unrolled_u256: bin/xmss_unrolled_u256.s bench_xmss_jasmin.c
 	$(CC) $(CFLAGS) -o $@ $(IDIRS) -DZEROIZATION_STRATEGY=unrolled -DZEROIZATION_SIZE=u256 -DFILENAME=results_unrolled_u256.txt $(SOURCES) $^ $(LDLIBS)
 
 bin/%.out: bin/% | csv/ 
