@@ -391,16 +391,13 @@ while (
       sub _stack{1} 0 (n * (min (to_uint offset{2}) (size stack{2}))) = sub_list (nbytes_flatten stack{2}) 0 (n * (min (to_uint offset{2}) (size stack{2})))
 ); last first.
 + auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 *.
-  do split; 1: by smt().
+  rewrite !ultE.
+  (do split; 1,7,8: by smt()); 2,3: by apply (eq_from_nth witness); rewrite !size_sub // => j?; rewrite !nth_sub //; smt(sub_k). 
         * by apply pow2_leq_1; apply H0. 
-        * apply (eq_from_nth witness); rewrite !size_sub // => j?; rewrite !nth_sub //; smt(sub_k). 
-        * apply (eq_from_nth witness); rewrite !size_sub // => j?; rewrite !nth_sub //; smt(sub_k). 
         * apply (eq_from_nth witness); first by rewrite size_sub 1:/# size_sub_list /#.
           rewrite size_sub /#.
         * apply (eq_from_nth witness); first by rewrite size_sub 1:/# size_sub_list /#.
           rewrite  size_sub /#.
-        * rewrite ultE /#.
-        * rewrite ultE /#.
         * move => stackL heightsL iL ltree_addrL node_addrL ots_addrL addressR heightsR offsetR stackR.      
           rewrite ultE => H15 H16 H17 H18 H19 H20 H21 H22 H23 H24 H25 H26 H27 H28 H29 H30 H31 H32 *.
           apply (eq_from_nth witness); first by rewrite size_sub 1:/# NBytes.valP n_val.
@@ -670,11 +667,9 @@ do split.
             * (* Neste caso, offset - 1 esta out of bounds, mas offset - 2 ainda pode estar in bounds *)
               case (0 <= to_uint (offset{2} - (of_int 2)%W64) < (size heights{2})) => ?. (* offset - 2 esta in bounds mas offset - 1 esta out of bounds *)
                  - rewrite eq_sym get_out //. 
-                   rewrite E; first by rewrite E1. 
+                   rewrite E ?E1 //. 
                    rewrite eq_sym in Hb.
-                   rewrite Hb. 
-                   rewrite nth_out //.
-                   rewrite (: size heights{2} = 11) 1:/# ; apply Hc1.
+                   rewrite Hb nth_out // (: size heights{2} = 11) 1:/# ; apply Hc1.
               (* Por fim, esta tudo out of bounds *)
               rewrite !get_out // /#.
 
@@ -683,9 +678,7 @@ do split.
       have E3: 0 <= to_uint i{1} <= 2 ^ 20 by smt(@RealExp). (* Same as before *)
       rewrite ultE !to_uintD.
       do split; 2..4,6,7: by smt().
-        * have := H30.
-          rewrite to_uintB; [by rewrite uleE /# => T |].
-          smt(). (* Este smt so funciona depois de simplificarmos um bocado a hipotese H28 *)
+        * have := H30; rewrite to_uintB; [by rewrite uleE /# => T | smt()]. (* Este ultimo smt so funciona depois de simplificarmos um bocado a hipotese H28 *)
         * smt(sub_N).
 
 (* === the last subgoal of the second while ends here === *)
@@ -748,14 +741,12 @@ seq 4 2 : (
       skip => /> &1 &2 5? H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19 H20.
       have ->: (true = ((W64.of_int 2 \ule P1) /\ heights{1}.[to_uint (P1 - W64.of_int 2)] = heights{1}.[to_uint (P1 - W64.one)])) = 
                  ((W64.of_int 2 \ule P1) /\ heights{1}.[to_uint (P1 - W64.of_int 2)] = heights{1}.[to_uint (P1 - W64.one)]) by smt().
-      move => H21 H22 H23 H24 H25 *; rewrite uleE /= in H23; do split => //=.
+      move => H21 H22 H23 H24 H25 *; rewrite uleE /= in H23; do split => //=; 3: by smt().
         - by rewrite H9 d_val h_val.
         - rewrite h_val /=; move : H5.
           have ->: to_uint (P1 - W64.one) = to_uint P1 - 1 by rewrite to_uintB ?uleE /#.
           move => H5 *. 
           smt(@StdOrder.IntOrder). 
-        - rewrite (: XMSS_N = n); first by rewrite n_val /XMSS_N.
-          assumption.
         - apply shl_5.
 
 seq 1 1 : (#pre /\ to_list buf{1} = NBytes.val new_node{2}).
@@ -841,12 +832,11 @@ seq 1 1 : #pre.
                                  (sub result 0 (32 * min (to_uint (offset{2} - (of_int 2)%W64) + 2) (size P1))) 
                                  j by rewrite E nth_sub 1:/#.  
                         rewrite Hr E nth_mkseq 1:/# /= nth_nbytes_flatten; first by rewrite size_put /#.
-                        rewrite nth_put 1:/# ifF 1:/#; reflexivity.
+                        by rewrite nth_put 1:/# ifF 1:/#.
                       * have ->: result.[j] = nth witness
                                  (sub result 0 (32 * min (to_uint (offset{2} - (of_int 2)%W64) + 2) (size P1))) 
                                  j by rewrite E nth_sub 1:/#.  
-                        rewrite Hr E nth_mkseq 1:/# /= nth_nbytes_flatten; first by rewrite size_put /#.
-                        rewrite nth_put 1:/# ifF 1:/#; reflexivity.
+                        rewrite Hr E nth_mkseq 1:/# /= nth_nbytes_flatten; [by rewrite size_put /# | by rewrite nth_put 1:/# ifF 1:/#].
 
 
 auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19 H20 H21 H22 H23 H24 H25 H26 H27 cond ->.
