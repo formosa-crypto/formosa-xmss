@@ -177,7 +177,7 @@ static uint64_t overhead_of_cpucycles_call(void) {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void xmssmt_bench_kg_jasmin(const xmss_params *params, uint32_t oid) {
+void xmssmt_bench_kg(const xmss_params *params, uint32_t oid) {
     assert(params != NULL);
 
     uint8_t pk[XMSS_OID_LEN + params->pk_bytes];
@@ -215,7 +215,7 @@ void xmssmt_bench_kg_jasmin(const xmss_params *params, uint32_t oid) {
     write_results(BENCH_FILE, "xmssmt_keypair", median_val, avg_val);
 }
 
-void xmssmt_bench_sign_jasmin(const xmss_params *params, uint32_t oid) {
+void xmssmt_bench_sign(const xmss_params *params, uint32_t oid) {
     assert(params != NULL);
 
     uint8_t m[MESSAGE_SIZE];
@@ -243,7 +243,13 @@ void xmssmt_bench_sign_jasmin(const xmss_params *params, uint32_t oid) {
         }
 
         before = cpucycles();
+
+#ifdef REF_IMPL
+        xmssmt_sign(sk, sm, (unsigned long long *)&smlen, m, MESSAGE_SIZE);
+#else
         xmssmt_sign_jazz(sk, sm, &smlen, m, MESSAGE_SIZE);
+#endif
+
         after = cpucycles();
         observations[i] = (after - cpucycles_overhead) - before;
     }
@@ -251,6 +257,49 @@ void xmssmt_bench_sign_jasmin(const xmss_params *params, uint32_t oid) {
     uint64_t median_val = median(observations, DATA_POINTS);
     uint64_t avg_jasmin = average(observations, DATA_POINTS);
     write_results(BENCH_FILE, "xmssmt_sign", median_val, avg_jasmin);
+}
+
+void xmssmt_bench_verify(const xmss_params *params, uint32_t oid) {
+    assert(params != NULL);
+
+    uint8_t m[MESSAGE_SIZE];
+    uint8_t pk[XMSS_OID_LEN + params->pk_bytes];
+    uint8_t sk[XMSS_OID_LEN + params->sk_bytes];
+    uint8_t sm[params->sig_bytes + MESSAGE_SIZE];
+    size_t mlen;
+
+    uint64_t observations[DATA_POINTS];
+
+    uint64_t before, after;
+
+    uint64_t cpucycles_overhead = overhead_of_cpucycles_call();
+
+    if (!file_exists(BENCH_FILE)) {
+        write_csv_header(BENCH_FILE);
+    }
+
+    // First we need to generate a keypair
+    xmssmt_keypair(pk, sk, oid);
+
+    for (size_t i = 0; i + 1 < DATA_POINTS; i++) {
+        if (verbose) {
+            printf("verify: %zu/%d\n", i, DATA_POINTS - 2);
+        }
+
+        before = cpucycles();
+#ifdef REF_IMPL
+        xmssmt_sign_open(m, (unsigned long long *)&mlen, sm, params->sig_bytes + MESSAGE_SIZE, pk);
+#else
+        xmssmt_sign_open_jazz(m, &mlen, sm, params->sig_bytes + MESSAGE_SIZE, pk);
+#endif
+
+        after = cpucycles();
+        observations[i] = (after - cpucycles_overhead) - before;
+    }
+
+    uint64_t median_val = median(observations, DATA_POINTS);
+    uint64_t avg_jasmin = average(observations, DATA_POINTS);
+    write_results(BENCH_FILE, "xmssmt_verify", median_val, avg_jasmin);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -271,9 +320,9 @@ int main(void) {
         }
 
         for (int i = 0; i < RUNS; i++) {
-            xmssmt_bench_kg_jasmin(&params, oid);
-            xmssmt_bench_sign_jasmin(&params, oid);
-            // xmssmt_bench_verify(&params, oid);
+            xmssmt_bench_kg(&params, oid);
+            xmssmt_bench_sign(&params, oid);
+            xmssmt_bench_verify(&params, oid);
         }
     } else {
         fprintf(stderr, "not implemented for the single tree version");
