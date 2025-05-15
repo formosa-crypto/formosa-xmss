@@ -18,28 +18,6 @@ require import Repr Utils Bytes.
 (*---*) import BitEncoding.BitChunking.
 (*---*) import StdBigop.Bigint.
 
-lemma zip_fst (a b : W8.t list) (i : int):
-    size a = size b => 
-    0 <= i < size a =>
-    (nth witness (zip a b) i).`1 = nth witness a i.
-proof.
-move => H ?.
-have ->: nth witness (zip a b) i = nth (witness, witness) (zip a b) i.
-- by apply nth_change_dfl; rewrite size_zip -H (: min (size a) (size a) = size a). 
-by rewrite nth_zip.
-qed.
-
-lemma zip_snd (a b : W8.t list) (i : int):
-    size a = size b =>
-    0 <= i < size a =>
-    (nth witness (zip a b) i).`2 = nth witness b i.
-proof.
-move => H ?.
-have ->: nth witness (zip a b) i = nth (witness, witness) (zip a b) i.
-- by apply nth_change_dfl; rewrite size_zip -H (: min (size a) (size a) = size a). 
-by rewrite nth_zip.
-qed.
-
 module ThashF = {
   proc thash_f (t : nbytes, seed : seed, address : adrs) : (nbytes * adrs) = {
     var key : nbytes;
@@ -78,13 +56,11 @@ lemma thash_f_equiv (_out_ _seed_ : W8.t Array32.t) (a : W32.t Array8.t) :
       sub res{1}.`2 0 7 = sub a 0 7
     ].
 proof. 
-rewrite /XMSS_N. 
-move => [#] n_val ???.
+rewrite /XMSS_N => [#] n_val ???.
 proc => /=.
 seq 4 0 : #pre; first by auto.
 
 seq 1 1 : (#pre /\ to_list addr_as_bytes{1} = NBytes.val addr_bytes{2}).
-
   + exists * addr{1}; elim * => P.
     call {1} (addr_to_bytes_correctness P); auto => /> ?->.
     have E : size (flatten (map Bytes.W32toBytes (to_list a))) = 32.
@@ -92,7 +68,6 @@ seq 1 1 : (#pre /\ to_list addr_as_bytes{1} = NBytes.val addr_bytes{2}).
            * rewrite in_nth size_map size_to_list /= => i?.
              rewrite (nth_map witness); by rewrite ?size_to_list // /W32toBytes size_rev size_to_list. 
         by rewrite big_constz count_predT size_map size_to_list /=.
-
     apply (eq_from_nth witness); rewrite ?NBytes.valP ?n_val E // => i?.
     rewrite /addr_to_bytes => />.
     rewrite NBytes.insubdK.
@@ -129,27 +104,20 @@ seq 2 1 : (#pre /\ to_list padding{1} = padding{2}).
 
 seq 1 0 : (#pre /\ sub buf{1} 0 n = padding{2}).
   + auto => /> &1 &2 ?.
-    apply (eq_from_nth witness); first by rewrite size_to_list n_val size_sub.
-    rewrite n_val size_sub // => j?.
+    apply (eq_from_nth witness); rewrite ?size_to_list n_val size_sub // => j?.
     by rewrite get_to_list nth_sub // initiE 1:/# /= ifT.
 
 seq 1 1 : (#pre /\ to_list aux{1} = NBytes.val key{2}).
   + inline {1} M(Syscall).__prf_ M(Syscall)._prf; wp; sp.
     exists * in_00{1}, key0{1}; elim * => _P1 _P2.
     call {1} (prf_correctness _P1 _P2) => [/# |]. 
-    skip => /> &1 &2 -> H1.
-    split => [| /#]; by rewrite NBytes.valKd.
+    skip => /> &1 &2 -> ?; smt(NBytes.valKd).
 
 seq 1 0 : (#pre /\ sub buf{1} n n = NBytes.val key{2}).
   + auto => /> &1 &2 H0 H1 H2. 
-    split.
-      - apply (eq_from_nth witness); first by rewrite n_val size_to_list size_sub.
-        rewrite n_val size_sub // => j?.
-        by rewrite -H1 nth_sub //= initiE 1:/# /= ifF 1:/# nth_sub // n_val .
-      - apply (eq_from_nth witness); first by rewrite NBytes.valP n_val size_sub.
-        rewrite n_val size_sub // => j?.
-        by rewrite nth_sub // initiE 1:/# /= ifT 1:/# -get_to_list H2. 
-
+    split; apply (eq_from_nth witness); rewrite size_sub ?size_to_list ?NBytes.valP n_val //= => j?; rewrite nth_sub //= initiE 1:/# /=.
+      - by rewrite ifF 1:/# (: padding{1}.[j] = nth witness (to_list padding{1}) j) 1:/# -H1 nth_sub /#.
+      - by rewrite ifT 1:/# -H2 get_to_list.
 
 seq 1 1 : (
   #{/~addr{1} = a}{/~address{2} = a}pre /\ 
@@ -157,14 +125,11 @@ seq 1 1 : (
   addr{1}.[7] = W32.one /\
   sub addr{1} 0 7 = sub a 0 7
 ).
-  + inline {1}; auto => /> &1 &2 H0 H1 H2 H3*.
-    apply (eq_from_nth witness); first by rewrite !size_sub.
-    rewrite size_sub // => j?.
-    by rewrite !nth_sub //= get_setE //= ifF 1:/#.
+  + by inline {1}; auto => /> &1 &2 *; apply (eq_from_nth witness); rewrite !size_sub // => j?; rewrite !nth_sub //= get_setE //= ifF 1:/#.
 
 seq 1 1 : (#pre /\ to_list addr_as_bytes{1} = NBytes.val addr_bytes{2}).
   + exists * addr{1}; elim * => P1; call {1} (addr_to_bytes_correctness P1).
-auto => /> 9? ->.
+    auto => /> 9? ->.
     have E : size (flatten (map Bytes.W32toBytes (to_list P1))) = 32.
       - rewrite size_flatten sumzE BIA.big_map /(\o) //= -(StdBigop.Bigint.BIA.eq_big_seq (fun _ => 4)) /=.
            * rewrite in_nth size_map size_to_list /= => i?.
