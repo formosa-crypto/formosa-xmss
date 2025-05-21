@@ -2533,21 +2533,68 @@ seq 2 1 : (   #pre
            /\ ap{1}
               =
               DBHL.insubd
-              (map (fun (b : nbytes) => DigestBlock.insubd (BytesToBits (NBytes.val b))) (AuthPath.val sig{2}.`r_sig.`2))).
-+ admit.
-wp.
-inline{1} WOTS_TW_ES.sign; inline{2} WOTS.sign_seed.
-wp.
-while (   ps0{1} = pub_seed0{2}
-       /\ ad0{1} = adr2ads address1{2}
-       /\ map BaseW.val (EmsgWOTS.val em{1}) = msg{2}
-       /\ DBLL.val skWOTS0{1} = map bs2block (LenNBytes.val wots_skey{2})
-       /\ (forall j, 0 <= j < size sig2{1} =>
-           nth witness sig2{1} j = bs2block (nth witness sig0{2} j))
-       /\ size sig2{1} = i{2}
-       /\ size sig2{1} <= XMSS_Security.FLXMSSTW.len).
-+ admit.
-admit.
+              (map (fun (b : nbytes) => bs2block b) (AuthPath.val auth0{2}))).
++ wp; ecall{1} (leaves_correct ps{1} ss{1} ad{1}).
+  inline{2} buildAuthPath.
+  sp 0 4; wp => /=.
+  while{2} (   #pre
+            /\ size authentication_path{2} = h
+            /\ 0 <= j{2} <= h
+            /\ (forall kk, 0 <= kk < j{2} =>
+                 nth witness (DBHL.val (DBHL.insubd (map (fun (b : nbytes) => bs2block b)
+                                                     (AuthPath.val (AuthPath.insubd authentication_path{2}))))) kk
+                 =
+                 nth witness (DBHL.val
+                              (cons_ap_trh
+                               (list2tree (map (leafnode_from_idx ss{1} ps{1} (adr2ads (set_layer_addr zero_address 0))) (range 0 (2 ^ h))))
+                               idx0{1} ps{1} (set_typeidx ad{1} 2))) kk))
+             (h - j{2}); last first.
+  + auto => &1 &2 />.
+    move=> *. split.  smt(size_nseq h_g0).
+    move=> apt jt; split; 1: smt().
+    move=> 4? eqnth.
+    apply /DBHL.val_inj /(eq_from_nth witness); 1: smt(DBHL.valP).
+    rewrite DBHL.valP => i rng_i.
+    rewrite ?NBytes.valKd eqnth 1:/#; do 6! congr.
+    admit.
+  auto.
+  sp.
+  exlim pub_seed0, sk_seed0,  (k * 2 ^ j), j, address1 => _ps _ss _start _sth _ad.
+  call (tree_hash_correct _ps _ss _start _sth).
+  auto => &2 />.
+  move=> 9? eqnth ?; split.
+  + admit.
+  move=> 3? rr rval; split; 2: smt().
+  split; 1: smt(size_put).
+  split; 1: smt(size_put).
+  move=> kk g0k ltj1k.
+  case (kk < j{2}) => kkj.
+  + rewrite -eqnth 1:/#.
+    admit.
+  rewrite (: kk = j{2}) 1:/#.
+  rewrite AuthPath.insubdK 2:DBHL.insubdK 3:(nth_map witness); 1..3: smt(size_map size_put).
+  rewrite nth_put 1:/# /= /bs2block rval.
+  admit.
+sp; elim*=> adt.
+seq 1 1 : (   #pre
+           /\ sigWOTS{1}
+              =
+              DBLL.insubd (map (fun (b : nbytes) => bs2block b) (LenNBytes.val sig_ots{2}))).
++ inline{1} WOTS_TW_ES.sign; inline{2} WOTS.sign_seed.
+  wp.
+  while (   ps0{1} = pub_seed0{2}
+         /\ ad0{1} = adr2ads address1{2}
+         /\ map BaseW.val (EmsgWOTS.val em{1}) = msg{2}
+         /\ DBLL.val skWOTS0{1} = map bs2block (LenNBytes.val wots_skey{2})
+         /\ (forall j, 0 <= j < size sig2{1} =>
+             nth witness sig2{1} j = bs2block (nth witness sig0{2} j))
+         /\ size sig2{1} = i{2}
+         /\ size sig2{1} <= XMSS_Security.FLXMSSTW.len).
+  + admit.
+  admit.
+auto => &1 &2 /> ? eqv *.
+rewrite Index.insubdK; 1:smt(Index.valP).
+by rewrite /RFC.skr2sko /= eqv /= to_uintD_small; smt(pow2_32 expr_ge0 h_max gt_exprsbde h_g0).
 (*
 inline{2} WOTS.checksum.
 swap {1} 22 -4.
@@ -2684,7 +2731,7 @@ seq 6 9 : (   pkrel pk{1} pk{2}
 (*   + rewrite eqsig21 Index.insubdK 2://.
     smt(W32.to_uint_cmp). *)
   + rewrite eqsig22 DBLL.insubdK.
-    + admit.
+    + admit.x
     rewrite -map_comp /=.
     apply eq_map => x @/(\o).
     apply DigestBlock.insubdK.
