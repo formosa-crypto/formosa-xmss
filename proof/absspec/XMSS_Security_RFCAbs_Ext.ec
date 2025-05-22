@@ -18,6 +18,10 @@ import IntOrder.
 (* Overflows may happen unless h is upper bounded *)
 axiom h_max : h < 32.
 
+(* We are using multiples of n and len to distinguish which hash to use *)
+axiom gt0_n : 0 < n.
+
+
 op BitsToBytes (bits : bool list) : W8.t list = map W8.bits2w (chunk W8.size bits).
 op BytesToBits (bytes : W8.t list) : bool list = flatten (map W8.w2bits bytes).
 
@@ -99,6 +103,19 @@ rewrite nth_mkseq 1:/# /= /idxs2adr initiE 1:/# /= (: 3 <= 7 - (i + 1) <= 6) 1:/
 rewrite of_uintK pmod_small 2:/#.
 by move/(all_nthP _ _ witness): mem_il => /(_ i _); smt(mem_range).
 qed.
+
+lemma adr2idxsK (ad : Address.adrs) :
+  (forall i, 0 <= i < 3 \/ i = 7 => ad.[i] = W32.zero) =>
+  idxs2adr (adr2idxs ad) = ad.
+proof.
+move=> zr.
+rewrite /adr2idxs /idxs2adr tP => i rngi.
+rewrite initE rngi /=; case (0 <= i < 3 \/ i = 7) => outi.
++ by move: (zr i outi) => -> /#.
+rewrite ifT 1:/# nth_rev 2:(nth_map witness); 1,2:smt(size_map size_sub).
+by rewrite to_uintK nth_sub; smt(size_sub size_map).
+qed.
+
 
 (*
 lemma adr2idxsK (ad : Address.adrs) :
@@ -252,19 +269,30 @@ realize dmkey_fu. admitted. (* TODO: instantiate and can do *)
 import RFC HtSRFC Repro MCORO.
 import FLXMSSTW SA WTW.
 
+lemma gt2_len : 2 < XMSS_Security.FLXMSSTW.len.
+proof.
+rewrite /len /len1 /len2 /= /len1 /len2 /w /w.
+admitted.
+
+lemma l_max : l < 4294967296
+  by rewrite -pow2_32 /l;apply gt_exprsbde; smt(h_g0 h_max).
+
+
 op bs2block(a : nbytes) = DigestBlock.insubd (BytesToBits (NBytes.val a)).
 op block2bs(a : dgstblock): nbytes = NBytes.insubd (BitsToBytes (DigestBlock.val a)).
 op ads2adr (ad : SA.adrs) : Address.adrs = idxs2adr (HAX.Adrs.val ad).
 op adr2ads (ad : Address.adrs) : SA.adrs = HAX.Adrs.insubd (adr2idxs ad).
 
 lemma ads2adrK (ad : SA.adrs) :
+  all (mem (range 0 W32.modulus)) (HAX.Adrs.val ad) =>
   adr2ads (ads2adr ad) = ad.
-proof.
-move: (HAX.Adrs.valP ad) => @/valid_adrsidxs [eqsz4 @/valid_xidxvalslp validxs].
-rewrite /ads2adr /adr2ads (idxs2adrK _ eqsz4) 2:HAX.Adrs.valKd //.
-rewrite allP => x xin; rewrite mem_range.
-admit.
-qed.
+proof. move=> *; smt(HAX.Adrs.valP HAX.Adrs.valKd idxs2adrK). qed.
+
+lemma adr2adsK (ad : Address.adrs) :
+  (forall i, 0 <= i < 3 \/ i = 7 => ad.[i] = W32.zero) =>
+  valid_adrsidxs (adr2idxs ad) =>
+  ads2adr (adr2ads ad) = ad.
+proof. smt(HAX.Adrs.insubdK adr2idxsK). qed.
 
 (* Notes:
 - We have a full binary tree with  h+1 levels (height = h), so 2^h leaves
@@ -671,14 +699,6 @@ op stack_increment (start lidxo t : int, ss ps : Params.nbytes, ad : SA.adrs, of
       in (take (offset - 1) oldstack) ++
                         [(node_from_path carrypath ss ps ad, level)].
 
-(* We are using multiples of n and len to distinguish which hash to use *)
-axiom gt0_n : 0 < n.
-lemma gt2_len : 2 < XMSS_Security.FLXMSSTW.len.
-rewrite /len /len1 /len2 /= /len1 /len2 /w /w.
-admitted.
-
-lemma l_max : l < 4294967296
-  by rewrite -pow2_32 /l;apply gt_exprsbde; smt(h_g0 h_max).
 
 lemma int2bs_enlarge (N1 N2 k : int) :
   0 <= N1 <= N2 => 0 <= k < 2^N1 =>
@@ -1698,6 +1718,19 @@ have Hsil := si_size_in_loop _lstart i{hr} _sth _ss _ps _ad (to_uint offset{hr})
 qed.
 *)
 
+lemma zeroadsE:
+  adr2ads zero_address = HAX.Adrs.insubd [0; 0; 0; 0].
+proof.
+rewrite /zero_address /adr2ads /adr2idxs; congr.
+rewrite &(eq_from_nth witness) /=; 1: smt(size_rev size_map size_sub).
+move=> i ?; rewrite nth_rev 2:(nth_map witness) 3:nth_sub; 1..3:smt(size_rev size_map size_sub).
+by rewrite size_map size_sub 1:// initE /= ifT; smt(size_rev size_map size_sub to_uint0).
+qed.
+
+lemma zeroadiP:
+  valid_adrsidxs [0; 0; 0; 0].
+proof. by smt(val_w ge2_len expr_gt0). qed.
+
 phoare tree_hash_correct _ps _ss _lstart _sth :
   [ TreeHash.treehash :
       arg = (_ps,_ss,_lstart,_sth, zero_address)
@@ -1789,21 +1822,39 @@ seq 6 : (#pre /\
   + conseq />;1: smt().
     ecall (Eqv_WOTS_pkgen (adr2ads address) sk_seed pub_seed).
     auto => /> &1 &2 ?????????????; split.
-    admit. (* (smt(Array8.get_setE ads2adrK).*)
-    move=> ?;split; 1: smt(get_setE).
+    rewrite adr2adsK 3://.
+    + by move => ii valii; smt(get_setE).
+    rewrite /valid_adrsidxs; split; 1: smt(size_rev size_map size_sub).
+    rewrite /valid_xidxvalslp /valid_xidxvalslpch; left.
+    rewrite ?nth_rev ?(nth_map witness); 1..12: smt(size_map size_sub).
+    rewrite /= /set_ots_addr /set_type ?size_map ?nth_iota ?size_iota 1..4:// /=.
+    rewrite ?get_setE // (: max 0 4 = 4) 1:// /= to_uintK_small; smt(l_max val_w ge2_len).
+    move => ?; split => [k ? ?|]; 1: by rewrite /set_ots_addr /set_type ?get_setE // /#.
     congr;congr;congr;congr;congr;congr;congr.
     + rewrite /wots_pk_val.
       suff /#:
-      adr2ads (set_ots_addr (set_type address{1} 0) (_lstart + i{1})) =
-      set_kpidx (set_typeidx (adr2ads zero_address) 0) (_lstart + i{1}).
-      + admit. (* address semantics *)
-    (* rewrite /set_ots_addr /set_kpidx /set_idx.  admit. (* address semantics *) *)
+        adr2ads (set_ots_addr (set_type address{1} 0) (_lstart + i{1})) =
+        set_kpidx (set_typeidx (adr2ads zero_address) 0) (_lstart + i{1}).
+      + rewrite zeroadsE /set_typeidx /set_kpidx HAX.Adrs.insubdK 1:zeroadiP /set_idx.
+        rewrite HAX.Adrs.insubdK.
+        + admit.
+        rewrite /adr2ads /adr2idxs; congr; apply (eq_from_nth witness); 1: smt(size_put size_rev size_map size_sub).
+        move=> ii rngi.
+        rewrite nth_rev 2:(nth_map witness) 3:nth_sub 4:?nth_put //; 1..3: smt(size_put size_rev size_map size_sub).
+        rewrite size_map size_sub 1:// /set_ots_addr /set_type ?get_setE 1..6://.
+        rewrite (: 3 + (4 - (ii + 1)) = 6 - ii) 1:/#.
+        case (ii <> 2) => /= [| -> /=].
+        smt(get_setE W32.to_uint0 size_rev size_map size_sub).
+        by rewrite to_uintK_small; smt(l_max).
   (* ecall (ltree_eq pub_seed address  pk ). *)
   auto => /> &1 &2 ???????????H?; do split.
   + move=> k gek ltk.
     by rewrite /set_ltree_addr /set_type; do ? rewrite get_setE 1:// ifF 1:/# => /#.
   rewrite /leafnode_from_idx.
-  suff /#: ads2adr (set_kpidx (set_typeidx (adr2ads zero_address) 1) (_lstart + i{1})) = set_ltree_addr (set_type address{1} 1) (_lstart + i{1}).
+  suff /#:
+    ads2adr (set_kpidx (set_typeidx (adr2ads zero_address) 1) (_lstart + i{1}))
+    =
+    set_ltree_addr (set_type address{1} 1) (_lstart + i{1}).
   + admit.
 (*
   move=> k ge0_k ltszk.

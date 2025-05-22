@@ -34,7 +34,9 @@ lemma eq_adrs_idxs (ad ad' : adrs) :
 proof. smt(val_inj). qed.
 
 lemma eq_adrs_idxsq (ad ad' : adrs) :
-  (forall (i : int), eq_idx ad ad' i) <=> ad = ad'.
+  (forall (i : int), 0 <= i < l => eq_idx ad ad' i)
+  <=>
+  ad = ad'.
 proof.
 rewrite -eq_adrs_idxs /eq_idx; split => [eqidx | eqvad].
 + by apply (eq_from_nth witness); smt(valP).
