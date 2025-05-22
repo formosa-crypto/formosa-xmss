@@ -1836,8 +1836,7 @@ seq 6 : (#pre /\
         adr2ads (set_ots_addr (set_type address{1} 0) (_lstart + i{1})) =
         set_kpidx (set_typeidx (adr2ads zero_address) 0) (_lstart + i{1}).
       + rewrite zeroadsE /set_typeidx /set_kpidx HAX.Adrs.insubdK 1:zeroadiP /set_idx.
-        rewrite HAX.Adrs.insubdK.
-        + admit.
+        rewrite /put /= ifT 2:HAX.Adrs.insubdK 2:zeroadiP /=; 1: smt(HAX.Adrs.valP).
         rewrite /adr2ads /adr2idxs; congr; apply (eq_from_nth witness); 1: smt(size_put size_rev size_map size_sub).
         move=> ii rngi.
         rewrite nth_rev 2:(nth_map witness) 3:nth_sub 4:?nth_put //; 1..3: smt(size_put size_rev size_map size_sub).
@@ -1855,7 +1854,12 @@ seq 6 : (#pre /\
     ads2adr (set_kpidx (set_typeidx (adr2ads zero_address) 1) (_lstart + i{1}))
     =
     set_ltree_addr (set_type address{1} 1) (_lstart + i{1}).
-  + admit.
+  + rewrite zeroadsE /set_typeidx /set_kpidx HAX.Adrs.insubdK 1:zeroadiP /set_idx.
+    rewrite /put /= ifT 2:HAX.Adrs.insubdK /=; 1,2: smt(HAX.Adrs.valP).
+    rewrite /ads2adr /idxs2adr HAX.Adrs.insubdK 1:/#.
+    rewrite tP => ii rngii; rewrite initE rngii /=.
+    rewrite /set_ltree_addr /set_type.
+    rewrite ?get_setE // /#.
 (*
   move=> k ge0_k ltszk.
   move: (H k _); 1: smt(sfl_size).
@@ -2196,20 +2200,44 @@ have Hsil := si_size_in_loop _lstart i{hr} _sth _ss _ps (adr2ads zero_address) (
     rewrite BitsToBytesK;1: by rewrite DigestBlock.valP /=; smt().
     rewrite DigestBlock.valKd /=.*)
     have /= := si_reduced_node _lstart i{hr} _sth _ss _ps (adr2ads zero_address) (to_uint offset{hr}) _ _ _ _ _ _ _;1..7:smt().
-    
+
     rewrite Hk => -> @/trh /=.
     rewrite ifF; 1: smt(ge1_n).
     rewrite /bs2block. do 4! congr.
     rewrite -Hs12 H1 Hk.
-    admit.
-    rewrite -Hs. smt().
+    rewrite zeroadsE /set_typeidx (HAX.Adrs.insubdK _ zeroadiP) /put /=.
+    rewrite /set_thtbidx (HAX.Adrs.insubdK [0; 0; 0; trhtype]) 1:/#.
+    rewrite /put /= HAX.Adrs.insubdK /valid_adrsidxs /= /valid_xidxvalslp /valid_xidxvalslptrh /=.
+    right; right. rewrite /valid_tbidx /valid_thidx /nr_nodes.
+    rewrite divz_ge0 1:expr_gt0 1:// /trhtype /=; split; 1: split; 1: smt().
+    + admit.
+    + admit.
+    rewrite /idxs2adr /set_tree_index /set_tree_height /set_type.
+    rewrite tP => ii rngi; rewrite initE rngi /= ?get_setE 1..7://.
+    rewrite initE.
+    case (ii = 0) => [-> //|].
+    case (ii = 1) => [-> //|].
+    case (ii = 2) => [-> //|].
+    case (ii = 3) => [-> //|].
+    case (ii = 4) => [-> //|].
+    by case (ii = 5) => [-> //| /#].	(* FIXME: WTF is my smt, why does it only solve from here? and not above as `rewrite initE /#`? *)
     rewrite take_cat DigestBlock.valP /= take0 cats0 /=.
-    admit.
-    rewrite -Hs. smt().
-    rewrite drop_cat DigestBlock.valP /= drop0 -Hs 1:/#.
+    print bs2block.
+    rewrite -Hk -Hs21 /bs2block DigestBlock.insubdK.
+    rewrite /BytesToBits (: n = size (map W8.w2bits (NBytes.val (nth witness stack{hr} (to_uint offset{hr} - 2))))).
+    + by rewrite size_map NBytes.valP.
+    by rewrite -size_flatten_ctt 2:// => x /mapP [xx [_ ->]]; rewrite size_w2bits.
+    rewrite BytesToBitsK NBytes.valKd.
+    + admit.
+    rewrite -Hs 1:/#.
+    rewrite drop_cat DigestBlock.valP /= drop0 -Hs 1:/# DigestBlock.insubdK.
+    + rewrite /BytesToBits (: n = size (map W8.w2bits (NBytes.val (nth witness stack{hr} (to_uint offset{hr} - 1))))).
+      + by rewrite size_map NBytes.valP.
+      by rewrite -size_flatten_ctt 2:// => x /mapP [xx [_ ->]]; rewrite size_w2bits.
+    rewrite BytesToBitsK NBytes.valKd.
     admit.
  rewrite to_uintD_small /=.
- + rewrite Hs22. 
+ + rewrite Hs22.
    + have := si_heights_in_loop_bnd _lstart i{hr} _sth _ss _ps (adr2ads zero_address) (to_uint offset{hr}) (to_uint offset{hr} - 2) _ _ _ _ _ _ _ _;smt(h_max).
      rewrite Hs22.
      rewrite /stack_increment /= ifF 1:/# nth_cat /=.
