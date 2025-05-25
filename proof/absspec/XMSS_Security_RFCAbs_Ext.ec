@@ -2209,9 +2209,14 @@ have Hsil := si_size_in_loop _lstart i{hr} _sth _ss _ps (adr2ads zero_address) (
     rewrite /set_thtbidx (HAX.Adrs.insubdK [0; 0; 0; trhtype]) 1:/#.
     rewrite /put /= HAX.Adrs.insubdK /valid_adrsidxs /= /valid_xidxvalslp /valid_xidxvalslptrh /=.
     right; right. rewrite /valid_tbidx /valid_thidx /nr_nodes.
-    rewrite divz_ge0 1:expr_gt0 1:// /trhtype /=; split; 1: split; 1: smt().
-    + admit.
-    + admit.
+    rewrite divz_ge0 1:expr_gt0 1:// /trhtype /=.
+    have ? : 0 <= to_uint (nth witness heights{hr} k) < h by 
+      smt(si_heights_in_loop_bnd).
+    split; 2:smt(). 
+    split; 1: smt().
+    + move => *.
+      apply (ler_lt_trans (2^h %/ 2 ^ (to_uint (nth witness heights{hr} k) + 1)));  1:  by  apply leq_div2r; 1,2:smt(expr_ge0).  
+      rewrite -exprD_subz 1,2:/#; apply gt_exprsbde; smt(). 
     rewrite /idxs2adr /set_tree_index /set_tree_height /set_type.
     rewrite tP => ii rngi; rewrite initE rngi /= ?get_setE 1..7://.
     rewrite initE.
@@ -2222,20 +2227,23 @@ have Hsil := si_size_in_loop _lstart i{hr} _sth _ss _ps (adr2ads zero_address) (
     case (ii = 4) => [-> //|].
     by case (ii = 5) => [-> //| /#].	(* FIXME: WTF is my smt, why does it only solve from here? and not above as `rewrite initE /#`? *)
     rewrite take_cat DigestBlock.valP /= take0 cats0 /=.
-    print bs2block.
     rewrite -Hk -Hs21 /bs2block DigestBlock.insubdK.
     rewrite /BytesToBits (: n = size (map W8.w2bits (NBytes.val (nth witness stack{hr} (to_uint offset{hr} - 2))))).
     + by rewrite size_map NBytes.valP.
     by rewrite -size_flatten_ctt 2:// => x /mapP [xx [_ ->]]; rewrite size_w2bits.
     rewrite BytesToBitsK NBytes.valKd.
-    + admit.
+    + apply nth_change_dfl;split => *;1:smt().
+      have : to_uint offset{hr} <= hw (lpathst _lstart i{hr} _sth) + 1 by smt().
+      by smt( hw_le_size size_drop size_lpathst).
     rewrite -Hs 1:/#.
     rewrite drop_cat DigestBlock.valP /= drop0 -Hs 1:/# DigestBlock.insubdK.
     + rewrite /BytesToBits (: n = size (map W8.w2bits (NBytes.val (nth witness stack{hr} (to_uint offset{hr} - 1))))).
       + by rewrite size_map NBytes.valP.
       by rewrite -size_flatten_ctt 2:// => x /mapP [xx [_ ->]]; rewrite size_w2bits.
     rewrite BytesToBitsK NBytes.valKd.
-    admit.
+    apply nth_change_dfl;split => *;1:smt().
+    have : to_uint offset{hr} <= hw (lpathst _lstart i{hr} _sth) + 1 by smt().
+    by smt( hw_le_size size_drop size_lpathst).
  rewrite to_uintD_small /=.
  + rewrite Hs22.
    + have := si_heights_in_loop_bnd _lstart i{hr} _sth _ss _ps (adr2ads zero_address) (to_uint offset{hr}) (to_uint offset{hr} - 2) _ _ _ _ _ _ _ _;smt(h_max).
