@@ -331,23 +331,42 @@ proof. by move=> ?; rewrite size_lpath /#. qed.
 op  prefix(s : 'a list, t : int) = take (size s - t) s.
 op  suffix(s : 'a list, t : int) = drop (size s - t) s.
 
-op lpathst (start lidxo t : int) = suffix (lpath (start + lidxo)) (t + b2i (lidxo = 2^t)).
+(* The path of the exit leaf is not a prefix of the path
+   in the full tree, but it makes the theorems nicely commute *)
+op lpathst (lidxo t : int) = 
+  rev (BS2Int.int2bs (t + (b2i (lidxo = 2^t))) lidxo).
 
-lemma size_lpathst (start lidxo t : int) :
-   0 <= start <= 2^h - 2^t
-=> 0 <= t <= h
-=> 0 <= lidxo <= 2^t
-=> size (lpathst start lidxo t) = if lidxo = 2^t then (t+1) else t.
-proof.
-move=> ??hle @/lpathst.
-smt(size_drop size_lpath).
-qed.
-
-lemma size_lpathst_lt (start lidxo t : int) :
+(* Exiting a subtree breaks this identity *)
+lemma lpathst_suffix (start lidxo t : int) :
    0 <= start <= 2^h - 2^t
 => 0 <= t <= h
 => 0 <= lidxo < 2^t
-=> size (lpathst start lidxo t) = t.
+ => 2^t %| start
+=> lpathst lidxo t =  suffix (lpath (start + lidxo)) t.
+move => *. 
+rewrite /lpathst /lpath /suffix size_rev BS2Int.size_int2bs /=.
+have -> /= : b2i (lidxo = 2 ^ t) = 0 by smt().
+have -> /= : b2i (start + lidxo = 2 ^ h) = 0 by smt().
+have -> /= : (max 0 h - t) = h-t by smt().
+have -> := BS2Int.int2bs_cat t h (start + lidxo) _;1:smt().
+rewrite rev_cat drop_cat_le ifT; 1: smt(size_take size_rev BS2Int.size_int2bs h_g0).
+rewrite drop_oversize /=;1: smt(size_take size_rev BS2Int.size_int2bs h_g0).
+congr;apply BS2Int.bs2int_eq;1,2:smt().
+smt().
+qed.
+
+lemma size_lpathst (lidxo t : int) :
+   0 <= t <= h
+=> 0 <= lidxo <= 2^t
+=> size (lpathst lidxo t) = if lidxo = 2^t then (t+1) else t.
+proof.
+move=> ?? @/lpathst;rewrite size_rev BS2Int.size_int2bs; smt().
+qed.
+
+lemma size_lpathst_lt (lidxo t : int) :
+   0 <= t <= h
+=> 0 <= lidxo < 2^t
+=> size (lpathst lidxo t) = t.
 proof. by move=> *; rewrite size_lpathst /#. qed.
 
 (*
@@ -367,9 +386,9 @@ op extract_path (p : path) (i : int) =
   then Some (rcons (take i p) false)
   else None.
 
-op paths_from_leaf (start lidxo t : int) : path list =
+op paths_from_leaf ( lidxo t : int) : path list =
   if (lidxo = 2^t) then [[]] (* we get the root *) else
-  pmap (extract_path (lpathst start lidxo t)) (range 0 t).
+  pmap (extract_path (lpathst lidxo t)) (range 0 t).
 
 (* Move to List *)
 lemma count_eq_nth ['a] (p : 'a -> bool) (s1 s2 : 'a list) :
@@ -381,7 +400,7 @@ elim: s1 s2 => [|x1 s1 ih] [|x2 s2] //=; ~-1:smt(size_ge0).
 by move/addzI => eq_sz heqp; rewrite (heqp 0) ?(ih s2); smt(size_ge0).
 qed.
 
-lemma paths_from_leaf_root start t : paths_from_leaf start (2^t) t = [[]].
+lemma paths_from_leaf_root t : paths_from_leaf (2^t) t = [[]].
 proof. by rewrite /paths_from_leaf //=. qed.
 
 hint simplify paths_from_leaf_root.
@@ -393,17 +412,16 @@ rewrite BS2Int.int2bs_pow2 ?mem_range 1:/# /=.
 by rewrite nseq0 rev_cat /= rev_nseq.
 qed.
 
-lemma lpathst_root start t :
-    0 <= start <= 2^h - 2^t
- => 0 <= t <= h
- => 2^t %| start => lpathst start (2 ^ t) t = true :: nseq t false.
+lemma lpathst_root t :
+   0 <= t <= h
+=> lpathst  (2 ^ t) t = true :: nseq t false.
 proof.
-have h_g0 := h_g0; move=> ??? @/lpathst @/suffix.
-rewrite size_lpath;1: smt(StdOrder.IntOrder.expr_ge0).
-admit.
+move => ht;move=> @/lpathst @/b2i /=.
+rewrite BS2Int.int2bs_pow2 ?mem_range 1:/# /=.
+by rewrite nseq0 rev_cat /= rev_nseq.
 qed.
 
-hint simplify lpath_root, lpathst_root.
+hint simplify lpath_root (* , lpathst_root *).
 
 lemma size_pmap ['a 'b] (p : 'a -> 'b option) (s : 'a list) :
   size (pmap p s) = count (fun x => is_some (p x)) s.
@@ -498,19 +516,17 @@ by rewrite ![is_some (if nth _ _ _ then _ else _)]fun_if.
 qed.
 
 
-lemma pfl_size (start lidxo t : int) :
+lemma pfl_size (lidxo t : int) :
     0 <= t <= h 
- => 0 <= start <= 2^h - 2^t
- => 2^t %| start
  => 0 <= lidxo <= 2^t
- => size (paths_from_leaf start lidxo t) = hw (lpathst start lidxo t).
+ => size (paths_from_leaf lidxo t) = hw (lpathst lidxo t).
 proof.
-move => ???.
+move => ?.
 have ? := h_g0; case=> ge0_lidx /lez_eqVlt [->|lt].
-- by rewrite /hw /= lpathst_root 1..3:/# /= count_nseq iffalse //=.
+- by rewrite /hw /= lpathst_root 1:/# /= count_nseq iffalse //=.
 rewrite /paths_from_leaf [lidxo = _]ltr_eqF //=.
-rewrite &(pfl_r_size) /lpathst /suffix size_drop; last by smt().
-by rewrite /lpath size_rev BS2Int.size_int2bs lez_maxr //#.
+rewrite &(pfl_r_size) /lpathst /suffix. 
+by rewrite size_rev BS2Int.size_int2bs lez_maxr //#.
 qed.
 
 lemma hw_le_size (p : path) : hw p <= size p.
@@ -631,15 +647,15 @@ op node_from_path (p : bool list, ss ps : Params.nbytes, ad : SA.adrs) : dgstblo
 
 (* The full stack state when one starts to process leaf lidx *)
 op stack_from_leaf (start lidxo t : int, ss ps : Params.nbytes, ad : SA.adrs) : (dgstblock * int) list =
-  map (fun p => (node_from_path (prefix (lpath start) t ++ p) ss ps ad, (h - size p))) (paths_from_leaf start lidxo t).
+  map (fun p => (node_from_path (prefix (lpath start) t ++ p) ss ps ad, (h - size p))) (paths_from_leaf lidxo t).
 
 lemma sfl_size start lidxo t ss ps ad :
     0 <= t <= h
  => 0 <= start <= 2^h - 2^t
  => 2^t %| start
  => 0 <= lidxo <= 2^t
- => size (stack_from_leaf start lidxo t ss ps ad) = hw (lpathst start lidxo t).
-proof. by move=> *; rewrite /stack_from_leaf size_map pfl_size //. qed.
+ => size (stack_from_leaf start lidxo t ss ps ad) = hw (lpathst lidxo t).
+proof. move=> *; rewrite /stack_from_leaf size_map pfl_size //. qed.
 
 (* The list of leaves that fall under the first node in the stack when one starts to process leaf lidx
    The case o lidx=0 is a corner case, as the stack is empty *)
@@ -647,20 +663,19 @@ op first_subtree_leaves(start lidxo t : int,ss ps : Params.nbytes, ad : SA.adrs)
  if lidxo = 0 then
    []
  else
-   let lps = (paths_from_leaf start lidxo t) in
+   let lps = (paths_from_leaf lidxo t) in
    let p1 = prefix (lpath start) t ++ head witness lps in
    let lp1 = leaves_from_path p1 in
    map (leafnode_from_idx ss ps ad) lp1.
 
 (* The hamming weight of 0 is 0, so stack is empty *)
-lemma pfl0 start t :
+lemma pfl0 t :
     0 <= t <= h
- => 0 <= start <= 2^h - 2^t
- => 2^t %| start
- =>   paths_from_leaf start 0 t = [].
+ =>   paths_from_leaf 0 t = [].
 proof.
 move => *;have expr_gt0 := expr_gt0; apply/size_eq0.
-rewrite pfl_size //= 1:/#. admit.
+rewrite pfl_size //= 1:/#.
+by rewrite /lpathst /= BS2Int.int2bs0 /= /hw count_rev count_nseq /pred1 //=.
 qed.
 
 lemma stack_from_leaf0 start t ss ps ad :
@@ -668,7 +683,7 @@ lemma stack_from_leaf0 start t ss ps ad :
  => 0 <= start <= 2^h - 2^t
  => 2^t %| start
  => stack_from_leaf start 0 t ss ps ad = [].
-proof. by move => *;rewrite /stack_from_leaf pfl0 //. qed.
+proof. move => *;rewrite /stack_from_leaf pfl0 //. qed.
 
 (* This op describes the state of the stack in the inner loop, while
    reducing, where o is the current offset = size of stack = sfl ++ [rednode].
@@ -679,8 +694,8 @@ proof. by move => *;rewrite /stack_from_leaf pfl0 //. qed.
 op stack_increment (start lidxo t : int, ss ps : Params.nbytes, ad : SA.adrs, offset : int) =
   (* the stack configuration is the state encountered for lidx
      with the extra node computed for lidx at the end *)
-  let hwi = hw (lpathst start lidxo t) in
-  let hwi1 = hw (lpathst start (lidxo + 1) t) in
+  let hwi = hw (lpathst lidxo t) in
+  let hwi1 = hw (lpathst (lidxo + 1) t) in
   if hwi < hwi1
   (* Then then case only happens when lidx is even, in which
      case we are already in the state we need on exit *)
@@ -874,46 +889,38 @@ move=> i [ge0_i ltik]; rewrite nth_nseq //.
 by rewrite nth_take // hones.
 qed.
 
-lemma hwincSE_lpathst (start lidxo t : int) :
+lemma hwincSE_lpathst (lidxo t : int) :
     0 <= t <= h
- => 0 <= start <= 2^h - 2^t
- => 2^t %| start
  => 0 <= lidxo < 2^t =>
      (   lidxo = 2^t - 1
-      /\ lpathst start lidxo t = nseq t true
-      /\ lpathst start (lidxo + 1) t = true :: nseq h false)
+      /\ lpathst lidxo t = nseq t true
+      /\ lpathst (lidxo + 1) t = true :: nseq t false)
   \/ (   lidxo < 2^t - 1
       /\ let k = argmax (fun i => take i (BS2Int.int2bs t lidxo)) (all idfun) in
-         hw (lpathst start (lidxo + 1) t) = hw (lpathst start lidxo t) + 1 - k).
+         hw (lpathst (lidxo + 1) t) = hw (lpathst lidxo t) + 1 - k).
 proof.
-admitted.
-(*
-case=> rg0_lidx /ltzE /lez_eqVlt [SlidxE | lt_Slidx]; [left | right].
-- have ->/=: lidx = 2^h - 1 by apply/Ring.IntID.subr_eq.
-  rewrite /lpath int2bs_pow2B1; ~-1:smt(h_g0).
-  by rewrite b2i0_eq 1:/# /= nseq0 cats0 rev_nseq.
+move => ?;case=> rg0_lidx /ltzE /lez_eqVlt [SlidxE | lt_Slidx]; [left | right].
+- have ->/=: lidxo = 2^t - 1 by apply/Ring.IntID.subr_eq.
+  rewrite /lpathst !int2bs_pow2B1 /=; ~-1:smt(h_g0).
+  rewrite b2i0_eq 1:/# /= nseq0 cats0 rev_nseq /=.
+  rewrite BS2Int.int2bs_pow2 /=;1:smt(mem_range).
+  by rewrite nseq0 /= rev_cat rev_nseq rev1 //.
 - split=> [/# | k @/lpath]; rewrite !hw_rev.
-  rewrite [lidx + 1 = _]ltr_eqF // [lidx = _]ltr_eqF 1:/#.
-  by have /= := hwincSE h lidx _ _ _; ~-1: smt(h_g0).
+  rewrite [lidxo + 1 = _]ltr_eqF // [lidxo = _]ltr_eqF 1:/#.
+  by have /= := hwincSE t lidxo _ _ _;smt().
 qed.
-*)
 
 (* hw increases by exactly 1 *)
-lemma hwinc start lidxo t :
+lemma hwinc lidxo t :
     0 <= t <= h
- => 0 <= start <= 2^h - 2^t
- => 2^t %| start
  => 0 <= lidxo < 2^t
-   => hw (lpathst start lidxo t) < hw (lpathst start (lidxo+1) t)
-   => hw (lpathst start (lidxo+1) t) = hw (lpathst start lidxo t) + 1.
+   => hw (lpathst lidxo t) < hw (lpathst (lidxo+1) t)
+   => hw (lpathst (lidxo+1) t) = hw (lpathst lidxo t) + 1.
 proof.
-admitted.
-(*
-have ? := h_g0; case/hwincSE_lpath.
-- by move=> [# lidxE -> ->] /=; rewrite !hw_nseq //#.
-- move=> [# lt -> /=]; smt(ge0_argmax).
+move=> ?;case => *. 
+have := hwincSE_lpathst lidxo t _ _;1,2:smt().
+smt(ge0_argmax hw_nseq).
 qed.
-*)
 
 (* we don't enter the loop if hw increased *)
 lemma hwinc_noentry start lidxo t ss ps ad offset:
@@ -921,7 +928,7 @@ lemma hwinc_noentry start lidxo t ss ps ad offset:
  => 0 <= start <= 2^h - 2^t
  => 2^t %| start
  => 0 <= lidxo < 2^t =>
-    hw (lpathst start lidxo t) < hw (lpathst start (lidxo + 1) t) =>
+    hw (lpathst lidxo t) < hw (lpathst (lidxo + 1) t) =>
    let si = stack_increment start lidxo t ss ps ad offset in
     ((size si < 2) \/
      (2 <= size si /\
@@ -960,15 +967,14 @@ apply: contraL nthi => ->; rewrite (_ : h = size (lpath lidx)).
 by rewrite nth_last /lpath last_rev b2i0_eq 1:/# /= hhd.
 qed.
 *)
+
 (* hw increase implies odd, so last node in paths is the previous leaf *)
-lemma hwinc_leaflast start lidxo t : 
+lemma hwinc_leaflast lidxo t : 
     0 <= t <= h 
- => 0 <= start <= 2^h - 2^t
- => 2^t %| start
  => 0 <= lidxo < 2^t 
-   => hw (lpathst start lidxo t) < hw (lpathst start (lidxo + 1) t)
-   =>    size (nth witness (paths_from_leaf start (lidxo + 1) t) (hw (lpathst start lidxo t))) = h
-      /\ lidxo = BS2Int.bs2int (rev (nth witness (paths_from_leaf start (lidxo + 1) t) (hw (lpathst start (lidxo + 1) t) - 1))).
+   => hw (lpathst lidxo t) < hw (lpathst (lidxo + 1) t)
+   =>    size (nth witness (paths_from_leaf (lidxo + 1) t) (hw (lpathst lidxo t))) = h
+      /\ lidxo = BS2Int.bs2int (rev (nth witness (paths_from_leaf (lidxo + 1) t) (hw (lpathst (lidxo + 1) t) - 1))).
 proof.
 admitted.
 (* 
@@ -1007,15 +1013,13 @@ qed.
 *)
 
 (* hw increase implies all previous paths same as before *)
-lemma hwinc_pathsprev start lidxo t k :
+lemma hwinc_pathsprev lidxo t k :
     0 <= t <= h
- => 0 <= start <= 2^h - 2^t
- => 2^t %| start
  => 0 <= lidxo < 2^t =>
-    hw (lpathst start lidxo t) < hw (lpathst start (lidxo  + 1) t) =>
-     0 <= k < hw (lpathst start lidxo t) =>
-      (nth witness (paths_from_leaf start (lidxo  + 1) t) k)
-      = (nth witness (paths_from_leaf start lidxo t) k).
+    hw (lpathst lidxo t) < hw (lpathst (lidxo  + 1) t) =>
+     0 <= k < hw (lpathst lidxo t) =>
+      (nth witness (paths_from_leaf (lidxo  + 1) t) k)
+      = (nth witness (paths_from_leaf lidxo t) k).
 admitted.
 (*
 proof.
@@ -1056,14 +1060,12 @@ qed.
 *)
 
 (* hw decrease implies odd, so last node in old stack is leaf *)
-lemma hwnoinc_leaflast start lidxo t :
+lemma hwnoinc_leaflast lidxo t :
     0 <= t <= h
- => 0 <= start <= 2^h - 2^t
- => 2^t %| start
  => 0 <= lidxo < 2^t =>
-    hw (lpathst start (lidxo  + 1) t) <= hw (lpathst start lidxo t)  =>
-     (0 < hw (lpathst start lidxo t) /\
-     size (nth witness (paths_from_leaf start lidxo t) ((size (paths_from_leaf start lidxo t)) - 1)) = h).
+    hw (lpathst (lidxo  + 1) t) <= hw (lpathst lidxo t)  =>
+     (0 < hw (lpathst lidxo t) /\
+     size (nth witness (paths_from_leaf lidxo t) ((size (paths_from_leaf lidxo t)) - 1)) = h).
 proof.
 admitted.
 (*
@@ -1101,12 +1103,12 @@ lemma hwdec_exit start lidxo t ss ps ad offset :
  => 0 <= start <= 2^h - 2^t
  => 2^t %| start
  => 0 <= lidxo < 2^t
-   => hw (lpathst start (lidxo + 1) t) <= hw (lpathst start lidxo t)
-   => hw (lpathst start (lidxo + 1) t) <= offset <= hw (lpathst start lidxo t) + 1
+   => hw (lpathst (lidxo + 1) t) <= hw (lpathst lidxo t)
+   => hw (lpathst (lidxo + 1) t) <= offset <= hw (lpathst lidxo t) + 1
    => let si = stack_increment start lidxo t ss ps ad offset in
       (   size si < 2
        \/ (2 <= size si /\ (nth witness si (size si - 1)).`2 <> (nth witness si (size si - 2)).`2))
-   => offset = hw (lpathst start (lidxo + 1) t) /\ size si = hw (lpathst start (lidxo + 1) t).
+   => offset = hw (lpathst (lidxo + 1) t) /\ size si = hw (lpathst (lidxo + 1) t).
 proof.
 admitted.
 (*
@@ -1184,8 +1186,8 @@ lemma stack_final start lidxo t ss ps ad :
  => 0 <= start <= 2^h - 2^t
  => 2^t %| start
  => 0 <= lidxo < 2^t =>
-   forall k, 0 <= k < hw (lpathst start (lidxo  + 1) t) =>
-         nth witness (stack_increment start lidxo t ss ps ad (hw (lpathst start (lidxo + 1) t)))  k
+   forall k, 0 <= k < hw (lpathst (lidxo  + 1) t) =>
+         nth witness (stack_increment start lidxo t ss ps ad (hw (lpathst (lidxo + 1) t)))  k
        = nth witness (stack_from_leaf start (lidxo + 1) t ss ps ad) k.
 proof.
 admitted.
@@ -1211,8 +1213,8 @@ lemma si_size_in_loop start lidxo t ss ps ad offset :
  => 0 <= start <= 2^h - 2^t
  => 2^t %| start
  => 0 <= lidxo < 2^t =>
-hw (lpathst start (lidxo + 1) t) <= hw (lpathst start lidxo t) =>
-hw (lpathst start (lidxo + 1) t) <= offset <= hw (lpathst start lidxo t) + 1 =>
+hw (lpathst (lidxo + 1) t) <= hw (lpathst lidxo t) =>
+hw (lpathst (lidxo + 1) t) <= offset <= hw (lpathst lidxo t) + 1 =>
 2 <= offset =>
 (nth witness (stack_increment start lidxo t ss ps ad offset) (offset - 1)).`2 = 
 (nth witness (stack_increment start lidxo t ss ps ad offset) (offset - 2)).`2 =>
@@ -1237,7 +1239,7 @@ lemma si_heights_in_loop_bnd start lidxo t ss ps ad offset k :
  => 0 <= start <= 2^h - 2^t
  => 2^t %| start
  => 0 <= lidxo < 2^t =>
-hw (lpathst start (lidxo + 1) t) <= hw (lpathst start lidxo t) =>
+hw (lpathst (lidxo + 1) t) <= hw (lpathst lidxo t) =>
 2 <= offset =>
 (nth witness (stack_increment start lidxo t ss ps ad offset) (offset - 1)).`2 = 
 (nth witness (stack_increment start lidxo t ss ps ad offset) (offset - 2)).`2 =>
@@ -1276,7 +1278,7 @@ lemma si_reduced_node start lidxo t ss ps ad offset :
   => 0 <= start <= 2^h - 2^t
   => 2^t %| start
   => 0 <= lidxo < 2^t =>
-  hw (lpathst start (lidxo + 1) t) <= hw (lpathst start lidxo t) =>
+  hw (lpathst (lidxo + 1) t) <= hw (lpathst lidxo t) =>
   2 <= offset =>
   (nth witness (stack_increment start lidxo t ss ps ad offset) (offset - 1)).`2 =
   (nth witness (stack_increment start lidxo t ss ps ad offset) (offset - 2)).`2 =>
@@ -1790,7 +1792,7 @@ wp;while ( #{/~address = zero_address}pre
       by congr; rewrite &(eq_from_nth witness); smt(nth_put size_put HAX.Adrs.valP).
     have @/bs2block -> := (H 0 _) => /=.
     have -> : i = 2^_sth by smt().
-    rewrite sfl_size 1..4:/#; have-> := lpathst_root _lstart _sth _ _ _;1..3:smt().
+    rewrite sfl_size 1..4:/#; have-> := lpathst_root _sth _;1:smt().
     rewrite /hw /=;smt(count_ge0).
   + rewrite /stack_from_leaf nth0_head /paths_from_leaf /= ifT 1:/# /= cats0 /=.
     rewrite /node_from_path.
@@ -1916,9 +1918,9 @@ while (
      s = _lstart /\
      t = _sth /\ 0 <= _sth /\ _sth <= h /\ 0 <= _lstart /\ _lstart <= 2 ^ h - 2 ^ _sth /\ 2 ^ _sth %| _lstart /\
     0 <= i <= 2 ^ t
- /\   (hw (lpathst _lstart i _sth) < hw (lpathst _lstart (i + 1) _sth) => to_uint offset = hw (lpathst _lstart (i + 1) _sth))
- /\ (hw (lpathst _lstart (i + 1) _sth) <= hw (lpathst _lstart i _sth) =>
-         hw (lpathst _lstart (i + 1) _sth) <= to_uint offset <= hw (lpathst _lstart i _sth) + 1)
+ /\   (hw (lpathst i _sth) < hw (lpathst (i + 1) _sth) => to_uint offset = hw (lpathst (i + 1) _sth))
+ /\ (hw (lpathst (i + 1) _sth) <= hw (lpathst i _sth) =>
+         hw (lpathst (i + 1) _sth) <= to_uint offset <= hw (lpathst i _sth) + 1)
  /\size stack = h + 1 /\ size heights = h + 1
  /\ (forall k, (0<=k<5 \/ k=7) => address.[k] = (set_type zero_address 2).[k])
  /\   0 <= i < 2 ^ t /\ t = _sth /\ s = _lstart
@@ -1936,8 +1938,8 @@ split.
 (* initialization of inner loop invariant *)
 + rewrite /stack_increment /=.
   pose _olds := (stack_from_leaf _lstart i{2} _sth _ss _ps (adr2ads zero_address)).
-  pose _hw1 := (hw (lpathst _lstart (i{2} + 1) _sth)).
-  pose _hw := (hw (lpathst _lstart i{2} _sth)).
+  pose _hw1 := (hw (lpathst (i{2} + 1) _sth)).
+  pose _hw := (hw (lpathst i{2} _sth)).
   have Hsos : size _olds = _hw
       by rewrite /olds /stack_from_leaf size_map; smt(pfl_size h_g0).
   do split.
@@ -1999,8 +2001,8 @@ move => ad hs o s.
 
   move => ???? Ha2 Ho2  H5.
   rewrite /stack_increment /=.
-  pose _hw1 := (hw (lpathst _lstart (i{2} + 1) _sth)).
-  pose _hw := (hw (lpathst _lstart (i{2}) _sth)).
+  pose _hw1 := (hw (lpathst (i{2} + 1) _sth)).
+  pose _hw := (hw (lpathst (i{2}) _sth)).
 do split.
   + by smt(size_rcons).
   + by smt().
@@ -2017,8 +2019,8 @@ do split.
 
   + case (_hw < _hw1) => ? k *.
     + case (k < _hw) => *. 
-      + have ? := hwinc_pathsprev _lstart i{2} _sth k _ _ _ _ _ _;1..6: smt().
-        have ? := hwinc_leaflast  _lstart i{2} _sth _ _ _ _ _;1..5: smt(). 
+      + have ? := hwinc_pathsprev i{2} _sth k _ _ _ _;1..4: smt().
+        have ? := hwinc_leaflast i{2} _sth _ _ _;1..3: smt(). 
         by rewrite -!stack_final;smt().
       by rewrite !H5;smt(W32.to_uint_eq sfl_size W64.to_uint_cmp stack_final).
   + have /= := hwdec_exit  _lstart i{2} _sth _ss _ps (adr2ads zero_address) (to_uint o) _ _ _ _ _ _ _;1..6:smt(). 
@@ -2042,7 +2044,7 @@ seq 3  :
   move : (Hs (to_uint offset{hr} - 2) _);1: smt(sfl_size).
   move => [# Hs21 Hs22] [# Hs11 Hs12].
 
-have ? :  hw (lpathst _lstart (i{hr} + 1) _sth) <= hw (lpathst _lstart i{hr} _sth) by
+have ? :  hw (lpathst (i{hr} + 1) _sth) <= hw (lpathst i{hr} _sth) by
   have /= := hwinc_noentry _lstart i{hr} _sth _ss _ps (adr2ads zero_address) (to_uint offset{hr}) _; smt(sfl_size).
 
 have -> :
@@ -2053,7 +2055,7 @@ have -> :
   + split; 1: by move => *;rewrite /set_tree_index /set_tree_height /=; smt(Array8.get_setE).
     rewrite tP => k kb;rewrite /set_tree_index /set_tree_height /=.
     pose x:=
-       (stack_increment _lstart i{hr} _sth _ss _ps (adr2ads zero_address) (hw (lpathst _lstart i{hr} _sth) + 1 - to_uint offset{hr})).
+       (stack_increment _lstart i{hr} _sth _ss _ps (adr2ads zero_address) (hw (lpathst i{hr} _sth) + 1 - to_uint offset{hr})).
     pose y := W32.of_int ((_lstart + i{hr})  %/ 2^(to_uint (nth witness heights{hr} (to_uint offset{hr} - 2)) + 1)).
      case (0<=k<5 \/ k= 7);1:by smt(Array8.get_setE).
      case (k=6);1:by smt(Array8.get_setE).
@@ -2157,7 +2159,7 @@ congr;congr;congr;1,4..:by rewrite /prf.
   move : (Hs (to_uint offset{hr} - 2) _);1: smt(sfl_size).
   move => [# Hs21 Hs22] [# Hs11 Hs12].
 
-have ? :  hw (lpathst _lstart (i{hr} + 1) _sth) <= hw (lpathst _lstart i{hr} _sth) by
+have ? :  hw (lpathst (i{hr} + 1) _sth) <= hw (lpathst i{hr} _sth) by
   have /= := hwinc_noentry _lstart i{hr} _sth _ss _ps (adr2ads zero_address) (to_uint offset{hr}) _; by smt(sfl_size).
 
 (*
@@ -2178,7 +2180,7 @@ have Hsil := si_size_in_loop _lstart i{hr} _sth _ss _ps (adr2ads zero_address) (
   + by smt(size_put).
   + rewrite Ho /stack_increment /= ifF 1:/# /= !size_cat /=.
     rewrite size_take;1:smt(size_ge0).
-    have -> /= : !(hw (lpathst _lstart i{hr} _sth) < hw (lpathst _lstart (i{hr} + 1) _sth)) by smt().
+    have -> /= : !(hw (lpathst i{hr} _sth) < hw (lpathst (i{hr} + 1) _sth)) by smt().
     by case (to_uint offset{hr} - 1 < size (stack_from_leaf _lstart i{hr} _sth _ss _ps (adr2ads zero_address)));rewrite size_cat /=; by  smt(sfl_size size_take).
 
   + move => k kbl kbh.
@@ -2189,7 +2191,7 @@ have Hsil := si_size_in_loop _lstart i{hr} _sth _ss _ps (adr2ads zero_address) (
     case (to_uint offset{hr} - 2 = k) => Hk; last first.
     + rewrite !Hs; 1,2: smt().
       rewrite /stack_increment /= ifF 1:/#.
-      have -> /= : !(hw (lpathst _lstart i{hr} _sth) < hw (lpathst _lstart (i{hr} + 1) _sth)) by smt().
+      have -> /= : !(hw (lpathst i{hr} _sth) < hw (lpathst (i{hr} + 1) _sth)) by smt().
       rewrite !nth_cat /= ifT;1:smt(size_take sfl_size size_ge0).
       have  /=: !(k - size (take (to_uint offset{hr} - 2) (stack_from_leaf _lstart i{hr} _sth _ss _ps (adr2ads zero_address))) = 0) by smt(sfl_size size_take).
       rewrite !ifT;1:smt(size_take sfl_size size_ge0).
@@ -2233,7 +2235,7 @@ have Hsil := si_size_in_loop _lstart i{hr} _sth _ss _ps (adr2ads zero_address) (
     by rewrite -size_flatten_ctt 2:// => x /mapP [xx [_ ->]]; rewrite size_w2bits.
     rewrite BytesToBitsK NBytes.valKd.
     + apply nth_change_dfl;split => *;1:smt().
-      have : to_uint offset{hr} <= hw (lpathst _lstart i{hr} _sth) + 1 by smt().
+      have : to_uint offset{hr} <= hw (lpathst i{hr} _sth) + 1 by smt().
       by smt( hw_le_size size_drop size_lpathst).
     rewrite -Hs 1:/#.
     rewrite drop_cat DigestBlock.valP /= drop0 -Hs 1:/# DigestBlock.insubdK.
@@ -2242,14 +2244,14 @@ have Hsil := si_size_in_loop _lstart i{hr} _sth _ss _ps (adr2ads zero_address) (
       by rewrite -size_flatten_ctt 2:// => x /mapP [xx [_ ->]]; rewrite size_w2bits.
     rewrite BytesToBitsK NBytes.valKd.
     apply nth_change_dfl;split => *;1:smt().
-    have : to_uint offset{hr} <= hw (lpathst _lstart i{hr} _sth) + 1 by smt().
+    have : to_uint offset{hr} <= hw (lpathst i{hr} _sth) + 1 by smt().
     by smt( hw_le_size size_drop size_lpathst).
  rewrite to_uintD_small /=.
  + rewrite Hs22.
    + have := si_heights_in_loop_bnd _lstart i{hr} _sth _ss _ps (adr2ads zero_address) (to_uint offset{hr}) (to_uint offset{hr} - 2) _ _ _ _ _ _ _ _;smt(h_max).
      rewrite Hs22.
      rewrite /stack_increment /= ifF 1:/# nth_cat /=.
-     have -> /= : !(hw (lpathst _lstart i{hr} _sth) < hw (lpathst _lstart (i{hr} + 1) _sth)) by smt().
+     have -> /= : !(hw (lpathst i{hr} _sth) < hw (lpathst (i{hr} + 1) _sth)) by smt().
      rewrite !nth_cat /= ifT;1:smt(size_take sfl_size size_ge0).
      rewrite ifF;1:smt(size_take sfl_size size_ge0).
      rewrite ifT;1:smt(size_take sfl_size size_ge0).
