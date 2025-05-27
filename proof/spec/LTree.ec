@@ -198,6 +198,29 @@ op ltree _seed address pk =
   in
   nth witness pks 0.
 
+lemma titi len:
+  ceil (len%r / 2%r) = len %/ 2 + len %% 2.
+proof. by move: (edivzP len 2); smt(ceil_bound). qed.
+
+lemma toto len:
+     1 < len
+  => ceil (log2 len%r) = ceil (log2 (ceil (len%r / 2%r))%r) + 1.
+proof.
+move=> gt1_len; rewrite eqz_leq; split.
++ have ->: ceil (log2 (ceil (len%r / 2%r))%r) + 1
+         = ceil (log2 (ceil (len%r / 2%r))%r + 1%r).
+  + smt(@Real). (* see floor *)
+  have: log2 len%r <= log2 (ceil (len%r / 2%r))%r + 1%r; 2:smt(@Real).
+  rewrite -(logK 2%r 1%r) // -logM.
+  + smt(@Real).
+  + smt(@RealExp).
+  apply: log_mono=> //.
+  + smt().
+  + smt(@Real @RealExp).
+  + smt(@Real @RealExp).
+admit. (** See Zulip: https://formosa-crypto.zulipchat.com/#narrow/channel/308422-VerifyHBS/topic/Security.20.3C-.3E.20Abstract.20RFC/near/520101757 **)
+qed.
+
 (* ltree smooshes exactly ceil (log2 len) time; by strong induction on ceil (log2 len):
    - if len is 1, this is trivial;
    - if len is 2^n < len <= 2^(n + 1), then the first 2^n nodes smoosh
@@ -219,10 +242,13 @@ while (1 <= _len <= len
   split=> [/#|_].
   rewrite {-4}pi1_smoosh_level_ldiv2.
   split; 1:smt(@Real).
-  have ->: ceil (log2 len%r) - ceil (log2 (ceil (_len{0} %r / 2%r))%r) = ceil (log2 len%r) - ceil (log2 _len{0}%r) + 1.
-  + admit. (* ougna *)
+  have ->: ceil (log2 (ceil (_len{0}%r / 2%r))%r)
+         = (ceil (log2 (ceil (_len{0}%r / 2%r))%r) + 1) - 1.
+  + done.
+  rewrite -toto //. search (-(_ + _))%Int.
+  rewrite Ring.IntID.opprD oppzK addzA.
   rewrite foldS.
-  + admit. (* ougna *)
+  + admit. (* loose monotonicity of ceil + _len_le_len *)
   by move=> //=; rewrite -ih /#.
 auto=> />; rewrite fold0 //=; split.
 + admit. (* FIXME!!!!! this is not currently true *)
