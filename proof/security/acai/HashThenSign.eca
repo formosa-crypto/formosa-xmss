@@ -15,12 +15,6 @@ require (*--*) DigitalSignatures DigitalSignaturesROM KeyedHashFunctions Reprogr
 (* Number of message-signature pairs given to adversary *)
 op n : { int | 0 <= n } as ge0_n.
 
-(* Number of allowed signature queries *)
-op qS : { int | 0 <= qS <= n } as rng_qS.
-
-(* Number of allowed random oracle (hash) queries *)
-op qH : { int | 0 <= qH } as ge0_qH. 
-
 
 
 (* --- Types --- *)
@@ -576,6 +570,12 @@ theory WithSampling.
   (* The adversary always terminates if the oracle procedures it can call terminate *)
   declare axiom A_forge_ll (RO <: POracle{-A}) (SO <: DSS.KeyUpdating.SOracle_CMA{-A}) : 
     islossless RO.o => islossless SO.sign => islossless A(RO, SO).forge.
+
+  (* Number of allowed signature queries *)
+  declare op qS : { int | 0 <= qS <= n } as rng_qS.
+
+  (* Number of allowed random oracle (hash) queries *)
+  declare op qH : { int | 0 <= qH } as ge0_qH.
 
   (* The adversary makes a limited number of queries to the given random (hash) oracle and signing oracle *)
   declare axiom A_forge_queries (RO <: POracle{-A, -QC_A}) (SO <: SOracle_CMA{-A, -QC_A}) : 
@@ -1715,6 +1715,12 @@ theory WithPRF.
   (* Signing and verification procedure of fixed-length signature scheme always terminate *)
   declare axiom FL_KU_DSS_sign_ll : islossless FL_KU_DSS.sign. 
   declare axiom FL_KU_DSS_verify_ll : islossless FL_KU_DSS.verify. 
+
+  (* Number of allowed signature queries *)
+  declare op qS : { int | 0 <= qS <= n } as rng_qS.
+
+  (* Number of allowed random oracle (hash) queries *)
+  declare op qH : { int | 0 <= qH } as ge0_qH.
   
   (* 
     Checks whether a secret key of the fixed-length digital signature scheme is one that
@@ -2039,7 +2045,7 @@ theory WithPRF.
   rewrite -3!addrA &(ler_add) 1:ALKUDSS_EUFCMARO_PRF //.
   rewrite ger0_norm 1:Pr[mu_ge0] //.
   move: (ALKUDSS_EUFCMARO_CRRO_EUFRMA FL_KU_DSS FL_KU_DSS_sign_ll FL_KU_DSS_verify_ll A 
-         _ _ opsign FL_KU_DSS_sign_fun FL_KU_DSS_keygen_stateless FL_KU_DSS_verify_stateless &m).
+         _ qS rng_qS qH ge0_qH _ opsign FL_KU_DSS_sign_fun FL_KU_DSS_keygen_stateless FL_KU_DSS_verify_stateless &m).
   + by move => RO SO ROll SOll; apply (A_forge_ll RO SO ROll SOll).
   + by move => RO SO; apply (A_forge_queries RO SO).
   by rewrite !addrA.
@@ -2069,7 +2075,7 @@ theory WithPRF.
   rewrite -3!addrA &(ler_add) 1:ALKUDSS_EUFCMARO_PRF //.
   rewrite ger0_norm 1:Pr[mu_ge0] //.
   move: (ALKUDSS_EUFCMARO_METCRRO_EUFRMA FL_KU_DSS FL_KU_DSS_sign_ll FL_KU_DSS_verify_ll A 
-         _ _ opsign FL_KU_DSS_sign_fun FL_KU_DSS_keygen_stateless FL_KU_DSS_verify_stateless &m).
+         _ qS rng_qS qH ge0_qH _ opsign FL_KU_DSS_sign_fun FL_KU_DSS_keygen_stateless FL_KU_DSS_verify_stateless &m).
   + by move => RO SO ROll SOll; apply (A_forge_ll RO SO ROll SOll).
   + by move => RO SO; apply (A_forge_queries RO SO).
   by rewrite !addrA.

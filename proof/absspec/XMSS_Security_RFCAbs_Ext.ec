@@ -205,8 +205,8 @@ clone import XMSS_TW as XMSS_Security with
     (fun (ms : nbytes) (i : FLXMSSTW.SA.index) =>
      prf ms (NBytes.insubd (toByte (W32.of_int (FLXMSSTW.SA.Index.val i)) n))),
   op dmseed <- dmap (dlist W8.dword Params.n) NBytes.insubd,
-  (* TODO: op MKey.enum <- map NBytes.insubd <all W8.t lists of length n>
-  op dmkey <- duniform MKey.enum, *)
+  op MKey.enum <= map NBytes.insubd (mkseq (fun (i : int) => BitsToBytes (BS2Int.int2bs (8 * n) i)) (2 ^ (8 * n))),
+  op dmkey <- duniform MKey.enum,
   op FLXMSSTW.n <- n,
   op FLXMSSTW.log2_w <- ilog 2 w,
   op FLXMSSTW.h <- h,
@@ -220,6 +220,7 @@ clone import XMSS_TW as XMSS_Security with
   type FLXMSSTW.SA.WTW.sseed <- nbytes,
   op FLXMSSTW.SA.WTW.dsseed <- dmap (dlist W8.dword Params.n) NBytes.insubd,
   op FLXMSSTW.SA.WTW.dpseed <- dmap (dlist W8.dword Params.n) NBytes.insubd,
+  op FLXMSSTW.SA.WTW.ddgstblock <- duniform FLXMSSTW.SA.WTW.DigestBlockFT.enum,
   op FLXMSSTW.SA.WTW.prf_sk <-
     (fun (ss : nbytes) (psad : nbytes * FLXMSSTW.SA.adrs) =>
      DigestBlock.insubd (BytesToBits
@@ -256,15 +257,42 @@ realize FLXMSSTW.SA.dmsgFLXMSSTW_uni by exact: duniform_uni.
 realize FLXMSSTW.SA.dmsgFLXMSSTW_fu by apply /duniform_fu /WTW.DigestBlockFT.enumP.
 realize FLXMSSTW.SA.WTW.dsseed_ll by apply /dmap_ll /dlist_ll /W8.dword_ll.
 realize FLXMSSTW.SA.WTW.dpseed_ll by apply /dmap_ll /dlist_ll /W8.dword_ll.
-realize FLXMSSTW.SA.WTW.ddgstblock_ll. admitted. (* TODO: Proof artifact, not needed (might instantiate just because?) *)
-realize MKey.enum_spec. admitted. (* TODO: instantiate enum and prove, but shouldn't be necessary *)
+realize FLXMSSTW.SA.WTW.ddgstblock_ll.
+rewrite duniform_ll -size_eq0 2!size_map size_range.
+suff /#: 0 < 2 ^ (8 * n).
+by rewrite expr_gt0.
+qed.
+realize MKey.enum_spec.
+move => x; rewrite count_uniq_mem.
++ rewrite ?map_inj_in_uniq /= 3:iota_uniq.
+  + move=> xl yl /mapP [x' /= [xpin ->]] /mapP [y' /= [ypin ->]] eqins.
+    rewrite -NBytes.insubdK 2:eq_sym 2:-NBytes.insubdK 3:eqins //.
+    + rewrite /BitsToBytes size_map size_chunk 1:// BS2Int.size_int2bs.
+      by rewrite lez_maxr 2:mulKz 2://; 1:smt(ge1_n).
+    rewrite /BitsToBytes size_map size_chunk 1:// BS2Int.size_int2bs.
+    by rewrite lez_maxr 2:mulKz 2://; 1:smt(ge1_n).
+  move=> x' y' /mem_iota /= rng_x /mem_iota /= rng_y eqb2b.
+  suff eqbs: (BS2Int.int2bs (8 * n) x') = (BS2Int.int2bs (8 * n) y').
+  +  by rewrite -(BS2Int.int2bsK (8 * n)) 3:eq_sym 3:-(BS2Int.int2bsK (8 * n)); smt(ge1_n).
+  rewrite -BitsToBytesK; 1: by rewrite BS2Int.size_int2bs lez_maxr 2:dvdz_mulr; 1: smt(ge1_n).
+  by rewrite eq_sym -BitsToBytesK; 1: rewrite BS2Int.size_int2bs lez_maxr 2:dvdz_mulr; smt(ge1_n).
+rewrite /b2i mapP ifT 2://; 1: exists (NBytes.val x).
+rewrite NBytes.valKd /= mapP; exists (BS2Int.bs2int (BytesToBits (NBytes.val x))).
+rewrite /= (: 8 * n = size (BytesToBits (NBytes.val x))).
++ rewrite /BytesToBits (size_flatten_ctt 8).
+  + by move=> bs /mapP [x' ->]; rewrite size_w2bits.
+  by congr; rewrite size_map NBytes.valP.
+by rewrite BS2Int.bs2intK BytesToBitsK mem_iota BS2Int.bs2int_ge0 BS2Int.bs2int_le2Xs.
+qed.
 realize MsgXMSSTW.enum_spec. admitted. (* TODO: this shouldn't be necessary *)
-realize rng_qS. admitted. (* TODO: Proof artifact, move to section *)
-realize ge0_qH. admitted. (* TODO: Proof artifact, move to section *)
 realize dmseed_ll by apply /dmap_ll /dlist_ll /W8.dword_ll.
-realize dmkey_ll. admitted. (* TODO: instantiate and can do *)
-realize dmkey_uni. admitted. (* TODO: instantiate and can do *)
-realize dmkey_fu. admitted. (* TODO: instantiate and can do *)
+realize dmkey_ll.
+rewrite duniform_ll -size_eq0 2!size_map size_iota.
+suff /#: 0 < 2 ^ (8 * n).
+by rewrite expr_gt0.
+qed.
+realize dmkey_uni by exact: duniform_uni.
+realize dmkey_fu by apply /duniform_fu /MKey.enumP.
 
 import RFC HtSRFC Repro MCORO.
 import FLXMSSTW SA WTW.
@@ -2752,13 +2780,47 @@ qed.
 
 equiv ver_eq (O <: DSS_RFC.RO.POracle) :
   XMSS_TW_RFC(O).verify ~ XMSS_RFC_Abs(RFC_O(O)).verify :
-       pkrel pk{1} pk{2} /\ ={m} /\ sigrel sig{1} s{2}
-    /\ to_uint s{2}.`sig_idx < l
+    pkrel pk{1} pk{2} /\ ={m, glob O} /\ sigrel sig{1} s{2}
   ==>
     ={res}.
 proof.
-admitted.
-
+proc.
+seq 5 9 : (   pkrel pk{1} pk{2}
+           /\ to_uint idx_sig{2} < l
+           /\ Index.val sigfl{1}.`1 = to_uint idx_sig{2}
+           /\ (map DigestBlock.val (DBLL.val sigfl{1}.`2)) = map (BytesToBits \o NBytes.val) (LenNBytes.val sig_ots{2})
+           /\ (map DigestBlock.val (DBHL.val sigfl{1}.`3) = map (BytesToBits \o NBytes.val) (AuthPath.val auth{2}))
+           /\ DigestBlock.val cm{1} = BytesToBits (NBytes.val _M'{2})
+           /\ address{2} = zero_address
+           /\ DigestBlock.val pk{1}.`1 = BytesToBits (NBytes.val root{2})
+           /\ pk{1}.`2 = _seed{2}
+           /\ root{2} = pk{2}.`pk_root).
++ inline{2} 9.
+  wp; call (_: true).
+  auto=> &1 &2 /> *.
+  admit.
+wp; inline{1} verify; inline{1} root_from_sigFLXMSSTW; inline{2} rootFromSig.
+sp; seq 1 1 : (   #pre
+               /\ map DigestBlock.val (DBLL.val pkWOTS0{1}) =  map (BytesToBits \o NBytes.val) (LenNBytes.val pk_ots{2})).
++ admit.
+wp; sp 0 5; elim* => ad2.
+exlim nodes0{2} => lf2.
+while{2} (BytesToBits (NBytes.val nodes0{2})
+          =
+          (let app = drop (h - k{2}) (map bs2block (AuthPath.val auth0{2})) in
+           let idp = (rev (BS2Int.int2bs k{2} (to_uint idx_sig0{2}))) in
+           let lfp = bs2block lf2 in
+           DigestBlock.val (val_ap_trh_gen app idp lfp _seed0{2} (adr2ads ad2) k{2} (to_uint idx_sig0{2} %/ 2 ^ k{2})))
+          /\ 0 <= k{2} <= h)
+         (h - k{2}).
++ move => _ z.
+  proc change 2 : (! odd (to_uint idx_sig0 %/ 2 ^ k)).
+  + admit.
+  auto => &1 &2 />.
+  admit.
+auto => &1 &2 />.
+admit.
+qed.
 (* PY *)
 (*
 equiv ver_eq : XMSS_TW(FakeRO).verify ~ XMSS_PRF.verify :
