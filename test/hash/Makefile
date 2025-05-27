@@ -11,7 +11,7 @@ JASMIN      ?= jasminc
 JAZZCT      ?= jasmin-ct
 JAZZCTFLAGS ?= --infer
 JFLAGS      ?= -nowarning ${JADDFLAGS}
-JINCLUDE    ?= -I XMSS:../../ref-jasmin/ -I Stdlib:../../ref-jasmin/stdlib
+JINCLUDE    ?= -I XMSS="../../ref-jasmin/" -I Stdlib="../../ref-jasmin/stdlib"
 
 JASMINPATH := JASMINPATH="XMSS=../../ref-jasmin/:Stdlib=../../ref-jasmin/stdlib"
 
