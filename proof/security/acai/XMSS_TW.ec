@@ -10,17 +10,6 @@ clone import FL_XMSS_TW as FLXMSSTW.
 require (*--*) DigitalSignatures DigitalSignaturesROM KeyedHashFunctions HashThenSign.
 (*---*) import SA WTW FLXMSSTW_EUFRMA.
 
-
-(* --- Parameters --- *)
-(* -- Proof-specific -- *)
-(* Number of allowed signature queries *)
-op qS : { int | 0 <= qS <= l } as rng_qS.
-
-(* Number of allowed random oracle (hash) queries *)
-op qH : { int | 0 <= qH } as ge0_qH.
-
-
-
 (* --- Types --- *)
 (* -- General -- *)
 (*
@@ -96,8 +85,6 @@ clone import HashThenSign as HtS with
   type WithPRF.id_t <= index,
 
     op n <- l,
-    op qS <- qS,
-    op qH <- qH,
 
     op WithPRF.mkg <= mkg,
     op WithPRF.extr_id <= fun (skfl : skFLXMSSTW) => skfl.`1,
@@ -111,8 +98,6 @@ clone import HashThenSign as HtS with
 
   proof *.
   realize ge0_n by smt(ge2_l).
-  realize rng_qS by exact: rng_qS.
-  realize ge0_qH by exact: ge0_qH.
   realize dmsg_fl_ll by exact: dmsgFLXMSSTW_ll.
   realize dmsg_fl_uni by exact: dmsgFLXMSSTW_uni.
   realize dmsg_fl_fu by exact: dmsgFLXMSSTW_fu.
@@ -268,6 +253,12 @@ declare module A <: Adv_EUFCMA_RO{-FL_XMSS_TW, -ERO, -O_CMA_Default, -O_METCR, -
 declare axiom A_forge_ll (RO <: POracle{-A}) (SO <: SOracle_CMA{-A}) :
   islossless RO.o => islossless SO.sign => islossless A(RO, SO).forge.
 
+(* Number of allowed signature queries *)
+declare op qS : { int | 0 <= qS <= l } as rng_qS.
+
+(* Number of allowed random oracle (hash) queries *)
+declare op qH : { int | 0 <= qH } as ge0_qH.
+
 (* The adversary makes a limited number of queries to the given random (hash) oracle and signing oracle *)
 declare axiom A_forge_queries (RO <: POracle{-A, -QC_A}) (SO <: SOracle_CMA{-A, -QC_A}) :
   hoare[A(QC_A(A, RO, SO).QC_RO, QC_A(A, RO, SO).QC_SO).forge :
@@ -313,7 +304,7 @@ have ->:
   wp; do 3! rnd.
   while (={w, ERO.m}); 1: by wp; rnd; wp; skip.
   by wp; skip.
-move: (ALKUDSS_EUFCMARO_PRF_CRRO_EUFRMA FL_XMSS_TW FLXMSSTW_sign_ll FLXMSSTW_verify_ll).
+move: (ALKUDSS_EUFCMARO_PRF_CRRO_EUFRMA FL_XMSS_TW FLXMSSTW_sign_ll FLXMSSTW_verify_ll qS rng_qS qH ge0_qH).
 move=> /(_ (fun (skfl : skFLXMSSTW) => skfl.`1 = Index.insubd 0)
            (fun (skfl : skFLXMSSTW) => (Index.insubd (Index.val skfl.`1 + 1), skfl.`2, skfl.`3, skfl.`4))
            opsign _ FLXMSSTW_sign_fun _ _ _ _).
@@ -552,8 +543,6 @@ clone import HashThenSign as HtSRFC with
   type WithPRF.id_t <= index,
 
     op n <- l,
-    op qS <- qS,
-    op qH <- qH,
 
     op WithPRF.mkg <= mkg,
     op WithPRF.extr_id <= fun (skfl : skFLXMSSTWRFC) => skfl.`1,
@@ -567,8 +556,6 @@ clone import HashThenSign as HtSRFC with
 
   proof *.
   realize ge0_n by smt(ge2_l).
-  realize rng_qS by exact: rng_qS.
-  realize ge0_qH by exact: ge0_qH.
   realize dmsg_fl_ll by exact: dmsgFLXMSSTW_ll.
   realize dmsg_fl_uni by exact: dmsgFLXMSSTW_uni.
   realize dmsg_fl_fu by exact: dmsgFLXMSSTW_fu.
@@ -723,8 +710,7 @@ declare axiom FLXMSSTWRFC_sign_fun (skfl : skFLXMSSTWRFC) (cm : msgFLXMSSTW) :
 (* The signing procedure of FL-XMSS-TW is lossless (and captured by opsign) *)
 local lemma FLXMSSTWRFC_sign_pfun (skfl : skFLXMSSTWRFC) (cm : msgFLXMSSTW) :
   phoare[FL_XMSS_TW_RFC.sign: arg = (skfl, cm) ==> res = opsign skfl cm] = 1%r.
-(* proof. by conseq FLXMSSTWRFC_sign_ll (FLXMSSTWRFC_sign_fun skfl cm). qed. *)
-proof. admit. qed.
+proof. by conseq FLXMSSTWRFC_sign_ll (FLXMSSTWRFC_sign_fun skfl cm). qed.
 
 (* Adversary against EUF-CMA in the ROM *)
 declare module A <: DSS_RFC.KeyUpdatingROM.Adv_EUFCMA_RO{
@@ -864,7 +850,7 @@ have LePrR_A:
   rewrite /sko2skr /pko2pkr /pkr2pko /= => msig qs1 qs2 sk eqskvl qsrel.
   rewrite &(contra) qsrel mapP; pose tup := (_, _, _).
   move=> tp. exists tup.  smt().
-move: (ALKUDSS_EUFCMARO_PRF_CRRO_EUFRMA FL_XMSS_TW_RFC FLXMSSTWRFC_sign_ll FLXMSSTWRFC_verify_ll).
+move: (ALKUDSS_EUFCMARO_PRF_CRRO_EUFRMA FL_XMSS_TW_RFC FLXMSSTWRFC_sign_ll FLXMSSTWRFC_verify_ll qS rng_qS qH ge0_qH).
 move=> /(_ (fun (skfl : skFLXMSSTWRFC) => skfl.`1 = Index.insubd 0)
            (fun (skfl : skFLXMSSTWRFC) => (Index.insubd (Index.val skfl.`1 + 1), skfl.`2, skfl.`3))
            opsign _ FLXMSSTWRFC_sign_fun _ _ _ _).
