@@ -690,7 +690,7 @@ module (R_EUFCMA_EUFCMARFC (A : DSS_RFC.KeyUpdatingROM.Adv_EUFCMA_RO) : Adv_EUFC
     (root, ps) <- pk;
     idx <- Index.insubd 0;
 
-    (m, sig) <@ A(RO, R_O).forge(pk);
+    (m, sig) <@ QC_A_RFC(A, RO, R_O).forge(pk);
 
     return ((root, sig.`2.`1, m), sig);
   }
@@ -734,26 +734,134 @@ declare axiom A_forge_ll (RO <: DSS_RFC.RO.POracle{-A}) (SO <: DSS_RFC.DSS.KeyUp
 local lemma R_forge_ll (RO <: POracle{-R_EUFCMA_EUFCMARFC(A)}) (SO <: SOracle_CMA{-R_EUFCMA_EUFCMARFC(A)}) :
   islossless RO.o => islossless SO.sign => islossless R_EUFCMA_EUFCMARFC(A, RO, SO).forge.
 proof.
-move=> RO_ll SO_ll.
+move => RO_ll SO_ll.
 proc.
-call (A_forge_ll RO (<: R_EUFCMA_EUFCMARFC(A, RO, SO).R_O)).
-+ by proc; wp; call SO_ll.
+inline 3; wp.
+call (A_forge_ll
+      (<: QC_A_RFC(A, RO, R_EUFCMA_EUFCMARFC(A, RO, SO).R_O).QC_RO)
+      (<: QC_A_RFC(A, RO, R_EUFCMA_EUFCMARFC(A, RO, SO).R_O).QC_SO)) => //.
++ by proc; call RO_ll; wp.
++ by proc; inline 2; wp; call SO_ll; wp.
 by wp.
 qed.
+
+(* Number of allowed signature queries *)
+declare op qS : { int | 0 <= qS <= l } as rng_qS.
+
+(* Number of allowed random oracle (hash) queries *)
+declare op qH : { int | 0 <= qH } as ge0_qH.
 
 (* The adversary makes a limited number of queries to the given random (hash) oracle and signing oracle *)
 declare axiom A_forge_queries (RO <: DSS_RFC.RO.POracle{-A, -QC_A_RFC}) (SO <: DSS_RFC.DSS.KeyUpdating.SOracle_CMA{-A, -QC_A_RFC}) :
   hoare[A(QC_A_RFC(A, RO, SO).QC_RO, QC_A_RFC(A, RO, SO).QC_SO).forge :
     QC_A_RFC.cH = 0 /\ QC_A_RFC.cS = 0 ==> QC_A_RFC.cH <= qH /\ QC_A_RFC.cS <= qS].
 
-local lemma R_forge_queries (RO <: POracle{-R_EUFCMA_EUFCMARFC(A), -QC_A}) (SO <: SOracle_CMA{-R_EUFCMA_EUFCMARFC(A), -QC_A}) :
+local lemma R_forge_queries (RO <: POracle{-R_EUFCMA_EUFCMARFC(A), -QC_A})
+                            (SO <: SOracle_CMA{-R_EUFCMA_EUFCMARFC(A), -QC_A}) :
   hoare[R_EUFCMA_EUFCMARFC(A, QC_A(R_EUFCMA_EUFCMARFC(A), RO, SO).QC_RO, QC_A(R_EUFCMA_EUFCMARFC(A), RO, SO).QC_SO).forge :
     QC_A.cH = 0 /\ QC_A.cS = 0 ==> QC_A.cH <= qH /\ QC_A.cS <= qS].
 proof.
 proc.
-admit.
+inline 3; wp; sp.
+call (_:
+      QC_A_RFC.cS = QC_A.cS /\ QC_A_RFC.cH = QC_A.cH
+      /\ QC_A_RFC.cS = 0 /\ QC_A_RFC.cH = 0
+      ==>
+      QC_A.cH <= qH /\ QC_A.cS <= qS) => //.
+conseq (: QC_A_RFC.cS = QC_A.cS /\ QC_A_RFC.cH = QC_A.cH
+         ==>
+         QC_A_RFC.cS = QC_A.cS /\ QC_A_RFC.cH = QC_A.cH)
+       (A_forge_queries
+        (<: QC_A(R_EUFCMA_EUFCMARFC(A), RO, SO).QC_RO)
+        (<: R_EUFCMA_EUFCMARFC(A, QC_A(R_EUFCMA_EUFCMARFC(A), RO, SO).QC_RO, QC_A(R_EUFCMA_EUFCMARFC(A), RO, SO).QC_SO).R_O)) => //.
+proc (QC_A_RFC.cS = QC_A.cS /\ QC_A_RFC.cH = QC_A.cH) => //.
++ proc.
+  inline 2; inline 3.
+  by wp; call (_: true); wp.
+proc.
+inline 2.
+by wp; call (_: true); wp.
+qed.
+(*
+local module R_EUFCMA_EUFCMARFC_QS (RO : RO.POracle) (O : SOracle_CMA) = {
+  include var R_EUFCMA_EUFCMARFC(A, RO, O) [-forge]
+
+  proc forge(pk : pkXMSSTWRFC) : (dgstblock * index * msgXMSSTW) * sigXMSSTW = {
+    var ps : pseed;
+    var m : msgXMSSTW;
+    var sig : sigXMSSTW;
+
+    (root, ps) <- pk;
+    idx <- Index.insubd 0;
+
+    (m, sig) <@ QC_A_RFC(A, RO, R_EUFCMA_EUFCMARFC(A, RO, O).R_O).forge(pk);
+
+    return ((root, sig.`2.`1, m), sig);
+  }
+}.
+
+local lemma EqPr_RQS &m :
+  Pr[EUF_CMA_RO(WithPRF.AL_KU_DSS(FL_XMSS_TW_RFC), R_EUFCMA_EUFCMARFC(A), O_CMA_Default, MCO).main() @ &m : res]
+  =
+  Pr[EUF_CMA_RO(WithPRF.AL_KU_DSS(FL_XMSS_TW_RFC), R_EUFCMA_EUFCMARFC_QS, O_CMA_Default, MCO).main() @ &m : res].
+proof.
+byequiv => //.
+proc.
+inline main; inline{1} 4; inline{2} 4; inline{2} 7.
+seq 7 11: ( ={sig0, pk, m0, R_EUFCMA_EUFCMARFC.root, O_Base_Default.qs, ERO.m}); last by sim.
+wp.
+call (_: ={glob O_CMA_Default, glob R_EUFCMA_EUFCMARFC, ERO.m}).
++ proc.
+  by inline{2} 2; sim.
++ proc.
+  by inline{2} o; wp.
+by conseq />; sim.
 qed.
 
+local lemma R_forge_ll (RO <: POracle{-R_EUFCMA_EUFCMARFC_QS}) (SO <: SOracle_CMA{-R_EUFCMA_EUFCMARFC_QS}) :
+  islossless RO.o => islossless SO.sign => islossless R_EUFCMA_EUFCMARFC_QS(RO, SO).forge.
+proof.
+move=> RO_ll SO_ll.
+proc.
+inline 3; wp; sp.
+call (A_forge_ll
+      (<: QC_A_RFC(A, RO, R_EUFCMA_EUFCMARFC(A, RO, SO).R_O).QC_RO)
+      (<: QC_A_RFC(A, RO, R_EUFCMA_EUFCMARFC(A, RO, SO).R_O).QC_SO)).
++ proc; call RO_ll; by wp.
++ proc; inline 2; wp.
+  by call SO_ll; wp.
+by wp.
+qed.
+
+local lemma R_forge_queries (RO <: POracle{-R_EUFCMA_EUFCMARFC_QS, -QC_A})
+                            (SO <: SOracle_CMA{-R_EUFCMA_EUFCMARFC_QS, -QC_A}) :
+  hoare[R_EUFCMA_EUFCMARFC_QS(QC_A(R_EUFCMA_EUFCMARFC_QS, RO, SO).QC_RO, QC_A(R_EUFCMA_EUFCMARFC_QS, RO, SO).QC_SO).forge :
+    QC_A.cH = 0 /\ QC_A.cS = 0 ==> QC_A.cH <= qH /\ QC_A.cS <= qS].
+proof.
+proc.
+inline 3.
+wp; sp.
+call (_:
+      QC_A_RFC.cS = QC_A.cS /\ QC_A_RFC.cH = QC_A.cH
+      /\ QC_A_RFC.cS = 0 /\ QC_A_RFC.cH = 0
+      ==>
+      QC_A.cH <= qH /\ QC_A.cS <= qS) => //.
+conseq (: QC_A_RFC.cS = QC_A.cS /\ QC_A_RFC.cH = QC_A.cH
+         ==>
+         QC_A_RFC.cS = QC_A.cS /\ QC_A_RFC.cH = QC_A.cH)
+       (A_forge_queries
+        (<: QC_A(R_EUFCMA_EUFCMARFC_QS, RO, SO).QC_RO)
+        (<: R_EUFCMA_EUFCMARFC(A, QC_A(R_EUFCMA_EUFCMARFC_QS, RO, SO).QC_RO, QC_A(R_EUFCMA_EUFCMARFC_QS, RO, SO).QC_SO).R_O)) => //.
+proc (QC_A_RFC.cS = QC_A.cS /\ QC_A_RFC.cH = QC_A.cH) => //.
++ proc.
+  inline 2; inline 3.
+  by wp; call (_: true); wp.
+proc.
+inline 2.
+by wp; call (_: true); wp.
+qed.
+
+*)
 (* local module EUF_CMA_RO_R = { *)
 (*   proc main() : bool = { *)
 (*     var pk : pk_al_t; *)
@@ -804,12 +912,12 @@ have LePrR_A:
   <=
   Pr[EUF_CMA_RO(WithPRF.AL_KU_DSS(FL_XMSS_TW_RFC), R_EUFCMA_EUFCMARFC(A), O_CMA_Default, MCO).main() @ &m : res].
 + byequiv => //.
-  proc. inline main.
+  proc.
+  inline main.
   inline fresh verify.
+  inline{2} 4; inline{2} 7.
   wp; call (: true); 1: by sim.
   wp; call (: ={ERO.m}); 1: by wp.
-  inline{2} ^ pk0<- & -1.
-  wp.
   wp; call (:  ={ERO.m}
             /\ DSS_RFC.DSS.KeyUpdating.O_CMA_Default.sk{1} = O_CMA_Default.sk{2}
             /\ DSS_RFC.DSS.KeyUpdating.O_CMA_Default.sk{1}.`2.`3.`1 = R_EUFCMA_EUFCMARFC.root{2}
@@ -820,7 +928,8 @@ have LePrR_A:
                 m \in map (fun (q : _ * _ * _) => q.`3) O_Base_Default.qs{2})).
   proc.
   wp.
-  inline{1} 1; inline{2} 1; inline{2} 2.
+  inline{1} 1.
+  inline{2} 2; inline{2} 3.
   inline sign.
   (* wp; call (_: DSS_RFC.DSS.KeyUpdating.O_CMA_Default.sk{1} = O_CMA_Default.sk{2} *)
   (*           /\ O_CMA_Default.sk{1}.`2.`3.`1 = R_EUFCMA_EUFCMARFC.root{2} *)
@@ -828,28 +937,28 @@ have LePrR_A:
   (* + inline sign. *)
   (*   wp 19 19. *)
   wp; call (_: true); 1: by sim.
-  wp; while (={skWOTS0, em, ps0, ad0} /\ sig3{1} = sig4{2}); 1: by sim.
+  wp; while (={skWOTS0, em, ps0, ad0} /\ sig3{1} = sig5{2}); 1: by sim.
   wp; call (_: true); 1: by sim.
   wp; call (_: ={ERO.m}); 1: by wp.
   wp; skip => &1 &2 /> eqqs _ _ _ mx.
   rewrite mem_rcons mapP /=; split.
   + case => [->|].
-    exists ((O_CMA_Default.sk{2}.`2.`3.`1, O_CMA_Default.sk{2}.`2.`1, m{2})).
-    smt(mem_rcons).
+    exists ((O_CMA_Default.sk{2}.`2.`3.`1, O_CMA_Default.sk{2}.`2.`1, m{2})); smt(mem_rcons).
   move=> mxin.
   move/iffLR: (eqqs mx) => /(_ mxin).
   rewrite mapP => -[x] [xin /=] eq3.
-  exists x. smt(mem_rcons).
+  exists x; smt(mem_rcons).
   move => -[x] []; rewrite mem_rcons /= => -[-> //|].
-  rewrite eqqs mapP => t d; right. exists x. smt().
-  by proc.
+  rewrite eqqs mapP => t d; right.
+  exists x => /#.
+  by proc; inline o; wp.
   seq 1 1 : (={glob A, ERO.m}); 1: by sim.
-  inline init. wp.
+  inline init; wp.
   inline keygen; wp; call (_: true); 1: by sim.
   auto => &1 &2 /> ms msin ss ssin ps psin sigw /> ->.
   rewrite /sko2skr /pko2pkr /pkr2pko /= => msig qs1 qs2 sk eqskvl qsrel.
   rewrite &(contra) qsrel mapP; pose tup := (_, _, _).
-  move=> tp. exists tup.  smt().
+  move=> tp; exists tup => /#.
 move: (ALKUDSS_EUFCMARO_PRF_CRRO_EUFRMA FL_XMSS_TW_RFC FLXMSSTWRFC_sign_ll FLXMSSTWRFC_verify_ll qS rng_qS qH ge0_qH).
 move=> /(_ (fun (skfl : skFLXMSSTWRFC) => skfl.`1 = Index.insubd 0)
            (fun (skfl : skFLXMSSTWRFC) => (Index.insubd (Index.val skfl.`1 + 1), skfl.`2, skfl.`3))
@@ -884,8 +993,9 @@ move=> /(_ (fun (skfl : skFLXMSSTWRFC) => skfl.`1 = Index.insubd 0)
   by rewrite -(Index.insubdK i) 2:-(Index.insubdK j) 3:eqins_ij; 1,2: smt(rng_qS).
 + by sim.
 + by sim.
-by move=> /(_ (R_EUFCMA_EUFCMARFC(A)) R_forge_ll R_forge_queries &m) /#.
+move=> /(_ (R_EUFCMA_EUFCMARFC(A)) R_forge_ll R_forge_queries &m) /#.
 qed.
+
 
 
 (* TODO: Adapt higher-level reductions to consider RFC types *)
