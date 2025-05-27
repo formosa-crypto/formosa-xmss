@@ -9,7 +9,7 @@ LDLIBS   = -lcrypto
 
 JASMIN   ?= jasminc
 JFLAGS   ?= -nowarning ${JADDFLAGS}
-JINCLUDE ?= -I XMSS:../../ref-jasmin/
+JINCLUDE ?= -I XMSS="../../ref-jasmin/"
 
 # --------------------------------------------------------------------------------------------------
 

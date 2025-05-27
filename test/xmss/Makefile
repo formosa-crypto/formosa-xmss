@@ -10,7 +10,7 @@ JASMIN   ?= jasminc
 JAZZCT   ?= jasmin-ct
 JAZZCTFLAGS ?= --infer
 JFLAGS   ?= -nowarning -g ${JADDFLAGS} # -g so its easier to debug when using valgrind
-JINCLUDE ?= -I XMSS:../../ref-jasmin/ -I Stdlib:../../ref-jasmin/stdlib
+JINCLUDE ?= -I XMSS="../../ref-jasmin/" -I Stdlib="../../ref-jasmin/stdlib"
 
 JASMINPATH := JASMINPATH="XMSS=../../ref-jasmin/:Stdlib=../../ref-jasmin/stdlib"
 
@@ -25,7 +25,7 @@ else
 VALGRIND := docker run --rm -v $(shell pwd):/work -w /work ghcr.io/steinwurf/valgrind-3.19.0:1.1.0 valgrind
 endif
 
-VALGRIND_FLAGS ?= --leak-check=full --show-leak-kinds=all -track-origins=yes --verbose --error-exitcode=1
+VALGRIND_FLAGS ?= --leak-check=full --show-leak-kinds=all --track-origins=yes --verbose --error-exitcode=1
 
 # --------------------------------------------------------------------------------------------------
 
