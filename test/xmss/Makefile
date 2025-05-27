@@ -25,6 +25,7 @@ else
 VALGRIND := docker run --rm -v $(shell pwd):/work -w /work ghcr.io/steinwurf/valgrind-3.19.0:1.1.0 valgrind
 endif
 
+VALGRIND_FLAGS ?= --leak-check=full --show-leak-kinds=all --track-origins=yes --verbose --error-exitcode=1
 
 # --------------------------------------------------------------------------------------------------
 
@@ -69,7 +70,7 @@ bin/%.out: bin/%
 # --------------------------------------------------------------------------------------------------
 
 check_valgrind: bin/test_xmssmt-sha2_20_2_256_valgrind
-	$(VALGRIND) --leak-check=full --track-origins=yes --error-exitcode=1 $<
+	$(VALGRIND) $(VALGRIND_FLAGS) $<
 
 bin/:
 	mkdir -p $@
