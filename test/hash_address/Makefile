@@ -9,7 +9,7 @@ JASMIN   ?= jasminc
 JAZZCT   ?= jasmin-ct
 JAZZCTFLAGS ?= --infer
 JFLAGS   ?= ${JADDFLAGS}
-JINCLUDE ?= -I XMSS:../../ref-jasmin/
+JINCLUDE ?= -I XMSS="../../ref-jasmin/"
 JASMINPATH := JASMINPATH="XMSS=../../ref-jasmin/:Stdlib=../../ref-jasmin/stdlib"
 
 # --------------------------------------------------------------------------------------------------
