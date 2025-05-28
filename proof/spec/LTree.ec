@@ -218,7 +218,25 @@ move=> gt1_len; rewrite eqz_leq; split.
   + smt().
   + smt(@Real @RealExp).
   + smt(@Real @RealExp).
-admit. (** See Zulip: https://formosa-crypto.zulipchat.com/#narrow/channel/308422-VerifyHBS/topic/Security.20.3C-.3E.20Abstract.20RFC/near/520101757 **)
+pose k := ceil (log2 len%r).
+have:= (rexpr_hmono_ltr 2%r (k%r - 1%r) (log2 len%r) _ _)=> //.
++ smt(@Real @RealExp).
+have:= (rexpr_hmono 2%r (log2 len%r) k%r _ _)=> //.
++ smt(@Real @RealExp).
+rewrite rpowK // 1:/#.
+move: (edivzP len 2)=> [] lenP H.
+have len_mod2_eq0Veq1 {H}: len %% 2 = 0 \/ len %% 2 = 1.
++ smt().
+case: len_mod2_eq0Veq1; 1:smt(@Real @RealExp).
+move=> len_mod2P; move: lenP; rewrite len_mod2P=> lenP.
+rewrite {1 2}lenP -fromintB !rpow_nat // 1,2:#smt:(@Real @RealExp).
+rewrite !RField.fromintXn 1,2:#smt:(@Real @RealExp).
+rewrite le_fromint lt_fromint.
+move=> + _.
+rewrite (Ring.IntID.exprSr 2 (k - 1)) 1:#smt:(@Real @RealExp).
+rewrite -ltzE StdOrder.IntOrder.ltr_pmul2r // ltzE.
+rewrite -{1}len_mod2P -titi.
+smt(@Real @RealExp).
 qed.
 
 (* ltree smooshes exactly ceil (log2 len) time; by strong induction on ceil (log2 len):
@@ -245,10 +263,14 @@ while (1 <= _len <= len
   have ->: ceil (log2 (ceil (_len{0}%r / 2%r))%r)
          = (ceil (log2 (ceil (_len{0}%r / 2%r))%r) + 1) - 1.
   + done.
-  rewrite -toto //. search (-(_ + _))%Int.
+  rewrite -toto //.
   rewrite Ring.IntID.opprD oppzK addzA.
-  rewrite foldS.
-  + admit. (* loose monotonicity of ceil + _len_le_len *)
+  rewrite foldS 1:subz_ge0.
+  + move: (log_mono 2%r _len{0}%r len%r _ _ _)=> //.
+    + smt().
+    + smt().
+    rewrite le_fromint _len_le_len //=.
+    smt(@Real).
   by move=> //=; rewrite -ih /#.
 auto=> />; rewrite fold0 //=; split.
 + admit. (* FIXME!!!!! this is not currently true *)
