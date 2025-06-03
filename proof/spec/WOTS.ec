@@ -68,6 +68,37 @@ module Chain = {
 pred chain_pre(X : nbytes, i s : int, _seed : seed, address : adrs) = 
     0 <= s <= w-1.
 
+op chain_body (i : int) (_s : seed) (chain_count : int) (ta : nbytes * adrs) =
+  let (t, ad) = ta in
+  let ad = set_hash_addr ad (i + chain_count) in
+  let ad = set_key_and_mask ad 0 in
+  let addr_bytes = addr_to_bytes ad in
+  let _key = prf addr_bytes _s in
+  let ad = set_key_and_mask ad 1 in
+  let addr_bytes = addr_to_bytes ad in
+  let bitmask = prf addr_bytes _s in
+  (_F _key (nbytexor t bitmask), ad).
+
+op chain (x : nbytes) (i s : int) (_s : seed) (ad : adrs): nbytes =
+  fst (iteri s (chain_body i _s) (x, ad)).
+
+hoare chain_eq _X _i _s _se _ad:
+  Chain.chain: arg = (_X, _i, _s, _se, _ad) /\ 0 <= _s ==> res = chain _X _i _s _se _ad.
+proof.
+proc.
+while (i = _i
+    /\ _seed = _se
+    /\ s = _s
+    /\ (t, address) = iteri chain_count (chain_body _i _se) (_X, _ad)
+    /\ 0 <= chain_count <= s).
++ wp; ecall (_F_eq _key (nbytexor t bitmask))=> //=.
+  wp; ecall (prf_eq addr_bytes _seed)=> //=.
+  wp; ecall (prf_eq addr_bytes _seed)=> //=.
+  auto=> /> &0 ih ge0_cc _ cc_lt_s.
+  by rewrite iteriS // -ih /chain_body //= /#.
+by auto=> />; rewrite iteri0 //= /#.
+qed.
+
 module WOTS = {
   (* In practise, we generate the private key from a secret seed *)
   proc genSK() : wots_sk = {
