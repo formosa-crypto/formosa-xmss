@@ -38,7 +38,7 @@ fn __expand_seed(
     buf[0 : XMSS_N] = copy_nbytes(buf[0 : XMSS_N], pub_seed);
 
     for i = 0 to XMSS_WOTS_LEN {
-        // NOTE: addr is live at the beggining of the loop => we must unspill it at the end
+        // NOTE: addr is live at the beginning of the loop => we must unspill it at the end
         // set_chain_addr(addr, i);
         addr = __set_chain_addr(addr, i);
         () = #spill(addr);
