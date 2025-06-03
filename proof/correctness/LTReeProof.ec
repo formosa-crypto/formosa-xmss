@@ -242,12 +242,9 @@ while (
   height{1} = address{2}.[5] 
 ); last first.
     + auto => /> &1 &2 H0 H1 H2 *.
-      do split.
+      do split; 2..4: by rewrite ?H2 ?ultE /#.
         - by rewrite NBytes.insubdK // /P size_to_list n_val.
-        - by rewrite H2.
-        - by rewrite H2.
         - by rewrite ultE.
-        - by rewrite ultE. 
         - move => addrL lL pkL addrR.
           rewrite ultE => H4 H5 H6 H7 H8 H9 H10 H11.
           apply (eq_from_nth witness); first by rewrite NBytes.valP n_val size_sub.
@@ -263,7 +260,7 @@ while (
           by rewrite nth_take 1..2:/# nth_drop 1..2:/# get_to_list.
 
 seq 2 0 : (#pre /\ to_uint parent_nodes{1} = _len{2} %/ 2).
-    + by auto => /> *; rewrite truncate_1_and_63 to_uint_shr.
+    + by auto => /> *; rewrite to_uint_shr.
 
 seq 5 4 : #post; last first.
     + conseq />.
@@ -305,7 +302,6 @@ seq 2 1 : (#pre /\ sub addr1{1} 0 7 = sub address{2} 0 7).
         - rewrite !nth_sub //= !get_setE //.
           case (j = 6) => ?; [smt(@W32 pow2_32) | smt(sub_k)]. 
 
-
 seq 3 2 : (
   #pre /\
   to_list buf1{1} = NBytes.val pk_i{2} ++ NBytes.val tmp{2}
@@ -316,8 +312,7 @@ seq 3 2 : (
       skip => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 *.
       rewrite !to_uintD of_uintK /=.
       do split; 1..4: by smt().
-        - move => ???? result H.
-          rewrite H.
+        - move => ???? result ->.
           apply (eq_from_nth witness); first by rewrite size_cat !NBytes.valP n_val size_sub.
           rewrite size_sub // => j?.
           rewrite /EncodeWotsPk LenNBytes.insubdK.
@@ -360,11 +355,12 @@ seq 1 1 : (
         - by rewrite -H0 NBytes.valKd.
         - smt(sub_k).
         - move => *; (do split; (apply (eq_from_nth witness); rewrite !size_sub // => j?)); rewrite !nth_sub //; smt(sub_k).
+
 wp.
 exists * wots_pk1{1}, pks{2}, (to_uint i{1}), buf0{1}.
 elim * => P0 P1 P2 P3.
 call {1} (memcpy_offset_ltree P0 P1 P2 P3) => [/# |].
-rcondt{1} 1; first by auto. (* esta linha nao e precisa. O auto da linha de baixo ja simplifica o if (32 = 32) mas assim fica mais facil perceber o q se esta a passar *)
+rcondt{1} 1; first by auto. 
 auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14.
 do split.
 - by rewrite shl_5 wordP => k?; rewrite !get_to_uint (: 0 <= k < 64) //= to_uintM !of_uintK.
