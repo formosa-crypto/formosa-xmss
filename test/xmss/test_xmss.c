@@ -113,11 +113,6 @@ void test_xmssmt_keypair(void) {
         }
 
         res_ref = xmssmt_keypair(pk_ref, sk_ref, oid);
-
-        if (debug && false) {
-            puts("Ref finished");
-        }
-
         res_jasmin = xmssmt_keypair_jazz(pk_jasmin, sk_jasmin);
 
         assert(res_jasmin == res_ref);
@@ -170,8 +165,7 @@ void test_xmssmt_sign_open(void) {
     for (int i = 0; i < TESTS; i++) {
         size_t mlen = MSG_LEN;
         if (debug) {
-            printf("[xmssmt sign open] Test %d/%d (msg len = %ld/%d)\n", i + 1, TESTS, mlen,
-                   MSG_LEN);
+            printf("[xmssmt sign open] Test %d/%d (msg len = %d)\n", i + 1, TESTS, MSG_LEN);
         }
 
         // First we need to generate a keypair and a valid signature
@@ -192,11 +186,64 @@ void test_xmssmt_sign_open(void) {
     }
 }
 
+void test_xmssmt_sign(void) {
+    bool debug = true;
+
+    xmss_params p;
+    uint32_t oid;
+
+    if (xmssmt_str_to_oid(&oid, xstr(IMPL)) == -1) {
+        fprintf(stderr, "Failed to generate oid from impl name\n");
+        exit(-1);
+    }
+
+    if (xmssmt_parse_oid(&p, oid) == -1) {
+        fprintf(stderr, "Failed to generate params from oid\n");
+        exit(-1);
+    }
+
+    uint8_t pk[XMSS_OID_LEN + p.pk_bytes];
+    uint8_t sk_ref[XMSS_OID_LEN + p.sk_bytes];
+    uint8_t sk_jasmin[XMSS_OID_LEN + p.sk_bytes];
+    uint8_t sm_ref[p.sig_bytes + MSG_LEN];
+    uint8_t sm_jasmin[p.sig_bytes + MSG_LEN];
+    size_t smlen_ref, smlen_jasmin;
+
+    uint8_t m[MSG_LEN];
+
+    int res_ref, res_jasmin;
+
+    // Generate a keypair
+    xmssmt_keypair(pk, sk_ref, oid);
+
+    for (int i = 0; i < TESTS; i++) {
+        if (debug) {
+            printf("[xmssmt sign] Test %d/%d (msg len = %d)\n", i + 1, TESTS, MSG_LEN);
+        }
+
+        // TODO: Make sure we can still use the secret key to sign
+
+        randombytes(m, MSG_LEN);  // Generate a random message
+
+        // copy the sk_ref to sk_jasmin
+        // This is to ensure that both implementations use the same key whe signing
+        memcpy(sk_jasmin, sk_ref, sizeof(sk_jasmin));
+
+        res_ref = xmssmt_sign(sk_ref, sm_ref, (unsigned long long *)&smlen_ref, m, MSG_LEN);
+        res_jasmin = xmssmt_sign_jazz(sk_jasmin, sm_jasmin, &smlen_jasmin, m, MSG_LEN);
+
+        assert(res_ref == res_jasmin);
+        assert(memcmp(sm_ref, sm_jasmin, p.sig_bytes + MSG_LEN) == 0);
+    }
+}
+
 int main(void) {
     test_randombytes();
 
     if (starts_with(xstr(IMPL), "XMSSMT")) {
         test_xmssmt_keypair();
+        test_xmssmt_sign();
+        test_xmssmt_sign_open();
     } else {
         fprintf(stderr, "Not implemented for single tree version");
         return EXIT_FAILURE;

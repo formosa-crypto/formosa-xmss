@@ -6,7 +6,7 @@ CC       ?= clang
 CFLAGS   ?= -Wall -g -O3 -Wextra -Wpedantic
 LDLIBS   = -lcrypto
 
-JASMIN   ?= jasminc
+JASMIN   ?= jasminc 
 JAZZCT   ?= jasmin-ct
 JAZZCTFLAGS ?= --infer
 JFLAGS   ?= -nowarning -g ${JADDFLAGS} # -g so its easier to debug when using valgrind
@@ -14,9 +14,6 @@ JINCLUDE ?= -I XMSS="../../ref-jasmin/" -I Stdlib="../../ref-jasmin/stdlib"
 
 JASMINPATH := JASMINPATH="XMSS=../../ref-jasmin/:Stdlib=../../ref-jasmin/stdlib"
 
-# Because my valgrind is not the same version as the one in the docker image
-# The valgrind in my laptop does not reject the program, but for some reason the
-# one in docker does not accept it
 ifdef CI
 VALGRIND := valgrind
 else
