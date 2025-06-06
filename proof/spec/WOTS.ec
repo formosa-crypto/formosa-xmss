@@ -99,6 +99,79 @@ while (i = _i
 by auto=> />; rewrite iteri0 //= /#.
 qed.
 
+op f (_s : seed) (ad : adrs) (x : nbytes): nbytes =
+  let ad = set_key_and_mask ad 0 in
+  let addr_bytes = addr_to_bytes ad in
+  let _key = prf addr_bytes _s in
+  let ad = set_key_and_mask ad 1 in
+  let addr_bytes = addr_to_bytes ad in
+  let bitmask = prf addr_bytes _s in
+  _F _key (nbytexor x bitmask).
+
+op ch (f : seed -> adrs -> nbytes -> nbytes) (_s : seed) (ad : adrs) (i s : int) (x : nbytes): nbytes =
+  iteri s (fun chain_count x=> f _s (set_hash_addr ad (i + chain_count)) x) x.
+
+lemma ch0 (g : seed -> adrs -> nbytes -> nbytes) (ps : seed) (ad : adrs) (s i : int) (x : nbytes) :
+     i <= 0
+  => ch g ps ad s i x = x.
+proof. by move=> ge0 @/ch; rewrite iteri0. qed.
+
+lemma chS (g : seed -> adrs -> nbytes -> nbytes) (ps : seed) (ad : adrs) (s i : int) (x : nbytes) :
+     0 < i
+  => ch g ps ad s i x = g ps (set_hash_addr ad (s + i - 1)) (ch g ps ad s (i - 1) x).
+proof. by move=> ge0_s @/ch; rewrite (iteriS (i - 1)) /#. qed.
+
+lemma chain_body_eq_ad (i : int) (_s : seed) (chain_count : int) (ta : nbytes * adrs):
+  forall j,
+       0 <= j < 8
+    => j <> 6
+    => j <> 7
+    => Array8.Array8."_.[_]" (chain_body i _s chain_count ta).`2 j = Array8.Array8."_.[_]" ta.`2 j.
+proof.
+case: ta=> t a /= j j_rng j_neq_6 j_neq_7 @/chain_body //=.
+by rewrite !Array8.Array8.set_neqiE.
+qed.
+
+lemma chain_eq_ad (x : nbytes) (i s : int) (_s : seed) (ad : adrs):
+  forall j,
+       0 <= j < 8
+    => j <> 6
+    => j <> 7
+    => Array8.Array8."_.[_]" (iteri s (chain_body i _s) (x, ad)).`2 j = Array8.Array8."_.[_]" ad j.
+proof.
+move=> j j_rng j_neq7 j_neq6.
+case: (0 <= s); last first.
++ by move=> lt0_s; rewrite iteri0 /#.
+elim: s=> [|s ge0_s ih].
++ by rewrite iteri0 //.
+by rewrite iteriS 1:// chain_body_eq_ad.
+qed.
+
+lemma chain_eq_ch_f _X _i _s _se _ad:
+     0 < _i
+  => chain _X _i _s _se _ad = ch f _se _ad _i _s _X.
+proof.
+move=> ge0_i; case: (0 <= _s); last first.
++ by move=> /ltzNge le0_s @/chain; rewrite iteri0 2:ch0 /#.
+elim: _s=> [|_s ge0_s ih].
++ by rewrite /chain iteri0 2:ch0.
+rewrite chS 1://#.
+have ->: _i + (_s + 1) - 1 = _i + _s.
++ smt().
+have ->: _s + 1 - 1 = _s by done.
+rewrite -ih.
+rewrite /chain iteriS // {1}/chain_body /f //=.
+case _: (iteri _s (chain_body _i _se) (_X, _ad))=> t ad /= tadP.
+have -> //: set_key_and_mask (set_hash_addr  ad (_i + _s)) 0
+          = set_key_and_mask (set_hash_addr _ad (_i + _s)) 0.
+apply: Array8.Array8.ext_eq=> j j_rng.
+case: (j = 7)=> [->> //|j_neq7].
+case: (j = 6)=> [->> //|j_neq6].
+rewrite !Array8.Array8.set_neqiE //.
+have ->: ad = (iteri _s (chain_body _i _se) (_X, _ad)).`2 by rewrite tadP.
+by rewrite chain_eq_ad.
+qed.
+
 module WOTS = {
   (* In practise, we generate the private key from a secret seed *)
   proc genSK() : wots_sk = {
