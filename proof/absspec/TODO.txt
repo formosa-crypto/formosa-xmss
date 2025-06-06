@@ -1,6 +1,0 @@
-- Think about naming for abstract RFC spec, as to prevent clashes with concrete spec
-- Substitute THF abstractions for all imperative hash function calls + surrounding address manipulation that cannot be done on security spec side
-- Figure out what Hash.prf maps to in security spec and whether to abstract this away under THFs as well, or make this another abstract KHF/THF
-- Make XMSS-PRF use random oracle again (renaming it to not have `PRF` in the name) for message compression 
-- Discuss: Instantiate `adrs` subtype on security spec side with address type of RFC spec, and
-instantiate `val` and `insub` to form the bijection between them? Can this be problematic?
