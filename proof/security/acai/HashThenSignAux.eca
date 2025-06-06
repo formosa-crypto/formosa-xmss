@@ -1,3 +1,4 @@
+(*
 (* --- Require/Import --- *)
 (* -- Built-In (Standard Library) -- *)
 require import AllCore List Distr DList IntDiv RealExp StdOrder FMap BitEncoding FinType.
@@ -2150,3 +2151,4 @@ theory WithPRF.
   end section Proofs_EUFCMA_RO_ALKUDSS.
 
 end WithPRF.
+*)

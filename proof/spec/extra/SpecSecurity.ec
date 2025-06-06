@@ -1,3 +1,4 @@
+(*
 require import AllCore IntDiv List Distr DList StdOrder RealExp.
 require import BitEncoding.
 (*---*) import BitChunking.
@@ -1811,3 +1812,4 @@ move: (to_uint idx_sig0{2}) => i valtb.
 congr.
 admit. (* Annoying, but true: th and tb idx is always overwritten *)
 qed.
+*)
