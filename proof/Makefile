@@ -55,8 +55,7 @@ check_correctness_proof: extraction/XMSS_IMPL.ec
 ####################################################################################################
 
 check_security_proof:
-	$(ECRUNTEST) config/tests.config acai
-#	$(ECRUNTEST) config/tests.config fsai
+	$(ECRUNTEST) config/tests.config security
 
 ####################################################################################################
 

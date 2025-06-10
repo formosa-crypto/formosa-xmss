@@ -4,7 +4,7 @@ from Jasmin require import JModel.
 
 require import List DList IntDiv Int Ring.
 
-require import Address Types Hash XMSS_Params LTree  XMSS_Types XMSS_PRF  XMSS_MT_Params XMSS_MT_Types XMSS_MT_PRF.
+require import Address Types Hash XMSS_Params LTree XMSS_Types XMSS_PRF XMSS_MT_Params XMSS_MT_Types XMSS_MT_PRF.
 import IntID.
 
 require import Array8.

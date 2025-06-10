@@ -1,7 +1,7 @@
 require import AllCore List Distr RealExp IntDiv DList.
 from Jasmin require import JModel.
 
-require import Params BaseW Address (*Hash*).
+require import Params BaseW Address.
 
 (******************************************************************************)
 
@@ -28,9 +28,10 @@ qed.
 (* op nbytexor(a b : nbytes) : nbytes = NBytes.insubd (bytexor (NBytes.val a) (NBytes.val b)). *)
 
 (* prefix of big endian byte representation of a 32-bit word *)
-op toByte(x : W32.t, k : int) : W8.t list =
+(*
+  op toByte(x : W32.t, k : int) : W8.t list =
     rev (mkseq (fun i => nth W8.zero (to_list (W4u8.unpack8 x)) i) k).
-
+*)
 
 (******************************************************************************)
 (* Corresponds to prf_sk in security spec *)

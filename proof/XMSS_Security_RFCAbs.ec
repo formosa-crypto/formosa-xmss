@@ -7,7 +7,7 @@ require import Array8.
 
 require (****) XMSS_TW.
 require import XMSS_RFC_Abs.
-import XMSS_RFC_Params WOTS Address BaseW.
+import XMSS_RFC_Params WOTS_RFC_Abs Address BaseW.
 (*
 require (****) XMSS_TW.
 require import XMSS_PRF.
