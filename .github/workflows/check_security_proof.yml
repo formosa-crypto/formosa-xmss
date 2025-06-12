@@ -37,8 +37,8 @@ jobs:
                 run: opam install easycrypt
             -   name: Configure SMT provers
                 run: opam config exec -- easycrypt why3config -why3 ~/.why3.conf
-            -   name: Check project (acai)
-                run: ${{ format('opam config exec -- easycrypt runtest -report report.log -raw-args -gcstats {0} {1}', 'proof/config/tests.config', 'acai') }}
+            -   name: Check project (security)
+                run: ${{ format('opam config exec -- easycrypt runtest -report report.log -raw-args -gcstats {0} {1}', 'proof/config/tests.config', 'security') }}
             -   uses: actions/upload-artifact@v4
                 name: Upload report
                 with:

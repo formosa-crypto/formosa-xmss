@@ -1,4 +1,4 @@
-name: CI (compile jasmin code & run testes & run XMSS/XMSS^MT equivalence proof & run correctness proof)
+name: CI (compile jasmin code & run tests & run XMSS/XMSS^MT equivalence proof & run correctness proof)
 
 on:
   push:
