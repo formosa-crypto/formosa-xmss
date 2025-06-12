@@ -593,6 +593,8 @@ clone import WOTS_TW as WTW with
   op n <- n,
   op log2_w <- log2_w,
   op w <- w,
+  op len1 <- len1,
+  op len2 <- len2,
   op len <- len,
   op d <- l,
   op valid_chidx <- valid_chidx,
@@ -602,7 +604,8 @@ clone import WOTS_TW as WTW with
   op valid_widxvalsgp adidxswgp <=    valid_kpidx (nth witness adidxswgp 0)
                                    /\ nth witness adidxswgp 1 = chtype
                                    /\ valid_xidxvalsgp (drop 2 adidxswgp),
-  theory HAW.Adrs <- HAX.Adrs
+  theory HAW.Adrs <- HAX.Adrs,
+  type adrs <- adrs
 
   proof ge2_adrslen, ge1_n, val_log2w, ge1_d, valid_widxvals_idxvals.
   realize ge2_adrslen by smt(ge4_adrslen).

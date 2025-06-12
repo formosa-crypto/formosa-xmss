@@ -109,7 +109,7 @@ op f (_s : seed) (ad : adrs) (x : nbytes): nbytes =
   _F _key (nbytexor x bitmask).
 
 op ch (f : seed -> adrs -> nbytes -> nbytes) (_s : seed) (ad : adrs) (i s : int) (x : nbytes): nbytes =
-  iteri s (fun chain_count x=> f _s (set_hash_addr ad (i + chain_count)) x) x.
+  iteri s (fun chain_count x => f _s (set_hash_addr ad (i + chain_count)) x) x.
 
 lemma ch0 (g : seed -> adrs -> nbytes -> nbytes) (ps : seed) (ad : adrs) (s i : int) (x : nbytes) :
      i <= 0

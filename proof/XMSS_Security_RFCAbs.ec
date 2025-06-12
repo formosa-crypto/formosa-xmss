@@ -5,7 +5,7 @@ require import BitEncoding.
 from Jasmin require import JModel.
 require import Array8.
 
-require (****) XMSS_TW.
+require (****) XMSS_TW Checksum.
 require import XMSS_RFC_Abs.
 import XMSS_RFC_Params WOTS_RFC_Abs Address BaseW.
 (*
@@ -18,9 +18,9 @@ import IntOrder.
 (* Overflows may happen unless h is upper bounded *)
 axiom h_max : h < 32.
 
-(* We are using multiples of n and len to distinguish which hash to use *)
+(* We are using multiples of n and len to distinguish which hash to use
 axiom gt0_n : 0 < n.
-
+*)
 
 op BitsToBytes (bits : bool list) : W8.t list = map W8.bits2w (chunk W8.size bits).
 op BytesToBits (bytes : W8.t list) : bool list = flatten (map W8.w2bits bytes).
@@ -197,6 +197,13 @@ qed.
 realize FLXMSSTW.dist_adrstypes by trivial.
 *)
 
+(* -- Checksum instantiation -- *)
+clone import Checksum as CS with
+  op w <- 2 ^ (ilog 2 w)
+
+proof *.
+realize gt0_w by rewrite expr_gt0.
+
 clone import XMSS_TW as XMSS_Security with
   type mseed <- nbytes,
   type mkey <- nbytes,
@@ -205,7 +212,8 @@ clone import XMSS_TW as XMSS_Security with
     (fun (ms : nbytes) (i : FLXMSSTW.SA.index) =>
      prf ms (NBytes.insubd (toByte (W32.of_int (FLXMSSTW.SA.Index.val i)) n))),
   op dmseed <- dmap (dlist W8.dword Params.n) NBytes.insubd,
-  op MKey.enum <= map NBytes.insubd (mkseq (fun (i : int) => BitsToBytes (BS2Int.int2bs (8 * n) i)) (2 ^ (8 * n))),
+  op MKey.enum <= map NBytes.insubd (mkseq (fun (i : int) =>
+                                            BitsToBytes (BS2Int.int2bs (8 * n) i)) (2 ^ (8 * n))),
   op dmkey <- duniform MKey.enum,
   op FLXMSSTW.n <- n,
   op FLXMSSTW.log2_w <- ilog 2 w,
@@ -221,12 +229,26 @@ clone import XMSS_TW as XMSS_Security with
   op FLXMSSTW.SA.WTW.dsseed <- dmap (dlist W8.dword Params.n) NBytes.insubd,
   op FLXMSSTW.SA.WTW.dpseed <- dmap (dlist W8.dword Params.n) NBytes.insubd,
   op FLXMSSTW.SA.WTW.ddgstblock <- duniform FLXMSSTW.SA.WTW.DigestBlockFT.enum,
-  op FLXMSSTW.SA.WTW.prf_sk <-
+  theory FLXMSSTW.SA.WTW.BaseW <- CS.BaseW,
+  op FLXMSSTW.SA.WTW.encode_msgWOTS <= (fun (m : msgWOTS) =>
+                                        EmsgWOTS.mkemsgWOTS (encode_int len1
+                                                             (BS2Int.bs2int (rev (DigestBlock.val m))) len2)),
+  op FLXMSSTW.SA.WTW.ch <= (fun (g : nbytes -> FLXMSSTW.SA.adrs -> bool list -> dgstblock) (ps : nbytes)
+                                (ad : FLXMSSTW.SA.adrs) (i s : int) (x : bool list) =>
+                            (DigestBlock.insubd
+                             (iteri s
+                              (fun chain_count x =>
+                               (DigestBlock.val
+                                (g ps (FLXMSSTW.SA.HAX.Adrs.insubd
+                                       (adr2idxs (set_hash_addr (idxs2adr (FLXMSSTW.SA.HAX.Adrs.val ad))
+                                                  (i + chain_count)))) x)))
+                              x))),
+  op FLXMSSTW.SA.WTW.prf_sk <=
     (fun (ss : nbytes) (psad : nbytes * FLXMSSTW.SA.adrs) =>
      DigestBlock.insubd (BytesToBits
                          (NBytes.val
                           (prf_keygen ss (psad.`1, (idxs2adr (FLXMSSTW.SA.HAX.Adrs.val psad.`2))))))),
-  op FLXMSSTW.SA.WTW.thfc <-
+  op FLXMSSTW.SA.WTW.thfc <=
     (fun (i : int) (ps : nbytes) (ad : FLXMSSTW.SA.adrs) (x : bool list) =>
      let nb2db = (fun (x : nbytes) => DigestBlock.insubd (BytesToBits (NBytes.val x))) in
      let mad = (idxs2adr (FLXMSSTW.SA.HAX.Adrs.val ad)) in
@@ -245,9 +267,37 @@ realize FLXMSSTW.ge1_n by exact: ge1_n.
 realize FLXMSSTW.val_log2w by case: w_vals => ->; smt(ilog_powK).
 realize FLXMSSTW.ge1_h by smt(h_g0).
 realize FLXMSSTW.dist_adrstypes by trivial.
-realize FLXMSSTW.SA.WTW.ch0. admitted. (* TODO: instantiate chain *)
-realize FLXMSSTW.SA.WTW.chS. admitted. (* TODO: instantiate chain *)
-realize FLXMSSTW.SA.WTW.two_encodings. admitted. (* TODO: instantiate encoding *)
+realize FLXMSSTW.SA.WTW.ch0.
+admitted. (* TODO: instantiate chain *)
+realize FLXMSSTW.SA.WTW.chS.
+admitted. (* TODO: instantiate chain *)
+realize FLXMSSTW.SA.WTW.two_encodings.
+move=> m m' neqm_mp.
+have eq28n_wl1 : 2 ^ (8 * n) = w ^ len1.
++ rewrite /w -exprM; congr.
+  rewrite /len1 log2_wP -fromint_div 2:from_int_ceil; first by smt(val_log2w).
+  by rewrite -divMr 2:mulKz 3://; first 2 smt(val_log2w).
+move: (checksum_prop_var len1 len2 (BS2Int.bs2int (rev (DigestBlock.val m'))) (BS2Int.bs2int (rev (DigestBlock.val m)))).
+move=> /(_ _ _ _); first 2 by smt(ge1_len1 ge1_len2).
++ rewrite -lt_fromint -RField.fromintXn 1:#smt:(ge1_len2) -rpow_int 1:#smt:(val_w).
+  have <- := rpowK w%r ((w - 1) * len1)%r _ _ _; first 3 by smt(val_w ge1_len1).
+  apply: rexpr_hmono_ltr; first by smt(val_w).
+  split=> [|_]; first by rewrite log_ge0 #smt:(val_w ge1_len1).
+  rewrite /len2; pose l1w1 := len1 * (w - 1).
+  have ->: log2 l1w1%r / log2 w%r = log w%r l1w1%r; last by smt(floor_bound).
+  by rewrite /log2 /log; field; first 2 by smt(ln_eq0 val_w).
+move=> /(_ _ _); first 2 by smt(BS2Int.bs2int_ge0 DigestBlock.valP size_rev BS2Int.bs2int_le2Xs).
+move=> /contra; rewrite negb_forall=> //= /(_ _).
++ rewrite -negP=> /(congr1 (BS2Int.int2bs (8 * n))).
+  rewrite -{1}(DigestBlock.valP m') -(size_rev (DigestBlock.val m')) -{1}(DigestBlock.valP m) -(size_rev (DigestBlock.val m)).
+  rewrite !BS2Int.bs2intK => /(congr1 rev); rewrite !revK => /(congr1 DigestBlock.insubd).
+  by rewrite !DigestBlock.valKd => ->>.
+move=> [] i; rewrite negb_imply (lezNgt (BaseW.val _)) /= => -[Hi Hlt].
+exists i; split; first by exact: Hi.
+rewrite /encode_msgWOTS !EmsgWOTS.getE Hi /= !EmsgWOTS.ofemsgWOTSK //.
++ by rewrite /encode_int size_cat 1:size_int2lbw 3:size_checksum; smt(ge1_len1 ge1_len2 BS2Int.bs2int_ge0).
+by rewrite /encode_int size_cat 1:size_int2lbw 3:size_checksum; smt(ge1_len1 ge1_len2 BS2Int.bs2int_ge0).
+qed.
 realize FLXMSSTW.SA.dmsgFLXMSSTW_ll.
 rewrite duniform_ll -size_eq0 2!size_map size_range.
 suff /#: 0 < 2 ^ (8 * n).
@@ -284,7 +334,8 @@ rewrite /= (: 8 * n = size (BytesToBits (NBytes.val x))).
   by congr; rewrite size_map NBytes.valP.
 by rewrite BS2Int.bs2intK BytesToBitsK mem_iota BS2Int.bs2int_ge0 BS2Int.bs2int_le2Xs.
 qed.
-realize MsgXMSSTW.enum_spec. admitted. (* TODO: this shouldn't be necessary *)
+realize MsgXMSSTW.enum_spec.
+admitted. (* TODO: this shouldn't be necessary *)
 realize dmseed_ll by apply /dmap_ll /dlist_ll /W8.dword_ll.
 realize dmkey_ll.
 rewrite duniform_ll -size_eq0 2!size_map size_iota.
