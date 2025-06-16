@@ -1854,14 +1854,18 @@ have Hsil := si_size_in_loop _lstart i{hr} _sth _ss _ps _ad (to_uint offset{hr})
 qed.
 *)
 
-lemma zeroadsE:
-  adr2ads zero_address = HAX.Adrs.insubd [0; 0; 0; 0].
+lemma zeroidxsE:
+  adr2idxs zero_address = [0; 0; 0; 0].
 proof.
-rewrite /zero_address /adr2ads /adr2idxs; congr.
+rewrite /zero_address /adr2idxs.
 rewrite &(eq_from_nth witness) /=; 1: smt(size_rev size_map size_sub).
 move=> i ?; rewrite nth_rev 2:(nth_map witness) 3:nth_sub; 1..3:smt(size_rev size_map size_sub).
 by rewrite size_map size_sub 1:// initE /= ifT; smt(size_rev size_map size_sub to_uint0).
 qed.
+
+lemma zeroadsE:
+  adr2ads zero_address = HAX.Adrs.insubd [0; 0; 0; 0].
+proof. by rewrite /adr2ads zeroidxsE. qed.
 
 lemma zeroadiP:
   valid_adrsidxs [0; 0; 0; 0].
@@ -2665,12 +2669,14 @@ seq 1 1 : (#pre /\ cm{1} = bs2block _M'{2}).
   wp; sp.
   call (: true).
   skip => &1 /> *.
-  do ? split.
+  pose kprt := _ ++ _ ++ _; have eq3n_sz : size kprt = 3 * n.
   + admit.
-  + admit.
-  + admit.
-  move => 3? m.
-  rewrite /bs2block.
+  rewrite ?ThreeNBytesBytes.insubdK 1://.
+  rewrite ?nth_mkseq 4:/=; 1..3:smt(mulzK ge1_n).
+  rewrite drop0 ?take_cat ?drop_cat.
+  rewrite ?size_cat ?NBytes.valP /= (: n < n + n) 2:take0 2:drop0 /=; 1:smt(ge1_n).
+  rewrite cats0 ?ifF 2:(: n * 2 - (n + n) = 0) 3:drop0; 1,2: smt(ge1_n).
+  rewrite ?take_cat ?NBytes.valP /= take0.
   admit.
 sp.
 seq 2 1 : (   #pre
@@ -2700,7 +2706,12 @@ seq 2 1 : (   #pre
     apply /DBHL.val_inj /(eq_from_nth witness); 1: smt(DBHL.valP).
     rewrite DBHL.valP => i rng_i.
     rewrite ?NBytes.valKd eqnth 1:/#; do 6! congr.
-    admit.
+    rewrite /skr2sko /= zeroidxsE (: set_layer_addr zero_address 0 = zero_address).
+    + by rewrite /set_layer_addr setE /zero_address &(ext_eq) => x rngx; smt(initE).
+    rewrite XAddress.insubdK /valid_xadrs 2:zeroadsE 2://.
+    have valx : valid_xadrsidxs [0; 0; 0; 0].
+    + admit.
+    by rewrite HAX.Adrs.insubdK 1:zeroadiP.
   auto.
   sp.
   exlim pub_seed0, sk_seed0,  (k * 2 ^ j), j, address1 => _ps _ss _start _sth _ad.
