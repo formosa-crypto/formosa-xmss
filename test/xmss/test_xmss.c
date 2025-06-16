@@ -35,6 +35,16 @@ extern int xmssmt_sign_open_jazz(uint8_t *m, size_t *mlen, const uint8_t *sm, si
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+static int memcpy_martelado(void *dest, const void *src, size_t n) {
+    if (!dest || !src || n == 0) {
+        return -1;
+    }
+
+    for (size_t i = 0; i < n; i++) {
+        ((uint8_t *)dest)[i] = ((const uint8_t *)src)[i];
+    }
+}
+
 static int starts_with(const char *str, const char *prefix) {
     return strncmp(str, prefix, strlen(prefix)) == 0;
 }
@@ -204,7 +214,7 @@ void test_xmssmt_sign(void) {
     }
 
     uint8_t pk[XMSS_OID_LEN + p.pk_bytes];
-    
+
     uint8_t sk_ref[XMSS_OID_LEN + p.sk_bytes];
     uint8_t sk_jasmin[XMSS_OID_LEN + p.sk_bytes];
 
@@ -213,7 +223,7 @@ void test_xmssmt_sign(void) {
 
     size_t smlen_ref, smlen_jasmin;
 
-    uint8_t m[MSG_LEN];
+    uint8_t m[MSG_LEN] = {0};
 
     int res_ref, res_jasmin;
 
@@ -247,7 +257,7 @@ int main(void) {
 
     if (starts_with(xstr(IMPL), "XMSSMT")) {
         test_xmssmt_keypair();
-        // test_xmssmt_sign();
+        test_xmssmt_sign();
         // test_xmssmt_sign_open();
     } else {
         fprintf(stderr, "Not implemented for single tree version");
