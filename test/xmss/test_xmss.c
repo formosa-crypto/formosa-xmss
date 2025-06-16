@@ -203,10 +203,13 @@ void test_xmssmt_sign(void) {
     }
 
     uint8_t pk[XMSS_OID_LEN + p.pk_bytes];
+    
     uint8_t sk_ref[XMSS_OID_LEN + p.sk_bytes];
     uint8_t sk_jasmin[XMSS_OID_LEN + p.sk_bytes];
+
     uint8_t sm_ref[p.sig_bytes + MSG_LEN];
     uint8_t sm_jasmin[p.sig_bytes + MSG_LEN];
+
     size_t smlen_ref, smlen_jasmin;
 
     uint8_t m[MSG_LEN];
@@ -232,6 +235,7 @@ void test_xmssmt_sign(void) {
         res_ref = xmssmt_sign(sk_ref, sm_ref, (unsigned long long *)&smlen_ref, m, MSG_LEN);
         res_jasmin = xmssmt_sign_jazz(sk_jasmin, sm_jasmin, &smlen_jasmin, m, MSG_LEN);
 
+        assert(smlen_ref == smlen_jasmin);
         assert(res_ref == res_jasmin);
         assert(memcmp(sm_ref, sm_jasmin, p.sig_bytes + MSG_LEN) == 0);
     }
