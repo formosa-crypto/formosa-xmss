@@ -237,11 +237,7 @@ clone import XMSS_TW as XMSS_Security with
                                 (ad : FLXMSSTW.SA.adrs) (i s : int) (x : bool list) =>
                             (DigestBlock.insubd
                              (iteri s
-                              (fun chain_count x =>
-                               (DigestBlock.val
-                                (g ps (FLXMSSTW.SA.HAX.Adrs.insubd
-                                       (adr2idxs (set_hash_addr (idxs2adr (FLXMSSTW.SA.HAX.Adrs.val ad))
-                                                  (i + chain_count)))) x)))
+                              (fun chain_count x => (DigestBlock.val (g ps (set_hidx ad (i + chain_count)) x)))
                               x))),
   op FLXMSSTW.SA.WTW.prf_sk <=
     (fun (ss : nbytes) (psad : nbytes * FLXMSSTW.SA.adrs) =>
@@ -268,9 +264,18 @@ realize FLXMSSTW.val_log2w by case: w_vals => ->; smt(ilog_powK).
 realize FLXMSSTW.ge1_h by smt(h_g0).
 realize FLXMSSTW.dist_adrstypes by trivial.
 realize FLXMSSTW.SA.WTW.ch0.
-admitted. (* TODO: instantiate chain *)
+move=> g ps ad s i x valad sz8n le0_i.
+by congr; rewrite iteri0.
+qed.
 realize FLXMSSTW.SA.WTW.chS.
-admitted. (* TODO: instantiate chain *)
+move=> g ps ad s i x valad sz8n ge0_s gt0_i lew1_si.
+rewrite (iteriS (i - 1)) 1:/# DigestBlock.valKd DigestBlock.insubdK 2:/#.
+elim/natind: i gt0_i lew1_si; 1: smt().
+move=> j ge0_j ih gt0_j1 ltw1.
+case (j = 0) => [-> /= | neq0_j]; 1: by rewrite iteri0.
+rewrite (: j + 1 - 1 = j - 1 + 1) 1://.
+by rewrite iteriS 1:/# /= DigestBlock.valP.
+qed.
 realize FLXMSSTW.SA.WTW.two_encodings.
 move=> m m' neqm_mp.
 have eq28n_wl1 : 2 ^ (8 * n) = w ^ len1.
@@ -335,7 +340,12 @@ rewrite /= (: 8 * n = size (BytesToBits (NBytes.val x))).
 by rewrite BS2Int.bs2intK BytesToBitsK mem_iota BS2Int.bs2int_ge0 BS2Int.bs2int_le2Xs.
 qed.
 realize MsgXMSSTW.enum_spec.
-admitted. (* TODO: this shouldn't be necessary *)
+admitted. (*
+            TODO:
+            this shouldn't be necessary, but current HtS requires it.
+            Need to introduce finite type for arbitrary-length messages
+            in RFC spec.
+          *)
 realize dmseed_ll by apply /dmap_ll /dlist_ll /W8.dword_ll.
 realize dmkey_ll.
 rewrite duniform_ll -size_eq0 2!size_map size_iota.
@@ -408,8 +418,8 @@ proof. by move=> ?; rewrite size_lpath /#. qed.
 (* When working in subtrees of height t we need the suffix of length t
    of the path to the leaf, except in the corner case where we are at
    the end.  *)
-op  prefix(s : 'a list, t : int) = take (size s - t) s.
-op  suffix(s : 'a list, t : int) = drop (size s - t) s.
+op prefix(s : 'a list, t : int) = take (size s - t) s.
+op suffix(s : 'a list, t : int) = drop (size s - t) s.
 
 (* The path of the exit leaf is not a prefix of the path
    in the full tree, but it makes the theorems nicely commute *)
