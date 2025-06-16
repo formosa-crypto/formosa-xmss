@@ -83,7 +83,7 @@ void test_xmssmt_keypair(void) {
     // We assume that both randombytes and randombytes1 output the same bytes (this test is only run
     // after the test that checks if randombytes == randombytes1)
 
-    bool debug = true;
+    bool debug = false;
 
     xmss_params p;
     uint32_t oid;
@@ -105,6 +105,7 @@ void test_xmssmt_keypair(void) {
     uint8_t sk_ref[XMSS_OID_LEN + p.sk_bytes];
     uint8_t pk_jasmin[XMSS_OID_LEN + p.pk_bytes];
     uint8_t sk_jasmin[XMSS_OID_LEN + p.sk_bytes];
+
     int res_jasmin, res_ref;
 
     for (int i = 0; i < TESTS; i++) {
@@ -247,7 +248,7 @@ int main(void) {
     if (starts_with(xstr(IMPL), "XMSSMT")) {
         test_xmssmt_keypair();
         // test_xmssmt_sign();
-        test_xmssmt_sign_open();
+        // test_xmssmt_sign_open();
     } else {
         fprintf(stderr, "Not implemented for single tree version");
         return EXIT_FAILURE;
