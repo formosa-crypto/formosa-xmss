@@ -256,9 +256,9 @@ int main(void) {
     test_randombytes();
 
     if (starts_with(xstr(IMPL), "XMSSMT")) {
-        test_xmssmt_keypair();
-        test_xmssmt_sign();
-        // test_xmssmt_sign_open();
+        // test_xmssmt_keypair();
+        // test_xmssmt_sign();
+        test_xmssmt_sign_open();
     } else {
         fprintf(stderr, "Not implemented for single tree version");
         return EXIT_FAILURE;
