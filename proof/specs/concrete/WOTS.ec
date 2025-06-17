@@ -20,7 +20,7 @@ type wots_sk = len_nbytes.
 type wots_keypair = wots_pk * wots_sk.
 
 (******************************************************************************)
- 
+
 subtype wots_ots_keys as OTSKeys = { l : wots_sk list | size l = 2^h }.
 realize inhabited.
 proof.
@@ -47,20 +47,20 @@ module Chain = {
     while (chain_count < s) {
      address <- set_hash_addr address (i + chain_count);
      address <- set_key_and_mask address 0;
-      
+
       addr_bytes <- addr_to_bytes address;
      _key <@ Hash.prf(addr_bytes, _seed);
-     
+
      address <- set_key_and_mask address 1;
-      
+
      addr_bytes <- addr_to_bytes address;
      bitmask <@ Hash.prf(addr_bytes, _seed);
 
      t <@ Hash._F (_key, (nbytexor t bitmask));
-     
+
      chain_count <- chain_count + 1;
     }
-    
+
     return t;
    }
 }.
