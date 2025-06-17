@@ -198,7 +198,7 @@ void test_xmssmt_sign_open(void) {
 }
 
 void test_xmssmt_sign(void) {
-    bool debug = true;
+    bool verbose = true;
 
     xmss_params p;
     uint32_t oid;
@@ -231,7 +231,7 @@ void test_xmssmt_sign(void) {
     xmssmt_keypair(pk, sk_ref, oid);
 
     for (int i = 0; i < TESTS; i++) {
-        if (debug) {
+        if (verbose) {
             printf("[xmssmt sign] Test %d/%d (msg len = %d)\n", i + 1, TESTS, MSG_LEN);
         }
 
@@ -242,15 +242,33 @@ void test_xmssmt_sign(void) {
             // This is to ensure that both implementations use the same key whe signing
             memcpy(sk_jasmin, sk_ref, sizeof(sk_jasmin));
 
+            if (verbose) {
+                puts("Signing with ref impl...");
+            }
+
             res_ref = xmssmt_sign(sk_ref, sm_ref, (unsigned long long *)&smlen_ref, m, MSG_LEN);
+
+            if (verbose) {
+                puts("Finished signing with ref impl...");
+            }
+
+            if (verbose) {
+                puts("Signing with jasmin impl...");
+            }
+
             res_jasmin = xmssmt_sign_jazz(sk_jasmin, sm_jasmin, &smlen_jasmin, m, MSG_LEN);
+
+            if (verbose) {
+                puts("Finished signing with jasmin impl...");
+            }
 
             assert(smlen_ref == smlen_jasmin);
             assert(res_ref == res_jasmin);
             assert(memcmp(sm_ref, sm_jasmin, p.sig_bytes + MSG_LEN) == 0);
+
         } else {
             fprintf(stderr, "Test %d/%d: Skipping signing test as the index is too high\n", i + 1,
-                   TESTS);
+                    TESTS);
         }
     }
 }
