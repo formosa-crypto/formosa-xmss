@@ -235,20 +235,23 @@ void test_xmssmt_sign(void) {
             printf("[xmssmt sign] Test %d/%d (msg len = %d)\n", i + 1, TESTS, MSG_LEN);
         }
 
-        // TODO: Make sure we can still use the secret key to sign
+        if ((unsigned long long)i < ((1ULL << p.full_height) - 1)) {
+            randombytes(m, MSG_LEN);  // Generate a random message
 
-        randombytes(m, MSG_LEN);  // Generate a random message
+            // copy the sk_ref to sk_jasmin
+            // This is to ensure that both implementations use the same key whe signing
+            memcpy(sk_jasmin, sk_ref, sizeof(sk_jasmin));
 
-        // copy the sk_ref to sk_jasmin
-        // This is to ensure that both implementations use the same key whe signing
-        memcpy(sk_jasmin, sk_ref, sizeof(sk_jasmin));
+            res_ref = xmssmt_sign(sk_ref, sm_ref, (unsigned long long *)&smlen_ref, m, MSG_LEN);
+            res_jasmin = xmssmt_sign_jazz(sk_jasmin, sm_jasmin, &smlen_jasmin, m, MSG_LEN);
 
-        res_ref = xmssmt_sign(sk_ref, sm_ref, (unsigned long long *)&smlen_ref, m, MSG_LEN);
-        res_jasmin = xmssmt_sign_jazz(sk_jasmin, sm_jasmin, &smlen_jasmin, m, MSG_LEN);
-
-        assert(smlen_ref == smlen_jasmin);
-        assert(res_ref == res_jasmin);
-        assert(memcmp(sm_ref, sm_jasmin, p.sig_bytes + MSG_LEN) == 0);
+            assert(smlen_ref == smlen_jasmin);
+            assert(res_ref == res_jasmin);
+            assert(memcmp(sm_ref, sm_jasmin, p.sig_bytes + MSG_LEN) == 0);
+        } else {
+            fprintf(stderr, "Test %d/%d: Skipping signing test as the index is too high\n", i + 1,
+                   TESTS);
+        }
     }
 }
 
@@ -256,8 +259,8 @@ int main(void) {
     test_randombytes();
 
     if (starts_with(xstr(IMPL), "XMSSMT")) {
-        // test_xmssmt_keypair();
-        // test_xmssmt_sign();
+        test_xmssmt_keypair();
+        test_xmssmt_sign();
         test_xmssmt_sign_open();
     } else {
         fprintf(stderr, "Not implemented for single tree version");
