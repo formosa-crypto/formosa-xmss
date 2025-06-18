@@ -3,7 +3,7 @@
 # --------------------------------------------------------------------------------------------------
 
 CC       ?= clang
-CFLAGS   ?= -Wall -g -O3 -Wextra -Wpedantic     -z noexecstack
+CFLAGS   ?= # -Wall -g -O3 -Wextra -Wpedantic     -z noexecstack
 LDLIBS   = -lcrypto
 
 JASMIN   ?= jasminc # /home/rui/repos/jasmin-release/compiler/jasminc

@@ -219,7 +219,7 @@ void test_xmssmt_sign(void) {
     uint8_t sk_jasmin[XMSS_OID_LEN + p.sk_bytes];
 
     uint8_t sm_ref[p.sig_bytes + MSG_LEN];
-    uint8_t sm_jasmin[p.sig_bytes + MSG_LEN];
+    uint8_t sm_jasmin[p.sig_bytes + 2* MSG_LEN];
 
     size_t smlen_ref, smlen_jasmin;
 
