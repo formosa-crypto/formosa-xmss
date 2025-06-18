@@ -1910,9 +1910,13 @@ lemma zeroadsE:
   adr2ads zero_address = HAX.Adrs.insubd [0; 0; 0; 0].
 proof. by rewrite /adr2ads zeroidxsE. qed.
 
+lemma zeroxadiP:
+  valid_xadrsidxs [0; 0; 0; 0].
+proof. by smt(val_w ge2_len expr_gt0). qed.
+
 lemma zeroadiP:
   valid_adrsidxs [0; 0; 0; 0].
-proof. by smt(val_w ge2_len expr_gt0). qed.
+proof. rewrite valid_xadrsidxs_adrsidxs zeroxadiP. qed.
 
 phoare tree_hash_correct _ps _ss _lstart _sth :
   [ TreeHash.treehash :
@@ -2475,6 +2479,39 @@ module RFC_O (O : DSS_RFC.RO.POracle) = {
   }
 }.
 
+module WOTS_Encode = {
+  proc encode(m : W8.t list) : int list = {
+    var msg, csum, csum_32, len_2_bytes, csum_bytes, csum_base_w;
+
+    (* Convert message to base w *)
+    msg <@ Top.BaseW.BaseW.base_w(m, Params.len1);
+
+    (* Compute checksum *)
+    csum <@ WOTS.checksum(msg);
+    csum_32 <- W32.of_int csum;
+
+    (* Convert checksum to base w *)
+    csum_32 <- csum_32 `<<` W8.of_int (8 - ((ceil (Params.len2%r * log2(Params.w%r))) %% 8));
+    len_2_bytes <- (ceil ((ceil (Params.len2%r * log2(Params.w%r)))%r / 8%r));
+
+    (* msg = msg || base_w(toByte(csum_32, len_2_bytes), w, len_2); *)
+    csum_bytes <- toByte csum_32 len_2_bytes;
+    csum_base_w <@ Top.BaseW.BaseW.base_w(csum_bytes, Params.len2);
+    msg <- msg ++ csum_base_w;
+
+    return msg;
+  }
+}.
+
+lemma WOTSEncodeP m :
+  phoare[WOTS_Encode.encode : arg = m
+         ==>
+         map BaseW.insubd res
+         =
+         encode_int Params.len1 (BS2Int.bs2int (rev (BytesToBits m))) Params.len2]= 1%r.
+admitted.
+
+
 equiv kg_eq (O <: DSS_RFC.RO.POracle) :
   XMSS_TW_RFC(O).keygen ~ XMSS_RFC_Abs(RFC_O(O)).kg :
     ={arg} ==> pkrel res{1}.`1 res{2}.`2 /\ skrel res{1}.`2 res{2}.`1.
@@ -2754,11 +2791,8 @@ seq 2 1 : (   #pre
     rewrite (: set_layer_addr zero_address 0 = zero_address).
     + by rewrite /set_layer_addr setE /zero_address &(ext_eq) => x rngx; smt(initE).
     rewrite /RFC.skr2sko /= ?XAddress.insubdK /valid_xadrs -/(adr2ads zero_address) ?zeroadsE 2://.
-    + have valx : valid_xadrsidxs [0; 0; 0; 0].
-      + admit.
-      by rewrite HAX.Adrs.insubdK 1:zeroadiP.
+    + by rewrite HAX.Adrs.insubdK 1:zeroadiP zeroxadiP.
     by move => <-; rewrite DBHL.insubdK 1:size_map 1:AuthPath.valP.
-
     (* rewrite ?NBytes.valKd eqnth 1:/#; do 6! congr. *)
     (* rewrite /skr2sko /= zeroidxsE (: set_layer_addr zero_address 0 = zero_address). *)
     (* + by rewrite /set_layer_addr setE /zero_address &(ext_eq) => x rngx; smt(initE). *)
@@ -2787,13 +2821,12 @@ seq 2 1 : (   #pre
   rewrite (: kk = j{2}) 1:/# nth_rev DBHL.valP 1:/#.
   rewrite AuthPath.insubdK 2:DBHL.insubdK 3:(nth_map witness); 1..3: smt(size_map size_put).
   rewrite nth_put 1:/# /= /bs2block rval.
-  rewrite /RFC.skr2sko /= /cons_ap_trh DBHL.insubdK. admit.
+  rewrite /RFC.skr2sko /= /cons_ap_trh DBHL.insubdK.
+  + admit.
   rewrite /val_bt_trh eqsk21 eqsk22 eqsk232 (: (set_layer_addr zero_address 0) = zero_address).
   + by rewrite /set_layer_addr setE /zero_address &(ext_eq) => x rngx; smt(initE).
   rewrite -/(adr2ads zero_address) /trhtype XAddress.insubdK /valid_xadrs zeroadsE.
-  + have valx : valid_xadrsidxs [0; 0; 0; 0].
-    + admit.
-    by rewrite HAX.Adrs.insubdK 1:zeroadiP.
+  + by rewrite HAX.Adrs.insubdK 1:zeroadiP zeroxadiP.
   rewrite (range_cat (2 ^ (h - 1)) 0) 1:expr_ge0 1:// 1:ler_weexpn2l 1://; 1: smt(ge1_h).
   rewrite map_cat (list2treeS (h - 1)) 2,3:size_map 2,3:size_range; 1,2:smt(expr_ge0 ge1_h).
   + admit.
@@ -2815,18 +2848,24 @@ seq 1 1 : (   #pre
 + inline{1} WOTS_TW_ES.sign; inline{2} WOTS.sign_seed.
   wp.
   while (   ps0{1} = pub_seed0{2}
-         /\ ad0{1} = adr2ads address1{2}
+         /\ (if size sig2{1} = 0
+             then ad0{1}
+             else set_chidx ad0{1} (size sig2{1} - 1))
+             = adr2ads address1{2}
          /\ map BaseW.val (EmsgWOTS.val em{1}) = msg{2}
          /\ DBLL.val skWOTS0{1} = map bs2block (LenNBytes.val wots_skey{2})
          /\ (forall j, 0 <= j < size sig2{1} =>
              nth witness sig2{1} j = bs2block (nth witness sig0{2} j))
          /\ size sig2{1} = i{2}
-         /\ size sig2{1} <= XMSS_Security.FLXMSSTW.len).
+         /\ size sig0{2} = Params.len
+         /\ size sig2{1} <= XMSS_Security.FLXMSSTW.len
+         /\ 0 <= i{2} <= Params.len).
   + wp; inline{2} chain; wp; sp => /=.
     exlim address2{2}, t0{2} => ad2t t02t.
     while{2} (   BytesToBits (NBytes.val t0{2}) = DigestBlock.val (cf _seed{2} (adr2ads address2{2}) 0 chain_count{2} (BytesToBits (NBytes.val t02t)))
               /\ 0 <= chain_count{2} <= s{2}
-              /\ 0 <= s{2} < Top.XMSS_Security.FLXMSSTW.w - 1)
+              /\ 0 <= s{2} < Top.XMSS_Security.FLXMSSTW.w - 1
+              /\ i{2} < Params.len)
              (s{2} - chain_count{2}).
     + auto => &2 /> ih *.
       do ? split; 2..:smt(w_vals).
@@ -2836,9 +2875,62 @@ seq 1 1 : (   #pre
       rewrite BytesToBitsK NBytes.valKd => ->.
       rewrite /cf iteriS /= 1:/#.
       admit.
-    skip => &1 &2 /> ad1 *.
+    skip => &1 &2 /> ad1.
+    progress.
+    rewrite /cf iteri0 //. admit.
     admit.
+    admit.
+    admit. smt().
+    rewrite size_rcons /= ifF. smt(size_ge0).
+    admit.
+    admit.
+    by rewrite size_rcons. admit.
+    by rewrite size_rcons /#.
+    smt(size_ge0).
+    smt(size_ge0).
+    rewrite size_rcons in H14.
+    suff /#: XMSS_Security.FLXMSSTW.len = Params.len.
+    admit.
+    rewrite size_rcons.
+    suff /#: XMSS_Security.FLXMSSTW.len = Params.len.
+    admit.
+  wp -1 -1.
+  sp; seq 1 1 : (#pre /\ DBLL.val skWOTS0{1} = map bs2block (LenNBytes.val wots_skey{2})).
+  + admit.
+  outline{2} [1 .. 8] by { msg <@ WOTS_Encode.encode(M0); }.
+  ecall{2} (WOTSEncodeP M0{2}).
+  skip => &1 &2 />.
+  progress.
+  rewrite /RFC.skr2sko /= zeroidxsE XAddress.insubdK.
+  + by rewrite /valid_xadrs HAX.Adrs.insubdK 1:zeroadiP zeroxadiP.
+  rewrite /set_typeidx /set_kpidx HAX.Adrs.insubdK /put /= 1:zeroadiP.
+  rewrite /set_idx HAX.Adrs.insubdK /put /= 1:zeroadiP.
+  rewrite /adr2ads /set_type /set_ots_addr /adr2idxs ?setE /=; congr.
+  apply (eq_from_nth witness); 1: smt(size_rev size_map size_sub).
+  move=> i /= rngi.
+  rewrite nth_rev. smt(size_rev size_map size_sub).
+  rewrite (nth_map witness). smt(size_rev size_map size_sub).
+  rewrite nth_sub. smt(size_rev size_map size_sub).
+  do ? (rewrite initE /=). pose t := size _.
+  smt(size_rev size_map size_sub W32.initE W32.to_uintK_small W32.to_uint0 Index.valP ge1_h).
+  have <- : Params.len1 = XMSS_Security.FLXMSSTW.len1. admit.
+  have <- : Params.len2 = XMSS_Security.FLXMSSTW.len2. admit.
+  rewrite /bs2block DigestBlock.insubdK. admit.
+  rewrite -H7. rewrite -/EmsgWOTS.ofemsgWOTS EmsgWOTS.ofemsgWOTSK.
+  rewrite H7 size_cat /checksum /int2lbw /= ?size_mkseq.
   admit.
+  admit.
+
+  smt().
+  rewrite size_nseq. smt(ge0_len).
+  
+  smt(ge2_len).
+  smt(Params.ge0_len).
+  by have <- : XMSS_Security.FLXMSSTW.len = Params.len by admit.
+  smt(ge2_len).
+  rewrite LenNBytes.insubdK. smt().
+  congr; apply (eq_from_nth witness).
+  smt(size_map). move=> ? ?. smt(nth_map).
 auto => &1 &2 /> ? eqv *.
 rewrite Index.insubdK; 1:smt(Index.valP).
 by rewrite /RFC.skr2sko /= eqv /= to_uintD_small; smt(pow2_32 expr_ge0 h_max gt_exprsbde h_g0).
@@ -2964,11 +3056,25 @@ seq 5 9 : (   pkrel pk{1} pk{2}
 + inline{2} 9.
   wp; call (_: true).
   auto=> &1 &2 /> *.
+  pose kprt := _ ++ _ ++ _; have eq3n_sz : size kprt = 3 * n.
+  + admit.
+  rewrite ?ThreeNBytesBytes.insubdK 1://.
+  rewrite ?nth_mkseq 4:/=; 1..3:smt(mulzK ge1_n).
+  rewrite drop0 ?take_cat ?drop_cat.
+  rewrite ?size_cat ?NBytes.valP /= (: n < n + n) 2:take0 2:drop0 /=; 1:smt(ge1_n).
+  rewrite cats0 ?ifF 2:(: n * 2 - (n + n) = 0) 3:drop0; 1,2: smt(ge1_n).
+  rewrite ?take_cat ?NBytes.valP /= take0 cats0 NBytes.valKd /=.
+  do ? split => //.
+  rewrite &(Index.val_inj) Index.insubdK. admit.
+  admit.
+  move => *.
+  split. smt(Index.valP).
   admit.
 wp; inline{1} verify; inline{1} root_from_sigFLXMSSTW; inline{2} rootFromSig.
 sp; seq 1 1 : (   #pre
-               /\ map DigestBlock.val (DBLL.val pkWOTS0{1}) =  map (BytesToBits \o NBytes.val) (LenNBytes.val pk_ots{2})).
-+ admit.
+               /\ map DigestBlock.val (DBLL.val pkWOTS0{1}) = map (BytesToBits \o NBytes.val) (LenNBytes.val pk_ots{2})).
++ inline{1} pkWOTS_from_sigWOTS; inline{2} pkFromSig.
+  admit.
 wp; sp 0 5; elim* => ad2.
 exlim nodes0{2} => lf2.
 while{2} (BytesToBits (NBytes.val nodes0{2})
@@ -2976,16 +3082,80 @@ while{2} (BytesToBits (NBytes.val nodes0{2})
           (let app = drop (h - k{2}) (map bs2block (AuthPath.val auth0{2})) in
            let idp = (rev (BS2Int.int2bs k{2} (to_uint idx_sig0{2}))) in
            let lfp = bs2block lf2 in
-           DigestBlock.val (val_ap_trh_gen app idp lfp _seed0{2} (adr2ads ad2) k{2} (to_uint idx_sig0{2} %/ 2 ^ k{2})))
+           DigestBlock.val (val_ap_trh_gen app idp lfp _seed0{2}
+                            (adr2ads (set_type zero_address 2)) k{2} (* Off by one... *)
+                            (to_uint idx_sig0{2} %/ 2 ^ k{2})))
           /\ 0 <= k{2} <= h)
          (h - k{2}).
 + move => _ z.
   proc change 2 : (! odd (to_uint idx_sig0 %/ 2 ^ k)).
-  + admit.
-  auto => &1 &2 />.
+  + move=> &2; rewrite oddPn.
+    admit.
+  auto => &2 /> eqnds ge0k _ lthk; split => parity.
+  do ? split; 2..: smt().
+  rewrite (drop_nth witness). admit.
+  rewrite BS2Int.int2bsS 1:// rev_rcons /= ifF 1:-oddPn 1://.
+  rewrite (: (h - (k{2} + 1) + 1) = h - k{2}) 1:/# /trh /=.
+  rewrite ifF; 1: smt(Params.ge1_n).
+  move/(congr1 BitsToBytes) /(congr1 NBytes.insubd): eqnds.
+  rewrite BytesToBitsK NBytes.valKd => ->.
   admit.
-auto => &1 &2 />.
+  do ? split; 2..: smt().
+  rewrite (drop_nth witness). admit.
+  rewrite BS2Int.int2bsS 1:// rev_rcons /= ifT 1:-oddPn 1://.
+  rewrite (: (h - (k{2} + 1) + 1) = h - k{2}) 1:/# /trh /=.
+  rewrite ifF; 1: smt(Params.ge1_n).
+  move/(congr1 BitsToBytes) /(congr1 NBytes.insubd): eqnds.
+  rewrite BytesToBitsK NBytes.valKd => ->.
+  admit.
+auto => &1 &2 /> eqpk1 eqpk2 ltlidx eqidx eqsfl2 eqsfl3 eqcm eqpk11 eqpkots.
+split.
+split; 2: smt(ge0_h).
+rewrite BS2Int.int2bs0s rev_nil (: h = size (map bs2block (AuthPath.val auth{2}))).
++ by rewrite size_map 1:AuthPath.valP 1://.
+rewrite drop_size /= DigestBlock.insubdK. admit.
+trivial.
+move=> kr ndsr; split; 1: smt().
+move/lezNgt => gehk + _ leh_kr @/RFC.pkr2pko /=.
+rewrite (: kr = h) 1:/# drop0 /val_ap_trh.
+rewrite /pkco /= ifF 2:ifF.
+smt(Params.ge1_n gt2_len @IntOrder).
+smt(Params.ge1_n gt2_len ltr_pmul2l).
+move/(congr1 BitsToBytes) /(congr1 NBytes.insubd).
+rewrite BytesToBitsK NBytes.valKd => ->.
+pose valap1 := val_ap_trh_gen _ _ _ _ _ _ _.
+pose valap2 := val_ap_trh_gen _ _ _ _ _ _ _.
+suff : valap1 = valap2.
++ move=> ->; rewrite eqpk1 eq_iff.
+  split => [| <-] @/bs2block.
+  + move/(congr1 block2bs) => @/block2bs.
+    rewrite DigestBlock.insubdK. admit.
+    by rewrite BytesToBitsK NBytes.valKd => <-.
+  rewrite NBytes.insubdK. admit.
+  by rewrite BitsToBytesK 1:DigestBlock.valP 1:dvdz_mulr 1:dvdzz DigestBlock.valKd.
+rewrite /valap1 /valap2.
+congr.
+move/(congr1 (List.map DigestBlock.insubd)): eqsfl3.
+rewrite -?map_comp /(\o) -/bs2block => <-.
+rewrite (eq_map _ idfun); 1: move=> x /=; 1: by rewrite DigestBlock.valKd.
+by rewrite map_id.
+smt().
 admit.
+rewrite zeroidxsE /set_type /set_typeidx.
+rewrite XAddress.insubdK /valid_xadrs 1:HAX.Adrs.insubdK 1:zeroadiP 1:zeroxadiP.
+rewrite HAX.Adrs.insubdK 1:zeroadiP ?setE /put /= /adr2ads /adr2idxs; congr.
+apply (eq_from_nth witness); 1: smt(size_rev size_map size_sub).
+move=> i /= rngi.
+rewrite nth_rev. smt(size_rev size_map size_sub).
+rewrite (nth_map witness). smt(size_rev size_map size_sub).
+rewrite nth_sub. smt(size_rev size_map size_sub).
+do ? (rewrite initE /=). pose t := size _; have ->: t = 4 by smt(size_rev size_map size_sub).
+case (i = 0) => [-> //|].
+case (i = 1) => [-> //|].
+case (i = 2) => [-> //|].
+case (i = 3) => [-> //| /#].  (* smt... *)
+rewrite eq_sym -divz_eq0 1:expr_gt0 1://; split => [| /#].
+by rewrite /to_uint BS2Int.bs2int_ge0.
 qed.
 (* PY *)
 (*
