@@ -510,7 +510,9 @@ seq 3 0 : (
 seq 1 1 : (
   #pre /\
   wots_pk{1} = DecodeWotsPk pk_ots{2}
-); first by wp; exists * root{1}, pub_seed{1}, ots_addr{1}, address0{2}; elim * => P1 P2 P3 P4; call (pk_from_sig_correct P1 P2 P3 P4) => [/# |]; by auto => /> &1 &2 /#.
+). 
+- wp; exists * root{1}, pub_seed{1}, ots_addr{1}, address0{2}; elim * => P1 P2 P3 P4; call (pk_from_sig_correct P1 P2 P3 P4); last by auto => /> &1 &2 /#.
+(do split; 3: by rewrite /log_w (: w = XMSS_WOTS_W) 1:/# /XMSS_WOTS_W /XMSS_WOTS_LOG_W  log2_16 from_int_ceil) => /#.
 
 seq 0 0 : (
      #{/~to_uint t64{1} = to_uint sm_ptr{1} + 35}
@@ -634,7 +636,9 @@ seq 3 0 : (
 seq 1 1 : (
   #pre /\
   wots_pk{1} = DecodeWotsPk pk_ots{2}
-); first by  wp; exists * root{1}, pub_seed{1}, ots_addr{1}, address0{2}; elim * => P1 P2 P3 P4; call (pk_from_sig_correct P1 P2 P3 P4) => [/# |]; by auto => /> &1 &2 /#.
+).
+- wp; exists * root{1}, pub_seed{1}, ots_addr{1}, address0{2}; elim * => P1 P2 P3 P4; call (pk_from_sig_correct P1 P2 P3 P4); last by auto => /> &1 &2 /#.
+(do split; 3: by rewrite /log_w (: w = XMSS_WOTS_W) 1:/# /XMSS_WOTS_W /XMSS_WOTS_LOG_W  log2_16 from_int_ceil) => /#.
 
 seq 0 0 : (
      #{/~to_uint t64{1} = to_uint sm_ptr{1} + 35}
