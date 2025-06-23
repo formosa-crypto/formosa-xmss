@@ -2451,7 +2451,9 @@ have Hsil := si_size_in_loop _lstart i{hr} _sth _ss _ps (adr2ads zero_address) (
 qed.
 
 op pkrel (pks : pkXMSSTWRFC) (pkr : xmss_pk) : bool =
-  pks.`1 = bs2block pkr.`pk_root /\ pks.`2 = pkr.`pk_pub_seed.
+  pks.`1 = bs2block pkr.`pk_root 
+ /\ pks.`2 = pkr.`pk_pub_seed 
+ /\ pkr.`pk_oid = impl_oid.
 
 op skrel (sks : skXMSSTWRFC) (skr : xmss_sk) : bool =
      sks.`1 = skr.`sk_prf
@@ -2756,10 +2758,10 @@ lemma eq_lens :
   XMSS_Security.FLXMSSTW.len = Params.len.
 proof. by rewrite /len eq_len1s eq_len2s. qed.
 
-equiv sig_eq (O <: DSS_RFC.RO.POracle) :
+equiv sig_eq (O <: DSS_RFC.RO.POracle) _idx :
   XMSS_TW_RFC(O).sign ~ XMSS_RFC_Abs(RFC_O(O)).sign :
-  ={glob O} /\ skrel sk{1} sk{2} /\ ={m} /\ Index.val sk{1}.`2.`1 < 2^h -1  ==>
-     sigrel res{1}.`1 res{2}.`1 /\ skrel res{1}.`2 res{2}.`2.
+  ={glob O} /\ skrel sk{1} sk{2} /\ ={m} /\ to_uint sk{2}.`idx = _idx /\ _idx <= 2^h - 1  ==>
+     sigrel res{1}.`1 res{2}.`1 /\ to_uint res{2}.`2.`idx = _idx+1 /\ (_idx < 2^h - 1 => skrel res{1}.`2 res{2}.`2).
 proof.
 proc.
 inline{1} RFC.FL_XMSS_TW_RFC.sign.
@@ -2771,13 +2773,13 @@ swap{1} ^m1<- -2.
 swap{1} [^sk0<- .. ^ad<-] -3.
 swap{2} [^sk0<- .. ^pub_seed<-] -2.
 sp.
-wp 17 20 => />.
+wp 17 20 => />;1:smt().
 elim*=> skt.
 seq 1 1 : (#pre /\ cm{1} = bs2block _M'{2}).
 + inline{2} *.
   wp; sp.
   call (: true).
-  skip => &1 /> eqsk1 eqsk21 eqsk22 eqsk231 eqsk232 lt2h1sk.
+  skip => &1 /> eqsk1 eqsk21 eqsk22 eqsk231 eqsk232.
   pose kprt := _ ++ _ ++ _; have eq3n_sz : size kprt = 3 * n.
   + by rewrite ?size_cat ?NBytes.valP /#.
   rewrite ?ThreeNBytesBytes.insubdK 1://.
@@ -2788,7 +2790,7 @@ seq 1 1 : (#pre /\ cm{1} = bs2block _M'{2}).
   rewrite ?take_cat ?NBytes.valP /= take0 cats0.
   rewrite eqsk1 eqsk21 eqsk231 /bs2block /= ?NBytes.insubdK ?NBytes.valKd /=.
   + rewrite size_rev size_mkseq; smt(ge1_n).
-  split => [| _ r *].
+  move => ?;split => [| _ r *].
   + admit.
   rewrite NBytes.insubdK 1:size_map 1:size_chunk // 1:DigestBlock.valP 1:mulKz 1,2://.
   by rewrite BitsToBytesK 1:DigestBlock.valP 1:dvdz_mulr 1:dvdzz DigestBlock.valKd.
@@ -2908,7 +2910,7 @@ seq 1 1 : (   #pre
               DBLL.insubd (map (fun (b : nbytes) => bs2block b) (LenNBytes.val sig_ots{2}))).
 + inline{1} WOTS_TW_ES.sign; inline{2} WOTS.sign_seed.
   wp.
-  while (   ps0{1} = pub_seed0{2}
+  while (   ps0{1} = pub_seed0{2} /\ idx_new{2} = skt.`Top.XMSS_RFC_Abs.idx + W32.one 
          /\ ad0{1} = set_kpidx (XAddress.val (XAddress.insubd (HAX.Adrs.insubd (adr2idxs zero_address)))) (Index.val idx0{1})
          /\ address1{2} = set_chain_addr (set_ots_addr zero_address (to_uint idx0{2})) (if i{2} = 0 then 0 else i{2} - 1)
          /\ set_chidx ad0{1} (if size sig2{1} = 0 then 0 else size sig2{1} - 1)
@@ -3049,8 +3051,11 @@ seq 1 1 : (   #pre
   smt(size_map). move=> i rngi.
   by rewrite (nth_map witness); smt().
 auto => &1 &2 /> ? eqv *.
-rewrite Index.insubdK; 1:smt(Index.valP).
+do split;last first. 
++ move => *; rewrite Index.insubdK; 1:smt(Index.valP).
 by rewrite /RFC.skr2sko /= eqv /= to_uintD_small; smt(pow2_32 expr_ge0 h_max gt_exprsbde h_g0).
+by rewrite /RFC.skr2sko /= eqv /=; smt(pow2_32 expr_ge0 h_max gt_exprsbde h_g0).
+by rewrite to_uintD_small /=;smt( l_max h_max).
 qed.
 
 (*
@@ -3260,7 +3265,7 @@ while{2} (BytesToBits (NBytes.val nodes0{2})
   do ? congr.
   rewrite exprD_nneg // divz_mul 1:expr_ge0 // adf.
   admit.
-auto => &1 &2 /> eqpk1 eqpk2 ltlidx eqidx eqsfl2 eqsfl3 eqcm eqpk11 eqpkots.
+auto => &1 &2 /> eqpk1 eqpk2 ? ltlidx eqidx eqsfl2 eqsfl3 eqcm eqpk11 eqpkots.
 split.
 split; 2: smt(ge0_h).
 rewrite BS2Int.int2bs0s take0 ?rev_nil //= /bs2block.

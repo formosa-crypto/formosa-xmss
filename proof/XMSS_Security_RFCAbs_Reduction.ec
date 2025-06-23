@@ -40,15 +40,7 @@ module (S : Scheme_RO) (O : RO.POracle) = {
       return (kp.`2,kp.`1);
    }
 
-   (* THIS IS A HACK BECAUSE RFC SHOULD BE CHECKING FOR SK IDX RANGE *)
-   proc sign(sk : xmss_sk, m : W8.t list) : sig_t * xmss_sk = { 
-     var s;
-     s <- witness;
-     if (to_uint sk.`idx < 2^h - 1) {
-       s <@ XMSS_RFC_Abs(RFC_O(O)).sign(sk,m);
-     }
-     return s;
-   }
+   proc sign = XMSS_RFC_Abs(RFC_O(O)).sign
 
    (* THIS IS A HACK BECAUSE RFC SHOULD BE CHECKING FOR IDX RANGE.  *)
    proc verify(pk : xmss_pk, m : W8.t list, sig : sig_t) : bool  = {
@@ -58,7 +50,6 @@ module (S : Scheme_RO) (O : RO.POracle) = {
    }
 }.
 
-print sigrel.
 module B_Oracles(O : DSS_RFC.DSS.KeyUpdating.SOracle_CMA) : SOracle_CMA = {
    proc sign(m : W8.t list) : sig_t = {
       var sig;
@@ -73,7 +64,7 @@ module B_Oracles(O : DSS_RFC.DSS.KeyUpdating.SOracle_CMA) : SOracle_CMA = {
 module (B(A : Adv_EUFCMA_RO) : DSS_RFC.KeyUpdatingROM.Adv_EUFCMA_RO) (RO : RO.POracle, O : DSS_RFC.DSS.KeyUpdating.SOracle_CMA) = {
    proc forge(pk : pkXMSSTWRFC) : W8.t list * sigXMSSTW = { 
          var f;
-         f <@ A(RO,B_Oracles(O)).forge({| pk_oid = witness; pk_root = NBytes.insubd (BitsToBytes (DigestBlock.val pk.`1)); pk_pub_seed = pk.`2|});
+         f <@ A(RO,B_Oracles(O)).forge({| pk_oid = impl_oid; pk_root = NBytes.insubd (BitsToBytes (DigestBlock.val pk.`1)); pk_pub_seed = pk.`2|});
          return (f.`1,
           (f.`2.`r,
             (Index.insubd (to_uint f.`2.`sig_idx),
@@ -81,7 +72,6 @@ module (B(A : Adv_EUFCMA_RO) : DSS_RFC.KeyUpdatingROM.Adv_EUFCMA_RO) (RO : RO.PO
              DBHL.insubd (rev (map (fun (b : nbytes) => DigestBlock.insubd (BytesToBits (NBytes.val b))) (AuthPath.val f.`2.`r_sig.`2))))));
    }
 }. 
-
 lemma security &m  (O <: RO.Oracle  {-O_CMA_Default, -DSS_RFC.DSS.KeyUpdating.O_CMA_Default}) (A <: Adv_EUFCMA_RO {-O_CMA_Default, -DSS_RFC.DSS.KeyUpdating.O_CMA_Default, -O}):
     Pr [ EUF_CMA_RO(S,A,O_CMA_Default,O).main() @ &m : res ] <=
     Pr[DSS_RFC.KeyUpdatingROM.EUF_CMA_RO(XMSS_TW_RFC, B(A), DSS_RFC.DSS.KeyUpdating.O_CMA_Default, O).main
@@ -108,17 +98,18 @@ seq 3 4 : (O_Base_Default.qs{1} = DSS_RFC.DSS.O_Base_Default.qs{2} /\ pkrel pk{2
 
 call(: ={glob O} 
     /\ O_Base_Default.qs{1} = DSS_RFC.DSS.O_Base_Default.qs{2} 
-    /\ skrel DSS_RFC.DSS.KeyUpdating.O_CMA_Default.sk{2} O_CMA_Default.sk{1} ).
-+ symmetry; proc;inline {1} 1;inline {2} 1.
-  sp; if{2}; last first. 
-  + admit. (* FIXME: BRING IN QUERY BOUNDS.  *)
-  wp; call (sig_eq O).
-  auto => /> &1 &2 ??????;split;1:smt().
-  move => ? s1 s2 O1 O2 H0 H1 H2  H3 H4 H5 H6 H7 H8;do split.
+    /\ (to_uint O_CMA_Default.sk{1}.`idx < 2 ^ h => skrel DSS_RFC.DSS.KeyUpdating.O_CMA_Default.sk{2} O_CMA_Default.sk{1} )).
++ symmetry;proc;inline {1} 1.
+  exlim O_CMA_Default.sk{2}.`idx => _idx.
+  wp; call (sig_eq O (to_uint _idx)).
+  auto => /> &1 &2.
+  have ? : to_uint O_CMA_Default.sk{2}.`idx < 2 ^ h  by  admit. (* query bounds *)
+  move =>  H0;split;1:smt(). 
+  move =>  H1 H2  H3 H4 H5 H6 s1 s2 O1 O2 H7 H8 H9 H10 H11 H12 ;do split.
   + have ? : W32.of_int (Index.val s1.`1.`2.`1) = s2.`1.`sig_idx.
-    + apply W32.to_uint_eq; rewrite /= of_uintK /= -H1; smt(Index.valP l_max). 
+    + apply W32.to_uint_eq; rewrite /= of_uintK /= -H8; smt(Index.valP l_max). 
     have ? : LenNBytes.insubd (map NBytes.insubd (map (BitsToBytes \o DigestBlock.val) (DBLL.val s1.`1.`2.`2))) = s2.`1.`r_sig.`1.
-    + rewrite H2 /= DBLL.insubdK;1: by rewrite size_map LenNBytes.valP eq_lens. 
+    + rewrite H9 /= DBLL.insubdK;1: by rewrite size_map LenNBytes.valP eq_lens. 
       rewrite  -!map_comp /(\o) /=.
       have -> /= : (fun (x : nbytes) =>
         NBytes.insubd (BitsToBytes (DigestBlock.val (DigestBlock.insubd (BytesToBits (NBytes.val x)))))) = idfun.
@@ -128,7 +119,7 @@ call(: ={glob O}
         by rewrite BytesToBitsK NBytes.valKd /#. 
       by rewrite map_id LenNBytes.valKd.
     have ? : AuthPath.insubd (rev (map NBytes.insubd (map (BitsToBytes \o DigestBlock.val) (DBHL.val s1.`1.`2.`3)))) = s2.`1.`r_sig.`2; last by smt().
-    rewrite -!map_rev H3 -!map_comp /(\o) /=.
+    rewrite -!map_rev H10 -!map_comp /(\o) /=.
     have -> /= : (fun (x : nbytes) =>
         NBytes.insubd (BitsToBytes (DigestBlock.val (DigestBlock.insubd (BytesToBits (NBytes.val x)))))) = idfun.
     + apply fun_ext => x; rewrite DigestBlock.insubdK. 
@@ -137,12 +128,12 @@ call(: ={glob O}
       by rewrite BytesToBitsK NBytes.valKd /#. 
     by rewrite map_id AuthPath.valKd.      
   + admit. (* EASY FIXME: need to prove preservation of RO in signature *)
-  + conseq (: ={res,glob O});1: smt(). 
+  + by smt().
+  + conseq (: _ ==> ={res,glob O}); first by smt(). 
     by sim.
 inline {1} 2; inline {2} 2;wp => /=.
 inline {1} 1;wp;symmetry;call (kg_eq O).
 auto => /> r1 r2 H1??????.
-have ? : r2.`2.`pk_oid = witness. admit. (* FIXME: WHAT ARE WE DOING WITH OID? *)
 have ? : r2.`2.`pk_pub_seed = r1.`1.`2 by smt().
 have ? : r2.`2.`pk_root = NBytes.insubd (BitsToBytes (DigestBlock.val r1.`1.`1)); last by smt().
 + rewrite H1 /bs2block DigestBlock.insubdK.
