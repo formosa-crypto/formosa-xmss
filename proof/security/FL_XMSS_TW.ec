@@ -624,7 +624,7 @@ import DigestBlock DBLL WAddress EmsgWOTS.
 
 
 (* --- Types (2/3) --- *)
-(* Integers between 0 (including) and l (including), used for the signing index *)
+(* Integers between 0 (including) and l (excluding), used for the signing index *)
 clone import Subtype as Index with
   type T <= int,
     op P <= fun (i : int), 0 <= i < l
