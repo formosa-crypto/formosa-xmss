@@ -29,9 +29,6 @@ qed.
 
 op nbytexor(a b : nbytes) : nbytes = NBytes.insubd (bytexor (NBytes.val a) (NBytes.val b)).
 
-(* w is always a power of 2 ==> ceil/floor dont change the result *)
-op log_w : int = ceil (log2 (w%r)).
-
 module Chain = {
    proc chain(X : nbytes, i s : int, _seed : seed, address : adrs) : nbytes = {
       (*
@@ -343,8 +340,8 @@ module WOTS = {
     csum_32 <- W32.of_int csum;
 
     (* Convert checksum to base w *) 
-    csum_32 <- csum_32 `<<` W8.of_int ( 8 - ( ( len2 * log_w) ) %% 8 );
-    len_2_bytes <- ceil( ( len2 * log_w )%r / 8%r );
+    csum_32 <- csum_32 `<<` W8.of_int ( 8 - ( ( len2 * log2_w) ) %% 8 );
+    len_2_bytes <- ceil( ( len2 * log2_w )%r / 8%r );
 
     (* msg = msg || base_w(toByte(csum_32, len_2_bytes), w, len_2); *)
     csum_bytes <- toByte csum_32 len2;
@@ -397,8 +394,8 @@ module WOTS = {
           len_2_bytes = ceil( ( len_2 * lg(w) ) / 8 );
 
      *)
-    csum_32 <- csum_32 `<<` W8.of_int ( 8 - ( ( len2 * log_w ) %% 8 ));
-    len_2_bytes <- ceil ( (len2 * log_w)%r / 8%r );
+    csum_32 <- csum_32 `<<` W8.of_int ( 8 - ( ( len2 * log2_w ) %% 8 ));
+    len_2_bytes <- ceil ( (len2 * log2_w)%r / 8%r );
 
     (* msg = msg || base_w(toByte(csum, len_2_bytes), w, len_2); *)
     csum_bytes <- toByte csum_32 len_2_bytes;
@@ -440,8 +437,8 @@ module WOTS = {
     csum_32 <- W32.of_int csum;
 
     (* Convert checksum to base w *)
-    csum_32 <- csum_32 `<<` W8.of_int (8 - (len2 * log_w) %% 8);
-    len_2_bytes <- ceil ( (len2 * log_w)%r / 8%r);
+    csum_32 <- csum_32 `<<` W8.of_int (8 - (len2 * log2_w) %% 8);
+    len_2_bytes <- ceil ( (len2 * log2_w)%r / 8%r);
 
     (* msg = msg || base_w(toByte(csum_32, len_2_bytes), w, len_2); *)
     csum_bytes <- toByte csum_32 len_2_bytes;
