@@ -339,13 +339,13 @@ module WOTS = {
     csum <@ checksum(msg);
     csum_32 <- W32.of_int csum;
 
-    (* Convert checksum to base w *)
-    csum_32 <- csum_32 `<<` W8.of_int (8 - ((ceil (len2%r * log2(w%r))) %% 8));
-    len_2_bytes <- (ceil ((ceil (len2%r * log2(w%r)))%r / 8%r));
+    (* Convert checksum to base w *) 
+    csum_32 <- csum_32 `<<` W8.of_int ( 8 - ( ( len2 * log2_w) ) %% 8 );
+    len_2_bytes <- ceil( ( len2 * log2_w )%r / 8%r );
 
     (* msg = msg || base_w(toByte(csum_32, len_2_bytes), w, len_2); *)
     csum_bytes <- toByte csum_32 len2;
-    csum_base_w <@ BaseW.base_w(csum_bytes, len_2_bytes);
+    csum_base_w <@ BaseW.base_w(csum_bytes, len2);
     msg <- msg ++ csum_base_w;
 
     i <- 0;
@@ -388,8 +388,14 @@ module WOTS = {
     csum_32 <- W32.of_int csum;
 
     (* Convert checksum to base w *)
-    csum_32 <- csum_32 `<<` W8.of_int (8 - ((ceil (len2%r * log2(w%r))) %% 8));
-    len_2_bytes <- (ceil ((ceil (len2%r * log2(w%r)))%r / 8%r));
+    (*
+    RFC:
+          csum = csum << ( 8 - ( ( len_2 * lg(w) ) % 8 ));
+          len_2_bytes = ceil( ( len_2 * lg(w) ) / 8 );
+
+     *)
+    csum_32 <- csum_32 `<<` W8.of_int ( 8 - ( ( len2 * log2_w ) %% 8 ));
+    len_2_bytes <- ceil ( (len2 * log2_w)%r / 8%r );
 
     (* msg = msg || base_w(toByte(csum, len_2_bytes), w, len_2); *)
     csum_bytes <- toByte csum_32 len_2_bytes;
@@ -431,8 +437,8 @@ module WOTS = {
     csum_32 <- W32.of_int csum;
 
     (* Convert checksum to base w *)
-    csum_32 <- csum_32 `<<` W8.of_int (8 - (len2 * floor (log2 w%r)) %% 8);
-    len_2_bytes <- (ceil ((ceil (len2%r * log2(w%r)))%r / 8%r));
+    csum_32 <- csum_32 `<<` W8.of_int (8 - (len2 * log2_w) %% 8);
+    len_2_bytes <- ceil ( (len2 * log2_w)%r / 8%r);
 
     (* msg = msg || base_w(toByte(csum_32, len_2_bytes), w, len_2); *)
     csum_bytes <- toByte csum_32 len_2_bytes;
