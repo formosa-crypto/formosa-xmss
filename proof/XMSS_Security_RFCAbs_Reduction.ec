@@ -94,11 +94,42 @@ while (true) (XMSS_Security.FLXMSSTW.len - size pkWOTS);move => *; auto => />;sm
 qed.
 
 lemma sign1_ll (O <: RO.Oracle) : islossless O.o => islossless XMSS_TW_RFC(O).sign.
-admitted.
+move => Oll.
+islossless.
++ while (true) (l - size leafl); last by auto;smt(size_rcons).
+  move => z;wp;conseq (: true);1:smt(size_rcons).
+  islossless.
+  + while (true) (XMSS_Security.FLXMSSTW.len - size pkWOTS);move => *; auto => />;smt(size_rcons).
+  + while (true) (XMSS_Security.FLXMSSTW.len - size skWOTS);move => *; auto => />;smt(size_rcons).
+  + while (true) (XMSS_Security.FLXMSSTW.len - size sig);move => *; auto => />;smt(size_rcons).
+  while (true) (XMSS_Security.FLXMSSTW.len - size skWOTS);move => *; auto => />;smt(size_rcons).
+qed.
 
 lemma sign2_ll (O <: RO.Oracle) : islossless O.o => islossless S(O).sign.
-admitted.
-
+move => Oll.
+islossless.
++ while (true) (Params.len - i). 
+  + move => *; inline *; wp; while (true) (s - chain_count);move => *; auto => /> /#.
+    by auto;smt().
++ while (true) (outlen - consumed);move => *; auto => /> /#.
++ while (true) (Params.len1 - i);move => *; auto => /> /#.
++ while (true) (outlen - consumed);move => *; auto => /> /#.
++ while (true) (Params.len - i);move => *; auto => /> /#.
++ while (true) (h-j);last by auto => /> /#.
+  move => z;wp;conseq (: true);1:smt().
+  islossless.
+  + while (true) (2^t - i); last by auto;smt().
+    move => zz;wp;conseq (: true);1:smt().
+    while (true) (to_uint offset - 2 + 1).
+    + move => zzz;auto => /> &hr; rewrite uleE /= => ? _.
+      by rewrite to_uintB /=;rewrite ?uleE /#.
+    conseq (: true) => /=;1: by move => &hr ?? ofs ?;rewrite uleE /= /#. 
+    islossless.
+    + while (true) (Params.len - i). 
+    + move => *; inline *; wp; while (true) (s - chain_count);move => *; auto => /> /#.
+      by auto;smt().
++ while (true) (Params.len - i);move => *; auto => /> /#.
+qed.
 
 lemma security &m  (O <: RO.Oracle  {-O_CMA_Default, -DSS_RFC.DSS.KeyUpdating.O_CMA_Default}) (A <: Adv_EUFCMA_RO {-O_CMA_Default, -DSS_RFC.DSS.KeyUpdating.O_CMA_Default, -O}):
     islossless O.o =>
