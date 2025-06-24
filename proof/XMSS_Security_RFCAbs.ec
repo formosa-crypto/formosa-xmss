@@ -711,11 +711,55 @@ lemma Eqv_WOTS_pkgen  (ad : adrs) (ss ps : seed) :
   hoare[WOTS.pkGen : arg = (ss, ps, ads2adr ad) ==>
      LenNBytes.insubd (map NBytes.insubd (chunk n (BitsToBytes (flatten (map DigestBlock.val (DBLL.val
        (pkWOTS_from_skWOTS (gen_skWOTS ss ps ad) ps ad))))))) = res].
+proof.
 admitted.
+
+phoare Chain_chain_ll: [ Chain.chain: 0 <= s < Params.w ==> true ] =1%r.
+proof.
+proc; sp; conseq (: 0 <= chain_count <= s ==> _)=> //.
+while (0 <= chain_count <= s) (s - chain_count) s 1%r=> //.
++ smt().
++ move=> ih'; sp; conseq ih'.
+  by move=> &0 /> /#.
++ by auto=> /> &0 /#.
+by split=> [/#|z]; auto=> /> /#.
+qed.
 
 lemma Eqv_WOTS_pkgen_ll  :
  islossless WOTS.pkGen.
-admitted.
+proof.
+(** FIXME: Really? **)
+proc; sp.
+seq 1: (i = 0)=> //.
++ conseq (: true)=> //.
+  call (: true)=> //.
+  sp; conseq (: size sk = Params.len /\ 0 <= i <= Params.len ==> _).
+  + by move=> &0 />; rewrite ge0_len size_nseq; smt(ge0_len).
+  while (0 <= i <= Params.len) (Params.len - i) Params.len 1%r=> //.
+  + smt(ge0_len).
+  + move=> ih; sp; conseq ih.
+    by move=> &0 />; smt(size_put).
+  + by auto=> /> &0 /#.
+  by split=> [/#|z]; auto=> /> /#.
++ conseq (: 0 <= i <= Params.len ==> _)=> //.
+  + smt(ge0_len).
+  while (0 <= i <= Params.len) (Params.len - i) Params.len 1%r=> //.
+  + smt(ge0_len).
+  + move=> ih.
+    seq -1: (0 <= i <= Params.len)=> //.
+    + wp; call Chain_chain_ll.
+      by wp; auto=> />; smt(w_vals).
+    by hoare; wp; conseq (: true)=> //; 1:smt().
+  + wp; conseq (: true)=> //.
+    + smt().
+    call Chain_chain_ll.
+    by wp; auto=> />; smt(w_vals).
+  split=> [/#|z].
+  wp; call (: 0 <= s < Params.w ==> true).
+  + by conseq Chain_chain_ll.
+  by auto=> />; smt(w_vals).
++ by hoare; conseq (: true)=> />.
+qed.
 
 (* list of all the leaves up to an index, exclusive *)
 op leaf_range(ss ps : Params.nbytes, ad : SA.adrs, start lidxo  : int) =
