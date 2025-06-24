@@ -365,8 +365,10 @@ rewrite /len /len1 /len2 /= /len1 /len2 /w /w.
 admitted.
 
 
-lemma l_max : l < 4294967296
-  by rewrite -pow2_32 /l;apply gt_exprsbde; smt(h_g0 h_max).
+lemma l_max : l <= 2147483648.
+have -> : 2147483648 = 2^31 by simplify => //=.
+rewrite /l;apply ler_weexpn2l; 1,2:smt(h_max h_g0).
+qed.
 
 
 op bs2block(a : nbytes) = DigestBlock.insubd (BytesToBits (NBytes.val a)).
@@ -2521,7 +2523,7 @@ admitted.
 
 equiv kg_eq (O <: DSS_RFC.RO.POracle) :
   XMSS_TW_RFC(O).keygen ~ XMSS_RFC_Abs(RFC_O(O)).kg :
-    ={arg} ==> pkrel res{1}.`1 res{2}.`2 /\ skrel res{1}.`2 res{2}.`1.
+    ={arg} ==> pkrel res{1}.`1 res{2}.`2 /\ skrel res{1}.`2 res{2}.`1 /\ to_uint res{2}.`1.`idx = 0.
 proof.
 have ? := h_g0; have ? := expr_gt0.
 
