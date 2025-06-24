@@ -2767,7 +2767,7 @@ proof. by rewrite /len eq_len1s eq_len2s. qed.
 equiv sig_eq (O <: DSS_RFC.RO.POracle) _idx :
   XMSS_TW_RFC(O).sign ~ XMSS_RFC_Abs(RFC_O(O)).sign :
   ={glob O} /\ skrel sk{1} sk{2} /\ ={m} /\ to_uint sk{2}.`idx = _idx /\ _idx <= 2^h - 1  ==>
-     sigrel res{1}.`1 res{2}.`1 /\ to_uint res{2}.`2.`idx = _idx+1 /\ (_idx < 2^h - 1 => skrel res{1}.`2 res{2}.`2).
+  ={glob O} /\  sigrel res{1}.`1 res{2}.`1 /\ to_uint res{2}.`2.`idx = _idx+1 /\ (_idx < 2^h - 1 => skrel res{1}.`2 res{2}.`2).
 proof.
 proc.
 inline{1} RFC.FL_XMSS_TW_RFC.sign.

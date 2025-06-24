@@ -73,12 +73,39 @@ module (B(A : Adv_EUFCMA_RO) : DSS_RFC.KeyUpdatingROM.Adv_EUFCMA_RO) (RO : RO.PO
    }
 }. 
 
+lemma verify1_ll (O <: RO.Oracle) : islossless O.o => islossless XMSS_RFC_Abs(RFC_O(O)).verify.
+move => Oll. 
+proc. 
+islossless.
++ while (true) (h - k);move => *; auto => /> /#.
++ while (true) (Params.len - i). 
+  + move => *; inline *; wp; while (true) (s - chain_count);move => *; auto => /> /#.
+    by auto;smt().
++ while (true) (outlen - consumed);move => *; auto => /> /#.
++ while (true) (Params.len1 - i);move => *; auto => /> /#.
++ while (true) (outlen - consumed);move => *; auto => /> /#.
+qed.
+
+lemma verify2_ll (O <: RO.Oracle) : islossless O.o => islossless XMSS_TW_RFC(O).verify.
+move => Oll. 
+proc. 
+islossless.
+while (true) (XMSS_Security.FLXMSSTW.len - size pkWOTS);move => *; auto => />;smt(size_rcons).
+qed.
+
+lemma sign1_ll (O <: RO.Oracle) : islossless O.o => islossless XMSS_TW_RFC(O).sign.
+admitted.
+
+lemma sign2_ll (O <: RO.Oracle) : islossless O.o => islossless S(O).sign.
+admitted.
+
+
 lemma security &m  (O <: RO.Oracle  {-O_CMA_Default, -DSS_RFC.DSS.KeyUpdating.O_CMA_Default}) (A <: Adv_EUFCMA_RO {-O_CMA_Default, -DSS_RFC.DSS.KeyUpdating.O_CMA_Default, -O}):
     islossless O.o =>
     (forall (RO <: RO.POracle{-A}) (O0 <: SOracle_CMA{-A}),
       islossless O0.sign => islossless RO.o => islossless A(RO, O0).forge) =>
      (forall  (RO <: RO.POracle{-A}), hoare [ A(RO,O_CMA_Default(S(O))).forge :  
-         size O_Base_Default.qs = 0 ==> size O_Base_Default.qs < l]) =>
+         size O_Base_Default.qs = 0 ==> size O_Base_Default.qs <= l]) =>
     Pr [ EUF_CMA_RO(S,A,O_CMA_Default,O).main() @ &m : res ] <=
     Pr[DSS_RFC.KeyUpdatingROM.EUF_CMA_RO(XMSS_TW_RFC, B(A), DSS_RFC.DSS.KeyUpdating.O_CMA_Default, O).main
                    () @ &m : res].
@@ -97,27 +124,17 @@ seq 3 4 : (O_Base_Default.qs{1} = DSS_RFC.DSS.O_Base_Default.qs{2}
        /\ f{2}.`2 = sig{1}); last first.
 + sp;case (0 <= to_uint sig0{1}.`sig_idx < l); last first. 
   + inline {1} 3;inline {2} 2;wp;conseq (: _ ==> true);1: by auto => />.
-    + call {1} (: true ==> true).
-      + islossless.
-        + while (true) (h - k);move => *; auto => /> /#.
-        + while (true) (Params.len - i). 
-          + move => *; inline *; wp; while (true) (s - chain_count);move => *; auto => /> /#.
-            by auto;smt().
-        + while (true) (outlen - consumed);move => *; auto => /> /#.
-        + while (true) (Params.len1 - i);move => *; auto => /> /#.
-        + while (true) (outlen - consumed);move => *; auto => /> /#.
-    + call {2} (: true ==> true).
-      + islossless.
-        + while (true) (XMSS_Security.FLXMSSTW.len - size pkWOTS);move => *; auto => />;smt(size_rcons).
-          by auto.
-  wp;call(: ={glob O} /\ O_Base_Default.qs{1} = DSS_RFC.DSS.O_Base_Default.qs{2}); 1: by auto => /#.
+    + call {1} (: true ==> true);1: by apply (verify1_ll O).
+    + call {2} (: true ==> true);1: by apply (verify2_ll O).
+    by auto.
+  wp;call(:O_Base_Default.qs{1} = DSS_RFC.DSS.O_Base_Default.qs{2} /\ ={arg} ==> 
+     O_Base_Default.qs{1} = DSS_RFC.DSS.O_Base_Default.qs{2} /\ ={res});1: by proc; auto => /#.
   wp;call(: pkrel  arg{2}.`1 arg{1}.`1 /\ ={m,glob O} /\ sigrel arg{2}.`3 arg{1}.`3 ==> ={res});
     1: by symmetry;proc*;call(ver_eq O);auto => /#.
   auto =>  /> &1 &2 *;do split. 
   + by rewrite Index.insubdK;smt().
   + rewrite DBHL.insubdK /=;1: by rewrite size_rev size_map AuthPath.valP. 
-    by rewrite revK.
-  move => *. admit. (* EASY FIXME: we need to prove that O is preserved in the verify equiv *) 
+    by rewrite revK. 
 
 seq 2 2 : (={glob A, glob O} 
    /\ O_Base_Default.qs{1} = DSS_RFC.DSS.O_Base_Default.qs{2} 
@@ -131,36 +148,41 @@ seq 2 2 : (={glob A, glob O}
 
 sp;symmetry.
 
-call(: 2^h < to_uint O_CMA_Default.sk.`idx,
+conseq (: pk0{1} = pk{1} /\
+  ((glob A){2} = (glob A){1} /\ (glob O){2} = (glob O){1}) /\
+  O_Base_Default.qs{2} = DSS_RFC.DSS.O_Base_Default.qs{1} /\
+  O_Base_Default.qs{2} = [] /\
+  pkrel pk{1} pk{2} /\
+  skrel DSS_RFC.DSS.KeyUpdating.O_CMA_Default.sk{1} O_CMA_Default.sk{2} /\ 
+  to_uint O_CMA_Default.sk{2}.`idx = 0
+  ==> 
+  !(2^h < size O_Base_Default.qs{2}) =>
+  O_Base_Default.qs{2} = DSS_RFC.DSS.O_Base_Default.qs{1} /\
+  pkrel pk{1} pk{2} /\ (glob O){2} = (glob O){1} /\ m{2} = f{1}.`1 /\ f{1}.`2 = sig{2})
+ _ (: size O_Base_Default.qs =  0 ==> size O_Base_Default.qs <= l).
++ smt().
++ smt().
++ by call (Abounded O);  auto => />.
+
+call(: 2^h < size O_Base_Default.qs,
        ={glob O} 
     /\ O_Base_Default.qs{2} = DSS_RFC.DSS.O_Base_Default.qs{1} /\ size O_Base_Default.qs{2} = to_uint O_CMA_Default.sk{2}.`idx
     /\ (to_uint O_CMA_Default.sk{2}.`idx < 2 ^ h => skrel DSS_RFC.DSS.KeyUpdating.O_CMA_Default.sk{1} O_CMA_Default.sk{2} ),true).
 + proc;inline {1} 1.
   case : (to_uint O_CMA_Default.sk{2}.`idx < 2 ^ h); last first. 
-  + inline {2} 1;sp;wp => /=; conseq(: _ ==> true).
-    + move => &1 &2 /> *.
-      have ? : to_uint (O_CMA_Default.sk{2}.`Top.XMSS_RFC_Abs.idx + W32.one) = 2^h + 1; last by smt().
-      rewrite to_uintD_small /=;smt(l_max). 
-    islossless.
-    + while (true) (Params.len - i). 
-      + move => *; inline *; wp; while (true) (s - chain_count);move => *; auto => /> /#.
-        by auto;smt().
-    + while (true) (outlen - consumed);move => *; auto => /> /#.
-    + while (true) (Params.len1 - i);move => *; auto => /> /#.
-    + while (true) (outlen - consumed);move => *; auto => /> /#.
-    + while (true) (Params.len - i);move => *; auto => /> /#.
-    + while (true) (h-j). 
-      + move => *; inline *; wp. admit. (* lossless *)
-      by auto;smt().
-    + admit.  (* lossless *)
-    + while (true) (XMSS_Security.FLXMSSTW.len - size sig);move => *; auto => />;smt(size_rcons).
-    while (true) (XMSS_Security.FLXMSSTW.len - size skWOTS);move => *; auto => />;smt(size_rcons).
+  + sp;wp => /=; conseq(: _ ==> true).
+    + move => &1 &2 />*;split => *;
+      have ? : to_uint (O_CMA_Default.sk{2}.`Top.XMSS_RFC_Abs.idx + W32.one) = 2^h + 1; 
+       rewrite ?to_uintD_small /=;smt(size_rcons l_max). 
+    + call {1} (: true ==> true);1: by apply (sign1_ll O).
+    + call {2} (: true ==> true);1: by apply (sign2_ll O).
+    by auto.
 
   exlim O_CMA_Default.sk{2}.`idx => _idx.
   wp; call (sig_eq O (to_uint _idx)).
   auto => /> &1 &2. 
   move =>  H0 H1 H2  H3;split;1:smt(). 
-  move =>  H4 H5 H6 H7 H8 H9 s1 s2 O1 O2 H10 H11 H12 H13 H14 H15 H16;do split.
+  move =>  H4 H5 H6 H7 H8 H9 s1 s2 H10 H11 H12 H13 H14 H15 H16;do split. 
   + have ? : W32.of_int (Index.val s1.`1.`2.`1) = s2.`1.`sig_idx.
     + apply W32.to_uint_eq; rewrite /= of_uintK /= -H11; smt(Index.valP l_max). 
     have ? : LenNBytes.insubd (map NBytes.insubd (map (BitsToBytes \o DigestBlock.val) (DBLL.val s1.`1.`2.`2))) = s2.`1.`r_sig.`1.
@@ -181,18 +203,18 @@ call(: 2^h < to_uint O_CMA_Default.sk.`idx,
       + rewrite /BytesToBits (size_flatten_ctt 8); last by rewrite size_map NBytes.valP.
         by move => xx; rewrite mapP => Hex;elim Hex;smt(@W8).
       by rewrite BytesToBitsK NBytes.valKd /#. 
-    by rewrite map_id AuthPath.valKd.      
-  + admit. (* EASY FIXME: need to prove preservation of RO in signature *)
+    by rewrite map_id AuthPath.valKd.   
   + by smt(size_rcons).
   + by smt().
 
-+ admit. (* lossless *)
-+ admit. (* preserve bad *)
-
++ move => &2 ?;proc;conseq />. 
+  by inline 1;wp;call (sign1_ll O); auto.
++ move => *;proc;wp;conseq (: _ ==> true);1:smt(size_rcons).
+  by call(sign2_ll O).
 + conseq (: _ ==> ={res,glob O}); first by smt(). 
   by sim.
 
-+ admit. (* preserve bad *)
++ by move => *;proc*;call(:true);auto. 
 
 auto => /> &1 &2 H1????????;do split.
 + move => *; do split;2:smt(). 
@@ -203,6 +225,5 @@ auto => /> &1 &2 H1????????;do split.
     move => x; rewrite mapP => Hex;elim Hex;smt(@W8).
   by rewrite BytesToBitsK NBytes.valKd.
 
-(* NEED TO USE A BOUNDED TO CONSEQ *)
-admit.
+by smt().
 qed.
