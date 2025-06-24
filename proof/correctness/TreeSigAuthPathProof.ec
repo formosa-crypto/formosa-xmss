@@ -335,8 +335,7 @@ seq 1 1 : (
       exists * m{1}, sk_seed{1}, pub_seed{1}, addr{1}, address{2}.
       elim * => P0 P1 P2 P3 P4.
       call {1} (wots_sign_seed_addr P0 P1 P2 P3 P4).
-      (do split; 3: by rewrite /log_w (: w = XMSS_WOTS_W) 1:/# /XMSS_WOTS_W /XMSS_WOTS_LOG_W  log2_16 from_int_ceil) => /#.
-
+      (do split; 3: by rewrite /log_w (: w = XMSS_WOTS_W) 1:/# /XMSS_WOTS_W /XMSS_WOTS_LOG_W) => /#.
       skip => /> &1 &2 H0 <- <- H1 H2 *; rewrite !NBytes.valKd /= NBytes.insubdK /P // ?size_to_list ?n_val //= => *.
       apply (eq_from_nth witness); rewrite !size_sub // => ??; rewrite !nth_sub //; smt(sub_k).
 
