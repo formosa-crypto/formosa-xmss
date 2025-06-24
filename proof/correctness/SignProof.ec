@@ -163,7 +163,8 @@ seq 3 0 : (
            rewrite size_load_buf 1:/# => j?.
            rewrite !nth_load_buf //.
            rewrite /storeW64 storesE => />.
-           rewrite !get_setE !ifF /#.
+           rewrite !get_setE !bits8E !ifF 1..7,9:/#.
+           smt(disjoint_ptr_ptr).
 
          - apply (eq_from_nth witness); first by rewrite !size_load_buf // /#.
            rewrite size_load_buf 1:/# => j?.
@@ -171,7 +172,7 @@ seq 3 0 : (
            rewrite /storeW64 storesE => />. 
            have ->: to_uint (_sm_ptr + (of_int 4963)%W64) + j = 
                     to_uint _sm_ptr + 4963 + j by rewrite !to_uintD /#. 
-           rewrite !get_setE !ifF 1..8:/#.
+           rewrite !get_setE !ifF; 1..8: by smt(disjoint_ptr_ptr).
            have ->: Glob.mem{1}.[to_uint _sm_ptr + 4963 + j] = 
                     nth witness 
                     (load_buf Glob.mem{1} (_sm_ptr + (of_int 4963)%W64) (to_uint mlen{1}))

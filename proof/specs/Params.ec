@@ -8,10 +8,24 @@ from Jasmin require import JModel.
 const h : { int | 0 < h } as h_g0.
 
 (* Length of the digest *)
-const n : { int | 1 <= n } as ge1_n.
+const n : { int | 1 <= n } as ge1_n. 
+
+op log2_w : { int | log2_w = 2 \/ log2_w = 4 } as logw_vals. 
+
+lemma ge0_log2_w : 0 <= log2_w.
+proof.
+case (log2_w = 2) => [-> //= | ?]; by have ->: log2_w = 4 by smt(logw_vals).
+qed.
 
 (* Winternitz parameter: the range of indices into a wots chain *)
-op w : { int | w = 4 \/ w = 16} as w_vals.
+op w : int = 2 ^ log2_w.
+
+lemma w_ilog :
+    log2_w = ilog 2 w.
+proof.
+rewrite /w; case (log2_w = 2) => [-> // | ?].
+by have ->: log2_w = 4 by smt(logw_vals).
+qed.
 
 const len1 : int = ceil (8%r * n%r / log2 w%r).
 const len2 : int = floor (log2 (len1 * (w - 1))%r / log2 w%r) + 1.
@@ -25,7 +39,7 @@ axiom ge0_len1 : 0 <= len1.
 subtype nbytes as NBytes = { l : W8.t list | size l = n}.
 realize inhabited.
 proof.
-by (exists (nseq n W8.zero);smt(size_nseq ge0_n)).
+by (exists (nseq n W8.zero);smt(size_nseq ge1_n)).
 qed.
 
 subtype len_nbytes as LenNBytes = { l : nbytes list | size l = len }.
@@ -43,6 +57,6 @@ qed.
 subtype threen_bytes as ThreeNBytesBytes = { l : W8.t list | size l = 3 * n }.
 realize inhabited.
 proof.
-by (exists (nseq (3*n) W8.zero);smt(size_nseq ge0_n)).
+by (exists (nseq (3*n) W8.zero);smt(size_nseq ge1_n)).
 qed.
 
