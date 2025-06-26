@@ -191,7 +191,7 @@ module WOTS = {
     return LenNBytes.insubd (map NBytes.insubd sk);
   }
 
-  (* 
+  (*
   Pseudorandom Key Generation [Section 3.1.7. of the RFC]
 
     During key generation, a uniformly random n-byte string S is
@@ -213,7 +213,7 @@ module WOTS = {
     var i : int;
 
     sk <-  nseq len witness;
-    
+
     address <- set_hash_addr address 0;
     address <- set_key_and_mask address 0;
 
@@ -259,7 +259,7 @@ module WOTS = {
 
     pk <- nseq len witness;
     i <- 0;
-   
+
 
     wots_skey <@ pseudorandom_genSK(sk_seed, _seed, address); (* Generate sk from the secret key *)
     while (i < len) {
@@ -339,7 +339,7 @@ module WOTS = {
     csum <@ checksum(msg);
     csum_32 <- W32.of_int csum;
 
-    (* Convert checksum to base w *) 
+    (* Convert checksum to base w *)
     csum_32 <- csum_32 `<<` W8.of_int ( 8 - ( ( len2 * log2_w) ) %% 8 );
     len_2_bytes <- ceil( ( len2 * log2_w )%r / 8%r );
 
@@ -444,14 +444,14 @@ module WOTS = {
     csum_bytes <- toByte csum_32 len_2_bytes;
     csum_base_w <@ BaseW.base_w(csum_bytes, len2);
     msg <- msg ++ csum_base_w;
-        
+
     i <- 0;
     while (i < len) {
       address <- set_chain_addr address i;
       msg_i <- nth witness msg i;
       sig_i <- nth witness (LenNBytes.val sig) i;
       pk_i <@ Chain.chain (sig_i, msg_i, (w - 1 - msg_i), _seed, address);
-      tmp_pk <- put tmp_pk i pk_i; 
+      tmp_pk <- put tmp_pk i pk_i;
       i <- i + 1;
     }
 

@@ -15,13 +15,6 @@ import Params Types XMSS_Types Hash WOTS Address LTree BaseW.
 *)
 import IntOrder.
 
-(* Overflows may happen unless h is upper bounded *)
-axiom h_max : h < 32.
-
-(* We are using multiples of n and len to distinguish which hash to use
-axiom gt0_n : 0 < n.
-*)
-
 op BitsToBytes (bits : bool list) : W8.t list = map W8.bits2w (chunk W8.size bits).
 op BytesToBits (bytes : W8.t list) : bool list = flatten (map W8.w2bits bytes).
 
@@ -199,7 +192,7 @@ realize FLXMSSTW.dist_adrstypes by trivial.
 
 (* -- Checksum instantiation -- *)
 clone import Checksum as CS with
-  op w <- 2 ^ (ilog 2 w)
+  op w <- w
 
 proof *.
 realize gt0_w by rewrite expr_gt0.
@@ -216,7 +209,8 @@ clone import XMSS_TW as XMSS_Security with
                                             BitsToBytes (BS2Int.int2bs (8 * n) i)) (2 ^ (8 * n))),
   op dmkey <- duniform MKey.enum,
   op FLXMSSTW.n <- n,
-  op FLXMSSTW.log2_w <- ilog 2 w,
+  op FLXMSSTW.log2_w <- log2_w,
+  op FLXMSSTW.w <- w,
   op FLXMSSTW.h <- h,
   op FLXMSSTW.chtype <= 0,
   op FLXMSSTW.pkcotype <= 1,
@@ -255,13 +249,13 @@ clone import XMSS_TW as XMSS_Security with
       let xl = take (8 * n) x in
       let xr = drop (8 * n) x in
       nb2db (rand_hash ps mad (NBytes.insubd (BitsToBytes xl)) (NBytes.insubd (BitsToBytes xr)))
-     else if i = 8 * n * len then
+     else if i = 8 * n * Top.len then
       let wpk = LenNBytes.insubd (map NBytes.insubd (chunk n (BitsToBytes x))) in
       nb2db (ltree ps mad wpk)
      else witness)
 proof *.
 realize FLXMSSTW.ge1_n by exact: ge1_n.
-realize FLXMSSTW.val_log2w by case: w_vals => ->; smt(ilog_powK).
+realize FLXMSSTW.val_log2w by case: logw_vals => ->.
 realize FLXMSSTW.ge1_h by smt(h_g0).
 realize FLXMSSTW.dist_adrstypes by trivial.
 realize FLXMSSTW.SA.WTW.ch0.
@@ -359,17 +353,10 @@ realize dmkey_fu by apply /duniform_fu /MKey.enumP.
 import RFC HtSRFC Repro MCORO.
 import FLXMSSTW SA WTW.
 
-lemma gt2_len : 2 < XMSS_Security.FLXMSSTW.len.
-proof.
-rewrite /len /len1 /len2 /= /len1 /len2 /w /w.
-admitted.
-
-
 lemma l_max : l <= 2147483648.
 have -> : 2147483648 = 2^31 by simplify => //=.
 rewrite /l;apply ler_weexpn2l; 1,2:smt(h_max h_g0).
 qed.
-
 
 op bs2block(a : nbytes) = DigestBlock.insubd (BytesToBits (NBytes.val a)).
 op block2bs(a : dgstblock): nbytes = NBytes.insubd (BitsToBytes (DigestBlock.val a)).
@@ -752,7 +739,8 @@ seq 1: (i = 0)=> //.
   + move=> ih.
     seq -1: (0 <= i <= Params.len)=> //.
     + wp; call Chain_chain_ll.
-      by wp; auto=> />; smt(w_vals).
+       wp; auto=> />; smt(vals_w).
+       
     by hoare; wp; conseq (: true)=> //; 1:smt().
   + wp; conseq (: true)=> //.
     + smt().
@@ -2541,20 +2529,36 @@ module WOTS_Encode = {
     var msg, csum, csum_32, len_2_bytes, csum_bytes, csum_base_w;
 
     (* Convert message to base w *)
-    msg <@ Top.BaseW.BaseW.base_w(m, Params.len1);
+    msg <@ BaseW.base_w(NBytes.val M, len1);
 
     (* Compute checksum *)
-    csum <@ WOTS.checksum(msg);
+    csum <@ checksum(msg);
     csum_32 <- W32.of_int csum;
 
     (* Convert checksum to base w *)
-    csum_32 <- csum_32 `<<` W8.of_int (8 - ((ceil (Params.len2%r * log2(Params.w%r))) %% 8));
-    len_2_bytes <- (ceil ((ceil (Params.len2%r * log2(Params.w%r)))%r / 8%r));
+    csum_32 <- csum_32 `<<` W8.of_int ( 8 - ( ( len2 * log2_w) ) %% 8 );
+    len_2_bytes <- ceil( ( len2 * log2_w )%r / 8%r );
 
     (* msg = msg || base_w(toByte(csum_32, len_2_bytes), w, len_2); *)
-    csum_bytes <- toByte csum_32 len_2_bytes;
-    csum_base_w <@ Top.BaseW.BaseW.base_w(csum_bytes, Params.len2);
+    csum_bytes <- toByte csum_32 len2;
+    csum_base_w <@ BaseW.base_w(csum_bytes, len2);
     msg <- msg ++ csum_base_w;
+
+    (* (* Convert message to base w *) *)
+    (* msg <@ Top.BaseW.BaseW.base_w(m, Params.len1); *)
+
+    (* (* Compute checksum *) *)
+    (* csum <@ WOTS.checksum(msg); *)
+    (* csum_32 <- W32.of_int csum; *)
+
+    (* (* Convert checksum to base w *) *)
+    (* csum_32 <- csum_32 `<<` W8.of_int (8 - ((ceil (Params.len2%r * log2(Params.w%r))) %% 8)); *)
+    (* len_2_bytes <- (ceil ((ceil (Params.len2%r * log2(Params.w%r)))%r / 8%r)); *)
+
+    (* (* msg = msg || base_w(toByte(csum_32, len_2_bytes), w, len_2); *) *)
+    (* csum_bytes <- toByte csum_32 len_2_bytes; *)
+    (* csum_base_w <@ Top.BaseW.BaseW.base_w(csum_bytes, Params.len2); *)
+    (* msg <- msg ++ csum_base_w; *)
 
     return msg;
   }
@@ -3256,8 +3260,7 @@ seq 5 9 : (   pkrel pk{1} pk{2}
     congr; rewrite &(eq_from_nth witness).
     + rewrite ?size_take /w2bits 3:size_mkseq 3:(size_flatten_ctt 8); 1,2: smt(ge1_h).
       + by move=> x /mapP [t] ->; rewrite size_w2bits.
-      rewrite size_map; have len8_h : h <= 8 * n by admit. (* TODO: Axiomatize  *)
-      by rewrite size_rev size_mkseq; smt(ge1_n ge1_h h_max).
+      rewrite size_map size_rev size_mkseq; smt(ge1_n ge1_h h_max len8_h).
     move=> i; rewrite size_take /w2bits 2:size_mkseq 2:ifT; 1,2: smt(ge1_h h_max).
     move=> rngi; rewrite ?nth_take //; 1..4: smt(ge1_h).
     rewrite /BytesToBits /toByte nth_mkseq /=; 1: smt(h_max).

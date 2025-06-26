@@ -2,7 +2,6 @@ require import AllCore List IntDiv StdOrder.
 require Subtype.
 import IntOrder.
 
-
 op w : { int | 0 < w } as gt0_w.
 
 clone import Subtype as BaseW with

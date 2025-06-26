@@ -43,10 +43,6 @@ op f : seed -> adrs -> nbytes -> nbytes.
 (******************************************************************************)
 
 module Chain = {
-   (*
-     TODO: Prove proc chain (after inserting abstract THF) is equivalent to
-     cf (from abstract spec)
-   *)
    proc chain(X : nbytes, i s : int, _seed : seed, address : adrs) : nbytes = {
       (*
        *
@@ -63,20 +59,6 @@ module Chain = {
     (* case i + s <= w-1 is precondition *)
     while (chain_count < s) {
      address <- set_hash_addr address (i + chain_count);
-     (* TODO: Replace following (from BEGIN until END comment) by abstract THF f
-     BEGIN
-     address <- set_key_and_mask address 0;
-
-      addr_bytes <- addr_to_bytes address;
-     _key <@ Hash.prf(addr_bytes, _seed);
-
-     address <- set_key_and_mask address 1;
-
-     addr_bytes <- addr_to_bytes address;
-     bitmask <@ Hash.prf(addr_bytes, _seed);
-
-     t <@ Hash._F (_key, (nbytexor t bitmask));
-     END *)
      t <- f _seed address t;
      chain_count <- chain_count + 1;
     }
@@ -136,10 +118,6 @@ module WOTS = {
     i <- 0;
     while (i < len) {
       address <- set_chain_addr address i;
-      (* TODO: Replace Hash.prf_keygen by abstract KHF prf_keygen (matching prs_sk from security spec) 
-      addr_bytes <- addr_to_bytes address;
-      sk_i <@ Hash.prf_keygen (NBytes.val seed ++ NBytes.val addr_bytes, sk_seed);
-      *)
       sk_i <- prf_keygen sk_seed (seed, address);
       sk <- put sk i sk_i;
       i <- i + 1;
@@ -201,7 +179,6 @@ module WOTS = {
     return (pk, sk);
   }
 
-  (* TODO: Prove checksum is instance of one used in security spec *)
   proc checksum (m : int list) : int = {
     var i : int <- 0;
     var m_i : int;
@@ -259,11 +236,11 @@ module WOTS = {
     csum_32 <- W32.of_int csum;
 
     (* Convert checksum to base w *)
-    csum_32 <- csum_32 `<<` W8.of_int (8 - ((ceil (len2%r * log2(w%r))) %% 8));
-    len_2_bytes <- (ceil ((ceil (len2%r * log2(w%r)))%r / 8%r));
+    csum_32 <- csum_32 `<<` W8.of_int ( 8 - ( ( len2 * log2_w) ) %% 8 );
+    len_2_bytes <- ceil( ( len2 * log2_w )%r / 8%r );
 
     (* msg = msg || base_w(toByte(csum_32, len_2_bytes), w, len_2); *)
-    csum_bytes <- toByte csum_32 len_2_bytes;
+    csum_bytes <- toByte csum_32 len2;
     csum_base_w <@ BaseW.base_w(csum_bytes, len2);
     msg <- msg ++ csum_base_w;
 
@@ -307,8 +284,8 @@ module WOTS = {
     csum_32 <- W32.of_int csum;
 
     (* Convert checksum to base w *)
-    csum_32 <- csum_32 `<<` W8.of_int (8 - ((ceil (len2%r * log2(w%r))) %% 8));
-    len_2_bytes <- (ceil ((ceil (len2%r * log2(w%r)))%r / 8%r));
+    csum_32 <- csum_32 `<<` W8.of_int ( 8 - ( ( len2 * log2_w ) %% 8 ));
+    len_2_bytes <- ceil ( (len2 * log2_w)%r / 8%r );
 
     (* msg = msg || base_w(toByte(csum, len_2_bytes), w, len_2); *)
     csum_bytes <- toByte csum_32 len_2_bytes;
@@ -350,8 +327,8 @@ module WOTS = {
     csum_32 <- W32.of_int csum;
 
     (* Convert checksum to base w *)
-    csum_32 <- csum_32 `<<` W8.of_int (8 - (len2 * floor (log2 w%r)) %% 8);
-    len_2_bytes <- (ceil ((ceil (len2%r * log2(w%r)))%r / 8%r));
+    csum_32 <- csum_32 `<<` W8.of_int (8 - (len2 * log2_w) %% 8);
+    len_2_bytes <- ceil ( (len2 * log2_w)%r / 8%r);
 
     (* msg = msg || base_w(toByte(csum_32, len_2_bytes), w, len_2); *)
     csum_bytes <- toByte csum_32 len_2_bytes;
