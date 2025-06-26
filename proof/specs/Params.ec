@@ -31,7 +31,7 @@ lemma w_vals :
   w = 4 \/ w = 16.
 proof. by rewrite /w; case (logw_vals) => ->. qed.
 
-const len1 : int = ceil (8%r * n%r / log2 w%r).
+const len1 : int = ceil ((8 * n)%r / log2 w%r).
 const len2 : int = floor (log2 (len1 * (w - 1))%r / log2 w%r) + 1.
 const len  : int = len1 + len2.
 
