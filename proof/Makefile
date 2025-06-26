@@ -13,13 +13,15 @@ JPATH := JASMINPATH="XMSS=../ref-jasmin:Stdlib=../ref-jasmin/stdlib"
 
 default: extract check_spec check_proofs check_extraction
 all: clean distclean extract check_spec check_proofs check_extraction check_xmss_spec \
-	check_xmss_mt_spec check_xmss_spec_extra check_correctness_proof check_security_proof
+	check_xmss_mt_spec check_xmss_spec_extra check_correctness_proof check_security_proof \
+	check_xmss_spec_equivs
 extract: extraction/XMSS_IMPL.ec
 
 # --------------------------------------------------------------------------------------------------
 
 .PHONY: check_spec check_proofs check_extraction check_xmss_spec check_xmss_mt_spec \
-        check_correctness_proof check_security_proof check_xmss_spec_extra
+        check_correctness_proof check_security_proof check_xmss_spec_extra \
+				check_xmss_spec_equivs
 
 # --------------------------------------------------------------------------------------------------
 
@@ -59,11 +61,13 @@ check_security_proof:
 
 ####################################################################################################
 
-# FIXME: do we want to split the XMSSMT(1) <-> XMSS equivalence out?
 check_xmss_spec_extra:
 	$(ECRUNTEST) config/tests.config spec-extra
 
-check_proofs: check_xmss_spec_extra check_correctness_proof check_security_proof
+check_xmss_spec_equivs:
+	$(ECRUNTEST) config/tests.config spec-equivs
+
+check_proofs: check_xmss_spec_extra checks_xmss_spec_equivs check_correctness_proof check_security_proof
 
 # --------------------------------------------------------------------------------------------------
 
