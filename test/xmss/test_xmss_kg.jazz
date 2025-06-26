@@ -1,0 +1,18 @@
+from XMSS require "xmss/xmss.jinc"
+
+export
+fn xmssmt_keypair_jazz(
+    reg ptr u8[XMSS_OID_LEN + XMSS_PK_BYTES] pk, 
+    reg ptr u8[XMSS_OID_LEN + XMSS_SK_BYTES] sk
+) -> reg ptr u8[XMSS_OID_LEN + XMSS_PK_BYTES],
+     reg ptr u8[XMSS_OID_LEN + XMSS_SK_BYTES],
+     reg u64
+{
+    reg u64 res;
+
+    pk, sk = __xmssmt_keypair(pk, sk);
+
+    ?{}, res = #set0();
+
+    return pk, sk, res;
+}

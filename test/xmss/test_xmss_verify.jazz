@@ -1,0 +1,12 @@
+from XMSS require "xmss/xmss.jinc"
+
+export
+fn xmssmt_sign_open_jazz(
+    reg u64 m_ptr mlen_ptr sm_ptr smlen,
+    reg ptr u8[XMSS_OID_LEN + XMSS_PK_BYTES] pk
+) -> reg u64
+{
+    reg u64 res;
+    res = __xmssmt_sign_open(pk, m_ptr, mlen_ptr, sm_ptr, smlen);
+    return res;
+}

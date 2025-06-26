@@ -93,7 +93,7 @@ jobs:
           gunzip -c image.tar.gz | docker load
 
       - name: Run tests in ${{ matrix.test_dir }}
-        run: docker run --rm jasmin-xmss:${{ github.sha }} make -C ${{ matrix.test_dir }} run
+        run: docker run --rm jasmin-xmss:${{ github.sha }} make -j$(nproc) -C ${{ matrix.test_dir }} run
 
   check_spec_equivs:
     needs: build_image

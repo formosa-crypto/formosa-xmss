@@ -1,4 +1,4 @@
-FROM debian:stable-20250407-slim
+FROM debian:stable-20250610-slim
 
 LABEL version="0.0.1"
 LABEL maintainer="rui.fernandes@mpi-sp.org" 
