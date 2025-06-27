@@ -97,7 +97,6 @@ jobs:
   more_tests:
     needs: build_image
     runs-on: ubuntu-latest
-    strategy:
     steps:
       - name: Check out code
         uses: actions/checkout@v4
