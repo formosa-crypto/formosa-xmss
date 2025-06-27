@@ -612,23 +612,86 @@ have -> : (size (lpath _lstart) - (size (lpath _lstart) - _sth)) = _sth by ring.
 rewrite -BS2Int.bs2int_div 1:/# /lpath revK BS2Int.int2bsK /= /#.
 qed.
 
+op WOTS_genSK ad ss ps =
+  let (a, sk) = iteri len
+    (fun i ask=>
+       let (ad, sk) = ask in
+       let ad = set_chain_addr ad i in
+       let sk_i = prf_keygen ss (ps, ad) in
+       let sk = put sk i sk_i in
+       (ad, sk))
+    ((set_key_and_mask (set_hash_addr ad 0) 0), nseq len witness)
+  in LenNBytes.insubd sk.
+
+op WOTS_pkgen ss ps ad =
+  let sk = WOTS_genSK ad ss ps in
+  let (a, pk) = iteri len
+    (fun i apk=>
+       let (ad, pk) = apk in
+       let ad = set_chain_addr ad i in
+       let sk_i = nth witness (LenNBytes.val sk) i in
+       let pk_i = chain sk_i 0 (w - 1) ps ad in
+       let pk = put pk i pk_i in
+       (ad, pk))
+    (ad, nseq len witness) in
+  LenNBytes.insubd pk.
+
 (* The leaf node corresponding to a leaf path
    The semantics of this needs to be computed from wots using
    operators and then proved equivalent to the imperative code. *)
-op wots_pk_val(ss ps : Params.nbytes, ad : SA.adrs, lidx : int) : dgstblocklenlist =
-   pkWOTS_from_skWOTS (gen_skWOTS ss ps ad) ps ad.
+op wots_pk_val(ss ps : Params.nbytes, ad : SA.adrs, lidx : int) : len_nbytes =
+   WOTS_pkgen ss ps (ads2adr ad).
 
 op leafnode_from_idx(ss ps : Params.nbytes, ad : adrs, lidx : int) : dgstblock =
  let pk = wots_pk_val ss ps (set_kpidx (set_typeidx ad 0) lidx) lidx in
- bs2block (ltree ps (ads2adr (set_kpidx (set_typeidx ad 1) lidx))
-           (LenNBytes.insubd (map NBytes.insubd (chunk n (BitsToBytes (flatten (map DigestBlock.val (DBLL.val pk)))))))).
+ bs2block (ltree ps (ads2adr (set_kpidx (set_typeidx ad 1) lidx)) pk).
 
-lemma Eqv_WOTS_pkgen  (ad : adrs) (ss ps : seed) :
-  hoare[WOTS.pkGen : arg = (ss, ps, ads2adr ad) ==>
-     LenNBytes.insubd (map NBytes.insubd (chunk n (BitsToBytes (flatten (map DigestBlock.val (DBLL.val
-       (pkWOTS_from_skWOTS (gen_skWOTS ss ps ad) ps ad))))))) = res].
+hoare Eqv_WOTS_genSK ad ss ps:
+  WOTS.pseudorandom_genSK:
+    arg = (ss, ps, ad)
+    ==> res = WOTS_genSK ad ss ps.
 proof.
-admitted.
+proc.
+while (0 <= i <= len
+    /\ sk_seed = ss
+    /\ seed = ps
+    /\   (address, sk)
+       = iteri i
+           (fun i ask=> let (ad, sk) = ask in
+              let ad = set_chain_addr ad i in
+              let sk_i = prf_keygen ss (ps, ad) in
+              let sk = put sk i sk_i in
+              (ad, sk))
+           (set_key_and_mask (set_hash_addr ad 0) 0, nseq len witness)).
++ auto=> /> &0 ge0_i _ ih i_lt_len.
+  by rewrite iteriS // -ih //= /#.
+by auto=> />; rewrite ge0_len iteri0 //= /WOTS_genSK /#.
+qed.
+
+hoare Eqv_WOTS_pkgen  (ad : Address.adrs) (ss ps : seed) :
+  WOTS.pkGen : arg = (ss, ps, ad) ==> res = WOTS_pkgen ss ps ad.
+proof.
+proc.
+while (0 <= i <= len
+    /\ sk_seed = ss
+    /\ _seed = ps
+    /\ wots_skey = WOTS_genSK ad ss ps
+    /\ (address, pk) = iteri i
+         (fun i apk=>
+            let (ad, pk) = apk in
+            let ad = set_chain_addr ad i in
+            let sk_i = nth witness (LenNBytes.val wots_skey) i in
+            let pk_i = chain sk_i 0 (w - 1) ps ad in
+            let pk = put pk i pk_i in
+            (ad, pk))
+         (ad, nseq len witness)).
++ wp; ecall (chain_eq sk_i 0 (w - 1) _seed address).
+  auto=> /> &0 ge0_i _ ih i_lt_len.
+  split; [smt(gt0_w)|move=> _].
+  by rewrite iteriS // -ih //= /#.
+ecall (Eqv_WOTS_genSK address sk_seed _seed).
+by auto=> />; rewrite ge0_len iteri0 //= /WOTS_pkgen /#.
+qed.
 
 phoare Chain_chain_ll: [ Chain.chain: 0 <= s < Params.w ==> true ] =1%r.
 proof.
@@ -1879,37 +1942,23 @@ wp;while ( #{/~address = zero_address}pre
 
 seq 6 : (#pre /\
    bs2block node = leafnode_from_idx _ss _ps (adr2ads zero_address) (_lstart + i)).
-+ seq 3 : (#pre /\   pk = LenNBytes.insubd
-  (map NBytes.insubd
-     (chunk n
-        (BitsToBytes
-           (flatten (map DigestBlock.val (DBLL.val (wots_pk_val _ss _ps (set_kpidx (set_typeidx (adr2ads zero_address) 0) (_lstart + i)) (_lstart + i))))))))).
++ seq 3 : (#pre /\   pk = wots_pk_val _ss _ps (set_kpidx (set_typeidx (adr2ads zero_address) 0) (_lstart + i)) (_lstart + i)).
   + conseq />;1: smt().
-    ecall (Eqv_WOTS_pkgen (adr2ads address) sk_seed pub_seed).
-    auto => /> &1 &2 ?????????????; split.
-    rewrite adr2adsK 3://.
-    + by move => ii valii; smt(get_setE).
-    rewrite /valid_adrsidxs; split; 1: smt(size_rev size_map size_sub).
-    rewrite /valid_xidxvalslp /valid_xidxvalslpch; left.
-    rewrite ?nth_rev ?(nth_map witness); 1..12: smt(size_map size_sub).
-    rewrite /= /set_ots_addr /set_type ?size_map ?nth_iota ?size_iota 1..4:// /=.
-    rewrite ?get_setE // (: max 0 4 = 4) 1:// /= to_uintK_small; smt(l_max val_w ge2_len).
-    move => ?; split => [k ? ?|]; 1: by rewrite /set_ots_addr /set_type ?get_setE // /#.
-    congr;congr;congr;congr;congr;congr;congr.
-    + rewrite /wots_pk_val.
-      suff /#:
-        adr2ads (set_ots_addr (set_type address{1} 0) (_lstart + i{1})) =
-        set_kpidx (set_typeidx (adr2ads zero_address) 0) (_lstart + i{1}).
-      + rewrite zeroadsE /set_typeidx /set_kpidx HAX.Adrs.insubdK 1:zeroadiP /set_idx.
-        rewrite /put /= ifT 2:HAX.Adrs.insubdK 2:zeroadiP /=; 1: smt(HAX.Adrs.valP).
-        rewrite /adr2ads /adr2idxs; congr; apply (eq_from_nth witness); 1: smt(size_put size_rev size_map size_sub).
-        move=> ii rngi.
-        rewrite nth_rev 2:(nth_map witness) 3:nth_sub 4:?nth_put //; 1..3: smt(size_put size_rev size_map size_sub).
-        rewrite size_map size_sub 1:// /set_ots_addr /set_type ?get_setE 1..6://.
-        rewrite (: 3 + (4 - (ii + 1)) = 6 - ii) 1:/#.
-        case (ii <> 2) => /= [| -> /=].
-        smt(get_setE W32.to_uint0 size_rev size_map size_sub).
-        by rewrite to_uintK_small; smt(l_max).
+    ecall (Eqv_WOTS_pkgen address sk_seed pub_seed).
+    auto => /> &1 &2 ?????????????; split; 1:smt(get_setE).
+    rewrite /wots_pk_val; congr.
+    rewrite zeroadsE /set_typeidx /set_kpidx HAX.Adrs.insubdK 1:zeroadiP /set_idx.
+    rewrite /put /= ifT 2:HAX.Adrs.insubdK 2:zeroadiP /=; 1: smt(HAX.Adrs.valP).
+    apply: tP=> i i_bnd.
+    rewrite /ads2adr /idxs2adr initE i_bnd /=.
+    rewrite /set_ots_addr /set_type.
+    rewrite HAX.Adrs.val_insubd /valid_adrsidxs //=.
+    rewrite /valid_xidxvalslp /valid_xidxvalslpch /valid_xidxvalslppkco /valid_xidxvalslptrh.
+    rewrite /valid_hidx /valid_chidx /valid_kpidx //=.
+    have -> /=: 0 < w - 1 by smt(w_vals).
+    have -> /=: 0 < len by smt(gt2_len).
+    have -> /=: 0 <= _lstart + i{!1} < l by smt().
+    by rewrite !fun_if; smt(get_setE).
   (* ecall (ltree_eq pub_seed address  pk ). *)
   auto => /> &1 &2 ???????????H?; do split.
   + move=> k gek ltk.
