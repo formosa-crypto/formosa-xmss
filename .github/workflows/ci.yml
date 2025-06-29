@@ -1,6 +1,9 @@
 name: CI (compile jasmin code & run tests & run XMSS/XMSS^MT equivalence proof & run correctness proof)
 
 on:
+  schedule:
+    - cron: '0 */6 * * *'  # Runs every 6 hours
+
   push:
     branches:
       - '**'
