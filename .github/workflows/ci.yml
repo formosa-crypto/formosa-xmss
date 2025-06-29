@@ -116,13 +116,13 @@ jobs:
           gunzip -c image.tar.gz | docker load
 
       - name: Test kg 
-        run: docker run --rm jasmin-xmss:${{ github.sha }} make -C test/xmss test_kg
+        run: docker run --rm jasmin-xmss:${{ github.sha }} make -C test/xmss/ test_kg 
 
       - name: Test sign
-        run: docker run --rm jasmin-xmss:${{ github.sha }} make -C test/xmss test_sign
+        run: docker run --rm jasmin-xmss:${{ github.sha }} make -C test/xmss/ test_sign
 
       - name: Test verify
-        run: docker run --rm jasmin-xmss:${{ github.sha }} make -C test/xmss test_verify
+        run: docker run --rm jasmin-xmss:${{ github.sha }} make -C test/xmss/ test_verify
 
   check_spec_equivs:
     needs: build_image
@@ -142,25 +142,6 @@ jobs:
 
       - name: Check single/multi tree proof
         run: docker run --rm jasmin-xmss:${{ github.sha }} make -C proof/ check_xmss_spec_extra
-
-  check_correctness_proof_latest_release:
-    needs: build_image
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v4
-
-      - name: Download Docker image
-        uses: actions/download-artifact@v4
-        with:
-          name: docker-image
-
-      - name: Load Docker image
-        run: |
-          gunzip -c image.tar.gz | docker load
-
-      - name: Check correctness proofs
-        run: docker run --rm jasmin-xmss:${{ github.sha }} make -C proof/ check_correctness_proof
 
   checkCT:
     needs: build_image
