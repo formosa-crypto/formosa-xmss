@@ -52,6 +52,9 @@ lemma ge0_len1 : 0 <= len1. admitted.
 
 lemma gt2_len : 2 < len. admitted.
 
+lemma ltW32_len : len < W32.modulus. admitted.
+
+
 subtype nbytes as NBytes = { l : W8.t list | size l = n}.
 realize inhabited.
 proof.
