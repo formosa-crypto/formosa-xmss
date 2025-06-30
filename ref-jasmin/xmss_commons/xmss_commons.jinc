@@ -215,16 +215,22 @@ fn __new_compute_root(
             if (k == 0) { thash_in[0 : XMSS_N] = #copy(leaf); } else { thash_in[0 : XMSS_N] = #copy(node); }
 
             () = #unspill(_auth_path_ptr);
+
+            // offset = k * XMSS_N
             offset = k;
-            offset *= XMSS_N; // TODO: do this with shifts 
+
+            #inline if XMSS_N == 32 { offset <<= 5; } else { offset *= XMSS_N; } 
+
             _ptr = _auth_path_ptr; _ptr += offset;
             thash_in[XMSS_N : XMSS_N] = _x_memcpy_u8u8p(thash_in[XMSS_N : XMSS_N], _ptr);
         } else {
             if (k == 0) { thash_in[XMSS_N : XMSS_N] = #copy(leaf); } else { thash_in[XMSS_N : XMSS_N] = #copy(node); }
 
             () = #unspill(_auth_path_ptr);
+            
             offset = k;
-            offset *= XMSS_N; // TODO: do this with shifts 
+            #inline if XMSS_N == 32 { offset <<= 5; } else { offset *= XMSS_N; } 
+            
             _ptr = _auth_path_ptr; _ptr += offset;
             thash_in[0 : XMSS_N] = _x_memcpy_u8u8p(thash_in[0 : XMSS_N], _ptr);
         }
