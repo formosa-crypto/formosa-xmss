@@ -37,7 +37,12 @@ test_sign: bin/test_xmssmt-sha2_20_2_256_sign.out
 test_verify: bin/test_xmssmt-sha2_20_2_256_verify.out
 
 default: test
-asm: bin/test_xmssmt-sha2_20_2_256_kg.s bin/test_xmssmt-sha2_20_2_256_sign.s bin/test_xmssmt-sha2_20_2_256_verify.s
+
+asm: bin/test_xmssmt-sha2_20_2_256.s
+# bin/test_xmssmt-sha2_20_2_256_kg.s \
+# bin/test_xmssmt-sha2_20_2_256_sign.s \
+# bin/test_xmssmt-sha2_20_2_256_verify.s
+
 test: $(BIN)
 run: $(OUT)
 

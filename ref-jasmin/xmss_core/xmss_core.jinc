@@ -237,7 +237,7 @@ fn __xmssmt_core_sign(
             ots_addr[4] = 0; // set the padding. This is already 0 but having this assignment here simplifies the proof 
             root = __treehash_(root, sk_seed, pub_seed, 0, XMSS_TREE_HEIGHT, ots_addr);
 
-                        // idx_tree = idx_tree >> params->tree_height;          /* (h - h / d) most significant bits of idx_sig */
+            // idx_tree = idx_tree >> params->tree_height;          /* (h - h / d) most significant bits of idx_sig */
             // idx_leaf = (idx_tree & ((1 << params->tree_height) - 1)); /* (h - h / d) least significant bits of idx_sig */
             () = #unspill(idx_tree);
             idx_tree >>= XMSS_TREE_HEIGHT;
