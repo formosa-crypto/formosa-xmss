@@ -285,7 +285,7 @@ split; last first.
   case (i = 24) => ?.
        * rewrite E0 ifT; first by smt(@W64 pow2_64).
          rewrite /get64_direct pack8E wordP => k? />. 
-         rewrite /= !bits8E ifT; first by smt(@W64 pow2_64)..
+         rewrite /= !bits8E ifT; first by smt(@W64 pow2_64).
          rewrite initiE //= initiE 1:/# //= initiE 1:/# //= initiE /#.   
   case (i = 25) => ?.
        * rewrite E0 ifT; first by smt(@W64 pow2_64). 
