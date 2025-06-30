@@ -46,7 +46,7 @@ fn _blocks_0_ref_array(
       () = #spill(inlen);
       for t=0 to 16
       { 
-        v = in.[u32 offset + 4*t]; // v = (u32)[in + t*4];
+        v = in.[: u32 offset + 4*t]; // v = (u32)[in + t*4];
         v = #BSWAP_32(v);
         W[t] = v;
       }
@@ -134,12 +134,12 @@ fn __lastblocks_ref_array(reg ptr u8[INLEN] in, reg u64 inlen offset bits) -> st
   { 
     index = offset; index += i;
     v = in[index]; // v = (u8)[in + i];
-    sblocks[u8 i] = v;
+    sblocks[:u8 i] = v;
     i += 1;
   }
 
   // set first byte after input to 0x80 
-  sblocks[u8 i] = 0x80;
+  sblocks[:u8 i] = 0x80;
 
   // check if one or two blocks are needed
   if(inlen < 56) // 448 / 8 = 56
@@ -148,7 +148,7 @@ fn __lastblocks_ref_array(reg ptr u8[INLEN] in, reg u64 inlen offset bits) -> st
   { j = (128-8); nblocks = 2; i = 127; }
 
   while(i >= j)
-  { sblocks[u8 i] = (8u) bits;
+  { sblocks[:u8 i] = (8u) bits;
     bits >>= 8;
     i -= 1;
   }

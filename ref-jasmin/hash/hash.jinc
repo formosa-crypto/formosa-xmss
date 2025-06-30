@@ -9,13 +9,16 @@ fn __addr_to_bytes(
     reg ptr u32[8] addr
 ) -> reg ptr u8[32]
 {
-    inline int i;
-    reg ptr u8[4] buf; 
+    reg u64 i = 0;
+    reg u64 subarray_start_index;
+    reg ptr u8[4] buf;
 
-    for i=0 to 8 {
-        buf = addr_as_bytes[4*i : 4];
+    while (i < 8) {
+        subarray_start_index = i; subarray_start_index <<= 2; // subarray_start_index = i * 4
+        buf = addr_as_bytes[subarray_start_index : 4];
         buf = __u32_to_bytes(buf, addr[i]);
-        addr_as_bytes[4*i : 4] = buf;
+        addr_as_bytes[subarray_start_index : 4] = buf;
+        i += 1;
     }
 
     return addr_as_bytes;
@@ -294,9 +297,9 @@ fn __thash_h(
 
         i = 0;
         while (i < 8) { // (2 * XMSS_N) / 8 = 8
-            t = in.[u64 8*i];
-            t ^= bitmask[u64 i];
-            buf[u64 8 + i] = t; // (XMSS_PADDING_LEN + XMSS_N) / 8 = 64/8 = 8
+            t = in.[: u64 8*i];
+            t ^= bitmask[: u64 i];
+            buf[: u64 8 + i] = t; // (XMSS_PADDING_LEN + XMSS_N) / 8 = 64/8 = 8
             i += 1;
         }
 
@@ -414,9 +417,9 @@ fn __thash_f(
         i = 0;
         while (i < 4) { /* XMSS_ N /8 = 32/8 = 4 */
             // buf[params->padding_len + params->n + i] = in[i] ^ bitmask[i];
-            t = out.[u64 8*i];
-            t ^= bitmask[u64 i];
-            buf[u64 8 + i] = t; // (XMSS_PADDING_LEN + XMSS_N) / 8 = 64/8 = 8
+            t = out.[:u64 8*i];
+            t ^= bitmask[:u64 i];
+            buf[:u64 8 + i] = t; // (XMSS_PADDING_LEN + XMSS_N) / 8 = 64/8 = 8
             i += 1;
         }
 
