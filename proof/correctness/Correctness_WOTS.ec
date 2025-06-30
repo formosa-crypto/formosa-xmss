@@ -735,8 +735,8 @@ while (
   sub addr{1} 0 5 = sub address{2} 0 5 /\ 
   sub addr{1} 0 5 = sub a1 0 5 /\
 
-  0 <= i{1} <= len /\
-  ={i} /\
+  0 <= to_uint i{1} <= len /\
+  to_uint i{1} = i{2} /\
   map W32.to_uint (to_list lengths{1}) = msg{2} /\
   NBytes.val M{2} = to_list msg{1} /\
   NBytes.val _seed{2} = to_list pub_seed{1} /\
@@ -744,49 +744,59 @@ while (
   size tmp_pk{2} = 67 /\
   valid_ptr_i sig_ptr{1} XMSS_WOTS_SIG_BYTES /\
   map W32.to_uint (to_list lengths{1}) = msg{2} /\
-  sub pk{1} 0 (32 * i{1}) = sub_list (nbytes_flatten tmp_pk{2}) 0 (32 * i{1}) /\
+  sub pk{1} 0 (32 * to_uint i{1}) = sub_list (nbytes_flatten tmp_pk{2}) 0 (32 * to_uint i{1}) /\
   forall (k : int), 0 <= k < size msg{2} => 0 <= nth witness msg{2} k < w 
 ); last first.
 
 (* === last subgoal of while starts here === *)
 
-auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6.
+auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 *.
 do split; 1,3: by smt().
  - apply (eq_from_nth witness); [by rewrite size_sub // size_sub_list | rewrite size_sub /#].
- - move => addrL pkL addrR iR tmpPkR 6?.
-   have ->: iR = 67 by smt().
-   move => H7 H8.
+ - move => addrL iL pkL addrR tmpPkR 7?.
+   have ->: to_uint iL = 67 by smt().
+   move => H7.
    split => [/# |]. 
    move => k??.
    have ->: pkL.[k] = nth witness (sub pkL 0 (32 * 67)) k by rewrite nth_sub /#.
-   by rewrite H8 /sub_list nth_mkseq.
+   by rewrite H7 /sub_list nth_mkseq.
 (* === last subgoal of while ends here === *)
  
-seq 1 1 : (#pre /\ sub addr{1} 0 6 = sub address{2} 0 6).
+seq 2 1 : (#pre /\ sub addr{1} 0 6 = sub address{2} 0 6).
 - inline {1}; auto => /> &1 &2*.
   rewrite /set_chain_addr.
   do split; (apply (eq_from_nth witness); rewrite !size_sub // => j?; rewrite !nth_sub //= !get_setE //; case (j = 5) => [/# |]; smt(sub_k)).
 
-seq 1 1 : (#pre /\ to_uint start{1} = msg_i{2} /\ start{1} = lengths{1}.[i{1}]).
+seq 1 1 : (#pre /\ to_uint start{1} = msg_i{2} /\ start{1} = lengths{1}.[to_uint i{1}]).
 - auto => /> &1 &2.
   move => H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 *.
-  rewrite (nth_map witness); [by rewrite size_to_list | by rewrite get_to_list].
+  rewrite (nth_map witness); rewrite ?size_to_list // /#.
 
 seq 2 0 : (#pre /\ to_uint steps{1} = w - 1 - msg_i{2}).
 - auto => /> &1 &2.
-  rewrite size_map size_to_list => H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 *.
-  rewrite to_uintB.
-    + rewrite uleE of_uintK /=. 
-      have ->: to_uint lengths{1}.[i{2}] = nth witness (map W32.to_uint (to_list lengths{1})) i{2}; last by smt().
-      rewrite (nth_map witness); by rewrite ?size_to_list ?get_to_list.
-  rewrite of_uintK /= /#.
+  rewrite size_map size_to_list ultE of_uintK /= => H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13.
+  have := H10.
+  rewrite (: w = 16) 1:/# /= => H; rewrite to_uintB; last by rewrite of_uintK.
+  rewrite uleE of_uintK /=.  
+  have ->: to_uint lengths{1}.[to_uint i{1}] = nth witness (map W32.to_uint (to_list lengths{1})) (to_uint i{1}); last by smt().
+  rewrite (nth_map witness); [rewrite size_to_list /# | by done]. 
 
-seq 2 0 : (#pre /\ to_uint t{1} = to_uint sig_ptr{1} + 32 * i{1}); first by auto => /> *; rewrite to_uintD of_uintK /#.
+rcondt {1} 1; 1: by auto.
+
+seq 4 0 : (
+    #pre /\ 
+    to_uint t{1} = to_uint sig_ptr{1} + 32 * to_uint i{1} /\
+    to_uint subarray_start_index{1} = to_uint i{1} * 32
+); first by auto => /> *; rewrite !to_uint_shl of_uintK //= to_uintD to_uint_shl of_uintK //=/#. 
  
 seq 1 1 : (#pre /\ to_list aux{1} = NBytes.val sig_i{2}).
-- ecall {1} (p_memcpy_ptr_correct t{1}).
-  auto => /> &1 &2 *; do split; 1..3: by smt().
-  move => ???.
+- inline {1}.
+  unroll {1} 4; rcondt{1} 4; 1:auto.
+  unroll {1} 6; rcondt{1} 6; 1:auto.
+  unroll {1} 8; rcondt{1} 8; 1:auto.
+  unroll {1} 10; rcondt{1} 10; 1:auto.
+  rcondf{1} 12; 1:auto.
+  auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H10 H11 H12 H13 H14 H15 H16 H17.
   apply (eq_from_nth witness); rewrite ?NBytes.valP size_to_list ?n_val // => j?.
   rewrite get_to_list initiE //=  /EncodeWotsSignature /load_sig LenNBytes.insubdK.
     + rewrite /P size_map size_chunk // size_to_list /#. 
@@ -797,14 +807,44 @@ seq 1 1 : (#pre /\ to_list aux{1} = NBytes.val sig_i{2}).
   rewrite /chunk nth_mkseq.
     + rewrite size_to_list /#.           
   rewrite /= nth_take // 1:/# nth_drop 1,2:/# get_to_list initiE 1:/# /=.
-  congr => /#.
-
+  case (24 <= j < 32) => ?.
+    + rewrite bits8E /= /loadW8 /loadW64 wordP => k?.  
+      rewrite initiE //= pack8E //=  initiE 1:/# /= initiE 1:/# /=.
+      congr => [| /#]; congr.
+      rewrite to_uintD H16 /#. 
+   rewrite /get8 /init8 initiE //= initiE //= /set64_direct initiE //=.
+   case (16 <= j < 24) => ?.
+    + rewrite bits8E /= /loadW8 /loadW64 wordP => k?.  
+      rewrite initiE //= pack8E //=  initiE 1:/# /= initiE 1:/# /=.
+      congr => [| /#]; congr.
+      rewrite to_uintD H16 /#.
+   rewrite /get8 /init8 initiE //= initiE //= /set64_direct initiE //=.
+   case (8 <= j < 16) => ?.
+    + rewrite bits8E /= /loadW8 /loadW64 wordP => k?.  
+      rewrite initiE //= pack8E //=  initiE 1:/# /= initiE 1:/# /=.
+      congr => [| /#]; congr.
+      rewrite to_uintD H16 /#.
+   rewrite /get8 /init8 initiE //= initiE //= /set64_direct initiE //= ifT 1:/#.
+   rewrite bits8E /= /loadW8 /loadW64 wordP => k?.  
+   rewrite initiE //= pack8E //=  initiE 1:/# /= initiE 1:/# /=.
+   congr => [| /#]; congr => /#.
+   
 conseq />; inline {1} M(Syscall)._gen_chain_inplace; sp; wp.
 exists * out{1}, start0{1}, steps0{1}, pub_seed0{1}, addr0{1}, address{2}.
 elim * => P0 P1 P2 P3 P4 P5; auto.
 call (gen_chain_correct P0 P1 P2 P3 P4 P5) => [/# |].
-auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16.
+auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17*.
 rewrite size_map size_to_list in H10.
+do split; 5..10: by admit.
+- apply nbytes_eq; apply (eq_from_nth witness); rewrite !NBytes.valP ?n_val // => j?.
+  rewrite NBytes.insubdK; first by rewrite /P size_to_list n_val.
+  rewrite get_to_list initiE // /= initiE 1:/# /= ifT 1:/# -get_to_list H16.
+  do congr => /#. 
+- smt().
+- by rewrite -H5 NBytes.valKd.
+FIQUEI AQUI 
+
+
 do split; rewrite ?to_uintD ?H14 -?H5 ?NBytes.valKd; try (
     have ->: to_uint lengths{1}.[i{2}] = nth witness (map W32.to_uint (to_list lengths{1})) i{2} by rewrite (nth_map witness); [by rewrite size_to_list | by rewrite get_to_list]
 ); 2..9: by smt().
