@@ -181,7 +181,7 @@ fn __treehash(
     // TODO: Fix this later
     if XMSS_N % 8 == 0 {
         for j=0 to XMSS_N/8 {
-            root.[u64 8*j] = _stack[u64 j];
+            root.[:u64 8*j] = _stack[:u64 j];
         }
     } else {
         for j=0 to XMSS_N {
@@ -242,28 +242,48 @@ fn __build_auth_path(
     reg ptr u32[8] addr
 ) -> reg ptr u8[XMSS_TREE_HEIGHT * XMSS_N]
 {
-    inline int j;
-    reg u32 k;
+    reg u64 j k;
+    reg u32 j32 k32;
+    reg u64 subarray_start_index;
     reg ptr u8[XMSS_N] node;
 
     () = #spill(i, auth_path, sk_seed, pub_seed, addr);
 
-    for j=0 to XMSS_TREE_HEIGHT {
+    j = 0;
+    while (j < XMSS_TREE_HEIGHT) {
         () = #unspill(i);
+        () = #spill(j);
 
         // k = ((i >> j) ^ 1) << j;
-        k = i >> j; k ^= 1; k <<= j;
+        k = (64u) i;
+        k >>= (j & 63); 
+        k ^= 1; 
+        k <<= (j & 63);
 
-        () = #unspill(auth_path);
-        node = auth_path[j*XMSS_N:XMSS_N];
+        () = #unspill(auth_path, j);
+
+        #inline if (XMSS_N == 32) { // this if is resolved at compile time
+            subarray_start_index = j;
+            subarray_start_index <<= 5;
+        } else {
+            subarray_start_index = j;
+            subarray_start_index *= XMSS_N;
+        }
 
         () = #unspill(sk_seed, pub_seed, addr);
-        node = __treehash_(node, sk_seed, pub_seed, k, j, addr);
+        j32 = (32u) j;
+        k32 = (32u) k;
 
-        () = #unspill(auth_path);
-        auth_path[j*XMSS_N:XMSS_N] = node;
+        auth_path[subarray_start_index : XMSS_N] = 
+            __treehash(auth_path[subarray_start_index : XMSS_N], sk_seed, pub_seed, k32, j32, addr);
+
         () = #spill(auth_path);
+        () = #unspill(j);
+        
+        j += 1;
     }
+
+    () = #unspill(auth_path);
 
     return auth_path;
 }

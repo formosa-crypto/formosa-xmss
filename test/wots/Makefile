@@ -9,7 +9,7 @@ LDLIBS   = -lcrypto
 JASMIN   ?= jasminc
 JAZZCT   ?= jasmin-ct
 JAZZCTFLAGS ?= --infer
-JFLAGS   ?= -nowarning ${JADDFLAGS}
+JFLAGS   ?= ${JADDFLAGS}
 JINCLUDE ?= -I XMSS="../../ref-jasmin/" -I Stdlib="../../ref-jasmin/stdlib"
 
 JASMINPATH := JASMINPATH="XMSS=../../ref-jasmin/:Stdlib=../../ref-jasmin/stdlib"
@@ -40,8 +40,8 @@ TEST_FLAGS := -DTEST_EXPAND_SEED -DTEST_WOTS_CHECKSUM -DTEST_GEN_CHAIN -DTEST_GE
 bin/test_xmssmt-sha2_20_2_256.s: test_wots.jazz | bin/
 	echo "from XMSS require \"params/params-xmssmt-sha2_20_2_256.jinc\"" > tmp
 	cat $< >> tmp
-	$(JASMIN) $(JINCLUDE) $(JFLAGS) -o $@ tmp || rm tmp # remove the file even when compilation fails
-	rm tmp
+	$(JASMIN) $(JINCLUDE) $(JFLAGS) -o $@ tmp # || rm tmp # remove the file even when compilation fails
+	# rm tmp
 
 bin/test_xmssmt-sha2_20_2_256: bin/test_xmssmt-sha2_20_2_256.s
 	$(CC) $(CFLAGS) -o $@ -I../common -I../ -DIMPL=XMSSMT-SHA2_20/2_256 $(TEST_FLAGS) \

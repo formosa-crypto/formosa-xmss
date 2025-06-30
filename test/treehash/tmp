@@ -1,3 +1,4 @@
+from XMSS require "params/params-xmssmt-sha2_20_2_256.jinc"
 from XMSS require "treehash/treehash.jinc"
 
 export
