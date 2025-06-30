@@ -30,7 +30,7 @@ fn __memcpy_u8u8p(
     inline int i;
 
     // 4 is XMSS_N/8 but having the 4 instead of XMSS_N/8 simplifies the proof
-    for i = 0 to 4 { out[:u64 i] = [:u64 in_ptr + 8*i]; }
+    for i = 0 to 4 { out.[:u64 i*8] = [:u64 in_ptr + 8*i]; }
 
     return out;
 }
