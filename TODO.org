@@ -4,8 +4,8 @@
 File: proof/XMSS_Security_RFCAbs.ec
 ** TODO Proof: tree hash properties
 Lemmas: a lot :)
-** TODO Proof: WOTS encoding operator/procedure equivalence
-Lemmas: WOTSEncodeP
+** TODO Proof: WOTS operator/procedure equivalence
+Lemmas: Eqv_WOTS_pkgen, WOTSEncodeP
 ** TODO Proof: Gaps in signature and verification equivalence
 Lemmas: sig_eq, ver_eq
 
@@ -14,7 +14,7 @@ File: proof/specs/XMSS_RFCAbs_RFCConc.ec
 
 * Equivalence/reduction between (security) spec using arbitrary-length messages and (security) spec using fixed-length messages
 File: proof/security/.*
-
+Axiomatize and propagate instead
 * Extend security claim (on security spec) to THF level
 File: proof/security/.*
 
