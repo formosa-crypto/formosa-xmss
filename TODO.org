@@ -1,0 +1,22 @@
+#+TODO: TODO | DONE
+
+* Equivalence security and spec (abstract) RFC spec
+File: proof/XMSS_Security_RFCAbs.ec
+** TODO Proof: tree hash properties
+Lemmas: a lot :)
+** TODO Proof: WOTS encoding operator/procedure equivalence
+Lemmas: WOTSEncodeP
+** TODO Proof: Gaps in signature and verification equivalence
+Lemmas: sig_eq, ver_eq
+
+* Equivalence abstract RFC spec and concrete RFC spec
+File: proof/specs/XMSS_RFCAbs_RFCConc.ec
+
+* Equivalence/reduction between (security) spec using arbitrary-length messages and (security) spec using fixed-length messages
+File: proof/security/.*
+
+* Extend security claim (on security spec) to THF level
+File: proof/security/.*
+
+* Proof axiomatized lemmas on parameters
+File: proof/specs/Params.ec
