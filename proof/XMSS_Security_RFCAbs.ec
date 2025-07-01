@@ -674,7 +674,7 @@ op node_from_path (p : bool list, ss ps : Params.nbytes, ad : SA.adrs) : dgstblo
            let nls = map (leafnode_from_idx ss ps ad) ls in
            let subtree = list2tree nls in
                (val_bt_trh subtree ps (set_typeidx ad trhtype)
-                   (h - size p) (head witness ls))
+                   (h - size p) ((head witness ls) %/ 2 ^ ((h - size p) + 1)))
       else witness.
 
 (* The full stack state when one starts to process leaf lidx *)
@@ -1347,6 +1347,7 @@ proof.
 move => ? Hw ?? /=.
 admitted.
 *)
+
 lemma si_reduced_node start lidxo t ss ps ad offset :
   0 <= t <= h
   => 0 <= start <= 2^h - 2^t
@@ -1479,10 +1480,13 @@ wp;while ( #{/~address = zero_address}pre
         rewrite take_size /lpath revK BS2Int.int2bsK;smt(h_g0 StdOrder.IntOrder.expr_gt0).
     rewrite /prefix ifF;1:by smt(take_size size_take size_ge0 size_lpath StdOrder.IntOrder.expr_gt0 h_g0).
     rewrite ifT /=;1:by smt(take_size size_take size_ge0 size_lpath StdOrder.IntOrder.expr_gt0 h_g0).
-    congr; 2,-2: by smt(take_size size_take size_ge0 size_lpath StdOrder.IntOrder.expr_gt0).
-    congr; congr; smt(lfp_st).
-    (* by rewrite lfp_st /range iotaS_minus;smt(StdOrder.IntOrder.expr_gt0). *)
-    admit.
+    congr.
+    + congr; congr; smt(lfp_st).
+    +  by smt(take_size size_take size_ge0 size_lpath StdOrder.IntOrder.expr_gt0).
+
+    rewrite lfp_st /range iotaS_minus /=;1: smt(StdOrder.IntOrder.expr_gt0). 
+    congr;congr;congr;congr;rewrite size_lpath 1:/# ifF;1: smt(StdOrder.IntOrder.expr_gt0).
+    smt(size_take size_lpath).
 seq 6 : (#pre /\
    bs2block node = leafnode_from_idx _ss _ps (adr2ads zero_address) (_lstart + i)).
 + seq 3 : (#pre /\   pk = LenNBytes.insubd
