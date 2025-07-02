@@ -403,8 +403,7 @@ auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H
             * rewrite !NBytes.valP n_val /= size_EncodeIdx /#.
           rewrite !NBytes.valP n_val size_EncodeIdx 1:/#.
 
-      move => ???? *.      
-      rewrite get_to_list of_listK.
+      move => *; rewrite get_to_list of_listK.
             * rewrite !size_cat !NBytes.valP n_val /= size_EncodeIdx /#.  
       rewrite nth_cat !size_cat !NBytes.valP n_val size_EncodeIdx /#.
 qed.

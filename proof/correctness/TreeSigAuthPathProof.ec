@@ -58,41 +58,44 @@ lemma build_auth_path_correct (_pub_seed _sk_seed : W8.t Array32.t, _idx : W32.t
 proof. 
 rewrite /XMSS_WOTS_LEN /XMSS_N /XMSS_D /XMSS_FULL_HEIGHT /XMSS_TREE_HEIGHT => [#] n_val d_val h_val *.
 proc => /=.
-seq 2 3 : (
+seq 1 3 : (
   #pre /\ 
-  ={j} /\ j{1} = 0 /\ 
+  j{2} = to_uint j{1} /\ to_uint j{1} = 0 /\ 
   size authentication_path{2} = h %/ d
 ); first by auto => />; rewrite size_nseq /#.
-conseq (: _ ==> 
+
+conseq (
+:  _ ==> 
   to_list auth_path{1} = nbytes_flatten authentication_path{2} /\
   size authentication_path{2} = h %/ d 
 ).
-    + auto => /> &1 &2 H0 H1 H2 H3 authPathL authPathR -> H4.
+- auto => /> &1 &2 H0 H1 H2 H3 H4 H5 authPathL authPathR H6 H7.
       apply auth_path_eq.
       rewrite insubdK //.
       rewrite /EncodeAuthPath insubdK.
-         * rewrite /P size_map n_val size_chunk // size_nbytes_flatten H4 n_val /#.
+         * rewrite /P size_map n_val size_chunk // size_to_list  /#.
       apply (eq_from_nth witness).
-         * rewrite n_val size_map size_chunk // size_nbytes_flatten H4 /#.
-      rewrite H4 d_val h_val /= => j?.
+         * rewrite n_val size_map size_chunk // size_to_list /#.
+      rewrite H7 d_val h_val /= => j?.
       rewrite (nth_map witness).
-         * rewrite n_val size_chunk // size_nbytes_flatten H4 /#.      
+         * rewrite n_val size_chunk // size_to_list /#.      
       rewrite /chunk nth_mkseq /=.
-         * rewrite size_nbytes_flatten /#.        
+         * rewrite size_to_list /#.        
       apply nbytes_eq.
       rewrite NBytes.insubdK.
-         * rewrite n_val /P size_take // size_drop 1:/# size_nbytes_flatten /#.
+         * rewrite n_val /P size_take // size_drop 1:/# size_to_list /#.
       apply (eq_from_nth witness).
-         * rewrite NBytes.valP n_val size_take // size_drop 1:/# size_nbytes_flatten /#. 
+         * rewrite NBytes.valP n_val size_take // size_drop 1:/# size_to_list /#. 
       rewrite NBytes.valP n_val => i?.
-      rewrite nth_take // 1:/# nth_drop 1,2:/# nth_nbytes_flatten /#.
+      rewrite nth_take // 1:/# nth_drop 1,2:/# H6 nth_nbytes_flatten /#.
+    
  
 conseq ( :
   to_list sk_seed{1} = NBytes.val sk_seed{2} /\
   to_list pub_seed{1} = NBytes.val pub_seed{2} /\
   sub addr{1} 0 3 = sub address{2} 0 3 /\
   addr{1}.[4] = W32.zero /\
-  ={j} /\ j{1} = 0 /\
+  j{2} = to_uint j{1} /\ to_uint j{1} = 0 /\
   i{1} = idx{2} /\ 
   0 <= to_uint idx{2} < 2 ^ XMSS_FULL_HEIGHT /\
   size authentication_path{2} = h %/ d 
@@ -112,37 +115,48 @@ while (
   to_list pub_seed{1} = NBytes.val pub_seed{2} /\
   sub addr{1} 0 3 = sub address{2} 0 3 /\
   i{1} = idx{2} /\
-  ={j} /\ 0 <= j{2} <= h %/ d /\ 
+  j{2} = to_uint j{1} /\ 0 <= j{2} <= h %/ d /\ 
   size authentication_path{2} = h %/ d /\
   
   addr{1}.[4] = W32.zero /\
 
   (0 <= to_uint idx{2} < 2 ^ XMSS_FULL_HEIGHT) /\
 
-  forall (k : int), 0 <= k < n * j{1} => auth_path{1}.[k] = nth witness (nbytes_flatten authentication_path{2}) k
+  forall (k : int), 0 <= k < n * to_uint j{1} => auth_path{1}.[k] = nth witness (nbytes_flatten authentication_path{2}) k
 ); last first.
     + auto => /> &1 &2 *.
-      split => [/# | authL authR j ????H0].
-      have ->: j = h %/ d by smt().
-      rewrite n_val h_val /= => H1.
-      apply (eq_from_nth witness).
-         * rewrite size_to_list size_nbytes_flatten n_val H0 /#.
-      rewrite size_to_list => ??.
-      rewrite get_to_list H1 /#.        
-   
+      rewrite ultE; split => [/# | authL jL authR].
+      rewrite ultE of_uintK /= => ?_ ???H.
+      apply (eq_from_nth witness); rewrite ?size_to_list ?size_nbytes_flatten /#.
+
 seq 2 1 : (
     #pre /\
     to_uint k{1} = k{2} /\
     k{2} = to_uint ((idx{2} `>>` (of_int j{2})%W8) `^` W32.one) /\
     0 <= k{2} < 1048576
-).
+); last by admit.
 - auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 *.
   rewrite /XMSS_FULL_HEIGHT /= in H8.
   pose X := (idx{2} `>>` (of_int j{2})%W8).
   have E1 : 0 <= to_uint idx{2} < 1048576 by smt().
-  have E2 : 0 <= to_uint (idx{2} `>>` (of_int j{2})%W8) < 1048576 by rewrite to_uint_shr of_uintK 1:/# (: j{2} %% W8.modulus = j{2}) 1:/# /=; smt(@IntDiv).
-  case (to_uint X %% 2 = 0) => [Heven | Hodd].
-   + rewrite xor1_even // 1:/# to_uintD /= /#.
+ (*  have E2 : 0 <= to_uint (idx{2} `>>` (of_int j{2})%W8) < 1048576 by rewrite to_uint_shr of_uintK 1:/# (: j{2} %% W8.modulus = j{2}) 1:/# /=; smt(@IntDiv). *)
+  case (to_uint X %% 2 = 0) => [Heven | Hodd]; last by admit.
+   + rewrite xor1_even // to_uint_shr of_uintK 1,3:/# /=. 
+      -  smt(@IntDiv).  
+     case (to_uint j{1} = 0) => [->/= | ?]. smt().
+
+ case (j{2} = 1) => [-> /# | ?]; case (j{2} = 2) => [-> /# | ?]; case (j{2} = 3) => [-> /# | ?];
+     case (j{2} = 4) => [-> /# | ?]; case (j{2} = 5) => [-> /# | ?]; case (j{2} = 6) => [-> /# | ?]; case (j{2} = 7) => [-> /# | ?];
+     case (j{2} = 8) => [-> /# | ?]; case (j{2} = 9) => [-> /# | /#].
+
+      - 
+      - rewrite (: 63 = 2^6 - 1) 1:/# and_mod //= of_uintK /#.
+      - admit.
+
+       
+
+ 
+1:/# to_uintD /= /#.
    + rewrite xor1_odd // 1:/# to_uintB 2:/# uleE /= /X to_uint_shr of_uintK 1:/# (: (j{2} %% W8.modulus) = j{2}) 1:/#.
      have := Hodd.
      rewrite /X to_uint_shr of_uintK 1:/# (: (j{2} %% W8.modulus) = j{2}) 1:/#. 
