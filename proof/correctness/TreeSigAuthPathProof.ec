@@ -25,6 +25,16 @@ require import TreeHashProof.
 
 require import WArray32.
 
+lemma xor1_even_64 (x : W64.t) :
+    0 <= to_uint x <= W64.max_uint => 
+    to_uint x %% 2 = 0 => 
+    x `^` W64.one = x + W64.one by admit.
+
+lemma xor1_odd_64 (x : W64.t) :
+    0 <= to_uint x <= W64.max_uint => 
+    to_uint x %% 2 <> 0 => 
+    (x `^` W64.one) = x - W64.one by admit.
+
 lemma build_auth_path_correct (_pub_seed _sk_seed : W8.t Array32.t, _idx : W32.t, a1 a2 : adrs) :
     n = XMSS_N /\
     d = XMSS_D /\
@@ -129,54 +139,54 @@ while (
       rewrite ultE of_uintK /= => ?_ ???H.
       apply (eq_from_nth witness); rewrite ?size_to_list ?size_nbytes_flatten /#.
 
-seq 2 1 : (
-    #pre /\
+seq 2 0 : (#pre /\ to_uint k{1} = to_uint (i{1} `>>` truncateu8 j{1})).
+- auto => /> &1 &2; rewrite ultE of_uintK /XMSS_FULL_HEIGHT /= => *. 
+  rewrite to_uint_shr to_uint_truncateu8 (: 63 = 2^6 - 1) 1:/# ?and_mod //= of_uintK 1:/#.
+  rewrite of_uintK to_uint_shr to_uint_truncateu8 /#.
+
+seq 1 1 : (
+    #{/~to_uint k{1} = to_uint (i{1} `>>` truncateu8 j{1})}pre /\
     to_uint k{1} = k{2} /\
     k{2} = to_uint ((idx{2} `>>` (of_int j{2})%W8) `^` W32.one) /\
     0 <= k{2} < 1048576
-); last by admit.
-- auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 *.
+). 
+- auto => /> &1 &2; rewrite ultE of_uintK /= => H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12*.
   rewrite /XMSS_FULL_HEIGHT /= in H8.
-  pose X := (idx{2} `>>` (of_int j{2})%W8).
+  pose X := (idx{2} `>>` (of_int (to_uint j{1}))%W8).
   have E1 : 0 <= to_uint idx{2} < 1048576 by smt().
- (*  have E2 : 0 <= to_uint (idx{2} `>>` (of_int j{2})%W8) < 1048576 by rewrite to_uint_shr of_uintK 1:/# (: j{2} %% W8.modulus = j{2}) 1:/# /=; smt(@IntDiv). *)
-  case (to_uint X %% 2 = 0) => [Heven | Hodd]; last by admit.
-   + rewrite xor1_even // to_uint_shr of_uintK 1,3:/# /=. 
-      -  smt(@IntDiv).  
-     case (to_uint j{1} = 0) => [->/= | ?]. smt().
-
- case (j{2} = 1) => [-> /# | ?]; case (j{2} = 2) => [-> /# | ?]; case (j{2} = 3) => [-> /# | ?];
-     case (j{2} = 4) => [-> /# | ?]; case (j{2} = 5) => [-> /# | ?]; case (j{2} = 6) => [-> /# | ?]; case (j{2} = 7) => [-> /# | ?];
-     case (j{2} = 8) => [-> /# | ?]; case (j{2} = 9) => [-> /# | /#].
-
-      - 
-      - rewrite (: 63 = 2^6 - 1) 1:/# and_mod //= of_uintK /#.
-      - admit.
-
-       
-
- 
-1:/# to_uintD /= /#.
-   + rewrite xor1_odd // 1:/# to_uintB 2:/# uleE /= /X to_uint_shr of_uintK 1:/# (: (j{2} %% W8.modulus) = j{2}) 1:/#.
-     have := Hodd.
-     rewrite /X to_uint_shr of_uintK 1:/# (: (j{2} %% W8.modulus) = j{2}) 1:/#. 
-     case (j{2} = 0) => [-> /# | ?]; case (j{2} = 1) => [-> /# | ?]; case (j{2} = 2) => [-> /# | ?]; case (j{2} = 3) => [-> /# | ?];
-     case (j{2} = 4) => [-> /# | ?]; case (j{2} = 5) => [-> /# | ?]; case (j{2} = 6) => [-> /# | ?]; case (j{2} = 7) => [-> /# | ?];
-     case (j{2} = 8) => [-> /# | ?]; case (j{2} = 9) => [-> /# | /#].
+  have E2 : 0 <= to_uint (idx{2} `>>` (of_int (to_uint j{1}))%W8) < 1048576 by rewrite to_uint_shr of_uintK //= 1:/#; smt(@IntDiv).
+  have := E2; rewrite to_uint_shr of_uintK 1:/# (: (to_uint j{1} %% W8.modulus) = to_uint j{1}) 1:/# => T.
+  case (to_uint X %% 2 = 0) => [Heven | Hodd]; [rewrite xor1_even // 1:/# xor1_even_64 1,2:/# | rewrite xor1_odd // 1:/# xor1_odd_64 1,2:/#].
+        * have := Heven; rewrite /X  to_uint_shr of_uintK 1:/# (: (to_uint j{1} %% W8.modulus) = to_uint j{1}) 1:/# => Teven.
+          rewrite !to_uintD !to_uint_shr !of_uintK 1:/# (: (to_uint j{1} %% W8.modulus) = to_uint j{1}) 1:/# /=; do split => [| /# | /#]. 
+          have ->: (to_uint idx{2} %/ 2 ^ to_uint j{1} + 1) %% 4294967296 = (to_uint idx{2} %/ 2 ^ to_uint j{1} + 1) by smt(). 
+          have ->: k{1} = zeroextu64 (idx{2} `>>` truncateu8 j{1}).
+             - rewrite wordP => i?.
+               by rewrite !get_to_uint (: 0 <= i < 64) //= to_uint_zeroextu64 to_uint_shr to_uint_truncateu8 1:/# H12 to_uint_shr to_uint_truncateu8 1:/#.
+         rewrite ?to_uint_zeroextu64 ?to_uint_shr ?to_uint_truncateu8 /= /#.
+       * rewrite !to_uintB ?uleE /#.
 
 seq 1 0 : (
   #{/~to_uint k{1} = k{2}}pre /\
   to_uint k{1} = k{2} * 2^j{2}
 ).
 - auto => /> &1 &2 *.
-  rewrite to_uint_shl of_uintK 1:/# /= (: (j{2} %% W8.modulus) = j{2}) 1:/#. 
-  case (j{2} = 0) => [-> /# | ?]; case (j{2} = 1) => [-> /# | ?]; case (j{2} = 2) => [-> /# | ?]; case (j{2} = 3) => [-> /# | ?];
-  case (j{2} = 4) => [-> /# | ?]; case (j{2} = 5) => [-> /# | ?]; case (j{2} = 6) => [-> /# | ?]; case (j{2} = 7) => [-> /# | ?];
-  case (j{2} = 8) => [-> /# | ?]; case (j{2} = 9) => [-> /# | /#].
+  rewrite to_uint_shl of_uintK 1:/# /=.
+  rewrite (: 63 = 2^6 - 1) 1:/# and_mod // of_uintK.
+  case (to_uint j{1} = 0) => [-> /# | ?]; case (to_uint j{1} = 1) => [-> /# | ?]; case (to_uint j{1} = 2) => [-> /# | ?]; case (to_uint j{1} = 3) => [-> /# | ?];
+  case (to_uint j{1} = 4) => [-> /# | ?]; case (to_uint j{1} = 5) => [-> /# | ?]; case (to_uint j{1} = 6) => [-> /# | ?]; case (to_uint j{1} = 7) => [-> /# | ?];
+  case (to_uint j{1} = 8) => [-> /# | ?]; case (to_uint j{1} = 9) => [-> /# | /#].
+
+rcondt {1} 1; 1:auto.
 
 conseq /> => [/# |]. 
-  
-seq 2 1 : (#pre /\ to_list node{1} = NBytes.val t{2}).
+FIQUEI AQUI 
+seq 5 1 : (#pre /\ sub authpath{1} (to_to_list Array32.init            
+                          (fun (i_0 : int) =>                                             
+                             auth_path{1}.[                                                  
+                             to_uint                                                      
+                              subarray_start_index{1} +                                         
+                             i_0]) = NBytes.val t{2}).
     + inline {1} 2.
       inline {1} 14.
       wp; sp. 
@@ -191,7 +201,7 @@ seq 2 1 : (#pre /\ to_list node{1} = NBytes.val t{2}).
          * rewrite of_uintK /#.
          * rewrite !of_uintK /#.
          * have E1 : 0 <= to_uint idx{2} < 1048576 by smt().
-           have E2 : 0 <= to_uint (idx{2} `>>` (of_int j{2})%W8) < 1048576 by rewrite to_uint_shr of_uintK 1:/# (: j{2} %% W8.modulus = j{2}) 1:/# /=; smt(@IntDiv).
+           have E2 : 0 <= to_uint (idx{2} `>>` (of_int j{2})%W8) < 1048576 by rewrite to_uint_shr of_uintK 1:/# (: j{2} %% W8.modulus = j{2}) 1:/# /=; smt(@IntDi v).
            have E3 : 0 <= 2 ^ j{2} < 2^10 
                  by case (j{2} = 0) => [-> /# | ?]; case (j{2} = 1) => [-> /# | ?]; case (j{2} = 2) => [-> /# | ?]; case (j{2} = 3) => [-> /# | ?];
                     case (j{2} = 4) => [-> /# | ?]; case (j{2} = 5) => [-> /# | ?]; case (j{2} = 6) => [-> /# | ?]; case (j{2} = 7) => [-> /# | ?];
