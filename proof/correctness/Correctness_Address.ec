@@ -90,16 +90,16 @@ move => n_val.
 proc.
 while ( 
   addr = x /\
-  0 <= i <= 8 /\
-  sub addr_as_bytes 0 (4 * i) = 
-  sub_list (flatten (map W32toBytes (to_list x))) 0 (4 * i)
+  0 <= to_uint i <= 8 /\
+  sub addr_as_bytes 0 (4 * to_uint i) = 
+  sub_list (flatten (map W32toBytes (to_list x))) 0 (4 * to_uint i)
 )
-(8 - i); last first.
+(8 - to_uint i); last first.
   + auto => /> *; split.
       - apply (eq_from_nth witness); first by rewrite size_sub // size_sub_list /#.
         rewrite size_sub // /#.
-      - move => addrBytes i; split => [/# |].
-        move => ???; have ->: i = 8 by smt(). 
+      - move => addrBytes i; rewrite ultE of_uintK /=; split => [/# |].
+        move => ???; have ->: to_uint i = 8 by smt(). 
         move => /= H.
         apply (eq_from_nth witness).
             * rewrite size_to_list size_flatten.
@@ -116,9 +116,9 @@ while (
         by rewrite H nth_sub_list.
 
   + auto => />. 
-    exists * addr.[i]; elim * => P.
+    exists * addr.[to_uint i]; elim * => P.
     call (u32_to_bytes_correct P).
-    auto => /> &hr H0 H1 H2 H3 result Hr *; do split; 1,2,4: by smt().
+    auto => /> &hr; rewrite ultE of_uintK /= => H0 H1 H2 H3 result Hr *; rewrite !to_uintD /=; do split; 1,2,4: by smt().
     apply (eq_from_nth witness); first by rewrite size_sub_list 1:/# size_sub 1,2:/#.
     rewrite size_sub 1:/# => j?.
     rewrite nth_sub_list 1:/# (nth_flatten witness 4).
@@ -130,11 +130,14 @@ while (
     rewrite (nth_map witness); first by rewrite size_to_list /#.
     rewrite /W32toBytes nth_rev; first by rewrite size_to_list /#.
     rewrite get_to_list size_to_list /to_list nth_mkseq 1:/# /=.
-    case (4 * i{hr} <= j < 4 * i{hr} + 4) => ?.
-       + rewrite (: result.[j - 4 * i{hr}] = nth witness (to_list result) (j - 4 * i{hr})) 1:/# Hr /W32toBytes.
+    case (4 * to_uint i{hr} <= j < 4 * to_uint i{hr} + 4) => ?.
+       + have ->: result.[j - to_uint (i{hr} `<<` W8.of_int 2)] = nth witness  (to_list result) (j - 4 * to_uint i{hr}) by rewrite to_uint_shl of_uintK //= /#.
+         rewrite Hr.
          rewrite nth_rev; first by rewrite size_to_list /#.
-         rewrite size_to_list /to_list nth_mkseq 1:/# /= /#.  
-       + have ->: addr_as_bytes{hr}.[j] = nth witness (sub addr_as_bytes{hr} 0 (4 * i{hr})) j by rewrite nth_sub /#.
+         rewrite size_to_list /to_list nth_mkseq 1:/# /=.
+         rewrite ifT; [rewrite to_uint_shl of_uintK /# |] => /#.
+       + rewrite ifF; [rewrite to_uint_shl of_uintK /# |].
+         have ->: addr_as_bytes{hr}.[j] = nth witness (sub addr_as_bytes{hr} 0 (4 * to_uint i{hr})) j by rewrite nth_sub /#.
          rewrite H2 nth_sub_list 1:/# (nth_flatten witness 4).
            * pose X := (fun (s : W8.t list) => size s = 4).
              pose Y := (map W32toBytes (to_list x)).
