@@ -590,8 +590,26 @@ by rewrite rev_nil BS2Int.bs2int_nil /= /mkseq id_map //#.
 qed.
 
 lemma lfp_st _lstart _sth:
-   leaves_from_path (prefix (lpath _lstart) _sth) = range _lstart (_lstart + 2 ^ _sth).
-admitted.
+0 <= _sth =>
+_sth <= h =>
+0 <= _lstart =>
+_lstart <= 2 ^ h - 2 ^ _sth =>
+2 ^ _sth %| _lstart =>
+leaves_from_path (prefix (lpath _lstart) _sth) = range _lstart (_lstart + 2 ^ _sth).
+move => *.
+rewrite /leaves_from_path /= ifT;1: smt(take_size size_take size_ge0 size_lpath StdOrder.IntOrder.expr_gt0). 
+apply (eq_from_nth witness).
++ rewrite size_range size_mkseq;congr;smt(take_size size_take size_ge0 size_lpath StdOrder.IntOrder.expr_gt0).  
+move => i. 
+rewrite size_mkseq =>?.
+have Hs : size (prefix (lpath _lstart) _sth) = h - _sth;1: smt(h_g0 size_lpath take_size size_take size_ge0 size_lpath StdOrder.IntOrder.expr_gt0).
+rewrite nth_mkseq;1:smt().
+rewrite nth_range;1:smt().
+congr; rewrite Hs /=; have ->: (h - (h - _sth)) = _sth by ring.
+rewrite /prefix rev_take /=;1: smt(h_g0 size_lpath take_size size_take size_ge0 size_lpath StdOrder.IntOrder.expr_gt0).
+have -> : (size (lpath _lstart) - (size (lpath _lstart) - _sth)) = _sth by ring.
+rewrite -BS2Int.bs2int_div 1:/# /lpath revK BS2Int.int2bsK /= /#.
+qed.
 
 (* The leaf node corresponding to a leaf path
    The semantics of this needs to be computed from wots using
@@ -1187,10 +1205,14 @@ lemma hwdec_exit start lidxo t ss ps ad offset :
    => offset = hw (lpathst (lidxo + 1) t) /\ size si = hw (lpathst (lidxo + 1) t).
 proof.
 move=> tr sr ds lt hinc.
-case (t = 0). admit.
+case (t = 0).
++ move => t0 HH /=. 
+  have Hl : lidxo = 0; 1:   by smt(@IntDiv).
+  move : HH;  rewrite t0 Hl /stack_increment  /=; rewrite ifF 1:/# /= !size_cat /= /hw /= /lpathst /= !count_rev BS2Int.int2bs0 /= BS2Int.int2bs1 //= !nseq0 /= /pred1 /=.
+  move => HH He;elim He => He; smt(take0).
 move => gt0t.
  move: lt hinc => ^[ge0_lidx _]; case/(hwincSE_lpathst lidxo t tr).
-- admit.
+- move => /= [#] ?????. admit.
 (pose k':= argmax _ _) => [# /=] ? + ^hdec - -> ?.
 have ?: 0 < k' by smt().
 have := int2bs_incSE t lidxo _ _ _; ~-1: by move=> //#.
@@ -1470,8 +1492,9 @@ wp;while ( #{/~address = zero_address}pre
     +  rewrite /prefix ifF;1:by smt(size_lpath StdOrder.IntOrder.expr_gt0 h_g0 take0).
        rewrite ifT /=;1: by smt(size_lpath StdOrder.IntOrder.expr_gt0 h_g0 take0).
        congr; 2,-2: by smt(take_size size_take size_ge0 size_lpath StdOrder.IntOrder.expr_gt0).
-       congr;congr; smt(lfp_st).
-       rewrite lfp_st /range iotaS_minus;smt(StdOrder.IntOrder.expr_gt0).
+       congr;congr; apply lfp_st; smt(take_size size_take size_ge0 size_lpath StdOrder.IntOrder.expr_gt0).
+       rewrite lfp_st;1..5: smt().
+       rewrite   /range iotaS_minus;smt(StdOrder.IntOrder.expr_gt0).
     case (_sth = 0) => H0.
     +  rewrite /prefix ifT;1:smt(take_size size_take size_ge0 size_lpath StdOrder.IntOrder.expr_gt0 h_g0).
        have -> /= : (range _lstart (_lstart + 2 ^ _sth)) = [_lstart] by rewrite H0 /= rangeS.
@@ -1481,10 +1504,11 @@ wp;while ( #{/~address = zero_address}pre
     rewrite /prefix ifF;1:by smt(take_size size_take size_ge0 size_lpath StdOrder.IntOrder.expr_gt0 h_g0).
     rewrite ifT /=;1:by smt(take_size size_take size_ge0 size_lpath StdOrder.IntOrder.expr_gt0 h_g0).
     congr.
-    + congr; congr; smt(lfp_st).
+    + congr; congr;apply lfp_st;1..5:smt().
     +  by smt(take_size size_take size_ge0 size_lpath StdOrder.IntOrder.expr_gt0).
 
-    rewrite lfp_st /range iotaS_minus /=;1: smt(StdOrder.IntOrder.expr_gt0). 
+    rewrite lfp_st;1..5:smt().
+    rewrite /range iotaS_minus /=;1: smt(StdOrder.IntOrder.expr_gt0). 
     congr;congr;congr;congr;rewrite size_lpath 1:/# ifF;1: smt(StdOrder.IntOrder.expr_gt0).
     smt(size_take size_lpath).
 seq 6 : (#pre /\
