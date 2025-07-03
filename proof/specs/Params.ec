@@ -8,7 +8,13 @@ from Jasmin require import JModel.
 const h : { int | 0 < h } as h_g0.
 
 (* Length of the digest *)
-const n : { int | 1 <= n } as ge1_n.
+(* const n : { int | 1 <= n } as ge1_n. *)
+(*
+  Need that 32 bits fit in n bytes (or toByte(., n) might
+  truncate 32-bit index
+*)
+const n : { int | 4 <= n } as ge4_n.
+lemma ge1_n : 1 <= n by smt(ge4_n).
 
 op log2_w : { int | log2_w = 2 \/ log2_w = 4 } as logw_vals.
 

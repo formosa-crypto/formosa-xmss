@@ -258,7 +258,7 @@ by rewrite BS2Int.bs2intK BytesToBitsK mem_iota BS2Int.bs2int_ge0 BS2Int.bs2int_
 qed.
 realize MsgXMSSTW.enum_spec.
 admitted. (*
-            TODO:
+            TODO: axiomatize this
             this shouldn't be necessary, but current HtS requires it.
             Need to introduce finite type for arbitrary-length messages
             in RFC spec.
@@ -1856,7 +1856,7 @@ module RFC_O (O : DSS_RFC.RO.POracle) = {
       `take h` here to make sure subtype injection is proper
       TODO: Does this cause issues with further proofs/instantiations?
     *)
-    idx <- Index.insubd (BS2Int.bs2int (take h (BytesToBits (nth witness xs 2))));
+    idx <- Index.insubd (BS2Int.bs2int (take h (BytesToBits (rev (nth witness xs 2)))));
 
     cm <@ O.o(mk, (root, idx, m));
 
@@ -1969,7 +1969,6 @@ rewrite (ihr bs (i - 1)) // /#.
 rewrite (ihl bs (i - 1))  // /#.
 qed.
 
-(* TODO: need concrete expression for the nth value *)
 lemma nthcnsh ss ps (idx : W32.t) (i : int) :
      0 <= i < h
   => 0 <= to_uint idx < 2 ^ h
@@ -1990,8 +1989,41 @@ lemma idx_conv idx:
     0 <= to_uint idx < 2 ^ h
  => to_uint idx
     =
-    BS2Int.bs2int (take h (BytesToBits (take n (toByte idx n)))).
-proof. admitted.
+    BS2Int.bs2int (take h (BytesToBits (rev (take n (toByte idx n))))).
+proof.
+move=> rngidx.
+rewrite {1}(: n = size (toByte idx n)) 2:take_size.
++ by rewrite /toByte size_rev size_mkseq; smt(ge1_n).
+rewrite /BytesToBits /toByte revK map_mkseq /= /(\o).
+pose mks := mkseq _ _.
+have ->:
+  mks = (chunk 8 (W32.w2bits idx)) ++ (mkseq (fun _ => nseq 8 false) (n - 4)).
++ rewrite /mks {1}(: n = 4 + (n - 4)) 1:// mkseq_add 1://; 1: smt(ge4_n).
+  congr.
+  + rewrite /chunk size_w2bits &(eq_in_mkseq) => i rngi /=.
+    rewrite get_unpack8 1:// /w2bits drop_mkseq 1:/# /= take_mkseq 1:/#.
+    rewrite &(eq_in_mkseq) => j rngj @/(\o).
+    by rewrite bits8iE // /#.
+  rewrite &(eq_in_mkseq) => i rngi /=; rewrite w2bitsE.
+  rewrite &(eq_from_nth false) ?size_mkseq 1:size_nseq //= => j rngj.
+  by rewrite nth_mkseq 2:nth_nseq 1,2:// /unpack8 initE /= ifF /#.
+rewrite flatten_cat take_cat.
+rewrite (size_flatten_ctt 8) 2:size_mkseq => //.
++  by move=> bs; apply /in_chunk_size.
+rewrite size_w2bits /= ifT; 1: smt(h_max).
+rewrite chunkK 1,2:// /to_uint /w2bits (: 32 = h + (32 - h)) 1:/# mkseq_add; 1,2: smt(ge1_h h_max).
+rewrite take_cat size_mkseq ifF 2:take_le0 3:cats0; 1,2:smt(ge1_h).
+rewrite BS2Int.bs2int_cat eq_sym -{1}Ring.IntID.addr0 eq_sym; congr.
+pose mks2 := mkseq _ (32 - h); suff : mks2 = nseq (32 - h) false.
++ by move => ->; rewrite BS2Int.bs2int_nseq_false.
+rewrite &(eq_from_nth witness) ?size_mkseq 1:size_nseq 1:// => i rngi.
+rewrite nth_mkseq 2:nth_nseq 1,2:/# /=.
+suff: b2i idx.[h + i] = 0 by smt().
+rewrite b2i_get 2:pdiv_small 2:exprD_nneg //; 1,2,3: smt(ge1_h).
+split => [| _]; 1: smt().
+rewrite (ltr_le_trans (2 ^ h)); 1: smt(mulr_ge0 expr_ge0).
+by rewrite ler_pemulr 1:expr_ge0 1://; smt(mulr_ge0 expr_gt0).
+qed.
 
 lemma bnd_uint_bs idx j :
      0 <= to_uint idx < 2 ^ h
@@ -1999,7 +2031,8 @@ lemma bnd_uint_bs idx j :
   => to_uint ((idx `>>` W8.of_int j) `^` W32.one) * 2 ^ j
      <=
      2 ^ h - 2 ^ j.
-proof. admitted.
+proof.
+admitted.
 
 equiv sig_eq (O <: DSS_RFC.RO.POracle) _idx :
   XMSS_TW_RFC(O).sign ~ XMSS_RFC_Abs(RFC_O(O)).sign :
@@ -2039,7 +2072,7 @@ seq 1 1 : (#pre /\ cm{1} = bs2block _M'{2}).
     + rewrite (: h = size tkh) {1}/tkh 1:size_take; 1: smt(ge1_h).
       + rewrite (size_flatten_ctt 8) => //.
         + by move=> bs /mapP [x] ->; rewrite size_w2bits.
-        rewrite size_map size_take; 1: smt(ge1_n).
+        rewrite size_map size_rev size_take; 1: smt(ge1_n).
         by rewrite size_rev size_mkseq; smt(ge1_n len8_h).
       by rewrite BS2Int.bs2int_le2Xs.
     by rewrite idx_conv; 1:smt(W32.to_uint_cmp).
@@ -2404,7 +2437,7 @@ seq 5 9 : (   pkrel pk{1} pk{2}
     pose tkh := take h _; rewrite (ltr_le_trans (2 ^ (size tkh))); 1: smt(BS2Int.bs2int_le2Xs).
     rewrite ler_weexpn2l // size_take 2:(size_flatten_ctt 8); 1: smt(ge1_h).
     + by move=> x /mapP [t] ->; rewrite size_w2bits.
-    by rewrite size_map size_rev size_mkseq; smt(ge1_n ge1_h).
+    rewrite size_map /toByte ?size_rev size_mkseq; smt(ge1_n ge1_h).
     rewrite eqs21 idx_conv; 1: smt(Index.valP).
     do 3! congr; pose tb := toByte _ n; rewrite (: n = size tb) 1:/tb 2:take_size 2://.
     by rewrite size_rev size_mkseq; smt(ge1_n).
