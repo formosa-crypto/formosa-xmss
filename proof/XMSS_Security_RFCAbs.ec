@@ -1932,10 +1932,11 @@ wp;while ( #{/~address = zero_address}pre
     rewrite /prefix ifF;1:by smt(take_size size_take size_ge0 size_lpath StdOrder.IntOrder.expr_gt0 h_g0).
     rewrite ifT /=;1:by smt(take_size size_take size_ge0 size_lpath StdOrder.IntOrder.expr_gt0 h_g0).
     congr.
-    + congr; congr; smt(lfp_st).
+    + congr; congr;apply lfp_st;1..5:smt().
     +  by smt(take_size size_take size_ge0 size_lpath StdOrder.IntOrder.expr_gt0).
 
-    rewrite lfp_st /range iotaS_minus /=;1: smt(StdOrder.IntOrder.expr_gt0). 
+    rewrite lfp_st;1..5:smt().
+    rewrite /range iotaS_minus /=;1: smt(StdOrder.IntOrder.expr_gt0). 
     congr;congr;congr;congr;rewrite size_lpath 1:/# ifF;1: smt(StdOrder.IntOrder.expr_gt0).
     smt(size_take size_lpath).
 
