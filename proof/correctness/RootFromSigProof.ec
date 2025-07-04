@@ -256,7 +256,7 @@ seq 6 2 : (
    {/~get_tree_index address0{2} = to_uint (idx_sig0{2} `>>` (of_int k{2})%W8)}pre /\ 
    sub addr1{1} 0 7 = sub address0{2} 0 7 /\
    get_tree_index address0{2} = to_uint (idx_sig0{2} `>>` (of_int (k{2} + 1))%W8)
-); last by admit.
+).
 - inline {1}; auto => /> &1 &2.
   rewrite /XMSS_FULL_HEIGHT ultE /= => H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19 H20 *; do split; 
   try (apply (eq_from_nth witness); rewrite !size_sub // => j?; rewrite !nth_sub // !get_setE //=); last first.
