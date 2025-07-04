@@ -70,12 +70,23 @@ rewrite /len1 -log2w_eq.
 (case (log2_w = 2) => [-> /= | ?]; [| have ->: log2_w = 4 by smt(logw_vals)]; have ? : 16%r <= (8 * n)%r / 2%r by smt(@RealExp ge4_n)); smt(ceil_lt ceil_ge).
 qed.
 
-lemma gt2_len : 2 < len. admitted.
+lemma g2_len1 : 2 < len1.
+proof.
+rewrite /len1 -log2w_eq.
+(case (log2_w = 2) => [-> /= | ?]; [| have ->: log2_w = 4 by smt(logw_vals)]; have ? : 16%r <= (8 * n)%r / 2%r by smt(@RealExp ge4_n)); smt(ceil_lt ceil_ge).
+qed.
+
+lemma g0_len2 : 0 < len2.
+proof.
+rewrite /len2 /w.
+case (log2_w = 2) => [-> /= | ?]; [| have ->: log2_w = 4 by smt(logw_vals)]; smt(g2_len1 le_ln_dw floor_le floor_gt).
+qed.
+
+lemma gt2_len : 2 < len by smt(g2_len1 g0_len2).
 
 lemma ge0_len  : 0 <= len by smt(ge0_len1 gt2_len).
 
 lemma ltW32_len : len < W32.modulus. admitted.
-
 
 subtype nbytes as NBytes = { l : W8.t list | size l = n}.
 realize inhabited.
@@ -100,4 +111,3 @@ realize inhabited.
 proof.
 by (exists (nseq (3*n) W8.zero);smt(size_nseq ge1_n)).
 qed.
-
