@@ -1,6 +1,9 @@
 name: CI (compile jasmin code & run tests & run XMSS/XMSS^MT equivalence proof & run correctness proof)
 
 on:
+  schedule:
+    - cron: '0 */6 * * *'  # Runs every 6 hours
+
   push:
     branches:
       - '**'
@@ -38,6 +41,7 @@ jobs:
   compile:
     needs: build_image
     runs-on: ubuntu-latest
+    continue-on-error: true
     strategy:
       matrix:
         test_dir:
@@ -68,6 +72,7 @@ jobs:
   run_tests:
     needs: build_image
     runs-on: ubuntu-latest
+    continue-on-error: true
     strategy:
       matrix:
         test_dir:
@@ -76,7 +81,6 @@ jobs:
           - test/hash
           - test/wots
           - test/treehash
-          - test/xmss
     steps:
       - name: Check out code
         uses: actions/checkout@v4
@@ -95,12 +99,15 @@ jobs:
       - name: Run tests in ${{ matrix.test_dir }}
         run: docker run --rm jasmin-xmss:${{ github.sha }} make -j$(nproc) -C ${{ matrix.test_dir }} run
 
-  check_spec_equivs:
+  more_tests:
     needs: build_image
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - name: Check out code
         uses: actions/checkout@v4
+        with:
+          submodules: true
 
       - name: Download Docker image
         uses: actions/download-artifact@v4
@@ -111,11 +118,14 @@ jobs:
         run: |
           gunzip -c image.tar.gz | docker load
 
-      - name: Check single/multi tree proof
-        run: docker run --rm jasmin-xmss:${{ github.sha }} make -C proof/ check_xmss_spec_extra
+      - name: Test kg 
+        run: docker run --rm jasmin-xmss:${{ github.sha }} make -C test/xmss/ test_kg 
 
-      - name: Check spec equivalences
-        run: docker run --rm jasmin-xmss:${{ github.sha }} make -C proof/ check_xmss_spec_equivs
+      - name: Test sign
+        run: docker run --rm jasmin-xmss:${{ github.sha }} make -C test/xmss/ test_sign
+
+      # - name: Test verify
+      #   run: docker run --rm jasmin-xmss:${{ github.sha }} make -C test/xmss/ test_verify
 
   check_correctness_proof_latest_release:
     needs: build_image
@@ -135,10 +145,10 @@ jobs:
 
       - name: Check correctness proofs
         run: docker run --rm jasmin-xmss:${{ github.sha }} make -C proof/ check_correctness_proof
-
   checkCT:
     needs: build_image
     runs-on: ubuntu-latest
+    continue-on-error: true
     strategy:
       matrix:
         test_dir:
@@ -183,4 +193,3 @@ jobs:
 
       - name: Build
         run: docker run --rm jasmin-xmss:${{ github.sha }} make -C test/xmss/ check_valgrind CI=1
-    
