@@ -112,7 +112,7 @@ while (
   have ->: addr_as_bytes.[j] =nth witness (sub addr_as_bytes 0 32) j by rewrite nth_sub /#.
   by rewrite H3 nth_sub_list.
 - exists * addr.[to_uint i]; elim * => P; call (u32_to_bytes_correct P).
-  (auto => /> &hr H0 H1 H2 H3 result Hr *; do split; rewrite to_uintD /= => *; 1,4: by smt()); first by smt(@W64).
+  (auto => /> &hr; rewrite ultE of_uintK /= => H0 H1 H2 H3 result Hr *; do split; rewrite to_uintD /= => *; 1,4: by smt()); first by smt(@W64).
   apply (eq_from_nth witness); first by rewrite size_sub_list 1:/# size_sub 1,2:/#.
   rewrite size_sub 1:/# => j?.
   rewrite nth_sub_list 1:/# (nth_flatten witness 4).
@@ -120,8 +120,8 @@ while (
          pose Y := (map W32toBytes (to_list x)).
          rewrite -(all_nthP X Y witness) /X /Y size_map => k?. 
          by rewrite (nth_map witness) // /W32toBytes size_rev size_to_list.
-  rewrite nth_sub 1:/# initiE; first by smt(@W64).
-  rewrite (nth_map witness); first by rewrite size_to_list ; smt(@W64).
+  rewrite nth_sub 1:/# initiE 1:/#.
+  rewrite (nth_map witness); first by rewrite size_to_list /#.
   rewrite /W32toBytes nth_rev; first by rewrite size_to_list /#.
   rewrite get_to_list size_to_list /to_list nth_mkseq 1:/# /=.
   case (4 * to_uint i{hr} <= j < 4 * to_uint i{hr} + 4) => ?; rewrite !to_uint_shl !of_uintK //=; [rewrite ifT 1:/# | rewrite ifF 1:/#].

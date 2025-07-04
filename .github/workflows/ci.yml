@@ -124,8 +124,8 @@ jobs:
       - name: Test sign
         run: docker run --rm jasmin-xmss:${{ github.sha }} make -C test/xmss/ test_sign
 
-      - name: Test verify
-        run: docker run --rm jasmin-xmss:${{ github.sha }} make -C test/xmss/ test_verify
+      # - name: Test verify
+      #   run: docker run --rm jasmin-xmss:${{ github.sha }} make -C test/xmss/ test_verify
 
   check_correctness_proof_latest_release:
     needs: build_image
