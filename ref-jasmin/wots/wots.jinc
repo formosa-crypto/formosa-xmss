@@ -25,7 +25,11 @@ fn __expand_seed(
 
     // NOTE: BUF = pub_seed || addr_as_bytes
     stack u8[XMSS_N + 32] buf;
-    inline int i;
+    
+    reg u64 i;
+    reg u64 subarray_start_index;
+
+    reg u32 chain_addr;
 
     () = #spill(outseeds, inseed);
 
@@ -37,10 +41,12 @@ fn __expand_seed(
     // memcpy(buf, pub_seed, params->n);
     buf[0 : XMSS_N] = copy_nbytes(buf[0 : XMSS_N], pub_seed);
 
-    for i = 0 to XMSS_WOTS_LEN {
-        // NOTE: addr is live at the beginning of the loop => we must unspill it at the end
+    i = 0;
+    while (i < XMSS_WOTS_LEN) {
+        // NOTE: addr is live at the beggining of the loop => we must unspill it at the end
         // set_chain_addr(addr, i);
-        addr = __set_chain_addr(addr, i);
+        chain_addr = (32u) i;
+        addr = __set_chain_addr(addr, chain_addr);
         () = #spill(addr);
 
         // addr_to_bytes(buf + params->n, addr);
@@ -49,11 +55,24 @@ fn __expand_seed(
         buf[XMSS_N : 32] = addr_bytes;
 
         () = #unspill(outseeds, inseed);
-        ith_seed = outseeds[i * XMSS_N : XMSS_N];
+
+        // start index = XMSS_N * i
+        if (XMSS_N == 32) { // this if is resolved at compile time
+            subarray_start_index = i;
+            subarray_start_index <<= 5;
+        } else {
+            subarray_start_index = i;
+            subarray_start_index *= XMSS_N;
+        }
+
+        ith_seed = outseeds[subarray_start_index : XMSS_N];
         ith_seed = __prf_keygen_(ith_seed, buf, inseed);
-        outseeds[i * XMSS_N : XMSS_N] = ith_seed;
+        outseeds[subarray_start_index : XMSS_N] = ith_seed;
+
         () = #spill(outseeds);
         () = #unspill(addr);
+
+        i += 1;
     }
 
     () = #unspill(outseeds);
@@ -309,8 +328,10 @@ fn __wots_pkgen(
 ) -> reg ptr u8[XMSS_WOTS_LEN * XMSS_N], reg ptr u32[8]
 {
     reg u32 chain;
-    inline int i;
     reg ptr u8[XMSS_N] t; // ith seed
+
+    reg u64 i;
+    reg u64 subarray_start_index;
 
     () = #spill(pub_seed);
 
@@ -319,17 +340,29 @@ fn __wots_pkgen(
     
     () = #spill(pk);
 
-    for i = 0 to XMSS_WOTS_LEN {
+    i = 0;
+    while (i < XMSS_WOTS_LEN) {
         // set_chain_addr(addr, i);
-        chain = i;
+        chain = (32u) i;
         addr = __set_chain_addr(addr, chain);
 
         () = #unspill(pk, pub_seed);
-        t = pk[i*XMSS_N : XMSS_N];
+
+        // start index = XMSS_N * i
+        if (XMSS_N == 32) { // this if is resolved at compile time
+            subarray_start_index = i;
+            subarray_start_index <<= 5;
+        } else {
+            subarray_start_index = i;
+            subarray_start_index *= XMSS_N;
+        }
+
+        t = pk[subarray_start_index : XMSS_N];
         t, addr = __gen_chain_inplace_(t, 0, XMSS_WOTS_W - 1, pub_seed, addr);
-        pk[i*XMSS_N : XMSS_N]= t;
+        pk[subarray_start_index : XMSS_N]= t;
         
         () = #spill(pk);
+        i += 1;
     }
 
     () = #unspill(pk);
@@ -349,7 +382,9 @@ fn __wots_sign(
     stack u32[XMSS_WOTS_LEN] lengths;
 
     reg u32 chain;
-    inline int i;
+
+    reg u64 i;
+    reg u64 subarray_start_index;
 
     () = #spill(pub_seed);
 
@@ -359,14 +394,30 @@ fn __wots_sign(
     // expand_seed(params, sig, seed, pub_seed, addr);
     sig, addr = __expand_seed_(sig, seed, pub_seed, addr);
 
-    for i = 0 to XMSS_WOTS_LEN {
+    i = 0;
+    while (i < XMSS_WOTS_LEN) {
         // set_chain_addr(addr, i);
-        chain = i;
+        chain = (32u) i;
         addr = __set_chain_addr(addr, chain);
+
+        // start index = XMSS_N * i
+        if (XMSS_N == 32) { // this if is resolved at compile time
+            subarray_start_index = i;
+            subarray_start_index <<= 5;
+        } else {
+            subarray_start_index = i;
+            subarray_start_index *= XMSS_N;
+        }
+
+        () = #spill(i);
 
         // gen_chain(params, sig + i * params->n, sig + i * params->n, 0, lengths[i], pub_seed, addr);
         () = #unspill(pub_seed);
-        sig[i*XMSS_N : XMSS_N], addr = __gen_chain_inplace_(sig[i*XMSS_N : XMSS_N], 0, lengths[i], pub_seed, addr);
+        sig[subarray_start_index : XMSS_N], addr = __gen_chain_inplace_(sig[subarray_start_index : XMSS_N], 0, lengths[i], pub_seed, addr);
+
+        () = #unspill(i);
+
+        i += 1;
     }
 
     return sig, addr;
@@ -384,27 +435,48 @@ fn __wots_pk_from_sig(
 {
     stack u32[XMSS_WOTS_LEN] lengths;
 
-    reg u32 start steps;
+    reg u32 start steps chain_addr;
     reg u64 t;
-    inline int i;
+    
+    reg u64 i;
+    reg u64 subarray_start_index;
 
     () = #spill(pub_seed, sig_ptr);
 
     // chain_lengths(params, lengths, msg);
     lengths = __chain_lengths(lengths, msg);
 
-    for i=0 to XMSS_WOTS_LEN {
+    i = 0;
+    while (i < XMSS_WOTS_LEN) {
         // set_chain_addr(addr, i);
-        addr = __set_chain_addr(addr, i);
+        chain_addr = (32u) i;
+        addr = __set_chain_addr(addr, chain_addr);
 
         // gen_chain(params, pk + i * params->n, sig + i * params->n, lengths[i], params->wots_w - 1 - lengths[i], pub_seed, addr);
         start = lengths[i];
         steps = XMSS_WOTS_W - 1; steps -= lengths[i];
         
+        // start index = XMSS_N * i
+        if (XMSS_N == 32) { // this if is resolved at compile time
+            subarray_start_index = i;
+            subarray_start_index <<= 5;
+        } else {
+            subarray_start_index = i;
+            subarray_start_index *= XMSS_N;
+        }
+
+        () = #spill(i);
+
         () = #unspill(pub_seed, sig_ptr);
-        t = sig_ptr; t += i*XMSS_N;
-        pk[i*XMSS_N : XMSS_N] = _x_memcpy_u8u8p(pk[i*XMSS_N : XMSS_N], t);
-        pk[i*XMSS_N : XMSS_N], addr = _gen_chain_inplace(pk[i*XMSS_N : XMSS_N], start, steps, pub_seed, addr);
+        t = sig_ptr; 
+        t += subarray_start_index;
+        
+        pk[subarray_start_index : XMSS_N] = __memcpy_u8u8p(pk[subarray_start_index : XMSS_N], t);
+        pk[subarray_start_index : XMSS_N], addr = _gen_chain_inplace(pk[subarray_start_index : XMSS_N], start, steps, pub_seed, addr);
+
+        () = #unspill(i);
+
+        i += 1;
     }
     
     return pk, addr;

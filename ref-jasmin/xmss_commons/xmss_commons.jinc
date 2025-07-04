@@ -182,20 +182,32 @@ fn __new_compute_root(
     stack u8[2 * XMSS_N] thash_in;
     stack u8[XMSS_N] node;
     stack u64 _ptr;
-    inline int k;
+    
+    reg u64 k offset;
+    reg u32 t tree_height u;
 
-    reg u32 t;
+    () = #spill(_auth_path_ptr, root, pub_seed, leaf_idx);
 
-    () = #spill(_auth_path_ptr, root, pub_seed);
+    k = 0;
+    while (k < XMSS_TREE_HEIGHT) {
+        () = #spill(k);
 
-    for k=0 to XMSS_TREE_HEIGHT {
-        addr = __set_tree_height(addr, k);
+        tree_height = (32u) k;
+        addr = __set_tree_height(addr, tree_height);
 
-        t = leaf_idx; t >>= (k + 1);
+        () = #unspill(leaf_idx);
+        t = leaf_idx;
+        tree_height = tree_height;
+        u = tree_height; u += 1;
+        t >>= u & 31; // t = leaf_idx >> (k + 1) 
+
         addr = __set_tree_index(addr, t);
 
-        t = leaf_idx; t >>= k;
+        tree_height = tree_height;
+        t = leaf_idx; t >>= tree_height & 31;
         t &= 1;
+
+        // TODO: t probably needs to be declassified
 
         // set the input buffer of thash 
         if (t == 0) {
@@ -203,33 +215,42 @@ fn __new_compute_root(
             if (k == 0) { thash_in[0 : XMSS_N] = #copy(leaf); } else { thash_in[0 : XMSS_N] = #copy(node); }
 
             () = #unspill(_auth_path_ptr);
-            _ptr = _auth_path_ptr; _ptr += k * XMSS_N;
+
+            // offset = k * XMSS_N
+            offset = k;
+
+            #inline if XMSS_N == 32 { offset <<= 5; } else { offset *= XMSS_N; } 
+
+            _ptr = _auth_path_ptr; _ptr += offset;
             thash_in[XMSS_N : XMSS_N] = _x_memcpy_u8u8p(thash_in[XMSS_N : XMSS_N], _ptr);
-        
         } else {
             if (k == 0) { thash_in[XMSS_N : XMSS_N] = #copy(leaf); } else { thash_in[XMSS_N : XMSS_N] = #copy(node); }
 
             () = #unspill(_auth_path_ptr);
-            _ptr = _auth_path_ptr; _ptr += k * XMSS_N;
+            
+            offset = k;
+            #inline if XMSS_N == 32 { offset <<= 5; } else { offset *= XMSS_N; } 
+            
+            _ptr = _auth_path_ptr; _ptr += offset;
             thash_in[0 : XMSS_N] = _x_memcpy_u8u8p(thash_in[0 : XMSS_N], _ptr);
         }
 
-        () = #unspill(pub_seed);
+        () = #unspill(pub_seed, k);
 
         if (k == XMSS_TREE_HEIGHT - 1) {
             () = #unspill(root);
             root, addr = __thash_h_(root, thash_in, pub_seed, addr);
-
-            // The compiler rejects this program without spilling root after thash 
-            // This shouldnt be needed. This is the last iteration of the loop, so we're 
-            // spilling root and unspilling it immeadiatly after.
             () = #spill(root); 
         } else {
             node, addr = __thash_h_(node, thash_in, pub_seed, addr);
         }
+
+        () = #unspill(k);
+        k += 1;
     }
 
     () = #unspill(root);
+
     return root, addr;
 }
 
@@ -246,7 +267,8 @@ fn _new_compute_root(
     return root, addr;
 }
 
-inline fn __new_compute_root_(
+inline 
+fn __new_compute_root_(
     reg ptr u8[XMSS_N] root,
     reg ptr u8[XMSS_N] leaf,
     reg u32 leaf_idx,

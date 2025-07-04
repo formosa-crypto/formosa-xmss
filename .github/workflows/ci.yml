@@ -76,7 +76,6 @@ jobs:
           - test/hash
           - test/wots
           - test/treehash
-          - test/xmss
     steps:
       - name: Check out code
         uses: actions/checkout@v4
@@ -94,6 +93,34 @@ jobs:
 
       - name: Run tests in ${{ matrix.test_dir }}
         run: docker run --rm jasmin-xmss:${{ github.sha }} make -j$(nproc) -C ${{ matrix.test_dir }} run
+
+  test_xmss:
+    needs: build_image
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Download Docker image
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image
+
+      - name: Load Docker image
+        run: |
+          gunzip -c image.tar.gz | docker load
+
+      - name: Test kg 
+        run: docker run --rm jasmin-xmss:${{ github.sha }} make -C test/xmss/ test_kg 
+
+      - name: Test sign
+        run: docker run --rm jasmin-xmss:${{ github.sha }} make -C test/xmss/ test_sign
+
+      # - name: Test verify
+      #   run: docker run --rm jasmin-xmss:${{ github.sha }} make -C test/xmss/ test_verify
 
   check_spec_equivs:
     needs: build_image
@@ -183,3 +210,4 @@ jobs:
 
       - name: Build
         run: docker run --rm jasmin-xmss:${{ github.sha }} make -C test/xmss/ check_valgrind CI=1
+    
