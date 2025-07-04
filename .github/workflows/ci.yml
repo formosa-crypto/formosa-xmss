@@ -142,7 +142,7 @@ jobs:
         run: docker run --rm jasmin-xmss:${{ github.sha }} make -C proof/ check_xmss_spec_extra
 
       - name: Check spec equivalences
-        run: docker  --rm jasmin-xmss:${{ github.sha }} make -C proof/ check_xmss_spec_equivs
+        run: docker run --rm jasmin-xmss:${{ github.sha }} make -C proof/ check_xmss_spec_equivs
 
   check_correctness_proof_latest_release:
     needs: build_image
