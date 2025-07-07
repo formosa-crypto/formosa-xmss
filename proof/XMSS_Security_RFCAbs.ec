@@ -1837,9 +1837,34 @@ phoare leaves_correct _ps _ss  _ad :
   arg = (_ss, _ps, _ad)  ==>
    res =
   map
-    (leafnode_from_idx (NBytes.insubd (NBytes.val _ss)) (NBytes.insubd (NBytes.val _ps)) _ad)
-      (range 0 (2 ^ h)) ] = 1%r.
-admitted. (* FD *)
+    (leafnode_from_idx _ss _ps _ad) (range 0 (2 ^ h)) ] = 1%r.
+proof.
+conseq (: true ==> true: =1%r) (: arg = (_ss, _ps, _ad) ==> res = map (leafnode_from_idx _ss _ps _ad) (range 0 (2 ^ h)))=> //; last first.
++ proc; while (size leafl <= l) (l - size leafl); auto; 2:smt(ge1_d).
+  auto=> />; conseq (: true ==> true); auto.
+  + by auto=> /> &0 _ + pks; rewrite size_rcons /#.
+  call (: true ==> true).
+  + proc; while (size pkWOTS <= len) (len - size pkWOTS); auto; 2:smt(ge0_len).
+    by auto=> /> &0; rewrite size_rcons /#.
+  call (: true ==> true)=> //.
+  proc; while (size skWOTS <= len) (len - size skWOTS); auto; 2:smt(ge0_len).
+  by auto=> /> &0; rewrite size_rcons /#.
+proc; while (size leafl <= l
+          (* something about the fields of the address that does not get set constantly *)
+          /\ leafl = map (leafnode_from_idx ss ps _ad) (range 0 (size leafl))).
++ wp; ecall (pkWOTS_from_skWOTS_eq skWOTS ps (set_kpidx (set_typeidx ad 0) (size leafl))).
+  ecall (skWOTS_eq ss ps (set_kpidx (set_typeidx ad 0) (size leafl))).
+  auto=> /> &0 _ ih size_lt_l; rewrite size_rcons; split=> [/#|].
+  rewrite /range /= iotaSr 1:size_ge0 map_rcons -ih.
+  congr.
+  (* Ah! Here it is! *) 
+  rewrite /leafnode_from_idx /pkco.
+  have -> //=: 8 * n * len <> 8 * n by smt(ge1_n gt2_len).
+  have -> //=: 8 * n * len <> 8 * n * 2 by smt(ge1_n gt2_len).
+  rewrite /bs2block /wots_pk_val.
+  admit. (** Here be a giant pain in the ass. **)
+by auto=> />; rewrite range_geq //=; smt(ge1_d).
+qed.
 
 lemma zeroidxsE:
   adr2idxs zero_address = [0; 0; 0; 0].
@@ -1860,7 +1885,7 @@ proof. by smt(val_w ge2_len expr_gt0). qed.
 
 lemma zeroadiP:
   valid_adrsidxs [0; 0; 0; 0].
-proof. rewrite valid_xadrsidxs_adrsidxs zeroxadiP. qed.
+proof. by rewrite valid_xadrsidxs_adrsidxs zeroxadiP. qed.
 
 phoare tree_hash_correct _ps _ss _lstart _sth :
   [ TreeHash.treehash :
