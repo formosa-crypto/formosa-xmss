@@ -2,8 +2,10 @@ require import AllCore List IntDiv Distr.
 require (*--*) Subtype.
 
 from Jasmin require import JModel.
+require import XMSS_Params.
 
-require import XMSS_RFC_Params WOTS_RFC_Abs.
+require WOTS_RFC_Abs.
+clone include WOTS_RFC_Abs.
 
 import Address BaseW.
 import Array8.
