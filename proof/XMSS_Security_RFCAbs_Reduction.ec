@@ -4,11 +4,15 @@ require import BitEncoding.
 
 from Jasmin require import JModel.
 require import Array8.
-
+(*
 require import XMSS_RFC_Abs.
 import XMSS_RFC_Params WOTS_RFC_Abs Address BaseW.
+*)
+require import XMSS_Params Address BaseW.
 
-require import XMSS_Security_RFCAbs.
+require XMSS_Security_RFCAbs.
+clone import XMSS_Security_RFCAbs as XMSSSecToAbs.
+import XMSSRFCAbs.
 import XMSS_Security RFC.
 import FLXMSSTW.
 import SA.
@@ -203,7 +207,7 @@ call(: 2^h < size O_Base_Default.qs,
   case : (to_uint O_CMA_Default.sk{2}.`idx < 2 ^ h); last first.
   + sp;wp => /=; conseq(: _ ==> true).
     + move => &1 &2 />*;split => *;
-      have ? : to_uint (O_CMA_Default.sk{2}.`Top.XMSS_RFC_Abs.idx + W32.one) = 2^h + 1;
+      have ? : to_uint (O_CMA_Default.sk{2}.`idx + W32.one) = 2^h + 1;
        rewrite ?to_uintD_small /=;smt(size_rcons l_max).
     + call {1} (: true ==> true);1: by apply (sign1_ll O).
     + call {2} (: true ==> true);1: by apply (sign2_ll O).

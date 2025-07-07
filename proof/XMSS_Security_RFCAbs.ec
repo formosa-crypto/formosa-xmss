@@ -2706,7 +2706,7 @@ split.
 + split.
   + rewrite BS2Int.int2bs0s take0 ?rev_nil //= /bs2block.
     rewrite DigestBlock.insubdK 2://.
-    rewrite (flatten_size_ctt 8); 1: by move=> y /mapP [t] ->; rewrite size_w2bits.
+    rewrite (size_flatten_ctt 8); 1: by move=> y /mapP [t] ->; rewrite size_w2bits.
     by rewrite size_map NBytes.valP.
   split; 2: smt(ge0_h).
   move=> i vali.
