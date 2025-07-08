@@ -33,9 +33,20 @@ rewrite /w; case (log2_w = 2) => [-> // | ?].
 by have ->: log2_w = 4 by smt(logw_vals).
 qed.
 
+lemma logK k:
+    1%r < k%r => log k%r k%r = 1%r by smt(@RealExp).
+
 lemma w_vals :
   w = 4 \/ w = 16.
 proof. by rewrite /w; case (logw_vals) => ->. qed.
+
+lemma log2w_eq : log2_w%r = log2 w%r.
+proof.
+rewrite /w /log2; case (log2_w = 2) => [-> /= | ?]; [| have ->: log2_w = 4 by smt(logw_vals)].
+- by rewrite (: 4%r = 2%r * 2%r) 1:/# logM 1,2:/# !logK.
+- by rewrite /= (: 16%r = 8%r * 2%r) 1:/# logM 1,2:/# (: 8%r = 4%r * 2%r) 1:/# logM 1,2:/# (: 4%r = 2%r * 2%r) 1:/# logM 1,2:/# !logK.
+qed.
+
 
 const len1 : int = ceil ((8 * n)%r / log2 w%r).
 const len2 : int = floor (log2 (len1 * (w - 1))%r / log2 w%r) + 1.
@@ -53,13 +64,29 @@ axiom len8_h : h <= 8 * n.
 lemma ge0_h : 0 <= h by smt(ge1_h).
 
 (* TODO: Why are these axioms? *)
-lemma ge0_len  : 0 <= len. admitted.
-lemma ge0_len1 : 0 <= len1. admitted.
+lemma ge0_len1 : 0 <= len1.
+proof.
+rewrite /len1 -log2w_eq.
+(case (log2_w = 2) => [-> /= | ?]; [| have ->: log2_w = 4 by smt(logw_vals)]; have ? : 16%r <= (8 * n)%r / 2%r by smt(@RealExp ge4_n)); smt(ceil_lt ceil_ge).
+qed.
 
-lemma gt2_len : 2 < len. admitted.
+lemma g2_len1 : 2 < len1.
+proof.
+rewrite /len1 -log2w_eq.
+(case (log2_w = 2) => [-> /= | ?]; [| have ->: log2_w = 4 by smt(logw_vals)]; have ? : 16%r <= (8 * n)%r / 2%r by smt(@RealExp ge4_n)); smt(ceil_lt ceil_ge).
+qed.
+
+lemma g0_len2 : 0 < len2.
+proof.
+rewrite /len2 /w.
+case (log2_w = 2) => [-> /= | ?]; [| have ->: log2_w = 4 by smt(logw_vals)]; smt(g2_len1 le_ln_dw floor_le floor_gt).
+qed.
+
+lemma gt2_len : 2 < len by smt(g2_len1 g0_len2).
+
+lemma ge0_len  : 0 <= len by smt(ge0_len1 gt2_len).
 
 lemma ltW32_len : len < W32.modulus. admitted.
-
 
 subtype nbytes as NBytes = { l : W8.t list | size l = n}.
 realize inhabited.
@@ -84,4 +111,3 @@ realize inhabited.
 proof.
 by (exists (nseq (3*n) W8.zero);smt(size_nseq ge1_n)).
 qed.
-

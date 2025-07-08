@@ -117,8 +117,8 @@ fn __xmssmt_core_sign(
     reg u64 sm_ptr smlen_ptr m_ptr mlen
 ) -> reg ptr u8[XMSS_SK_BYTES], reg u64
 {
-    reg u32 idx_leaf; 
-    reg u64 r t64 idx idx_tree;
+    reg u32 idx_leaf layer_addr; 
+    reg u64 r t64 idx idx_tree subarray_start_index;
 
     reg ptr u8[XMSS_N] sk_seed sk_prf pub_root pub_seed node;
     reg ptr u8[XMSS_INDEX_BYTES] idx_bytes;
@@ -132,7 +132,8 @@ fn __xmssmt_core_sign(
 
     stack u8 exit = FALSE;
 
-    inline int j i;
+    reg u64 i;
+    inline int j;
 
     // uint32_t ots_addr[8] = {0};
     // set_type(ots_addr, XMSS_ADDR_TYPE_OTS);
@@ -228,7 +229,10 @@ fn __xmssmt_core_sign(
             __tree_sig_(signature[XMSS_INDEX_BYTES + XMSS_N : XMSS_REDUCED_SIG_BYTES], mhash, sk, idx_leaf, ots_addr);
 
 
-        for i=1 to XMSS_D {
+        i = 1;
+        while (i < XMSS_D) {
+            () = #spill(i);
+
             // treehash_new(params, root, sk_seed, pub_seed, 0, params->tree_height, ots_addr);
             () = #unspill(sk);
             sk_seed = sk[XMSS_INDEX_BYTES : XMSS_N];
@@ -237,8 +241,8 @@ fn __xmssmt_core_sign(
             ots_addr[4] = 0; // set the padding. This is already 0 but having this assignment here simplifies the proof 
             root = __treehash_(root, sk_seed, pub_seed, 0, XMSS_TREE_HEIGHT, ots_addr);
 
-                        // idx_tree = idx_tree >> params->tree_height;          /* (h - h / d) most significant bits of idx_sig */
-            // idx_leaf = (idx_tree & ((1 << params->tree_height) - 1)); /* (h - h / d) least significant bits of idx_sig */
+            // idx_tree = idx_tree >> params->tree_height;                  (h - h / d) most significant bits of idx_sig 
+            // idx_leaf = (idx_tree & ((1 << params->tree_height) - 1));    (h - h / d) least significant bits of idx_sig 
             () = #unspill(idx_tree);
             idx_tree >>= XMSS_TREE_HEIGHT;
             idx_leaf = ((1 << XMSS_TREE_HEIGHT) - 1); idx_leaf &= idx_tree;  
@@ -246,18 +250,29 @@ fn __xmssmt_core_sign(
 
             // set_layer_addr(ots_addr, i);
             // set_tree_addr(ots_addr, idx_tree);
-            ots_addr = __set_layer_addr(ots_addr, i);
+            () = #unspill(i);
+            layer_addr = (32u) i;
+            ots_addr = __set_layer_addr(ots_addr, layer_addr);
             ots_addr = __set_tree_addr(ots_addr, idx_tree);
 
             // treesig(params, sm, root, sk, idx_leaf, ots_addr);
+
+            // subarray_start_index = XMSS_INDEX_BYTES + XMSS_N + (i * XMSS_REDUCED_SIG_BYTES)
+            subarray_start_index = i;
+            subarray_start_index *= XMSS_REDUCED_SIG_BYTES;
+            subarray_start_index += XMSS_INDEX_BYTES + XMSS_N;
+
             () = #unspill(sk);
-            signature[XMSS_INDEX_BYTES + XMSS_N + (i * XMSS_REDUCED_SIG_BYTES) : XMSS_REDUCED_SIG_BYTES], ots_addr = 
-                __tree_sig_(signature[XMSS_INDEX_BYTES + XMSS_N + (i * XMSS_REDUCED_SIG_BYTES) : XMSS_REDUCED_SIG_BYTES], root, sk, idx_leaf, ots_addr);
+            signature[subarray_start_index : XMSS_REDUCED_SIG_BYTES], ots_addr = 
+                __tree_sig_(signature[subarray_start_index : XMSS_REDUCED_SIG_BYTES], root, sk, idx_leaf, ots_addr);
+
+            () = #unspill(i);
+            i += 1;
         }
 
         // Copy the signature back to memory
         () = #unspill(sm_ptr);
-        for i=0 to XMSS_SIG_BYTES { (u8) [sm_ptr + i] = signature[i]; }
+        for j=0 to XMSS_SIG_BYTES { [:u8 sm_ptr + j] = signature[j]; }
        
         ?{}, r = #set0();
     }

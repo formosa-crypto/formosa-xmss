@@ -30,7 +30,7 @@ fn __memcpy_u8u8p(
     inline int i;
 
     // 4 is XMSS_N/8 but having the 4 instead of XMSS_N/8 simplifies the proof
-    for i = 0 to 4 { out[u64 i] = (u64) [in_ptr + 8*i]; }
+    for i = 0 to 4 { out.[:u64 i*8] = [:u64 in_ptr + 8*i]; }
 
     return out;
 }
@@ -77,7 +77,7 @@ fn __memcpy_u8pu8p(
     reg u64 i = 0;
     
     while(i < bytes) {
-        (u8) [out_ptr + out_offset] = (u8) [in_ptr + in_offset];
+        [:u8 out_ptr + out_offset] = [:u8 in_ptr + in_offset];
         i += 1;
         in_offset += 1;
         out_offset += 1;
@@ -195,10 +195,10 @@ fn copy_nbytes (reg ptr u8[XMSS_N] out in) -> reg ptr u8[XMSS_N] {
         // This has to use unaligned accesses. Otherwise we get a 
         // "variable allocation: bad range alignment" error
 
-        out[u64 0] = in.[u64 0]; // copies in[0..7]
-        out[u64 1] = in.[u64 1 * 8]; // copies in[8..15]
-        out[u64 2] = in.[u64 2 * 8]; // copies in[16..23]
-        out[u64 3] = in.[u64 3 * 8]; // copies in[24..31]
+        out[:u64 0] = in.[:u64 0]; // copies in[0..7]
+        out[:u64 1] = in.[:u64 1 * 8]; // copies in[8..15]
+        out[:u64 2] = in.[:u64 2 * 8]; // copies in[16..23]
+        out[:u64 3] = in.[:u64 3 * 8]; // copies in[24..31]
     } else {
         reg u64 i = 0;
         while (i < XMSS_N) {
@@ -218,10 +218,10 @@ fn copy_nbytes_unaligned_left (reg ptr u8[XMSS_N] out in) -> reg ptr u8[XMSS_N] 
         // This has to use unaligned accesses. Otherwise we get a 
         // "variable allocation: bad range alignment" error
 
-        out.[u64 0*8] = in[u64 0]; // copies in[0..7]
-        out.[u64 1*8] = in[u64 1]; // copies in[8..15]
-        out.[u64 2*8] = in[u64 2]; // copies in[16..23]
-        out.[u64 3*8] = in[u64 3]; // copies in[24..31]
+        out.[:u64 0*8] = in[:u64 0]; // copies in[0..7]
+        out.[:u64 1*8] = in[:u64 1]; // copies in[8..15]
+        out.[:u64 2*8] = in[:u64 2]; // copies in[16..23]
+        out.[:u64 3*8] = in[:u64 3]; // copies in[24..31]
     } else {
         reg u64 i = 0;
         while (i < XMSS_N) {
@@ -248,14 +248,14 @@ fn copy_nbytes_from_ptr(
         inline int i;
 
         for i=0 to 4 { 
-            (u64) [out_ptr + offset + 8*i] = in.[u64 8*i]; 
+            [:u64 out_ptr + offset + 8*i] = in.[:u64 8*i]; 
         }
 
     } else {
         reg u64 i = 0;
         
         while (i < XMSS_N) {
-            (u8) [out_ptr + offset] = in[i];
+            [:u8 out_ptr + offset] = in[i];
             offset += 1;
             i += 1;
         }

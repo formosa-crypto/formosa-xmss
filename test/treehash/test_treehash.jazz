@@ -1,8 +1,7 @@
 from XMSS require "treehash/treehash.jinc"
 
 export
-fn
-treehash_jazz(
+fn treehash_jazz(
     reg ptr u8[XMSS_N] root sk_seed pub_seed, 
     reg u32 start_index target_height,
     reg ptr u32[8] subtree_addr
@@ -29,7 +28,8 @@ fn treesig_jazz(
     reg ptr u8[XMSS_N] M, 
     reg ptr u8[XMSS_SK_BYTES] sk, 
     reg u32 idx_sig
-) ->reg ptr u8[XMSS_WOTS_SIG_BYTES + (XMSS_TREE_HEIGHT * XMSS_N)], reg ptr u32[8] {
+) -> reg ptr u8[XMSS_WOTS_SIG_BYTES + (XMSS_TREE_HEIGHT * XMSS_N)], 
+     reg ptr u32[8] {
     sig, addr = __tree_sig_(sig, M, sk, idx_sig, addr);
     return sig, addr;
 }

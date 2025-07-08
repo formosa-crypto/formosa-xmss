@@ -5,9 +5,10 @@ require import BitEncoding.
 from Jasmin require import JModel.
 require import Array8.
 
-require (****) XMSS_TW Checksum.
-require import XMSS_RFC_Abs.
-import XMSS_RFC_Params WOTS_RFC_Abs Address BaseW.
+require XMSS_TW Checksum.
+require XMSS_RFC_Abs.
+clone import XMSS_RFC_Abs as XMSSRFCAbs.
+import XMSS_Params Address BaseW.
 (*
 require (****) XMSS_TW.
 require import XMSS_PRF.
@@ -1218,7 +1219,6 @@ have ?: 0 < k' by smt().
 have := int2bs_incSE t lidxo _ _ _; ~-1: by move=> //#.
 rewrite -/k' /= => [#] ?? /= => hhd eqE1 eqE2 hoff.
 pose si := stack_increment _ _ _ _ _ _ _.
-print stack_increment.
 pose oldstack := stack_from_leaf start lidxo t ss ps ad.
 pose level :=
   if   offset = size oldstack + 1
@@ -2161,7 +2161,7 @@ seq 2 1 : (   #pre
   call (tree_hash_correct ps0t sk0t (kt * 2 ^ jt) jt).
   skip => &2 /> eqsk1 eqsk21 eqsk22 eqsk231 eqsk232 le2h1_idx eqszaph ge0j ? apdef lthj.
   do ? split; 1: by rewrite mulr_ge0 2:expr_ge0 2:// /to_uint 1:BS2Int.bs2int_ge0.
-  + by move => ?; apply bnd_uint_bs; 1,2: smt(W32.to_uint_cmp).
+  + move => ?; apply bnd_uint_bs; 1,2: smt(W32.to_uint_cmp).
   + by rewrite dvdz_mull 1:dvdzz.
   move => ? le2jkk ? resr resrval; do ? split; [ by rewrite size_put | smt() | smt() | | smt()].
   move=> kk ge0_k ltj1_kk; case (kk = j{2}) => [eqj | neqj].
@@ -2178,7 +2178,7 @@ seq 1 1 : (   #pre
               DBLL.insubd (map (fun (b : nbytes) => bs2block b) (LenNBytes.val sig_ots{2}))).
 + inline{1} WOTS_TW_ES.sign; inline{2} WOTS.sign_seed.
   wp.
-  while (   ps0{1} = pub_seed0{2} /\ idx_new{2} = skt.`Top.XMSS_RFC_Abs.idx + W32.one
+  while (   ps0{1} = pub_seed0{2} /\ idx_new{2} = skt.`idx + W32.one
          /\ ad0{1} = set_kpidx (XAddress.val (XAddress.insubd (HAX.Adrs.insubd (adr2idxs zero_address)))) (Index.val idx0{1})
          /\ address1{2} = set_chain_addr (set_ots_addr zero_address (to_uint idx0{2})) (if i{2} = 0 then 0 else i{2} - 1)
          /\ set_chidx ad0{1} (if size sig2{1} = 0 then 0 else size sig2{1} - 1)
@@ -2222,7 +2222,7 @@ seq 1 1 : (   #pre
           + by rewrite size_map NBytes.valP.
           by rewrite (size_flatten_ctt 8) => // bs /mapP [x] ->; rewrite size_w2bits.
         by rewrite (: chain_count{2} = chain_count{2} - 1 + 1) 1:// iteriS 1:/# /= DigestBlock.valP.
-        + pose ft :=  Top.WOTS_RFC_Abs.f _ _ _.
+        + pose ft :=  XMSSRFCAbs.f _ _ _.
           rewrite /BytesToBits (: n = size (map W8.w2bits (NBytes.val ft))).
           + by rewrite size_map NBytes.valP.
           by rewrite (size_flatten_ctt 8) => // bs /mapP [x] ->; rewrite size_w2bits.
@@ -2431,14 +2431,42 @@ nth witness (mkseq (fun (i0 : int) => s{2}.`sig_idx.[i0]) 32) i = nth witness (B
 
 lemma flrdv_intdiv i d:
   0 <= i => 1 <= d => floor (i%r / d%r) = i %/ d.
-proof. admitted.
+proof.
+move => rngi rngd; rewrite floorP.
+rewrite RField.mulrC; split => [|_].
++ by rewrite RealOrder.ler_pdivl_mull 1:/# -fromintM le_fromint; smt(leq_trunc_div).
+by rewrite RealOrder.ltr_pdivr_mull 1:/# -fromintD -fromintM lt_fromint; smt(ltz_ceil).
+qed.
 
 lemma chfltn_id pkw:
   chunk n (BitsToBytes (flatten (map DigestBlock.val (DBLL.val pkw))))
   =
   map BitsToBytes (map DigestBlock.val (DBLL.val pkw)).
-proof. admitted.
-
+proof.
+rewrite /BitsToBytes map_mkseq /(\o) /= (size_flatten_ctt (8 * n)).
++ by move=> y /mapP [t] ->; rewrite DigestBlock.valP.
+rewrite size_map DBLL.valP mulrC mulrCA mulKz 1:// -/(chunk 8).
+rewrite &(eq_from_nth witness).
++ rewrite size_chunk 2:size_mkseq 2:lez_maxr 3:mulzK; 1..3:smt(gt2_len ge4_n).
+  by rewrite ?size_map DBLL.valP.
+rewrite size_chunk 2:size_mkseq 2:lez_maxr 3:mulzK; 1..3:smt(gt2_len ge4_n).
+move => i rngi.
+rewrite /chunk size_mkseq lez_maxr 2:mulzK; 1,2:smt(gt2_len ge4_n).
+rewrite nth_mkseq /= 1:// (nth_map witness) /= 1:size_map 1:DBLL.valP 1://.
+rewrite map_mkseq /(\o) /= (nth_map witness) 2:DigestBlock.valP 2:mulKz 1:DBLL.valP 1,2://.
+rewrite &(eq_from_nth witness) ?size_take ?size_drop ?size_mkseq; 1..5:smt(gt2_len ge1_n).
+move=> j; pose ifn := if _ then _ else _; rewrite (: ifn = n); 1:smt(gt2_len ge4_n).
+move=> rngj; rewrite nth_mkseq 1:// /= nth_take 3:nth_drop; 1..4:smt(ge1_n).
+rewrite nth_mkseq 2:/=; 1: smt(ge1_n); congr.
+rewrite mulrDr mulrA addrC -drop_drop; 1,2: smt(ge1_n).
+rewrite drop_flatten_ctt; 1: by move => bs /mapP -[x [_ ->]]; 1: rewrite DigestBlock.valP.
+rewrite (drop_nth witness i) /= 1:size_map 1:DBLL.valP 1://.
+rewrite flatten_cons /= (nth_map witness) 1:DBLL.valP 1:// drop_cat.
+rewrite DigestBlock.valP ifT 1:/# take_cat size_drop 1:/# DigestBlock.valP.
+case (j = n - 1) => [-> | neqn1_j]; 2: by rewrite ifT 1:/#.
+rewrite ifF 1:/# /= take_le0 1:/# cats0.
+by rewrite take_oversize 2:// 1:size_drop 2:DigestBlock.valP; 1,2:smt(ge1_n).
+qed.
 
 equiv ver_eq (O <: DSS_RFC.RO.POracle) :
   XMSS_TW_RFC(O).verify ~ XMSS_RFC_Abs(RFC_O(O)).verify :

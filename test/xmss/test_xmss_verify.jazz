@@ -10,3 +10,20 @@ fn xmssmt_sign_open_jazz(
     res = __xmssmt_sign_open(pk, m_ptr, mlen_ptr, sm_ptr, smlen);
     return res;
 }
+
+/*
+export fn compute_root_jazz(
+    reg ptr u8[XMSS_N] root,
+    reg ptr u32[8] addr,
+    reg ptr u8[XMSS_N] leaf,
+    reg u32 leaf_idx,
+    reg u64 auth_path_ptr,
+    reg ptr u8[XMSS_N] pub_seed
+) -> reg ptr u8[XMSS_N], reg ptr u32[8]
+{
+    root, addr = 
+        __new_compute_root_(root, leaf, leaf_idx, auth_path_ptr, pub_seed, addr);
+    
+    return root, addr;
+}
+*/
