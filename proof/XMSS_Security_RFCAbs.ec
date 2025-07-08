@@ -2831,8 +2831,7 @@ seq 1 1 : (   #pre
     rewrite /RFC.skr2sko XAddress.insubdK /valid_xadrs ?HAX.Adrs.insubdK ?zeroidxsE ?zeroadiP ?zeroxadiP /=.
     rewrite /set_typeidx HAX.Adrs.insubdK 1:valid_xadrsidxs_adrsidxs 1:zeroxadiP /put /=.
     rewrite /set_kpidx /set_idx HAX.Adrs.insubdK 1:valid_xadrsidxs_adrsidxs 1:zeroxadiP /put /=.
-    rewrite to_uint_small //. (* smt(Index.valP h_max). ??? *)
-    admit.
+    rewrite to_uint_small //; smt(Index.valP ge1_h h_max pow2_32 gt_exprsbde).
   outline{2} [1 .. 8] by { msg <@ WOTS_Encode.encode(M0); }.
   ecall{2} (WOTSEncodeP M0{2}).
   skip => &1 &2 />.
