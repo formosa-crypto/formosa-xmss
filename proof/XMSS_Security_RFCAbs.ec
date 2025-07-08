@@ -2034,16 +2034,49 @@ lemma bnd_uint_bs idx j :
 proof.
 move => ??.
 rewrite /(`>>`) /= modz_small /=;1:smt(h_max).
-have /=: 0 <= 2^h < 2^32  by split;[ smt(StdOrder.IntOrder.expr_ge0) | move => *;apply gt_exprsbde;smt(h_max h_g0 leq_div)].
-have /=: 0 <= 2^j < 2^h  by split;[ smt(StdOrder.IntOrder.expr_ge0) | move => *;apply gt_exprsbde;smt(h_max h_g0 leq_div)].
+have /= ?: 0 <= 2^h < 2^32  by split;[ smt(StdOrder.IntOrder.expr_ge0) | move => *;apply gt_exprsbde;smt(h_max h_g0 leq_div)].
+have /= ? : 0 <= 2^j < 2^h  by split;[ smt(StdOrder.IntOrder.expr_ge0) | move => *;apply gt_exprsbde;smt(h_max h_g0 leq_div)].
 have -> : (idx `>>>` j) `^` W32.one = if (idx `>>>` j).[0] then
-   (idx `>>>` j) - W32.one else (idx `>>>` j) + W32.one; last first.
-+ case ((idx `>>>` j).[0]) => *; last first.
-  + rewrite to_uintD_small /= to_uint_shr 1,3:/#.  
-    + by smt( h_max h_g0 leq_div).
-      by smt( h_max h_g0 leq_div).
-  
-admitted.
+   (idx `>>>` j) - W32.one else (idx `>>>` j) + W32.one  by admit.
+case ((idx `>>>` j).[0]) => *.
++ rewrite to_uintB ? uleE /=; smt(@W32).
+rewrite to_uintD_small /= to_uint_shr 1,3:/#;1: by smt( h_max h_g0 leq_div).
+have ? : 2*2^j <= 2^h by smt(@StdOrder.IntOrder h_g0).
+rewrite mulrDl /= divzE. 
+have ? : to_uint idx %/ 2^j %% 2 = 0 by smt(@W32 @IntDiv).
+have <- : (to_uint idx + 2 ^ j + 2^j <= 2^ h + to_uint idx %% 2 ^ j) <=> 
+ (to_uint idx - to_uint idx %% 2 ^ j + 2 ^ j <= 2 ^ h - 2 ^ j)   by smt() .
+have -> := (divz_eq (to_uint idx + 2 ^ j + 2 ^ j) (2^j)).
+have -> : (to_uint idx + 2 ^ j + 2 ^ j) %% 2 ^ j = to_uint idx %% 2 ^ j by smt().
+have -> : ((to_uint idx + 2 ^ j + 2 ^ j) %/ 2 ^ j * 2 ^ j + to_uint idx %% 2 ^ j <= 2 ^ h + to_uint idx %% 2 ^ j) <=> ((to_uint idx + 2 ^ j) + 2 ^ j) %/ 2 ^ j * 2 ^ j  <= 2 ^ h  by smt().
+rewrite divzDr; 1:smt(@IntDiv).
+rewrite mulrDl /=.
+have -> : 2 ^ j %/ 2 ^ j * 2 ^ j  = 2^j by smt(@IntDiv).
+pose x:= (to_uint idx + 2 ^ j).
+have ? : 0 <= x < 2^h.
++ split => *; 1: by smt(W32.to_uint_cmp).
+  rewrite /x (divz_eq (to_uint idx) (2^j)).
+  have -> : to_uint idx %/ 2 ^ j * 2 ^ j = to_uint idx %/ 2 ^ j %/ 2 * 2  * 2 ^ j by smt(@IntDiv).
+  have -> :  to_uint idx %/ 2 ^ j %/ 2 * 2 * 2 ^ j = to_uint idx %/ 2 ^ (j+1) * 2 ^ (j+1) by smt(@Ring.IntID @IntDiv).
+  have ? : to_uint idx %/ 2 ^ (j + 1) * 2 ^ (j + 1)  <= 2^h %/ 2 ^ (j + 1) * 2 ^ (j + 1)   by smt(@StdOrder.IntOrder @Ring.IntID @IntDiv).
+  have ? : to_uint idx %% 2 ^ j  < 2^j by smt(@IntDiv).
+  have ? : (2^h -1 )%/ 2 ^ (j + 1) * 2 ^ (j + 1) + 2^ j + (2^j-1) = 2^h - 1; last  by smt(@StdOrder.IntOrder @Ring.IntID @IntDiv).
+   have Hs := modz_pow_split (j+1) j (2^h - 1) 2 _;1:smt().
+   rewrite {2} Hs;congr;last by have := powm1_mod h j;smt().
+   congr. 
+   have -> :  (2 ^ h - 1) %% 2 ^ (j + 1) = 2^(j+1) - 1 by have := powm1_mod h (j+1);smt().
+   have ? := powm1_mod (j+1) (j) _;1:smt(). 
+   have -> : 2 ^ (j + 1) - 1 = (2^j - 1) + 1*2^j by smt(@IntDiv @Ring.IntID).
+   rewrite divzDr; 1: by smt(@IntDiv).
+   have -> /= : (2 ^ j - 1) %/ 2 ^ j = 0 by smt(@IntDiv).
+   have -> : 2 ^ j %/ 2 ^ j= 1; by smt (@IntDiv @StdOrder.IntOrder @Ring.IntID).
+     
+
+have ? : (x %/ 2 ^ j * 2 ^ j) %% 2^j = 0 by smt(@IntDiv).
+have ? : (x %/ 2 ^ j * 2 ^ j) < 2^h by smt(@IntDiv).
+case  (x %/ 2 ^ j * 2 ^ j = (2^h-1) %/ 2 ^ j * 2 ^ j); last by smt(@IntDiv).  
+by have := powm1_mod h j _; smt(@IntDiv). 
+qed.
 
 equiv sig_eq (O <: DSS_RFC.RO.POracle) _idx :
   XMSS_TW_RFC(O).sign ~ XMSS_RFC_Abs(RFC_O(O)).sign :
