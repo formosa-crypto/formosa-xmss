@@ -2032,6 +2032,17 @@ lemma bnd_uint_bs idx j :
      <=
      2 ^ h - 2 ^ j.
 proof.
+move => ??.
+rewrite /(`>>`) /= modz_small /=;1:smt(h_max).
+have /=: 0 <= 2^h < 2^32  by split;[ smt(StdOrder.IntOrder.expr_ge0) | move => *;apply gt_exprsbde;smt(h_max h_g0 leq_div)].
+have /=: 0 <= 2^j < 2^h  by split;[ smt(StdOrder.IntOrder.expr_ge0) | move => *;apply gt_exprsbde;smt(h_max h_g0 leq_div)].
+have -> : (idx `>>>` j) `^` W32.one = if (idx `>>>` j).[0] then
+   (idx `>>>` j) - W32.one else (idx `>>>` j) + W32.one; last first.
++ case ((idx `>>>` j).[0]) => *; last first.
+  + rewrite to_uintD_small /= to_uint_shr 1,3:/#.  
+    + by smt( h_max h_g0 leq_div).
+      by smt( h_max h_g0 leq_div).
+  
 admitted.
 
 equiv sig_eq (O <: DSS_RFC.RO.POracle) _idx :
