@@ -2037,41 +2037,62 @@ rewrite /(`>>`) /= modz_small /=;1:smt(h_max).
 have /= ?: 0 <= 2^h < 2^32  by split;[ smt(StdOrder.IntOrder.expr_ge0) | move => *;apply gt_exprsbde;smt(h_max h_g0 leq_div)].
 have /= ? : 0 <= 2^j < 2^h  by split;[ smt(StdOrder.IntOrder.expr_ge0) | move => *;apply gt_exprsbde;smt(h_max h_g0 leq_div)].
 have -> : (idx `>>>` j) `^` W32.one = if (idx `>>>` j).[0] then
-   (idx `>>>` j) - W32.one else (idx `>>>` j) + W32.one  by admit.
-case ((idx `>>>` j).[0]) => *.
-+ rewrite to_uintB ? uleE /=; smt(@W32).
+   (idx `>>>` j) - W32.one else (idx `>>>` j) + W32.one.
++ case ((idx `>>>` j).[0]) => Hbit; have := Hbit;rewrite get_to_uint /= to_uint_shr 1:/# => Hbitt.
+  + have {2}->/= : (idx `>>>` j) = W32.of_int (to_uint (idx `>>>` j) %/ 2 * 2) + W32.one by smt(@W32 @IntDiv).
+    apply W32.wordP => i ib; rewrite xorwE.
+    + case(i = 0). 
+      + move => ->;rewrite Hbit /= !of_intwE /= /int_bit /=; smt(@IntDiv).
+    move => ?. 
+    have -> : W32.one.[i] = false by rewrite of_intwE /=; smt(@IntDiv).
+  pose xx := (idx `>>>` j).[i]. simplify.
+  rewrite !of_intwE /= /int_bit /= ib /=(modz_small _ 4294967296);1: smt( @W32 pow2_32).
+  have -> : to_uint (idx `>>>` j) %/ 2 * 2 %/ 2 ^ i = to_uint (idx `>>>` j)  %/ 2 ^ i; last by  smt(@W32).
+  admit.
+  + have {2}->/= : (idx `>>>` j) = W32.of_int (to_uint (idx `>>>` j) %/ 2 * 2) by smt(@W32 @IntDiv).
+    apply W32.wordP => i ib; rewrite xorwE.
+    + case(i = 0). 
+      + move => ->;rewrite Hbit /= !of_intwE /= /int_bit /=; smt(@IntDiv).
+    move => ?. 
+    have -> : W32.one.[i] = false by rewrite of_intwE /=; smt(@IntDiv).
+  pose xx := (idx `>>>` j).[i]. simplify.
+  rewrite !of_intwE /= /int_bit /= ib /=(modz_small _ 4294967296);1: smt( @W32 pow2_32).
+  have -> :( to_uint (idx `>>>` j) %/ 2 * 2 + 1) %/ 2 ^ i = to_uint (idx `>>>` j)  %/ 2 ^ i; last by  smt(@W32).
+  admit. 
+case ((idx `>>>` j).[0]);rewrite get_to_uint /= to_uint_shr 1:/# => Hbit.
++ by rewrite to_uintB ? uleE /= to_uint_shr 1:/#; smt( StdOrder.IntOrder.expr_gt0).
 rewrite to_uintD_small /= to_uint_shr 1,3:/#;1: by smt( h_max h_g0 leq_div).
-have ? : 2*2^j <= 2^h by smt(@StdOrder.IntOrder h_g0).
+have ? : 2*2^j <= 2^h by rewrite -Ring.IntID.exprS; smt(h_g0 ler_weexpn2l).
 rewrite mulrDl /= divzE. 
-have ? : to_uint idx %/ 2^j %% 2 = 0 by smt(@W32 @IntDiv).
 have <- : (to_uint idx + 2 ^ j + 2^j <= 2^ h + to_uint idx %% 2 ^ j) <=> 
  (to_uint idx - to_uint idx %% 2 ^ j + 2 ^ j <= 2 ^ h - 2 ^ j)   by smt() .
 have -> := (divz_eq (to_uint idx + 2 ^ j + 2 ^ j) (2^j)).
 have -> : (to_uint idx + 2 ^ j + 2 ^ j) %% 2 ^ j = to_uint idx %% 2 ^ j by smt().
 have -> : ((to_uint idx + 2 ^ j + 2 ^ j) %/ 2 ^ j * 2 ^ j + to_uint idx %% 2 ^ j <= 2 ^ h + to_uint idx %% 2 ^ j) <=> ((to_uint idx + 2 ^ j) + 2 ^ j) %/ 2 ^ j * 2 ^ j  <= 2 ^ h  by smt().
-rewrite divzDr; 1:smt(@IntDiv).
+rewrite divzDr;1: smt(le_dvd_pow). 
 rewrite mulrDl /=.
-have -> : 2 ^ j %/ 2 ^ j * 2 ^ j  = 2^j by smt(@IntDiv).
+have -> : 2 ^ j %/ 2 ^ j * 2 ^ j  = 2^j by smt().
 pose x:= (to_uint idx + 2 ^ j).
 have ? : 0 <= x < 2^h.
 + split => *; 1: by smt(W32.to_uint_cmp).
   rewrite /x (divz_eq (to_uint idx) (2^j)).
-  have -> : to_uint idx %/ 2 ^ j * 2 ^ j = to_uint idx %/ 2 ^ j %/ 2 * 2  * 2 ^ j by smt(@IntDiv).
-  have -> :  to_uint idx %/ 2 ^ j %/ 2 * 2 * 2 ^ j = to_uint idx %/ 2 ^ (j+1) * 2 ^ (j+1) by smt(@Ring.IntID @IntDiv).
-  have ? : to_uint idx %/ 2 ^ (j + 1) * 2 ^ (j + 1)  <= 2^h %/ 2 ^ (j + 1) * 2 ^ (j + 1)   by smt(@StdOrder.IntOrder @Ring.IntID @IntDiv).
-  have ? : to_uint idx %% 2 ^ j  < 2^j by smt(@IntDiv).
-  have ? : (2^h -1 )%/ 2 ^ (j + 1) * 2 ^ (j + 1) + 2^ j + (2^j-1) = 2^h - 1; last  by smt(@StdOrder.IntOrder @Ring.IntID @IntDiv).
+  have -> : to_uint idx %/ 2 ^ j * 2 ^ j = to_uint idx %/ 2 ^ j %/ 2 * 2  * 2 ^ j by smt().
+  have -> :  to_uint idx %/ 2 ^ j %/ 2 * 2 * 2 ^ j = to_uint idx %/ 2 ^ (j+1) * 2 ^ (j+1).
+  + by rewrite !exprS 1:/#  (Ring.IntID.mulrC 2 (2^j)) divzMr /#.
+  have ? : to_uint idx %/ 2 ^ (j + 1) * 2 ^ (j + 1)  <= 2^h %/ 2 ^ (j + 1) * 2 ^ (j + 1) by smt().
+  have ? : to_uint idx %% 2 ^ j  < 2^j by smt(modz_cmp StdOrder.IntOrder.expr_gt0).
+  have ? : (2^h -1 )%/ 2 ^ (j + 1) * 2 ^ (j + 1) + 2^ j + (2^j-1) = 2^h - 1.
    have Hs := modz_pow_split (j+1) j (2^h - 1) 2 _;1:smt().
    rewrite {2} Hs;congr;last by have := powm1_mod h j;smt().
    congr. 
    have -> :  (2 ^ h - 1) %% 2 ^ (j + 1) = 2^(j+1) - 1 by have := powm1_mod h (j+1);smt().
    have ? := powm1_mod (j+1) (j) _;1:smt(). 
-   have -> : 2 ^ (j + 1) - 1 = (2^j - 1) + 1*2^j by smt(@IntDiv @Ring.IntID).
-   rewrite divzDr; 1: by smt(@IntDiv).
-   have -> /= : (2 ^ j - 1) %/ 2 ^ j = 0 by smt(@IntDiv).
-   have -> : 2 ^ j %/ 2 ^ j= 1; by smt (@IntDiv @StdOrder.IntOrder @Ring.IntID).
-     
-
+   have -> : 2 ^ (j + 1) - 1 = (2^j - 1) + 1*2^j by rewrite exprS 1:/#;ring.
+   rewrite divzDr => /=;1:by smt(le_dvd_pow).
+   have -> /= : (2 ^ j - 1) %/ 2 ^ j = 0 by smt(divz_small StdOrder.IntOrder.expr_gt0).
+   have -> : 2 ^ j %/ 2 ^ j= 1; by smt (StdOrder.IntOrder.expr_gt0).
+  apply (ler_lt_trans ((2 ^ h - 1) %/ 2 ^ (j + 1) * 2 ^ (j + 1) + 2 ^ j + (2 ^ j - 1))); last by smt().  
+  smt(@StdOrder.IntOrder @IntDiv).
 have ? : (x %/ 2 ^ j * 2 ^ j) %% 2^j = 0 by smt(@IntDiv).
 have ? : (x %/ 2 ^ j * 2 ^ j) < 2^h by smt(@IntDiv).
 case  (x %/ 2 ^ j * 2 ^ j = (2^h-1) %/ 2 ^ j * 2 ^ j); last by smt(@IntDiv).  
