@@ -1832,6 +1832,14 @@ proof.
 move=> 7? si si1.
 admitted.
 
+equiv genSK_eq:
+  WOTS_TW_ES.gen_skWOTS ~ WOTS.pseudorandom_genSK:
+    ss{1} = sk_seed{2} /\ ps{1} = seed{2} /\ ad{1} = adr2ads address{2}
+    ==> DBLL.val res{1} = map bs2block (LenNBytes.val res{2}).
+proof.
+(* FD --- equivalence of secret key generation *)
+admitted.
+
 phoare leaves_correct _ps _ss  _ad :
  [ FL_XMSS_TW_ES.leaves_from_sspsad :
   arg = (_ss, _ps, _ad)  ==>
@@ -1862,7 +1870,7 @@ proc; while (size leafl <= l
   have -> //=: 8 * n * len <> 8 * n by smt(ge1_n gt2_len).
   have -> //=: 8 * n * len <> 8 * n * 2 by smt(ge1_n gt2_len).
   rewrite /bs2block /wots_pk_val.
-  admit. (** Here be a giant pain in the ass. **)
+  admit. (** FD --- Here be a giant pain in the ass. **)
 by auto=> />; rewrite range_geq //=; smt(ge1_d).
 qed.
 
@@ -2813,28 +2821,18 @@ seq 1 1 : (   #pre
     smt(size_rcons).
   wp -1 -1.
   sp; seq 1 1 : (#pre /\ DBLL.val skWOTS0{1} = map bs2block (LenNBytes.val wots_skey{2})).
-  (* FD: WOTS stuff *)
-  + admit.
-  (*
-    inline *.
-    wp; while (   ss1{1} = sk_seed1{2}
-               /\ ps1{1} = seed{2}
-               /\ address2{2} = set_chain_addr (ads2adr ad1{1}) (if i0{2} = 0 then 0 else i0{2} - 1)
-               /\ size skWOTS1{1} = i0{2}
-               /\ size sk1{2} = len
-               /\ 0 <= size skWOTS1{1} <= len
-               /\ (forall i, 0 <= i < size skWOTS1{1} =>
-                    nth witness skWOTS1{1} i = bs2block (nth witness sk1{2} i))).
-    + admit.
-    auto => &1 &2 /> *.
-    split.
-    + split; 2: smt(size_nseq gt2_len).
-      rewrite /RFC.skr2sko XAddress.insubdK /valid_xadrs ?HAX.Adrs.insubdK ?zeroidxsE ?zeroadiP ?zeroxadiP /=.
-      rewrite /set_typeidx HAX.Adrs.insubdK 1:valid_xadrsidxs_adrsidxs 1:zeroxadiP /put /=.
-      rewrite /set_kpidx /set_idx HAX.Adrs.insubdK 1:valid_xadrsidxs_adrsidxs 1:zeroxadiP /put /=.
-      admit.
-  + admit.
-  *)
+  + conseq (: DBLL.val skWOTS0{1} = map bs2block (LenNBytes.val wots_skey{2}))=> //.
+    call genSK_eq; auto=> /> &1 &2 sk1 sk21 sk22 sk231 sk232 skt_idx ap_eq.
+    rewrite -sk21 /adr2ads /adr2idxs /set_ots_addr /set_type /sub /zero_address.
+    rewrite -map_rev /mkseq -map_rev //= rev_iota.
+    (* Use user reduction? *)
+    rewrite (iotaS _ 3) // (iotaS _ 2) // (iotaS _ 1) // (iota1) //=.
+    (* This is probably simplifiable---copy-pasted without thought from old proof *)
+    rewrite /RFC.skr2sko XAddress.insubdK /valid_xadrs ?HAX.Adrs.insubdK ?zeroidxsE ?zeroadiP ?zeroxadiP /=.
+    rewrite /set_typeidx HAX.Adrs.insubdK 1:valid_xadrsidxs_adrsidxs 1:zeroxadiP /put /=.
+    rewrite /set_kpidx /set_idx HAX.Adrs.insubdK 1:valid_xadrsidxs_adrsidxs 1:zeroxadiP /put /=.
+    rewrite to_uint_small //. (* smt(Index.valP h_max). ??? *)
+    admit.
   outline{2} [1 .. 8] by { msg <@ WOTS_Encode.encode(M0); }.
   ecall{2} (WOTSEncodeP M0{2}).
   skip => &1 &2 />.
