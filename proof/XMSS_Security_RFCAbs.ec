@@ -1837,9 +1837,28 @@ equiv genSK_eq:
     ss{1} = sk_seed{2} /\ ps{1} = seed{2} /\ ad{1} = adr2ads address{2}
     ==> DBLL.val res{1} = map bs2block (LenNBytes.val res{2}).
 proof.
-(* FD --- equivalence of secret key generation *)
+(* FD --- equivalence of OTS secret key generation *)
 admitted.
 
+equiv pkFromSig_eq:
+  WOTS_TW_ES.pkWOTS_from_sigWOTS ~ WOTS.pkFromSig:
+     DigestBlock.val m{1} = BytesToBits (NBytes.val M{2})
+  /\ map DigestBlock.val (DBLL.val sig{1}) = map (BytesToBits \o NBytes.val) (LenNBytes.val sig{2})
+  /\ ps{1} = _seed{2}
+  /\ ad{1} = adr2ads address{2}
+  ==> map DigestBlock.val (DBLL.val res{1}) = map (BytesToBits \o NBytes.val) (LenNBytes.val res{2}).
+proof.
+(* FD --- equivalence of OTS verification *)
+(*
++ inline{1} pkWOTS_from_sigWOTS; inline{2} pkFromSig.
+  sp 4 5.
+  outline{2} [1 .. 8] by { msg <@ WOTS_Encode.encode(NBytes.val M0); }.
+  wp.
+  admit.
+*)
+admitted.
+  
+(* TODO: check usage; would it be better phrased as an equivalence? *)
 phoare leaves_correct _ps _ss  _ad :
  [ FL_XMSS_TW_ES.leaves_from_sspsad :
   arg = (_ss, _ps, _ad)  ==>
@@ -2996,15 +3015,22 @@ seq 5 9 : (   pkrel pk{1} pk{2}
 wp; inline{1} verify; inline{1} root_from_sigFLXMSSTW; inline{2} rootFromSig.
 sp; seq 1 1 : (   #pre
                /\ map DigestBlock.val (DBLL.val pkWOTS0{1}) = map (BytesToBits \o NBytes.val) (LenNBytes.val pk_ots{2})).
-  (* FD: WOTS stuff *)
-(*
-+ inline{1} pkWOTS_from_sigWOTS; inline{2} pkFromSig.
-  sp 4 5.
-  outline{2} [1 .. 8] by { msg <@ WOTS_Encode.encode(NBytes.val M0); }.
-  wp.
-  admit.
-*)
-+ admit.
++ call pkFromSig_eq; auto=> /> &1 &2 -> _ _ idx_sig_lt_l -> _ _ _ _.
+  move: (HAX.Adrs.valP ((RFC.pkr2pko pk{1}).`3)).
+  rewrite /valid_adrsidxs=> - [] size_adrs valid_adrs.
+  rewrite /set_kpidx /set_typeidx.
+  rewrite {1}/put //= !size_put size_adrs //=.
+  rewrite {1}/put //= !size_put size_adrs //=.
+  rewrite {1}/put //= !size_put size_adrs //=.
+  rewrite {1}/put //= size_adrs //=.
+  do !rewrite take0 //=.
+  move: size_adrs; rewrite -(size_put _ 0 0) -(size_put _ 1 0) -(size_put _ 2 0)=> <-.
+  rewrite drop_size.
+  rewrite /HAX.set_idx HAX.Adrs.insubdK /put //=.
+  + smt(w_vals gt2_len ge2_l).
+  rewrite /adr2ads /adr2idxs /set_ots_addr /set_type /zero_address /sub.
+  rewrite -map_rev rev_mkseq /mkseq //=.
+  by rewrite (iotaS _ 3) // (iotaS _ 2) // (iotaS _ 1) // iota1.
 wp; sp 0 5; elim* => ad2.
 exlim nodes0{2} => lf2.
 while{2} (BytesToBits (NBytes.val nodes0{2})
