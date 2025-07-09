@@ -255,10 +255,10 @@ void xmssmt_bench_sign(const xmss_params *params, uint32_t oid) {
     uint64_t median_val = median(observations, DATA_POINTS);
 
 #ifdef MEDIAN_ONLY
-    write_results(xstr(OUTPUT_FILE), "keypair", median_val, 0);
+    write_results(xstr(OUTPUT_FILE), "sign", median_val, 0);
 #else
     uint64_t avg = average(observations, DATA_POINTS);
-    write_results(xstr(OUTPUT_FILE), "keypair", median_val, avg);
+    write_results(xstr(OUTPUT_FILE), "sign", median_val, avg);
 #endif
 }
 
