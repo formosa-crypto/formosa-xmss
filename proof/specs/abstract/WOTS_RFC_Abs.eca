@@ -95,6 +95,22 @@ qed.
 op ch (f : seed -> adrs -> nbytes -> nbytes) (_s : seed) (ad : adrs) (i s : int) (x : nbytes): nbytes =
   iteri s (fun chain_count x => f _s (set_hash_addr ad (i + chain_count)) x) x.
 
+lemma chain_ch x i s _s ad:
+     0 <= s
+  => chain x i s _s ad = ch f _s ad i s x.
+proof.
+move=> ge0_s; rewrite /chain /ch.
+have -> //: iteri s (chain_body i _s) (x, ad)
+          = (iteri s (fun cc x0=> f _s (set_hash_addr ad (i + cc)) x0) x, if s = 0 then ad else set_hash_addr ad (i + (s - 1))).
+elim: s ge0_s.
++ by rewrite !iteri0 //.
++ move=> s ge0_s ih.
+  rewrite !iteriS //=.
+  have -> /=: s + 1 <> 0 by smt().
+  rewrite {1}/chain_body ih //=.
+  by case: (s = 0)=> //=.
+qed.
+
 lemma ch0 (g : seed -> adrs -> nbytes -> nbytes) (ps : seed) (ad : adrs) (s i : int) (x : nbytes) :
      i <= 0
   => ch g ps ad s i x = x.
