@@ -3,29 +3,29 @@ pragma Goals : printall.
 require import AllCore List Distr RealExp IntDiv DList.
 from Jasmin require import JModel.
 
-require import Params BaseW Address Hash.
+require import Params Types BaseW Address Hash.
 
 (******************************************************************************)
 
-type key = nbytes.
-type seed = nbytes.
+(* type key = nbytes. *)
+(* type seed = nbytes. *)
 
-(******************************************************************************)
+(* (******************************************************************************) *)
 
-type wots_message = nbytes.
-type wots_message_base_w = onebyte.
-type wots_signature = len_nbytes.
-type wots_pk = len_nbytes.
-type wots_sk = len_nbytes.
-type wots_keypair = wots_pk * wots_sk.
+(* type wots_message = nbytes. *)
+(* type wots_message_base_w = onebyte. *)
+(* type wots_signature = len_nbytes. *)
+(* type wots_pk = len_nbytes. *)
+(* type wots_sk = len_nbytes. *)
+(* type wots_keypair = wots_pk * wots_sk. *)
 
-(******************************************************************************)
+(* (******************************************************************************) *)
 
-subtype wots_ots_keys as OTSKeys = { l : wots_sk list | size l = 2^h }.
-realize inhabited.
-proof.
-by exists (nseq (2^h) witness); rewrite size_nseq; smt(ge0_h @IntDiv).
-qed.
+(* subtype wots_ots_keys as OTSKeys = { l : wots_sk list | size l = 2^h }. *)
+(* realize inhabited. *)
+(* proof. *)
+(* by exists (nseq (2^h) witness); rewrite size_nseq; smt(ge0_h @IntDiv). *)
+(* qed. *)
 
 op nbytexor(a b : nbytes) : nbytes = NBytes.insubd (bytexor (NBytes.val a) (NBytes.val b)).
 
