@@ -4,7 +4,7 @@ require import AllCore List RealExp IntDiv.
 
 from Jasmin require import JModel JArray.
 
-require import Params Address Hash BaseW WOTS. 
+require import Params Types Address Hash BaseW WOTS. 
 
 require import XMSS_IMPL Parameters.
 

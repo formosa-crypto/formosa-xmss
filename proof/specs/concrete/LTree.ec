@@ -1,23 +1,17 @@
 pragma Goals : printall.
 
-require import AllCore List RealExp IntDiv Distr DList.
+require import AllCore List IntDiv Distr DList RealExp.
 require (*--*) Subtype. 
 
 from Jasmin require import JModel.
  
-require import Params Address Hash WOTS.
+require import Params Types Address Hash WOTS.
 
 op H_msg_padding_val : W64.t.
 
 op H_msg (t : threen_bytes) (M : W8.t list) : nbytes =
   let padding : W8.t list = toByte_64 H_msg_padding_val n in
   Hash (padding ++ ThreeNBytesBytes.val t ++ M).
-
-subtype wots_keys as WOTSKeys = { l : wots_sk list | size l = 2^h }.
-realize inhabited.
-proof.
-exists (nseq (2^h) witness); rewrite size_nseq; smt(@IntDiv).
-qed.
 
 (* 4.1.5 L-Trees *)
 (* takes as input a WOTS+ public key pk and compresses it to a single 
@@ -211,7 +205,7 @@ move=> gt1_len; rewrite eqz_leq; split.
          = ceil (log2 (ceil (len%r / 2%r))%r + 1%r).
   + smt(@Real). (* see floor *)
   have: log2 len%r <= log2 (ceil (len%r / 2%r))%r + 1%r; 2:smt(@Real).
-  rewrite -(logK 2%r 1%r) // -logM.
+  rewrite -(RealExp.logK 2%r 1%r) // -logM.
   + smt(@Real).
   + smt(@RealExp).
   apply: log_mono=> //.

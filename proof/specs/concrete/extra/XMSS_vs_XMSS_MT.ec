@@ -4,7 +4,7 @@ from Jasmin require import JModel.
 
 require import List DList IntDiv Int Ring.
 
-require import Address Types Hash XMSS_Params LTree XMSS_Types XMSS_PRF XMSS_MT_Params XMSS_MT_Types XMSS_MT_PRF.
+require import Address Params Types Hash LTree XMSS_PRF XMSS_MT_Params XMSS_MT_Types XMSS_MT_PRF.
 import IntID.
 
 require import Array8.
@@ -35,8 +35,8 @@ while (#pre).
 - auto.
 qed.
 
-pred eq_auth_path (a : XMSS_Types.auth_path) (a_mt : auth_path)  = 
-    AuthPath.val a_mt = XMSS_Types.AuthPath.val a.
+pred eq_auth_path (a : Types.auth_path) (a_mt : auth_path) =
+     AuthPath.val a_mt = Types.AuthPath.val a.
 
 equiv root_from_sig_equiv : 
     XMSS_TreeHash.RootFromSig.rootFromSig ~ XMSS_MT_TreeHash.RootFromSig.rootFromSig :
@@ -71,13 +71,13 @@ seq 6 6 : (#pre /\ ={pub_seed, sk_seed, address, sk_seed, sk_prf, pub_seed}).
 call (treehash_equiv); auto => /> /#.
 qed.
 
-pred eq_r_sigs (x : wots_signature * XMSS_Types.auth_path)
+pred eq_r_sigs (x : wots_signature * Types.auth_path)
                (y : (wots_signature * auth_path) list) = 
                size y = 1 /\ 
                x.`1 = (nth witness y 0).`1 /\ 
                eq_auth_path x.`2 (nth witness y 0).`2.
 
-pred eqsig(sig : XMSS_Types.sig_t, sigmt : XMSS_MT_Types.sig_t) =
+pred eqsig(sig : Types.sig_t, sigmt : XMSS_MT_Types.sig_t) =
   sig.`sig_idx = sigmt.`sig_idx /\
   sig.`r = sigmt.`r /\  
   eq_r_sigs (sig.`r_sig) (sigmt.`r_sigs).
@@ -119,7 +119,7 @@ call(:
   while (#pre); auto => />.
      - call (treehash_equiv); auto => /> *; split => //; rewrite ?size_put /#. 
      - move => &2 d_val *; split => [/# |]. 
-       move => authpathR ?????; rewrite /eq_auth_path !AuthPath.insubdK // XMSS_Types.AuthPath.insubdK //.
+       move => authpathR ?????; rewrite /eq_auth_path !AuthPath.insubdK //Types.AuthPath.insubdK //.
 wp ; call(: true); 1: by sim.
 auto => /> &1 ? -> /= *; do split. 
 + rewrite and_mod;1:smt(ge0_h).

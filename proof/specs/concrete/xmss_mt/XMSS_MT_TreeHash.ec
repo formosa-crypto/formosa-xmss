@@ -1,6 +1,5 @@
 pragma Goals : printall.
 
-
 require import AllCore List RealExp IntDiv Distr DList.
 require (*--*) Subtype. 
 

@@ -8,7 +8,7 @@ require import Array8.
 require XMSS_TW Checksum.
 require XMSS_RFC_Abs.
 clone import XMSS_RFC_Abs as XMSSRFCAbs.
-import XMSS_Params Address BaseW.
+import XMSS_Params Types Address BaseW.
 (*
 require (****) XMSS_TW.
 require import XMSS_PRF.
@@ -2055,8 +2055,10 @@ have -> : (idx `>>>` j) `^` W32.one = if (idx `>>>` j).[0] then
     apply W32.wordP => i ib; rewrite xorwE.
     + case(i = 0). 
       + move => ->;rewrite Hbit /= !of_intwE /= /int_bit /=; smt(@IntDiv).
-    move => ?. 
-    have -> : W32.one.[i] = false by rewrite of_intwE /=; smt(@IntDiv).
+    move => ?.
+    have -> : W32.one.[i] = false.
+    + rewrite of_intwE /= ib /int_bit neqF /= pdiv_small; split => // _.
+      by rewrite -(Ring.IntID.expr0 2); smt(gt_exprsbde expr_gt0).
   pose xx := (idx `>>>` j).[i]. simplify.
   rewrite !of_intwE /= /int_bit /= ib /=(modz_small _ 4294967296);1: smt( @W32 pow2_32).
   have -> :( to_uint (idx `>>>` j) %/ 2 * 2 + 1) %/ 2 ^ i = to_uint (idx `>>>` j)  %/ 2 ^ i; last by  smt(@W32).
