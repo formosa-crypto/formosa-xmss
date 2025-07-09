@@ -8,7 +8,7 @@ require import Array8.
 require XMSS_TW Checksum.
 require XMSS_RFC_Abs.
 clone import XMSS_RFC_Abs as XMSSRFCAbs.
-import XMSS_Params Address BaseW.
+import XMSS_Params Types Address BaseW.
 (*
 require (****) XMSS_TW.
 require import XMSS_PRF.

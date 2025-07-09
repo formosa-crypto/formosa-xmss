@@ -8,7 +8,7 @@ require import Array8.
 require import XMSS_RFC_Abs.
 import XMSS_RFC_Params WOTS_RFC_Abs Address BaseW.
 *)
-require import XMSS_Params Address BaseW.
+require import XMSS_Params Types Address BaseW.
 
 require XMSS_Security_RFCAbs.
 clone import XMSS_Security_RFCAbs as XMSSSecToAbs.
