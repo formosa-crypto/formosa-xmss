@@ -58,6 +58,9 @@ bin/%.out: bin/%
 bin/:
 	mkdir -p $@ 
 
-.PHONY: clean
+.PHONY: clean clean_bin
 clean:
 	-$(RM) -r bin/ 
+
+clean_bin:
+	-$(RM) $(BIN)
