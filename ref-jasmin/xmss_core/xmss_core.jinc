@@ -272,7 +272,15 @@ fn __xmssmt_core_sign(
 
         // Copy the signature back to memory
         () = #unspill(sm_ptr);
-        for j=0 to XMSS_SIG_BYTES { [:u8 sm_ptr + j] = signature[j]; }
+
+        if XMSS_SIG_BYTES % 8 != 0 {
+            for j = 0 to XMSS_SIG_BYTES/8 { 
+                [:u64 sm_ptr + 8*j] = signature[:u64 j]; 
+            }
+            for j = 4960 to XMSS_SIG_BYTES { [:u8 sm_ptr + j] = signature[j]; }
+        } else { 
+            for j=0 to XMSS_SIG_BYTES/8 { [:u64 sm_ptr + 8*j] = signature[:u64 j]; } 
+        } 
        
         ?{}, r = #set0();
     }

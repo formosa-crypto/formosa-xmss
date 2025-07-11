@@ -28,6 +28,19 @@ extern int xmssmt_sign_jazz(uint8_t *sk, uint8_t *sm, size_t *smlen, const uint8
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+static size_t longest_prefix_len(const void *a, const void *b, size_t len) {
+    if (!a || !b) {
+        return 0;
+    }
+
+    size_t i = 0;
+    for (; i < len && ((const uint8_t *)a)[i] == ((const uint8_t *)b)[i]; i++) {
+        ;
+    }
+
+    return i;
+}
+
 static int starts_with(const char *str, const char *prefix) {
     if (!str || !prefix) {
         return -1;
@@ -99,6 +112,16 @@ void test_xmssmt_sign(void) {
         assert(res_ref == res_jasmin);
         assert(res_jasmin == 0);
         assert(res_ref == 0);
+
+        if (memcmp(sm_ref, sm_jasmin, p.sig_bytes + MSG_LEN) != 0) {
+            print_str_u8("sm_ref", sm_ref, p.sig_bytes + MSG_LEN);
+            print_str_u8("sm_jasmin", sm_jasmin, p.sig_bytes + MSG_LEN);
+            fprintf(stderr, "Signatures do not match!\n");
+            printf("Longest preffix length: %zu\n",
+                   longest_prefix_len(sm_ref, sm_jasmin, p.sig_bytes + MSG_LEN));
+            exit(EXIT_FAILURE);
+        }
+
         assert(memcmp(sm_ref, sm_jasmin, p.sig_bytes + MSG_LEN) == 0);
     }
 }

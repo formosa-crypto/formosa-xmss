@@ -55,7 +55,9 @@ void test_xmssmt_sign_open(void) {
         exit(-1);
     }
 
-    if (verbose) { puts("A"); }
+    if (verbose) {
+        puts("A");
+    }
 
     uint8_t m[MSG_LEN];
     uint8_t pk[XMSS_OID_LEN + p.pk_bytes];
@@ -65,7 +67,9 @@ void test_xmssmt_sign_open(void) {
     size_t _mlen_ref, _mlen_jasmin;
     int res_ref, res_jasmin;
 
-    if (verbose) { puts("B"); }
+    if (verbose) {
+        puts("B");
+    }
 
     for (int i = 0; i < TESTS; i++) {
         if (verbose) {
@@ -76,14 +80,18 @@ void test_xmssmt_sign_open(void) {
         xmssmt_keypair(pk, sk, oid);
         xmssmt_sign(sk, sm, (unsigned long long *)&smlen, m, MSG_LEN);
 
-        if (verbose) { puts("C"); }
+        if (verbose) {
+            puts("C");
+        }
 
         res_ref = xmssmt_sign_open(m, (unsigned long long *)&_mlen_ref, sm, smlen,
                                    pk);  // Obs: Verifying does not update the SK
         res_jasmin = xmssmt_sign_open_jazz(m, &_mlen_jasmin, sm, smlen,
                                            pk);  // Obs: Verifying does not update the SK
 
-        if (verbose) { puts("D"); }
+        if (verbose) {
+            puts("D");
+        }
 
         assert(_mlen_ref == MSG_LEN);
         assert(_mlen_jasmin == MSG_LEN);
@@ -92,10 +100,14 @@ void test_xmssmt_sign_open(void) {
         assert(res_jasmin == 0);
         assert(res_jasmin == res_ref);
 
-        if (verbose) { puts("E"); }
+        if (verbose) {
+            puts("E");
+        }
     }
 
-    if (verbose) { puts("F"); }
+    if (verbose) {
+        puts("F");
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -103,20 +115,32 @@ void test_xmssmt_sign_open(void) {
 int main(void) {
     bool verbose = true;
 
-    if (verbose) { puts("G"); }
+    if (verbose) {
+        puts("G");
+    }
 
     if (starts_with(xstr(IMPL), "XMSSMT")) {
-        if (verbose) { puts("H1"); }
+        if (verbose) {
+            puts("H1");
+        }
         test_xmssmt_sign_open();
-        if (verbose) { puts("H2"); }
+        if (verbose) {
+            puts("H2");
+        }
     } else {
-        if (verbose) { puts("Ha"); }
+        if (verbose) {
+            puts("Ha");
+        }
         fprintf(stderr, "Not implemented for single tree version");
-        if (verbose) { puts("Hb"); }
+        if (verbose) {
+            puts("Hb");
+        }
         return EXIT_FAILURE;
     }
-    
-    if (verbose) { puts("I"); }
+
+    if (verbose) {
+        puts("I");
+    }
 
     return EXIT_SUCCESS;
 }
