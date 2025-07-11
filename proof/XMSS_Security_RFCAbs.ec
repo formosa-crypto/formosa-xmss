@@ -1725,17 +1725,32 @@ lemma si_heights_in_loop_bnd start lidxo t ss ps ad offset k :
  => 2^t %| start
  => 0 <= lidxo < 2^t
  => hw (lpathst (lidxo + 1) t) <= hw (lpathst lidxo t)
+ => hw (lpathst (lidxo + 1) t) <= offset <= hw (lpathst lidxo t) + 1
  => 2 <= offset
  => (nth witness (stack_increment start lidxo t ss ps ad offset) (offset - 1)).`2 = 
     (nth witness (stack_increment start lidxo t ss ps ad offset) (offset - 2)).`2
  => 0 <= k < offset
  => 0 <= (nth witness (stack_increment start lidxo t ss ps ad offset) k).`2 < h.
 proof.
-move=> * @/stack_increment /=; rewrite ltrNge ifF // sfl_size ~-1:/#.
+move=> * @/stack_increment /=; rewrite ltrNge ifF 1:/# sfl_size ~-1:/#.
+have := si_size_in_loop start lidxo t ss ps ad offset _ _ _ _ _ _ _ _;1..8:smt().
+rewrite nth_cat size_take 1:/# sfl_size 1..4:/# /=. 
+case (offset = hw (lpathst lidxo t) + 1) => ?. 
+(* 
++ have ->/= : !(offset - 1 < hw (lpathst lidxo t)) by smt().
+  case (k < hw (lpathst lidxo t));last by smt.
+  move => H.
+  rewrite nth_take 1,2:/#. 
+  rewrite /stack_from_leaf (nth_map witness) /=;1: smt(pfl_size). 
+  admit.
+have ->/= : (offset - 1 < hw (lpathst lidxo t)) by smt(@List). (pfl_size).
+  case (k < hw (lpathst lidxo t));last by smt.
+  move => H.
+  rewrite nth_take 1,2:/#. 
+  rewrite /stack_from_leaf (nth_map witness) /=;1: smt(pfl_size). 
+*)
 
-
-
-
+  
 admitted.
 
 lemma si_reduced_node start lidxo t ss ps ad offset :
@@ -1744,6 +1759,7 @@ lemma si_reduced_node start lidxo t ss ps ad offset :
   => 2^t %| start
   => 0 <= lidxo < 2^t
   => hw (lpathst (lidxo + 1) t) <= hw (lpathst lidxo t)
+ => hw (lpathst (lidxo + 1) t) <= offset <= hw (lpathst lidxo t) + 1
   => 2 <= offset
   => (nth witness (stack_increment start lidxo t ss ps ad offset) (offset - 1)).`2 =
      (nth witness (stack_increment start lidxo t ss ps ad offset) (offset - 2)).`2
@@ -2116,7 +2132,7 @@ have Hsil := si_size_in_loop _lstart i{hr} _sth _ss _ps (adr2ads zero_address) (
       rewrite !ifT;1:smt(size_take sfl_size size_ge0).
       by rewrite !nth_take;smt(size_take sfl_size size_ge0).
    split.
-  + have /= := si_reduced_node _lstart i{hr} _sth _ss _ps (adr2ads zero_address) (to_uint offset{hr}) _ _ _ _ _ _ _;1..7:smt().
+  + have /= := si_reduced_node _lstart i{hr} _sth _ss _ps (adr2ads zero_address) (to_uint offset{hr}) _ _ _ _ _ _ _ _;1..8:smt().
     rewrite Hk => -> @/trh /=.
     rewrite ifF; 1: smt(ge1_n).
     rewrite /bs2block. do 4! congr.
