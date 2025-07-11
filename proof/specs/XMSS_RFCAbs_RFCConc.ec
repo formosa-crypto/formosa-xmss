@@ -12,12 +12,13 @@ import ThreeNBytesBytes AuthPath.
 
 clone import XMSS_Security_RFCAbs as XMSSSecToAbs with
   op XMSSRFCAbs.prf_keygen <- (fun (ss : nbytes) (psad : nbytes * adrs) =>
-                                prf_keygen (NBytes.val psad.`1 ++ NBytes.val (addr_to_bytes psad.`2)) ss),  (* prf_keygen, *)
+                                prf_keygen (NBytes.val psad.`1 ++ NBytes.val (addr_to_bytes psad.`2)) ss),
   op XMSSRFCAbs.prf <- fun ss idx => prf idx ss,
   op XMSSRFCAbs.f <- f,
   op XMSSRFCAbs.rand_hash <- (fun (ps : seed) (ad : adrs) (l r : nbytes) => rand_hash l r ps ad),
   op XMSSRFCAbs.ltree <- ltree
 proof *.
+
 
 import XMSSRFCAbs.
 
@@ -88,17 +89,26 @@ while (={i, address, _seed, pk, wots_skey}).
 by call (pseudorandom_gensk_eqv); auto => />.
 qed.
 
+lemma rand_hash_ll : islossless Hash.rand_hash.
+proof. by proc; inline prf; wp. qed.
+
 lemma ltree_ll1 : islossless LTree.ltree.
 proof.
-admit.
+proc.
+wp; while (1 <= _len <= len) (_len - 1).
++ move=> z.
+  wp.
+  while (0 <= i <= _len %/ 2) (_len %/ 2 - i).
+  + move=> z'.
+    wp; call rand_hash_ll.
+    by auto => &1 /#.
+  by auto => />; smt(divz_ge0).
+auto => &1 />; smt(gt2_len).
 qed.
 
 lemma ltree_eq_ph1 (s0 : seed) (a0 : adrs) (pk0 : wots_pk):
   phoare[ LTree.ltree : pk = pk0 /\ _seed = s0 /\ address = a0 ==> res = ltree s0 a0 pk0] = 1%r.
 proof. by conseq ltree_ll1 (ltree_eq s0 a0 pk0). qed.
-
-lemma rand_hash_ll : islossless Hash.rand_hash.
-proof. by proc; inline prf; wp. qed.
 
 lemma rand_hash_eq_ph1 (l r s : nbytes) (a : adrs) :
   phoare[ Hash.rand_hash : _left = l /\ _right = r /\ _seed = s /\ address = a ==> res = rand_hash l r s a] = 1%r.
@@ -153,19 +163,65 @@ module WOTS_Encode = {
 
     (* msg = msg || base_w(toByte(csum_32, len_2_bytes), w, len_2); *)
     csum_bytes <- toByte csum_32 len_2_bytes;
-    csum_base_w <@ Top.BaseW.BaseW.base_w(csum_bytes, len2);
+    csum_base_w <@ BaseW.base_w(csum_bytes, len2);
     msg <- msg ++ csum_base_w;
 
     return msg;
   }
 }.
 
+lemma gt_exprsbde (x n m : int) :
+  1 < x => 0 <= n < m => x ^ n < x ^ m.
+proof.
+move=> gt1_x [ge0_n gtn_m].
+have ge0_m: 0 <= m by smt().
+elim: n ge0_n m ge0_m gtn_m => [| i ge0_i ih m ge0_m gti1_m].
++ by elim => [/# | *]; rewrite expr0 StdOrder.IntOrder.exprn_egt1 /#.
+rewrite exprD_nneg // expr1 (: m = m - 1 + 1) // exprD_nneg 1:/# // expr1.
+by rewrite StdOrder.IntOrder.ltr_pmul2r 2:(ih (m - 1)) /#.
+qed.
+
+equiv basew_eqv_range m l :
+  BaseW.base_w ~ BaseW.base_w :
+  ={arg} /\ X{1} = m /\ outlen{1} = l
+  /\ 0 <= l
+  ==>
+  ={res} /\ size res{1} = l /\ all (fun x => 0 <= x < w) res{1}.
+proof.
+proc.
+while (   #post
+       /\ ={consumed, X, _in, out, total, bits, outlen}
+       /\ 0 <= out{1} <= size base_w{1}
+       /\ out{1} = consumed{1}
+       /\ size base_w{1} = outlen{1}).
++ auto => &1 &2 /> allbsw ge0_out lebasew_out ltlen_cons.
+  rewrite ?size_put /= -?(all_nthP _ _ witness) ?size_put.
+  split => [| neq0_bits]; split => [ | /# | | /#] i rngi /=.
+  + rewrite nth_put 1://; case (consumed{2} = i) => ?; 2: smt(all_nthP).
+    rewrite /w and_mod 1:ge0_log2_w to_uintK_small modz_ge0 2:/=; 1,3,4: smt(logw_vals StdOrder.IntOrder.expr_gt0).
+    rewrite (StdOrder.IntOrder.ltr_trans (2 ^ log2_w)) 1: ltz_pmod 1:StdOrder.IntOrder.expr_gt0 1://.
+    by case: logw_vals => -> //.
+  rewrite nth_put 1://; case (consumed{2} = i) => ?; 2: smt(all_nthP).
+  rewrite /w and_mod 1:ge0_log2_w to_uintK_small modz_ge0 2:/=; 1,3,4: smt(logw_vals StdOrder.IntOrder.expr_gt0).
+  rewrite (StdOrder.IntOrder.ltr_trans (2 ^ log2_w)) 1: ltz_pmod 1:StdOrder.IntOrder.expr_gt0 1://.
+  by case: logw_vals => -> //.
+auto => &1 &2 /> ge0_outlen.
+by rewrite size_nseq lez_maxr 1:// 1:/= all_nseq /=; smt(w_vals).
+qed.
+
 equiv encode_eqv_ge0 :
   WOTS_Encode.encode ~ WOTS_Encode.encode
   : ={arg} ==> ={res} /\ size res{1} = len /\ all (fun x => 0 <= x < w) res{1}.
 proof.
 proc => //.
-admitted.
+wp; ecall (basew_eqv_range csum_bytes{1} len2).
+wp; inline checksum.
+wp; while (={i, m0, checksum}); 1: by sim.
+wp; ecall (basew_eqv_range m{1} len1).
+auto => &1 &2 />.
+rewrite ge0_len1 ge0_len2 /= => r0 szr0 allr i /lezNgt gelen1i _ r1 szr1 allr1.
+by rewrite size_cat szr0 szr1 /len /= all_cat.
+qed.
 
 equiv wots_signseed_eqv :
   WOTS.sign_seed ~ Top.WOTS.WOTS.sign_seed : ={arg} ==> ={res}.

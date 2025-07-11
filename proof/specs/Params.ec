@@ -63,7 +63,6 @@ axiom len8_h : h <= 8 * n.
 
 lemma ge0_h : 0 <= h by smt(ge1_h).
 
-(* TODO: Why are these axioms? *)
 lemma ge0_len1 : 0 <= len1.
 proof.
 rewrite /len1 -log2w_eq.
@@ -81,6 +80,9 @@ proof.
 rewrite /len2 /w.
 case (log2_w = 2) => [-> /= | ?]; [| have ->: log2_w = 4 by smt(logw_vals)]; smt(g2_len1 le_ln_dw floor_le floor_gt).
 qed.
+
+lemma ge0_len2 : 0 <= len2.
+proof. smt(g0_len2). qed.
 
 lemma gt2_len : 2 < len by smt(g2_len1 g0_len2).
 
