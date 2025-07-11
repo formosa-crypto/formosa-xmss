@@ -1875,13 +1875,14 @@ while (map BaseW.val (EmsgWOTS.val em){1} = msg{2}
     /\ (address{2} = if i{2} = 0 then ads2adr ad{1} else set_chain_addr (ads2adr ad{1}) (i - 1){2})
     /\ size pkWOTS{1} = i{2}
     /\ size tmp_pk{2} = len
+    /\ 0 <= i{2} <= len
     /\ (forall j, 0 <= j < size pkWOTS{1} => DigestBlock.val (nth witness pkWOTS{1} j) = BytesToBits (NBytes.val (nth witness tmp_pk{2} j)))).
 + wp; sp.
   exlim sig_i{2}, msg_i{2}, (w - 1 - msg_i){2}, _seed{2}, address{2}=> x i s _s ad.
   call {2} (: arg = (x, i, s, _s, ad) /\ 0 <= s ==> res = chain x i s _s ad).
   + conseq (: 0 <= s{!hr} ==> true) (chain_eq x i s _s ad)=> //.
     by proc; while (chain_count <= s{!hr}) (s{!hr} - chain_count); auto=> /#.
-  auto=> /> &1 &2 eq_sig size_pk inv pkWOTS_lt_len; split=> [|_].
+  auto=> /> &1 &2 eq_sig size_pk ge0_size size_le_len inv pkWOTS_lt_len; split=> [|_].
   + rewrite (nth_map witness).
     + by rewrite size_ge0 EmsgWOTS.valP.
     smt(BaseW.valP).
@@ -1890,7 +1891,7 @@ while (map BaseW.val (EmsgWOTS.val em){1} = msg{2}
     + case: (size pkWOTS{1} = 0)=> [->|] //.
       have -> /=: size pkWOTS{1} + 1 <> 0 by smt(size_ge0).
       by rewrite /set_chain_addr /ads2adr /idxs2adr; smt(@Array8). (* Nasty, but WTF is this library design? *)
-    rewrite size_rcons size_put size_pk /=.
+    rewrite size_rcons size_put size_pk /=; split; 1:smt().
     move=> j ge0_j j_lt_len.
     move: eq_sig=> /(congr1 (fun x=> nth witness x (size pkWOTS{1}))) /=.
     rewrite (nth_map witness).
@@ -1906,6 +1907,13 @@ while (map BaseW.val (EmsgWOTS.val em){1} = msg{2}
     rewrite chain_ch 1:#smt:(BaseW.valP).
     rewrite /cf /ch /f //= /EmsgWOTS."_.[_]" /EmsgWOTS.ofemsgWOTS.
     rewrite size_ge0 /= pkWOTS_lt_len //=.
+    (* Simplify address *)
+    have ->: set_chain_addr (if size pkWOTS{1} = 0
+                             then ads2adr ad{!1}
+                             else set_chain_addr (ads2adr ad{!1}) (size pkWOTS{1} - 1))
+                            (size pkWOTS{1})
+           = set_chain_addr (ads2adr ad{!1}) (size pkWOTS{1}).
+    + by rewrite /set_chain_addr !(fun_if, if_arg).
     (** Each of these arguments (nested!) should be extracted out as
         a proof interface on the datatypes **)
     pose l := (w - 1 - BaseW.val (nth witness (EmsgWOTS.val em){1} (size pkWOTS){1})).
@@ -1932,12 +1940,20 @@ while (map BaseW.val (EmsgWOTS.val em){1} = msg{2}
     + by rewrite !iteri0.
     move=> l ge0_l ih; rewrite !iteriS //= ih.
     congr; congr; congr.
-    + (* ?? *) admit.
+    + (* MM: Something something addresses *) admit.
     by rewrite BytesToBitsK /NBytes.insubd NBytes.valK.
   by rewrite size_rcons.
-auto=> /> &1 &2 eq_sig.
-(** FD TODO: we need a stronger condition on addresses in the loop invariant **)
-admitted.
+auto=> /> &1 &2 eq_sig; split.
++ split; 2:by rewrite size_nseq; smt(ge0_len).
+  admit. (** FD TODO: we need a stronger condition on addresses in the
+             precondition (and in the loop invariant of the caller) **)
+move=> pkL pkR len_le_size _ sizeP _ size_le_len eq_nth.
+apply: (eq_from_nth witness).
++ by rewrite !size_map; smt(DBLL.valP LenNBytes.valP).
+move=> j; rewrite DBLL.insubdK 1:/# size_map=> j_bnd.
+rewrite !(nth_map witness) //; 1:smt(LenNBytes.valP).
+by rewrite LenNBytes.insubdK 1:/# eq_nth.
+qed.
   
 (* TODO: check usage; would it be better phrased as an equivalence? *)
 phoare leaves_correct _ps _ss  _ad :
