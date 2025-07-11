@@ -1365,52 +1365,46 @@ rewrite lez_eqVlt => -[^eq0k <- /=|].
   - rewrite nth_cat sfl_size ~-1:/# ltzz /= /stack_from_leaf.
     rewrite !(nth_map witness) ?pfl_size ~-1:/# /=.
     have [-> /=] := hwinc_leaflast lidxo t _ _ _; ~-1: smt().
-    move=> ?;congr.
+    move=> ?; congr.
     rewrite /prefix. 
-    rewrite -(cat_take_drop (size (lpath start) - t) (lpath (start + lidxo)) );congr.
+    rewrite -(cat_take_drop (size (lpath start) - t) (lpath (start + lidxo)) ); congr.
     + apply (eq_from_nth false);1:by smt(size_lpath size_take).
-      move => i?.
-      rewrite !nth_take;1..4:smt(size_lpath size_take).
-      rewrite /lpath !nth_rev;1,2:smt(size_rev size_lpath size_take).
-      have -> /=: b2i (start = 2 ^ h) = 0 by smt().
-      have -> /=: b2i (start + lidxo = 2 ^ h) = 0 by smt().
-      rewrite !BS2Int.size_int2bs /=.
-      have -> : (max 0 h - (i + 1))  = h - (i + 1) by smt(h_g0).
-      rewrite /BS2Int.int2bs !nth_mkseq => /=;1,2: smt(size_lpath size_take).
-      congr;congr;congr;congr.
-      have ? : t <= h - (i + 1) <= h by smt(size_lpath size_take).
-      have -> : 2 ^ (h - (i + 1)) = 2^t * 2^(h - (i + 1) - t) by  rewrite -exprD_nneg /#.  
-      by rewrite !divz_mulp;smt(expr_gt0).
-    rewrite /lpath size_rev BS2Int.size_int2bs.
-    have -> /=: b2i (start = 2 ^ h) = 0 by smt().
-    have -> /=: b2i (start + lidxo = 2 ^ h) = 0 by smt().
-    have -> : (max 0 h - t) = h - t by smt(). 
-    have := hwinc_leaflast lidxo t _ _ _;1..3:smt().
-    have -> : (hw (lpathst (lidxo + 1) t) - 1) = (hw (lpathst lidxo t))by smt().
-    move => [H1 H2]. 
+      move=> i *; rewrite !nth_take; ~-1: smt(size_lpath size_take).
+      rewrite /lpath !nth_rev; ~-1:smt(size_rev size_lpath size_take).
+      rewrite !b2i0_eq ~-1:/# !BS2Int.size_int2bs /= ler_maxr ~-1:/#.
+      rewrite /BS2Int.int2bs !nth_mkseq => /=; ~-1: smt(size_lpath size_take).
+      do 4! congr.
+      have ?: t <= h - (i + 1) <= h by smt(size_lpath size_take).
+      have ->: 2 ^ (h - (i + 1)) = 2^t * 2^(h - (i + 1) - t).
+      - by  rewrite -exprD_nneg /#.
+      by rewrite !divz_mulp ?expr_gt0 /#.
+    rewrite /lpath size_rev BS2Int.size_int2bs b2i0_eq ~-1:/# ler_maxr 1:/#.
+    have := hwinc_leaflast lidxo t _ _ _; ~-1:smt().
+    have -> [H1 H2]: (hw (lpathst (lidxo + 1) t) - 1) = (hw (lpathst lidxo t)) by smt().
     rewrite -{1}(BS2Int.int2bsK t lidxo) 1,2:/# in H2.
-    have -> : (nth witness (paths_from_leaf (lidxo + 1) t) (hw (lpathst lidxo t))) =
-       rev (BS2Int.int2bs t lidxo)
+    have -> :
+         (nth witness (paths_from_leaf (lidxo + 1) t) (hw (lpathst lidxo t)))
+       = rev (BS2Int.int2bs t lidxo)
       by smt(size_rev BS2Int.size_int2bs rev_inj revK BS2Int.inj_bs2int_eqsize).
-    apply (eq_from_nth false);1:  by smt(size_drop BS2Int.size_int2bs size_rev).
+    apply (eq_from_nth false); 1: by smt(size_drop BS2Int.size_int2bs size_rev).
     move => i ib.
-    rewrite nth_drop 1,2:/# !nth_rev;1,2:by smt(size_drop BS2Int.size_int2bs size_rev).
-    rewrite !BS2Int.size_int2bs.
-    rewrite /BS2Int.int2bs !nth_mkseq => /=;1,2: smt(size_lpath size_take size_drop BS2Int.size_int2bs size_rev).
-    have -> : (max 0 h - (h - t + i + 1)) = t - i - 1 by smt().
-    have -> : (max 0 t - (i + 1)) = t  - i - 1 by smt().
-    congr;congr. 
-    have /=:= modz_pow_div 2 (t-i) (t - i - 1) (start + lidxo) _ _;1,2: smt(size_drop size_rev BS2Int.size_int2bs).
-    have  -> /=: (t - i - (t - i - 1)) = 1 by smt().
-    move => <-. 
+    rewrite nth_drop 1,2:/# !nth_rev; ~-1: smt(size_drop BS2Int.size_int2bs size_rev).
+    rewrite !BS2Int.size_int2bs /BS2Int.int2bs !nth_mkseq => /=;
+      ~-1: smt(size_lpath size_take size_drop BS2Int.size_int2bs size_rev).
+    rewrite !ler_maxr ~-1:/#.
+    do 2! congr.
+    have /=:= modz_pow_div 2 (t-i) (t - i - 1) (start + lidxo) _ _;
+      ~-1: smt(size_drop size_rev BS2Int.size_int2bs).
+    rewrite (_ : t - i - (t - i - 1) = 1) 1:#ring.
     have -> : (start + lidxo) %% 2 ^ (t-i)  = lidxo %% 2^(t-i); last first.
-    + have /= -> := modz_pow_div 2 (t-i) (t - i - 1) (lidxo) _ _;1,2: smt(size_drop size_rev BS2Int.size_int2bs).
-      by have -> /= : (t - i - (t - i - 1)) = 1 by smt().
+    + have /= -> := modz_pow_div 2 (t-i) (t - i - 1) (lidxo) _ _;
+        ~-1: smt(size_drop size_rev BS2Int.size_int2bs).
+      by rewrite (_ : t - i - (t - i - 1) = 1) 1:#ring /#.
     have := modz_mod_pow2 (start + lidxo) t (t-i). 
     have := modz_mod_pow2 (lidxo) t (t-i). 
-    have -> : min (`|t|) (`|t - i|)  = t-i by rewrite !ger0_norm;smt(size_drop size_rev BS2Int.size_int2bs).
-    move => <- <-;congr;congr.
-    by smt().
+    have -> : min (`|t|) (`|t - i|)  = t-i.
+    - by rewrite !ger0_norm;smt(size_drop size_rev BS2Int.size_int2bs).
+    by move => <- <-; (do 2! congr); smt().
 
 have := int2bs_incSE t lidxo _ _ _; ~-1:smt().
 rewrite -/k /= => [# lt_kt all1 has0 eqE eqES].
@@ -1625,12 +1619,10 @@ move=> 7? eqnth; rewrite -andaE; split=> [|<-].
 have ? := h_g0; (have := hwincSE_lpathst lidxo t _ _; ~-1:smt()); case.
 - move => [#] Hli Hlp Hlp1.
   + rewrite /stack_increment /= ifF  1:/# size_cat /=.  
-    rewrite !size_take;1:   smt(@List sfl_size).
-    rewrite !sfl_size ;1..8:   smt(@List sfl_size).
-    have ? : 1 <= offset <= t+1 by smt(hw_nseq).
+    rewrite !size_take ~-1:/# !sfl_size ~-1:/#.
+    have ?: 1 <= offset <= t+1 by smt(hw_nseq).
     rewrite Hlp Hlp1 !hw_nseq 1:/# /=.
-    smt(@List).
-
+    by rewrite hw_nseq ~-1:/# /= /#.
 (pose k':= argmax _ _) => [# /=] *.
 have ?: 0 < k' by smt(). have := int2bs_incSE t lidxo _ _ _; ~-1:smt().
 rewrite -/k' /= => [#] 2?? /= eqE1 eqE2.
@@ -1705,7 +1697,7 @@ have gt0_i: 0 <= i.
   rewrite [_ - k']addrC !addrA /= => offE.
   rewrite eqE1 drop_cat size_nseq ler_maxr 1:/# /=.
   have: 2 <= offset by done.
-  rewrite offE -ler_subl_addr /=;1:by smt().  
+  by rewrite offE -ler_subl_addr /= /#.
 have: nth witness s' i \in s' by apply/mem_nth; smt(ge0_hw).
 case/pmapP => j [] /mem_range rgj @/extract_path.
 case (nth false (lpathst lidxo t) j) => // _.
