@@ -708,16 +708,6 @@ lemma sfl_size start lidxo t ss ps ad :
  => size (stack_from_leaf start lidxo t ss ps ad) = hw (lpathst lidxo t).
 proof. move=> *; rewrite /stack_from_leaf size_map pfl_size //. qed.
 
-(* The list of leaves that fall under the first node in the stack when one starts to process leaf lidx
-   The case o lidx=0 is a corner case, as the stack is empty *)
-op first_subtree_leaves(start lidxo t : int,ss ps : Params.nbytes, ad : SA.adrs) =
- if lidxo = 0 then
-   []
- else
-   let lps = (paths_from_leaf lidxo t) in
-   let p1 = prefix (lpath start) t ++ head witness lps in
-   let lp1 = leaves_from_path p1 in
-   map (leafnode_from_idx ss ps ad) lp1.
 
 (* The hamming weight of 0 is 0, so stack is empty *)
 lemma pfl0 t :
@@ -1334,10 +1324,28 @@ rewrite lez_eqVlt => -[^eq0k <- /=|].
   - rewrite nth_cat sfl_size ~-1:/# ltzz /= /stack_from_leaf.
     rewrite !(nth_map witness) ?pfl_size ~-1:/# /=.
     have [-> /=] := hwinc_leaflast lidxo t _ _ _; ~-1: smt().
-    move=> ?.
-
+    move=> ?;congr.
+    rewrite /prefix. 
+    rewrite -(cat_take_drop (size (lpath start) - t) (lpath (start + lidxo)) );congr.
+    + apply (eq_from_nth false);1:by smt(size_lpath size_take).
+      move => i?.
+      rewrite !nth_take;1..4:smt(size_lpath size_take).
+      rewrite /lpath !nth_rev;1,2:smt(size_rev size_lpath size_take).
+      have -> /=: b2i (start = 2 ^ h) = 0 by smt().
+      have -> /=: b2i (start + lidxo = 2 ^ h) = 0 by smt().
+      rewrite !BS2Int.size_int2bs /=.
+      have -> : (max 0 h - (i + 1))  = h - (i + 1) by smt(h_g0).
+      rewrite /BS2Int.int2bs !nth_mkseq => /=;1,2: smt(size_lpath size_take).
+      congr;congr;congr;congr.
+      have ? : t <= h - (i + 1) <= h by smt(size_lpath size_take).
+      have -> : 2 ^ (h - (i + 1)) = 2^t * 2^(h - (i + 1) - t)  by smt(@Ring.IntID).
+      rewrite !divz_mulp;1..4: smt(expr_gt0). by smt(@IntDiv).
+    rewrite /lpath size_rev BS2Int.size_int2bs.
+    have -> /=: b2i (start = 2 ^ h) = 0 by smt().
+    have -> /=: b2i (start + lidxo = 2 ^ h) = 0 by smt().
+    have -> : (max 0 h - t) = h - t by smt(). 
     admit.
-
+    
 have := int2bs_incSE t lidxo _ _ _; ~-1:smt().
 rewrite -/k /= => [# lt_kt all1 has0 eqE eqES].
 
@@ -1618,20 +1626,6 @@ proof.
 move => ? Hw ?? /=.
 admitted.
 
-(* growth of leaves under the leftmost subtree *)
-lemma growth ss ps ad leaves start lidxo t :
-    0 <= t <= h
- => 0 <= start <= 2^h - 2^t
- => 2^t %| start
- => 0 <= lidxo < 2^t =>
-size leaves = lidxo =>
- take (size (first_subtree_leaves start (size leaves) t ss ps ad)) leaves =
-   first_subtree_leaves start (size leaves) t ss ps ad =>
- take (size (first_subtree_leaves start (lidxo + 1) t ss ps ad))
-   (rcons leaves (leafnode_from_idx ss ps ad (start + lidxo))) =
- first_subtree_leaves start (lidxo + 1) t ss ps ad.
-admitted.
-
 phoare leaves_correct _ps _ss  _ad :
  [ FL_XMSS_TW_ES.leaves_from_sspsad :
   arg = (_ss, _ps, _ad)  ==>
@@ -1739,6 +1733,7 @@ wp;while ( #{/~address = zero_address}pre
     rewrite /range iotaS_minus /=;1: smt(StdOrder.IntOrder.expr_gt0). 
     congr;congr;congr;congr;rewrite size_lpath 1:/# ifF;1: smt(StdOrder.IntOrder.expr_gt0).
     smt(size_take size_lpath).
+
 seq 6 : (#pre /\
    bs2block node = leafnode_from_idx _ss _ps (adr2ads zero_address) (_lstart + i)).
 + seq 3 : (#pre /\   pk = LenNBytes.insubd
