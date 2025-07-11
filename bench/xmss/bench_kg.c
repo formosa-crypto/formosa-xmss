@@ -214,8 +214,8 @@ static uint64_t overhead_of_cpucycles_call(void) {
 void xmssmt_bench_kg(const xmss_params *params, uint32_t oid) {
     assert(params != NULL);
 
-    uint8_t pk[XMSS_OID_LEN + params->pk_bytes];
-    uint8_t sk[XMSS_OID_LEN + params->sk_bytes];
+    uint8_t pk[XMSS_OID_LEN + params->publickey_bytes];
+    uint8_t sk[XMSS_OID_LEN + params->privatekey_bytes];
 
     uint64_t observations[DATA_POINTS];
 

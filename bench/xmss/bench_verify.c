@@ -216,9 +216,9 @@ void xmssmt_bench_verify(const xmss_params *params, uint32_t oid) {
     assert(params != NULL);
 
     uint8_t m[MESSAGE_SIZE];
-    uint8_t pk[XMSS_OID_LEN + params->pk_bytes];
-    uint8_t sk[XMSS_OID_LEN + params->sk_bytes];
-    uint8_t sm[params->sig_bytes + MESSAGE_SIZE];
+    uint8_t pk[XMSS_OID_LEN + params->publickey_bytes];
+    uint8_t sk[XMSS_OID_LEN + params->privatekey_bytes];
+    uint8_t sm[params->bytes + MESSAGE_SIZE];
     size_t mlen, smlen;
 
     uint64_t observations[DATA_POINTS];
@@ -248,9 +248,9 @@ void xmssmt_bench_verify(const xmss_params *params, uint32_t oid) {
         before = cpucycles();
         
         #ifdef REF
-        xmssmt_sign_open(m, (unsigned long long *)&mlen, sm, params->sig_bytes + MESSAGE_SIZE, pk);
+        xmssmt_sign_open(m, (unsigned long long *)&mlen, sm, params->bytes + MESSAGE_SIZE, pk);
         #else
-        xmssmt_sign_open_jazz(m, &mlen, sm, params->sig_bytes + MESSAGE_SIZE, pk);
+        xmssmt_sign_open_jazz(m, &mlen, sm, params->bytes + MESSAGE_SIZE, pk);
         #endif
 
         after = cpucycles();

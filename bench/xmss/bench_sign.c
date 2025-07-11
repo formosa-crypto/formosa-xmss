@@ -215,9 +215,9 @@ void xmssmt_bench_sign(const xmss_params *params, uint32_t oid) {
     assert(params != NULL);
 
     uint8_t m[MESSAGE_SIZE];
-    uint8_t pk[XMSS_OID_LEN + params->pk_bytes];
-    uint8_t sk[XMSS_OID_LEN + params->sk_bytes];
-    uint8_t sm[params->sig_bytes + MESSAGE_SIZE];
+    uint8_t pk[XMSS_OID_LEN + params->publickey_bytes];
+    uint8_t sk[XMSS_OID_LEN + params->privatekey_bytes];
+    uint8_t sm[params->bytes + MESSAGE_SIZE];
     size_t smlen;
 
     uint64_t observations[DATA_POINTS];
