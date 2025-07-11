@@ -1623,7 +1623,14 @@ move=> 7? eqnth; rewrite -andaE; split=> [|<-].
 - rewrite /stack_increment /= ltrNge ifF //.
   by rewrite size_cat /= size_take_condle 1:/# ifT // sfl_size //#.
 have ? := h_g0; (have := hwincSE_lpathst lidxo t _ _; ~-1:smt()); case.
-- admit.
+- move => [#] Hli Hlp Hlp1.
+  + rewrite /stack_increment /= ifF  1:/# size_cat /=.  
+    rewrite !size_take;1:   smt(@List sfl_size).
+    rewrite !sfl_size ;1..8:   smt(@List sfl_size).
+    have ? : 1 <= offset <= t+1 by smt(hw_nseq).
+    rewrite Hlp Hlp1 !hw_nseq 1:/# /=.
+    smt(@List).
+
 (pose k':= argmax _ _) => [# /=] *.
 have ?: 0 < k' by smt(). have := int2bs_incSE t lidxo _ _ _; ~-1:smt().
 rewrite -/k' /= => [#] 2?? /= eqE1 eqE2.
@@ -1692,13 +1699,13 @@ pose i := hw _ - 1; pose s' := pmap _ _; have lti: i < size s'.
   have {2}->: t = size (BS2Int.int2bs t lidxo) by rewrite BS2Int.size_int2bs /#. 
   rewrite -rev_drop ?BS2Int.size_int2bs ~-1:/# hw_rev.
   by rewrite {1}eqE1 !drop_cat ?size_nseq ler_maxr ~-1:/# /= /#.
-have gt0_i: 0 < i.
+have gt0_i: 0 <= i.
 - rewrite /i; move: offE; rewrite /lpathst b2i0_eq /= 1:/# hw_rev.
   rewrite {1}eqE1 hw_cat hw_nseq /= ~-1:/#.
   rewrite [_ - k']addrC !addrA /= => offE.
   rewrite eqE1 drop_cat size_nseq ler_maxr 1:/# /=.
   have: 2 <= offset by done.
-  rewrite offE -ler_subl_addr /=. admit.
+  rewrite offE -ler_subl_addr /=;1:by smt().  
 have: nth witness s' i \in s' by apply/mem_nth; smt(ge0_hw).
 case/pmapP => j [] /mem_range rgj @/extract_path.
 case (nth false (lpathst lidxo t) j) => // _.
@@ -1706,7 +1713,7 @@ move/someI=> ->; rewrite size_rcons size_take_condle ~-1:/#.
 suff ->: size (lpathst lidxo t) = t by rewrite ifT /#.
 rewrite /lpathst size_rev b2i0_eq /= ~-1:/#.
 by rewrite BS2Int.size_int2bs /#.
-admitted.
+qed.
 
 (* entering the inner loop for a leaf tree means that
    we are still hashing values at height < h-1: when
