@@ -202,34 +202,42 @@ seq 25 13 : (
   sk{1} = DecodeSkNoOID sk{2} /\
   sig{2} = EncodeSignature (to_list signature{1})
 ); last first.
-  + wp; conseq />.
-    while {1} (
-      _sm_ptr = sm_ptr{1} /\
-      0 <= to_uint sm_ptr{1} + XMSS_SIG_BYTES < 18446744073709551615 /\
-      0 <= j{1} <= XMSS_SIG_BYTES /\
-      load_buf Glob.mem{1} _sm_ptr j{1} = sub signature{1} 0 j{1}
-    ) (XMSS_SIG_BYTES - j{1}); last first.
-     - auto => /> &1 *.
-       do split. 
-         * apply (eq_from_nth witness); first by rewrite size_load_buf // size_sub.
-           rewrite size_load_buf // /#.
-         * move => memL iL.
-           split => [/# | H0 H1 H2].
-           have ->: iL = XMSS_SIG_BYTES by smt().
-           move => ->; congr.
-           apply (eq_from_nth witness); first by rewrite size_to_list size_sub //.
-           rewrite size_to_list => i?.
-           by rewrite get_to_list nth_sub 1:/#.
+- rcondt{1} 1; 1:auto.
+  seq 3 0 : (#pre /\ load_buf Glob.mem{1} _sm_ptr 4960  = sub signature{1} 0 4960).
+    + wp; conseq />.
+      while {1} (
+        _sm_ptr = sm_ptr{1} /\
+        0 <= to_uint sm_ptr{1} + XMSS_SIG_BYTES < 18446744073709551615 /\
+        0 <= j{1} <= 620 /\
+        inc{1}  = 620 /\
+        load_buf Glob.mem{1} _sm_ptr (8*j{1}) = sub signature{1} 0 (8*j{1})
+      ) (XMSS_SIG_BYTES - j{1}); last first.
+          - auto => /> &1 *; split => [| /#].
+            apply (eq_from_nth witness); [by rewrite size_load_buf // size_sub | by rewrite size_load_buf // /#].
+          - auto => /> &hr 4? H*; do split; 1..2,4: by smt().
+            apply (eq_from_nth witness); first by rewrite size_sub 1:/# size_load_buf /#.
+            rewrite size_load_buf 1:/# => k?.
+            rewrite nth_load_buf 1:/# nth_sub //= !storeW64E !get_storesE size_to_list to_uintD_small; 1: by smt(@W64 pow2_64).
+            rewrite of_uintK.
+            have ->: to_uint _sm_ptr + 8 * j{hr} %% W64.modulus= to_uint _sm_ptr + 8 * j{hr} by smt().
+            case (to_uint _sm_ptr + 8 * j{hr} <= to_uint _sm_ptr + k < to_uint _sm_ptr + 8 * j{hr} + 8) => ?; last first.
+               * have ->: signature{hr}.[k] = nth witness (sub signature{hr} 0 (8 * j{hr})) k by rewrite nth_sub /#.
+                 rewrite -H nth_load_buf /#.
+               * rewrite wordP => w?; admit.
 
-     - auto => /> &hr H0 H1 H2 H3 H4 *.
-       do split; 1,2,4: by smt().
-       apply (eq_from_nth witness); first by rewrite size_load_buf 1:/# size_sub // /#.
-       rewrite size_load_buf 1:/# => k?.
-       rewrite nth_sub // nth_load_buf // /storeW8 get_setE.
-       have ->: to_uint (_sm_ptr + (of_int j{hr})%W64) = to_uint _sm_ptr + j{hr} by rewrite to_uintD_small of_uintK /#.
-       case (k = j{hr}) => [/# |?]; rewrite ifF 1:/# /=.
-       have ->: signature{hr}.[k] = nth witness (sub signature{hr} 0 j{hr}) k by rewrite nth_sub // /#.
-       rewrite -H4 nth_load_buf // /#.
+  wp; sp => /=.
+  unroll {1} 1; unroll {1} 2; unroll {1} 3.
+  rcondt {1} 1; 1:auto.
+  rcondt {1} 3; 1:auto.
+  rcondt {1} 5; 1:auto.
+  rcondf {1} 7; 1:auto.
+  auto => /> &1 ??H *; congr.
+  apply (eq_from_nth witness); rewrite ?size_load_buf ?size_to_list => [/# | /# | j?].
+  rewrite get_to_list nth_load_buf 1:/#.
+  case (0 <= j < 4960) => [Ha | Hb].
+    + have ->: signature{1}.[j] = nth witness (sub signature{1} 0 4960) j by rewrite nth_sub.
+      by rewrite -H nth_load_buf // !storeW8E !get_setE !ifF; 1..3:by rewrite to_uintD /#.
+    + rewrite !storeW8E !get_setE !to_uintD_small ?of_uinK /#.
   
 seq 1 0 : (
       #pre /\
