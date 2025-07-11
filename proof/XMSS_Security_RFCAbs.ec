@@ -3096,7 +3096,8 @@ seq 5 9 : (   pkrel pk{1} pk{2}
 wp; inline{1} verify; inline{1} root_from_sigFLXMSSTW; inline{2} rootFromSig.
 sp; seq 1 1 : (   #pre
                /\ map DigestBlock.val (DBLL.val pkWOTS0{1}) = map (BytesToBits \o NBytes.val) (LenNBytes.val pk_ots{2})).
-address{2} = set_ots_addr (set_type zero_address 0) (to_uint idx_sig0{2})
+(* FD --- more needed here (and in precondition to pkFromSig_eq
+   address{2} = set_ots_addr (set_type zero_address 0) (to_uint idx_sig0{2}) *)
 + call pkFromSig_eq; auto=> /> &1 &2 -> _ _ idx_sig_lt_l -> _ _ _ _.
   move: (HAX.Adrs.valP ((RFC.pkr2pko pk{1}).`3)).
   rewrite /valid_adrsidxs=> - [] size_adrs valid_adrs.
