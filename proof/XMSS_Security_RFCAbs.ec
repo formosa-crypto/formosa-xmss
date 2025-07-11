@@ -1203,7 +1203,48 @@ case (t = 0).
   move => HH He;elim He => He; smt(take0).
 move => gt0t.
  move: lt hinc => ^[ge0_lidx _]; case/(hwincSE_lpathst lidxo t tr).
-- move => /= [#] ?????. admit.
+- move => /= [#]; move : ge0_lidx => +Hlidxo;rewrite Hlidxo => ? H1 H2; rewrite H1 H2 => ??Hcases;elim Hcases.
+  + rewrite /stack_increment /= ifF  1:/# size_cat /=.  
+    by move => H; have ? : (offset = 1 + hw (nseq t false)); smt(@List sfl_size).
+  + rewrite /stack_increment /= ifF  1:/# size_cat /= => [#].
+    rewrite !size_take;1:   smt(@List sfl_size).
+    rewrite !sfl_size ;1..4:   smt(@List sfl_size).
+    have ? : 1 <= offset <= t+1 by smt(hw_nseq).
+    rewrite H1 !hw_nseq 1..2:/# /=.
+    move => H H0;have ? : offset = 1; last by smt(). 
+    move : H0.
+    case (offset - 1 < t) => ?; last first.
+    + rewrite ifT 1:/#. 
+      rewrite take_oversize;1: smt(sfl_size @List).
+      rewrite nth_cat ifF;1: smt(sfl_size @List).
+      rewrite nth_cat ifT;1: smt(sfl_size @List).
+      have -> /= :  (t - size (stack_from_leaf start (2 ^ t - 1) t ss ps ad)) = 0 by smt( @List sfl_size). 
+      rewrite /stack_from_leaf /paths_from_leaf /= ifF 1:/# H1. 
+      rewrite /extract_path pmap_map /= /range /=. 
+      rewrite eq_in_filter_predT. 
+      + move => l; rewrite mapP =>He;elim He =>x;rewrite mem_iota /= => [#]??;smt(@List).
+      rewrite (nth_map witness) /=;1: smt( @List sfl_size). 
+      rewrite (nth_map witness) /=;1: smt( @List sfl_size). 
+      rewrite (nth_map witness) /=;1: smt( @List sfl_size). 
+      smt( @List sfl_size). 
+    + rewrite ifF 1:/#. 
+      rewrite nth_cat ifF;1: smt(sfl_size @List).
+      rewrite nth_cat ifT;1: smt(sfl_size @List).
+      pose ll :=  (h - ((nth witness (stack_from_leaf start (2 ^ t - 1) t ss ps ad) (offset - 1)).`2 + 1)).
+      have -> /= : (offset - 1 - size (take (offset - 1) (stack_from_leaf start (2 ^ t - 1) t ss ps ad))) = 0 by   smt(sfl_size @List).
+      rewrite (nth_take witness);1,2:smt().
+      rewrite /stack_from_leaf /paths_from_leaf /= ifF 1:/# H1. 
+      rewrite /extract_path pmap_map /= /range /=. 
+      rewrite eq_in_filter_predT. 
+      + move => l; rewrite mapP =>He;elim He =>x;rewrite mem_iota /= => [#]??;smt(@List).
+      rewrite (nth_map witness) /=;1: smt( @List sfl_size). 
+      rewrite (nth_map witness) /=;1: smt( @List sfl_size). 
+      rewrite (nth_map witness) /=;1: smt( @List sfl_size). 
+      rewrite (nth_map witness) /=;1: smt( @List sfl_size). 
+      rewrite (nth_map witness) /=;1: smt( @List sfl_size). 
+      rewrite (nth_map witness) /=;1: smt( @List sfl_size). 
+      smt( @List sfl_size). 
+
 (pose k':= argmax _ _) => [# /=] ? + ^hdec - -> ?.
 have ?: 0 < k' by smt().
 have := int2bs_incSE t lidxo _ _ _; ~-1: by move=> //#.
