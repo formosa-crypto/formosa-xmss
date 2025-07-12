@@ -83,9 +83,12 @@ op chain (x : nbytes) (i s : int) (_s : seed) (ad : adrs): nbytes =
   fst (iteri s (chain_body i _s) (x, ad)).
 
 hoare chain_eq _X _i _s _se _ad:
-  Chain.chain: arg = (_X, _i, _s, _se, _ad) /\ 0 <= _s ==> res = chain _X _i _s _se _ad.
+  Chain.chain: arg = (_X, _i, _s, _se, _ad) ==> res = chain _X _i _s _se _ad.
 proof.
 proc.
+case (s < 0).
++ rcondf ^while; auto => /> ?; 1: smt().
+  by rewrite /chain iteri0 /#.
 while (i = _i
     /\ _seed = _se
     /\ s = _s
@@ -148,10 +151,9 @@ by rewrite iteriS 1:// chain_body_eq_ad.
 qed.
 
 lemma chain_eq_ch_f _X _i _s _se _ad:
-     0 < _i
-  => chain _X _i _s _se _ad = ch f _se _ad _i _s _X.
+  chain _X _i _s _se _ad = ch f _se _ad _i _s _X.
 proof.
-move=> ge0_i; case: (0 <= _s); last first.
+case: (0 <= _s); last first.
 + by move=> /ltzNge le0_s @/chain; rewrite iteri0 2:ch0 /#.
 elim: _s=> [|_s ge0_s ih].
 + by rewrite /chain iteri0 2:ch0.

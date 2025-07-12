@@ -79,9 +79,12 @@ op chain (x : nbytes) (i s : int) (_s : seed) (ad : adrs): nbytes =
   fst (iteri s (chain_body i _s) (x, ad)).
 
 hoare chain_eq _X _i _s _se _ad:
-  Chain.chain: arg = (_X, _i, _s, _se, _ad) /\ 0 <= _s ==> res = chain _X _i _s _se _ad.
+  Chain.chain: arg = (_X, _i, _s, _se, _ad) ==> res = chain _X _i _s _se _ad.
 proof.
 proc.
+case (s < 0).
++ rcondf ^while; auto => /> ?; 1: smt().
+  by rewrite /chain iteri0 /#.
 while (i = _i
     /\ _seed = _se
     /\ s = _s
@@ -96,10 +99,11 @@ op ch (f : seed -> adrs -> nbytes -> nbytes) (_s : seed) (ad : adrs) (i s : int)
   iteri s (fun chain_count x => f _s (set_hash_addr ad (i + chain_count)) x) x.
 
 lemma chain_ch x i s _s ad:
-     0 <= s
-  => chain x i s _s ad = ch f _s ad i s x.
+  chain x i s _s ad = ch f _s ad i s x.
 proof.
-move=> ge0_s; rewrite /chain /ch.
+case (s < 0) => [lt0_s | /lezNgt ge0_s].
++ by rewrite /chain /ch ?iteri0 1,2:/#.
+rewrite /chain /ch.
 have -> //: iteri s (chain_body i _s) (x, ad)
           = (iteri s (fun cc x0=> f _s (set_hash_addr ad (i + cc)) x0) x, if s = 0 then ad else set_hash_addr ad (i + (s - 1))).
 elim: s ge0_s.

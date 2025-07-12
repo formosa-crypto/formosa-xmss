@@ -7,9 +7,6 @@ from Jasmin require import JModel.
 import Params Types Address BaseW Hash WOTS LTree XMSS_TreeHash OTSKeys.
 import ThreeNBytesBytes AuthPath.
 
-(* op prf_keygen : Params.nbytes -> Params.nbytes * Address.adrs -> Params.nbytes. *)
-(* op rand_hash : seed -> Address.adrs -> Params.nbytes -> Params.nbytes -> Params.nbytes. *)
-
 clone import XMSS_Security_RFCAbs as XMSSSecToAbs with
   op XMSSRFCAbs.prf_keygen <- (fun (ss : nbytes) (psad : nbytes * adrs) =>
                                 prf_keygen (NBytes.val psad.`1 ++ NBytes.val (addr_to_bytes psad.`2)) ss),
@@ -52,22 +49,27 @@ by auto => /#.
 qed.
 
 lemma chain_eq1_ph1 _X _i _s _se _ad:
-  phoare[ Chain.chain : arg = (_X, _i, _s, _se, _ad) /\ 0 <= _s ==> res = chain _X _i _s _se _ad] = 1%r.
+  phoare[ Chain.chain : arg = (_X, _i, _s, _se, _ad)
+         ==> res = Top.XMSSSecToAbs.XMSSRFCAbs.chain _X _i _s _se _ad] = 1%r.
 proof.
-admitted.
+conseq chain_ll1 (chain_eq _X _i _s _se _ad). progress.
+qed.
 
 lemma chain_eq2_ph1 _X _i _s _se _ad:
-  phoare[ Top.WOTS.Chain.chain: arg = (_X, _i, _s, _se, _ad) /\ 0 <= _s ==> res = chain _X _i _s _se _ad] = 1%r.
+  phoare[ Top.WOTS.Chain.chain: arg = (_X, _i, _s, _se, _ad)
+         ==> res = Top.WOTS.chain _X _i _s _se _ad] = 1%r.
 proof.
-by conseq chain_ll2 (chain_eq _X _i _s _se _ad) => /#.
+by conseq chain_ll2 (Top.WOTS.chain_eq _X _i _s _se _ad).
 qed.
 
 equiv chain_eqv :
-  Chain.chain ~ Top.WOTS.Chain.chain : ={arg} /\ 0 <= s{1} ==> ={res}.
+  Chain.chain ~ Top.WOTS.Chain.chain :
+  ={arg} ==> ={res}.
 proof.
 proc*.
 ecall{1} (chain_eq1_ph1 X{1} i{1} s{1} _seed{1} address{1}).
-by ecall{2} (chain_eq2_ph1 X{2} i{2} s{2} _seed{2} address{2}).
+ecall{2} (chain_eq2_ph1 X{2} i{2} s{2} _seed{2} address{2}).
+by auto => &1 &2 />; rewrite chain_ch chain_eq_ch_f.
 qed.
 
 equiv pseudorandom_gensk_eqv :
