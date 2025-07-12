@@ -70,6 +70,57 @@ module Chain = {
 pred chain_pre(X : nbytes, i s : int, _seed : seed, address : adrs) =
     0 <= s <= w-1.
 
+op chain_body (i : int) (_s : seed) (chain_count : int) (ta : nbytes * adrs) =
+  let (t, ad) = ta in
+  let ad = set_hash_addr ad (i + chain_count) in
+  (f _s ad t, ad).
+
+op chain (x : nbytes) (i s : int) (_s : seed) (ad : adrs): nbytes =
+  fst (iteri s (chain_body i _s) (x, ad)).
+
+hoare chain_eq _X _i _s _se _ad:
+  Chain.chain: arg = (_X, _i, _s, _se, _ad) /\ 0 <= _s ==> res = chain _X _i _s _se _ad.
+proof.
+proc.
+while (i = _i
+    /\ _seed = _se
+    /\ s = _s
+    /\ (t, address) = iteri chain_count (chain_body _i _se) (_X, _ad)
+    /\ 0 <= chain_count <= s).
++ wp; auto=> /> &0 ih ge0_cc _ cc_lt_s.
+  by rewrite iteriS // -ih /chain_body //= /#.
+by auto=> />; rewrite iteri0 //= /#.
+qed.
+
+op ch (f : seed -> adrs -> nbytes -> nbytes) (_s : seed) (ad : adrs) (i s : int) (x : nbytes): nbytes =
+  iteri s (fun chain_count x => f _s (set_hash_addr ad (i + chain_count)) x) x.
+
+lemma chain_ch x i s _s ad:
+     0 <= s
+  => chain x i s _s ad = ch f _s ad i s x.
+proof.
+move=> ge0_s; rewrite /chain /ch.
+have -> //: iteri s (chain_body i _s) (x, ad)
+          = (iteri s (fun cc x0=> f _s (set_hash_addr ad (i + cc)) x0) x, if s = 0 then ad else set_hash_addr ad (i + (s - 1))).
+elim: s ge0_s.
++ by rewrite !iteri0 //.
++ move=> s ge0_s ih.
+  rewrite !iteriS //=.
+  have -> /=: s + 1 <> 0 by smt().
+  rewrite {1}/chain_body ih //=.
+  by case: (s = 0)=> //=.
+qed.
+
+lemma ch0 (g : seed -> adrs -> nbytes -> nbytes) (ps : seed) (ad : adrs) (s i : int) (x : nbytes) :
+     i <= 0
+  => ch g ps ad s i x = x.
+proof. by move=> ge0 @/ch; rewrite iteri0. qed.
+
+lemma chS (g : seed -> adrs -> nbytes -> nbytes) (ps : seed) (ad : adrs) (s i : int) (x : nbytes) :
+     0 < i
+  => ch g ps ad s i x = g ps (set_hash_addr ad (s + i - 1)) (ch g ps ad s (i - 1) x).
+proof. by move=> ge0_s @/ch; rewrite (iteriS (i - 1)) /#. qed.
+
 module WOTS = {
   (* In practice, we generate the private key from a secret seed *)
   proc genSK() : wots_sk = {
