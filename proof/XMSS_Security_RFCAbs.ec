@@ -1857,16 +1857,79 @@ module WOTS_Encode = {
   }
 }.
 
-lemma WOTSEncodeP m :
-  phoare[WOTS_Encode.encode : arg = m
+lemma basew_valh _ml l:
+  hoare[Top.BaseW.BaseW.base_w : arg = (_ml, l)
+         ==>
+         res = map BaseW.val (int2lbw l (BS2Int.bs2int (rev (BytesToBits _ml))))].
+proof.
+proc. admitted.
+
+lemma basew_val _ml l:
+  phoare[Top.BaseW.BaseW.base_w : arg = (_ml, l)
+         ==>
+         res = map BaseW.val (int2lbw l (BS2Int.bs2int (rev (BytesToBits _ml))))] = 1%r.
+proof.
+proc. admitted.
+
+lemma WOTSchecksum_len1valh _ml :
+  hoare[WOTS.checksum : arg = _ml /\ size _ml = len1
+         ==>
+         res = StdBigop.Bigint.BIA.big predT (fun (i : int) => w - 1 - i) _ml].
+proof.
+proc.
+while (   #pre
+       /\ 0 <= i <= len1
+       /\ checksum = StdBigop.Bigint.BIA.big predT (fun (i : int) => w - 1 - i) (take i _ml)).
++ auto => &1 /> *.
+  split => [/#|].
+  by rewrite (take_nth witness) 1:/# StdBigop.Bigint.BIA.big_rcons ifT 1:// /#.
+auto => &1 /> ?.
+rewrite ge0_len1 take0 StdBigop.Bigint.BIA.big_nil /= => j.
+by move=> *; rewrite take_oversize 1:/#.
+qed.
+
+lemma WOTSchecksum_ll : islossless WOTS.checksum.
+proof.
+proc.
+by while (true) (len1 - i); auto => /#.
+qed.
+
+lemma WOTSchecksum_len1val _ml :
+  phoare[WOTS.checksum : arg = _ml /\ size _ml = len1
+         ==>
+         res = StdBigop.Bigint.BIA.big predT (fun (i : int) => w - 1 - i) _ml] = 1%r.
+proof. by conseq WOTSchecksum_ll (WOTSchecksum_len1valh _ml). qed.
+
+lemma WOTSEncodeP _ml :
+  phoare[WOTS_Encode.encode : arg = _ml
          ==>
          res
          =
-         map BaseW.val (encode_int Params.len1 (BS2Int.bs2int (rev (BytesToBits m))) Params.len2) ]= 1%r.
+         map BaseW.val (encode_int Params.len1 (BS2Int.bs2int (rev (BytesToBits _ml))) Params.len2) ]= 1%r.
 proof.
 (* FD --- MM: Moved this here, removing one of the admits below. This one is used elsewhere as well. *)
-admitted.
-
+proc.
+wp.
+seq 1 : (   #pre
+         /\ msg = map BaseW.val (int2lbw len1 (BS2Int.bs2int (rev (BytesToBits _ml))))) => //.
++ by call (basew_val _ml len1).
++ seq 1 : (   #pre
+           /\ csum = StdBigop.Bigint.BIA.big predT (fun (i : int) => w - 1 - i) msg) => //.
+  + exlim msg => msgt; call (WOTSchecksum_len1val msgt).
+    auto => &1 />.
+    by rewrite size_map size_mkseq; smt(ge0_len1).
+  + sp; exlim csum_bytes => csbt.
+    call (basew_val csbt len2).
+    auto => &1 />.
+    rewrite /encode_int map_cat; congr.
+    rewrite /checksum /=.
+    admit. (* Hmm... not sure about this one *)
+  hoare => /=.
+  exlim msg => msgt; call (WOTSchecksum_len1valh msgt).
+  auto => &1 />.
+  by rewrite size_map size_mkseq; smt(ge0_len1).
+by hoare => /=; call(basew_valh _ml len1).
+qed.
 
 equiv genSK_eq:
   WOTS_TW_ES.gen_skWOTS ~ WOTS.pseudorandom_genSK:
