@@ -1,6 +1,6 @@
 require import AllCore IntDiv List Distr DList StdOrder RealExp.
 require import BitEncoding.
-(*---*) import BitChunking.
+(*---*) import BitChunking BS2Int.
 
 from Jasmin require import JModel.
 require import Array8.
@@ -2624,21 +2624,165 @@ rewrite (ihr bs (i - 1)) // /#.
 rewrite (ihl bs (i - 1))  // /#.
 qed.
 
-lemma nthcnsh ss ps (idx : W32.t) (i : int) :
-     0 <= i < h
-  => 0 <= to_uint idx < 2 ^ h
+lemma cnsh_val ps (idx : W32.t) (s : int) (lfs : dgstblock list) :
+     0 <= s
+  => 0 <= to_uint idx < 2 ^ s
+  => size lfs = 2 ^ s
+  =>
+  rev (cons_ap_trh_gen (list2tree lfs) (rev (BS2Int.int2bs s (to_uint idx)))
+                  ps (set_typeidx (adr2ads zero_address) 2) s (to_uint idx %/ 2 ^ s))
+     =
+  mkseq (fun i =>
+         val_bt_trh (list2tree (take (2 ^ i) (drop (to_uint ((idx `>>` W8.of_int i) `^` W32.one) * 2 ^ i) lfs)))
+         ps (set_typeidx (adr2ads zero_address) 2) i (to_uint ((idx `>>` W8.of_int i) `^` W32.one) %/ 2))
+        s.
+proof.
+move=> ge0_s.
+elim: s ge0_s idx lfs ps.
++ move=> idx lfs ps; rewrite expr0 size_eq1 => rngidx [lf] ->.
+  by rewrite int2bs0s rev_nil list2tree1 mkseq0 /= rev_nil.
+move=> s ge0_s ih idx lfs ps rngidx szlfs.
+rewrite -(cat_take_drop (2 ^ s) lfs).
+rewrite (list2treeS s) 1://. admit. admit.
+rewrite /= int2bsS 1:// rev_rcons /=.
+rewrite rev_cons mkseqS 1:// /=.
++ case (to_uint idx %/ 2 ^ s %% 2 <> 0) => odd.
+  + congr.
+    have odddivM : (2 * (to_uint idx %/ 2 ^ (s + 1)) + 1) = (to_uint idx %/ 2 ^ s).
+    + admit.
+    rewrite odddivM.
+    rewrite (ih idx (drop (2 ^ s) lfs) ps).
+    + admit.
+    + admit.
+    admit.
+    admit.
+  congr.
+  have nodddivM : (2 * (to_uint idx %/ 2 ^ (s + 1))) = (to_uint idx %/ 2 ^ s).
+  + admit.
+  rewrite nodddivM (ih idx (take (2 ^ s) lfs) ps) .
+  + admit.
+  + admit.
+  admit.
+admit.
+qed.
+
+(* lemma nthcnsh_bs ps (idx : W32.t) (i : int) (s : int) (lfs : dgstblock list) : *)
+(*      0 <= i < s *)
+(*   => 0 <= to_uint idx < 2 ^ s *)
+(*   => size lfs = 2 ^ s *)
+(*   => *)
+(*   let bsidx = BS2Int.int2bs s (to_uint idx) in *)
+(*   nth witness (cons_ap_trh_gen *)
+(*                (list2tree lfs) *)
+(*                (rev bsidx) (* (BS2Int.int2bs s (to_uint idx)) *) *)
+(*                ps *)
+(*                (set_typeidx (adr2ads zero_address) 2) *)
+(*                s *)
+(*                (bs2int (drop i bsidx))) *)
+(*      (s - (i + 1)) *)
+(*      = *)
+(*      val_bt_trh (list2tree (take (2 ^ i) (drop (to_uint ((idx `>>` W8.of_int i) `^` W32.one) * 2 ^ i) lfs))) *)
+(*                 ps (set_typeidx (adr2ads zero_address) 2) i *)
+(*                 (to_uint ((idx `>>` W8.of_int i) `^` W32.one) %/ 2). *)
+(* proof. *)
+(* move=> rngi; have ge0_s: 0 <= s by smt(). *)
+(* elim: s ge0_s i idx lfs ps rngi => [/# |]. *)
+(* move=> s ge0_s ih j idx lfs ps rngj rngidx szlfs. *)
+(* rewrite -(cat_take_drop (2 ^ s) lfs). *)
+(* rewrite (list2treeS s) 1://. admit. admit. *)
+(* rewrite /= int2bsS 1:// rev_rcons /=. *)
+(* case (j = s) => eqs_j. *)
+(* + rewrite eqs_j /=. *)
+(*   case (to_uint idx %/ 2 ^ s %% 2 <> 0) => odd. *)
+(*   + admit. *)
+(*   admit. *)
+(* rewrite ifF 1:/#. *)
+(* case (to_uint idx %/ 2 ^ s %% 2 <> 0) => odd. *)
+(* + rewrite (: (s + 1 - (j + 1) - 1) = s - (j + 1)) 1:/#. *)
+(*   (ih j idx (drop (2 ^ s) lfs) ps). *)
+(* admit. *)
+
+lemma drop_range i n m :
+  0 <= i =>
+  drop i (range n m) = range (n + i) m.
+proof.
+elim: i; 1: by rewrite drop0.
+move => i ge0_i ih.
+case (m - n <= i + 1) => cs.
++ by rewrite (range_geq (n + _)) 2:drop_oversize 2:size_range /#.
+move: ih; rewrite addrA (drop_nth witness) 1:size_range 1:/#.
+by rewrite (range_ltn (n + i)) 1:/#.
+qed.
+
+lemma take_range i n m :
+  0 <= i =>
+  0 <= n =>
+  take i (range n m) = range n (min (n + i) m).
+proof.
+elim: i => [ge0_n | i ge0_i ih ge0_n].
++ by rewrite take0 // range_geq 1:/#.
+case (m - n <= i + 1) => cs.
++ rewrite take_oversize 1:size_range 1:/#.
+  by rewrite lez_minr 1:/#.
+rewrite (take_nth witness) 1:size_range 1:/#.
+by rewrite ih 1:// nth_range 2:lez_minl 3:-rangeSr /#.
+qed.
+
+lemma nthcnsh ss ps (idx : W32.t) (i : int) (s : int) :
+     0 <= i < s
+  => 0 <= to_uint idx < 2 ^ s
   => nth witness (cons_ap_trh_gen
-                  (list2tree (map (leafnode_from_idx ss ps (adr2ads zero_address)) (range 0 (2 ^ h))))
-                  (rev (BS2Int.int2bs h (to_uint idx)))
-                  ps (set_typeidx (adr2ads zero_address) 2) h 0)
-                 (h - (i + 1))
+                  (list2tree (map (leafnode_from_idx ss ps (adr2ads zero_address)) (range 0 (2 ^ s))))
+                  (rev (BS2Int.int2bs s (to_uint idx)))
+                  ps (set_typeidx (adr2ads zero_address) 2) s 0)
+                 (s - (i + 1))
      =
      val_bt_trh (list2tree (map (leafnode_from_idx ss ps (adr2ads zero_address))
                             (range (to_uint ((idx `>>` W8.of_int i) `^` W32.one) * 2 ^ i)
                                    (to_uint ((idx `>>` W8.of_int i) `^` W32.one) * 2 ^ i + 2 ^ i))))
                 ps (set_typeidx (adr2ads zero_address) 2) i
                 (to_uint ((idx `>>` W8.of_int i) `^` W32.one) %/ 2).
-proof. admitted.
+proof.
+move=> rngi rngidx.
+pose cnsap := cons_ap_trh_gen _ _ _ _ _ _.
+have sz_cnsap : size cnsap = s.
++ rewrite /cnsap 1:&(szcnsh) 1:/# 2:size_rev 2:size_int2bs 2:/#.
+  + by rewrite &(list2tree_height) 1:/# 1:size_map 1:size_range; 1:smt(expr_ge0).
+  + rewrite &(list2tree_fullybalanced _ s) 1:/# 1:size_map 1:size_range; 1:smt(expr_ge0).
+rewrite -sz_cnsap -nth_rev 1:/#.
+rewrite /cnsap.
+have ^ eq0idxdv <-: to_uint idx %/ 2 ^ s = 0.
++ admit.
+rewrite cnsh_val 1:/# 1:// 1:size_map 1:size_range; 1:smt(expr_ge0).
+rewrite nth_mkseq 1:// /=.
+rewrite -map_drop -map_take.
+rewrite drop_range. admit.
+rewrite take_range 1:expr_ge0 1://. admit.
+rewrite lez_minl. admit.
+smt().
+
+(* move=> rngi rng_idx. *)
+(* rewrite nthcnsh 1,2:// 1:size_map 1:size_range; 1: smt(expr_ge0). *)
+(* do 2! congr. *)
+(* move: rngi => [ge0_i lts_i]. *)
+(* elim: i ge0_i idx ss ps lts_i rng_idx. *)
+(* + move => idx ss ps gt0_s rng_idx. *)
+(*   rewrite -map_drop -map_take; congr. *)
+(*   rewrite /= (drop_take1_nth witness). *)
+(*   + admit. *)
+(*   rewrite rangeS /=. *)
+(*   rewrite nth_range. admit. *)
+(*   trivial. *)
+(* move => i ge0_i ih idx ss ps lts_i1 rngidx. *)
+(* rewrite -map_drop -map_take; congr. *)
+(* rewrite drop_range. admit. *)
+(* rewrite take_range. admit. *)
+(* admit. *)
+(* simplify. *)
+(* rewrite lez_minl. admit. *)
+(* trivial. *)
+
+qed.
 
 lemma idx_conv idx:
     0 <= to_uint idx < 2 ^ h
