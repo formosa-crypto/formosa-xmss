@@ -1931,6 +1931,86 @@ seq 1 : (   #pre
 by hoare => /=; call(basew_valh _ml len1).
 qed.
 
+lemma gen_skWOTS_WOTS_genSK ss s ad:
+    DBLL.val (gen_skWOTS ss s (adr2ads ad))
+  = map bs2block (LenNBytes.val (WOTS_genSK ad ss s)).
+proof.
+rewrite /gen_skWOTS /= DBLL.insubdK.
++ move: ge0_len; pose l := len; elim: l=> />.
+  + by rewrite iter0.
+  by move=> l ge0_l ih; rewrite iterS //= size_rcons //= ih.
+(* Deal with size (iter _ _) = i invariant *)
+have ->: iter len (fun skWOTS=> rcons skWOTS (DigestBlock.insubd (BytesToBits (NBytes.val (prf_keygen ss (s, idxs2adr (HAX.Adrs.val (set_hidx (set_chidx (adr2ads ad) (size skWOTS)) 0 )))))))) []
+       = iteri len (fun i skWOTS=> rcons skWOTS (DigestBlock.insubd (BytesToBits (NBytes.val (prf_keygen ss (s, idxs2adr (HAX.Adrs.val (set_hidx (set_chidx (adr2ads ad) i) 0)))))))) [].
++ move: ge0_len; pose l := len; elim: l=> />.
+  + by rewrite iter0 // iteri0.
+  move=> l ge0_l ih; rewrite iterS // iteriS //= ih.
+  do! congr.
+  move: ge0_l; pose l' := l; elim: l'=> />.
+  + by rewrite iteri0.
+  by move=> l' ge0_l' ih'; rewrite iteriS //= size_rcons ih'.
+(* Deal with address construction *)
+(* Now for the nasty bit *)
+rewrite /WOTS_genSK.
+have ->: iteri len (fun i ask=>
+           let (ad, sk) = ask in
+           let ad = set_chain_addr ad i in
+           let sk_i = prf_keygen ss (s, ad) in
+           let sk = put sk i sk_i in
+           (ad, sk))
+               (set_key_and_mask (set_hash_addr ad 0) 0, nseq len witness)
+       = (let ad = set_key_and_mask (set_hash_addr ad 0) 0 in
+          if len = 0 then ad else set_chain_addr ad (len - 1)
+         , (map block2bs (iteri len (fun i skWOTS=>
+             let sk = rcons skWOTS (DigestBlock.insubd (BytesToBits (NBytes.val (prf_keygen ss (s, idxs2adr (HAX.Adrs.val (set_hidx (set_chidx (adr2ads ad) i) 0))))))) in
+             sk) [])) ++ nseq (len - len) witness).
++ pose {-2 6}l := len.
+  have: l <= len by done.
+  have: 0 <= l by exact: ge0_len.
+  elim: l.
+  + by rewrite !iteri0 //=.
+  move=> l ge0_l ih l_le_len; rewrite !iteriS //=.
+  have -> /=: l + 1 <> 0 by smt().
+  rewrite ih //= 1:/#.
+  have ->: set_chain_addr (if l = 0
+                           then set_key_and_mask (set_hash_addr ad 0) 0
+                           else set_chain_addr (set_key_and_mask (set_hash_addr ad 0) 0) (l - 1))
+                          l
+        = set_chain_addr (set_key_and_mask (set_hash_addr ad 0) 0) l.
+  + admit. (* address gunk yup *) (* MM/FD *)
+  rewrite put_cat size_map.
+  pose xs := iteri l _ _.
+  have -> //=: size xs = l.
+  + rewrite /xs; move: ge0_l; pose l' := l; elim: l'.
+    + by rewrite iteri0.
+    by move=> l' ge0_l' ih'; rewrite iteriS //= size_rcons ih'.
+  rewrite map_rcons cat_rcons.
+  congr.
+  have ->: nseq (len - l) witness<:Params.nbytes> = witness :: (nseq (len - (l + 1)) witness).
+  + by rewrite (nseqS (len - l - 1)) /#.
+  rewrite put_cons0; congr.
+  rewrite /block2bs DigestBlock.insubdK.
+  + rewrite /BytesToBits size_flatten /sumz !foldr_map //=.
+    have ->: forall (xs : W8.t list), foldr (fun _ z=> 8 + z) 0 xs = 8 * size xs.
+    + by elim=> /> xs0 -> /#.
+    by rewrite NBytes.valP.
+  rewrite BytesToBitsK /NBytes.insubd NBytes.valK //=.
+  do !congr.
+  admit. (* address gunk... unsure *) (* MM/FD *)
+move=> //=; rewrite LenNBytes.insubdK.
++ rewrite size_cat size_map size_nseq /max /=.
+  move: ge0_len; pose l := len; elim: l=> />.
+  + by rewrite iteri0.
+  + by move=> l ge0_l ih; rewrite iteriS // size_rcons ih.
+rewrite nseq0 cats0 -map_comp (eq_map _ idfun).
++ move=> x @/(\o) @/bs2block @/block2bs.
+  rewrite NBytes.insubdK.
+  + by rewrite /BitsToBytes size_map size_chunk //; smt(DigestBlock.valP).
+  rewrite BitsToBytesK; 1:smt(DigestBlock.valP).
+  by rewrite /DigestBlock.insubd DigestBlock.valK.
+by rewrite map_id.
+qed.
+
 equiv genSK_eq:
   WOTS_TW_ES.gen_skWOTS ~ WOTS.pseudorandom_genSK:
     ss{1} = sk_seed{2} /\ ps{1} = seed{2} /\ ad{1} = adr2ads address{2}
@@ -1948,9 +2028,8 @@ call {2} (: arg = (sk_seed0, seed0, address0) ==> res = WOTS_genSK address0 sk_s
 + conseq (: true ==> true: =1%r) (Eqv_WOTS_genSK address0 sk_seed0 seed0)=> //.
   proc; while (i <= len) (len - i); auto=> /> => [/#|].
   smt(ge0_len).
-auto=> />.
-(* FD --- equivalence of OTS secret key generation *)
-admitted.
+by auto=> />; exact: gen_skWOTS_WOTS_genSK.
+qed.
 
 equiv pkFromSig_eq:
   WOTS_TW_ES.pkWOTS_from_sigWOTS ~ WOTS.pkFromSig:
