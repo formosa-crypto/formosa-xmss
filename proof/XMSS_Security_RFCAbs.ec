@@ -2178,19 +2178,35 @@ conseq (: true ==> true: =1%r) (: arg = (_ss, _ps, _ad) ==> res = map (leafnode_
   proc; while (size skWOTS <= len) (len - size skWOTS); auto; 2:smt(ge0_len).
   by auto=> /> &0; rewrite size_rcons /#.
 proc; while (size leafl <= l
-          (* something about the fields of the address that does not get set constantly *)
+          /\ ad = _ad
           /\ leafl = map (leafnode_from_idx ss ps _ad) (range 0 (size leafl))).
 + wp; ecall (pkWOTS_from_skWOTS_eq skWOTS ps (set_kpidx (set_typeidx ad 0) (size leafl))).
   ecall (skWOTS_eq ss ps (set_kpidx (set_typeidx ad 0) (size leafl))).
   auto=> /> &0 _ ih size_lt_l; rewrite size_rcons; split=> [/#|].
   rewrite /range /= iotaSr 1:size_ge0 map_rcons -ih.
   congr.
-  (* Ah! Here it is! *)
   rewrite /leafnode_from_idx /pkco.
   have -> //=: 8 * n * len <> 8 * n by smt(ge1_n gt2_len).
   have -> //=: 8 * n * len <> 8 * n * 2 by smt(ge1_n gt2_len).
-  rewrite /bs2block /wots_pk_val.
-  admit. (** FD --- Here be a giant pain in the ass. **)
+  rewrite /bs2block; do !congr.
+  + by rewrite /ads2adr.
+  have ->: (gen_skWOTS ss ps (set_kpidx (set_typeidx _ad 0) (size leafl))){0}
+         = (DBLL.insubd (DBLL.val (gen_skWOTS ss ps (adr2ads (ads2adr (set_kpidx (set_typeidx _ad 0) (size leafl))))))){0}.
+  + rewrite /DBLL.insubd DBLL.valK /=.
+    do !congr. (* something something, _ad is initially valid *) admit.
+  rewrite gen_skWOTS_WOTS_genSK.
+  rewrite /wots_pk_val /WOTS_pkgen /= //=.
+  pose sks := LenNBytes.val (WOTS_genSK _ _ _).
+  have ->: iteri len (fun i apk=>
+                        let (ad, pk) = apk in
+                        (set_chain_addr ad i, put pk i (chain (nth witness sks i) 0 (w - 1) ps{0} (set_chain_addr ad i))))
+                 (ads2adr (set_kpidx (set_typeidx _ad 0) (size leafl{0})), nseq len witness)
+         = (if len = 0
+            then ads2adr _ad else set_chain_addr (ads2adr _ad) (len - 1)
+          , (map NBytes.insubd (chunk n (BitsToBytes (flatten (map DigestBlock.val (DBLL.val (pkWOTS_from_skWOTS (DBLL.insubd (map bs2block sks)) ps{0} (set_kpidx (set_typeidx _ad 0) (size leafl{0})))))))))).
+  (** FD --- Death and Misery *)
+  + admit. (** FD --- Here be a giant pain in the ass. **)
+  by move=> @/pkWOTS_from_skWOTS //=.
 by auto=> />; rewrite range_geq //=; smt(ge1_d).
 qed.
 
