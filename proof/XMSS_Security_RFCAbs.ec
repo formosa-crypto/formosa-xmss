@@ -756,7 +756,7 @@ op node_from_path (p : bool list, ss ps : Params.nbytes, ad : SA.adrs) : dgstblo
            let nls = map (leafnode_from_idx ss ps ad) ls in
            let subtree = list2tree nls in
                (val_bt_trh subtree ps (set_typeidx ad trhtype)
-                   (h - size p) ((head witness ls) %/ 2 ^ ((h - size p) + 1)))
+                   (h - size p) ((head witness ls) %/ 2 ^ ((h - size p))))
       else witness.
 
 (* The full stack state when one starts to process leaf lidx *)
@@ -2329,9 +2329,8 @@ wp;while ( #{/~address = zero_address}pre
 
     rewrite lfp_st;1..5:smt().
     rewrite /range iotaS_minus /=;1: smt(StdOrder.IntOrder.expr_gt0).
-    (* congr;congr;congr;congr;rewrite size_lpath 1:/# ifF;1: smt(StdOrder.IntOrder.expr_gt0). *)
-    (* smt(size_take size_lpath). *)
-    admit.
+    congr;congr;rewrite size_lpath 1:/# ifF;1: smt(StdOrder.IntOrder.expr_gt0). 
+    smt(size_take size_lpath).
 seq 6 : (#pre /\
    bs2block node = leafnode_from_idx _ss _ps (adr2ads zero_address) (_lstart + i)).
 + seq 3 : (#pre /\   pk = wots_pk_val _ss _ps (set_kpidx (set_typeidx (adr2ads zero_address) 0) (_lstart + i)) (_lstart + i)).
