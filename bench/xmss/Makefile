@@ -22,9 +22,9 @@ build: $(BIN)
 asm: $(ASM)
 run: $(OUT)
 
-REF_SOURCES   := $(filter-out ../../submodules/xmss-reference/xmss_core_fast.c, $(wildcard ../../submodules/xmss-reference/*.c))
+REF_SOURCES   := $(filter-out ../../_submodules/xmss-reference/xmss_core_fast.c, $(wildcard ../../_submodules/xmss-reference/*.c))
 BENCH_SOURCES := $(wildcard ../common/*.c)
-IDIRS         := -I ../common/ -I ../../submodules/xmss-reference/
+IDIRS         := -I ../common/ -I ../../_submodules/xmss-reference/
 
 SOURCES := $(REF_SOURCES) $(BENCH_SOURCES)
 
@@ -41,16 +41,16 @@ bin/bench_xmss: bin/xmss.s bench_xmss.c
 	$(CC) $(CFLAGS) -o $@ $(IDIRS) $(SOURCES) $^ $(LDLIBS)
 
 bin/bench_%: bench_%.c bin/xmss.s
-	$(CC) "clang $(CFLAGS) -o $@ $(IDIRS) -DOUTPUT_FILE=results.csv -DDATA_POINTS=10000 -DMEDIAN_ONLY -DJASMIN_BASE $(SOURCES) $^ $(LDLIBS)"
+	$(CC) "clang $(CFLAGS) -o $@ $(IDIRS) -DOUTPUT_FILE=results.csv -DDATA_POINTS=100 -DMEDIAN_ONLY -DJASMIN_BASE $(SOURCES) $^ $(LDLIBS)"
 
 bin/bench_%_ref: bench_%.c
-	$(CC) "clang $(CFLAGS) -o $@ $(IDIRS) -DOUTPUT_FILE=results.csv -DDATA_POINTS=10000 -DMEDIAN_ONLY -DREF $(SOURCES) $^ $(LDLIBS)"
+	$(CC) "clang $(CFLAGS) -o $@ $(IDIRS) -DOUTPUT_FILE=results.csv -DDATA_POINTS=100 -DMEDIAN_ONLY -DREF $(SOURCES) $^ $(LDLIBS)"
 
 bin/bench_%_loop: bench_%.c bin/xmss_loop_u64.s
-	$(CC) "clang $(CFLAGS) -o $@ $(IDIRS) -DOUTPUT_FILE=results.csv -DDATA_POINTS=10000 -DMEDIAN_ONLY -DLOOP $(SOURCES) $^ $(LDLIBS)"
+	$(CC) "clang $(CFLAGS) -o $@ $(IDIRS) -DOUTPUT_FILE=results.csv -DDATA_POINTS=100 -DMEDIAN_ONLY -DLOOP $(SOURCES) $^ $(LDLIBS)"
 
 bin/bench_%_unrolled: bench_%.c bin/xmss_unrolled_u64.s
-	$(CC) "clang $(CFLAGS) -o $@ $(IDIRS) -DOUTPUT_FILE=results.csv -DDATA_POINTS=10000 -DMEDIAN_ONLY -DUNROLLED $(SOURCES) $^ $(LDLIBS)"
+	$(CC) "clang $(CFLAGS) -o $@ $(IDIRS) -DOUTPUT_FILE=results.csv -DDATA_POINTS=100 -DMEDIAN_ONLY -DUNROLLED $(SOURCES) $^ $(LDLIBS)"
 
 
 bin/%.out: bin/%  
