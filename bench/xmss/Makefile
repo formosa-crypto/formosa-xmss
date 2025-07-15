@@ -1,6 +1,7 @@
 # -*- Makefile -*-
 
-CC     := clang-14
+CC     := nix-shell -p llvmPackages_14.clang gcc glibc.dev openssl.dev --run
+# CC     := clang-14
 CFLAGS := -march=native -O3 -fomit-frame-pointer -fwrapv -Qunused-arguments -fPIC -fPIE
 LDLIBS   = -lcrypto
 
@@ -40,16 +41,16 @@ bin/bench_xmss: bin/xmss.s bench_xmss.c
 	$(CC) $(CFLAGS) -o $@ $(IDIRS) $(SOURCES) $^ $(LDLIBS)
 
 bin/bench_%: bench_%.c bin/xmss.s
-	$(CC) $(CFLAGS) -o $@ $(IDIRS) -DOUTPUT_FILE=results.csv -DDATA_POINTS=100 -DJASMIN_BASE $(SOURCES) $^ $(LDLIBS)
+	$(CC) "clang $(CFLAGS) -o $@ $(IDIRS) -DOUTPUT_FILE=results.csv -DDATA_POINTS=100 -DMEDIAN_ONLY -DJASMIN_BASE $(SOURCES) $^ $(LDLIBS)"
 
 bin/bench_%_ref: bench_%.c
-	$(CC) $(CFLAGS) -o $@ $(IDIRS) -DOUTPUT_FILE=results.csv -DDATA_POINTS=100  -DREF $(SOURCES) $^ $(LDLIBS)
+	$(CC) "clang $(CFLAGS) -o $@ $(IDIRS) -DOUTPUT_FILE=results.csv -DDATA_POINTS=100 -DMEDIAN_ONLY -DREF $(SOURCES) $^ $(LDLIBS)"
 
 bin/bench_%_loop: bench_%.c bin/xmss_loop_u64.s
-	$(CC) $(CFLAGS) -o $@ $(IDIRS) -DOUTPUT_FILE=results.csv -DDATA_POINTS=100  -DLOOP $(SOURCES) $^ $(LDLIBS)
+	$(CC) "clang $(CFLAGS) -o $@ $(IDIRS) -DOUTPUT_FILE=results.csv -DDATA_POINTS=100 -DMEDIAN_ONLY -DLOOP $(SOURCES) $^ $(LDLIBS)"
 
 bin/bench_%_unrolled: bench_%.c bin/xmss_unrolled_u64.s
-	$(CC) $(CFLAGS) -o $@ $(IDIRS) -DOUTPUT_FILE=results.csv -DDATA_POINTS=100  -DUNROLLED $(SOURCES) $^ $(LDLIBS)
+	$(CC) "clang $(CFLAGS) -o $@ $(IDIRS) -DOUTPUT_FILE=results.csv -DDATA_POINTS=100 -DMEDIAN_ONLY -DUNROLLED $(SOURCES) $^ $(LDLIBS)"
 
 
 bin/%.out: bin/%  
@@ -58,6 +59,9 @@ bin/%.out: bin/%
 bin/:
 	mkdir -p $@ 
 
-.PHONY: clean
+.PHONY: clean clean_bin
 clean:
 	-$(RM) -r bin/ 
+
+clean_bin:
+	-$(RM) $(BIN)
