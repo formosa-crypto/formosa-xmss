@@ -40,16 +40,16 @@ bin/bench_xmss: bin/xmss.s bench_xmss.c
 	$(CC) $(CFLAGS) -o $@ $(IDIRS) $(SOURCES) $^ $(LDLIBS)
 
 bin/bench_%: bench_%.c bin/xmss.s
-	$(CC) $(CFLAGS) -o $@ $(IDIRS) -DOUTPUT_FILE=results.csv -DJASMIN_BASE $(SOURCES) $^ $(LDLIBS)
+	$(CC) $(CFLAGS) -o $@ $(IDIRS) -DOUTPUT_FILE=results.csv -DDATA_POINTS=100 -DJASMIN_BASE $(SOURCES) $^ $(LDLIBS)
 
 bin/bench_%_ref: bench_%.c
-	$(CC) $(CFLAGS) -o $@ $(IDIRS) -DOUTPUT_FILE=results.csv -DREF $(SOURCES) $^ $(LDLIBS)
+	$(CC) $(CFLAGS) -o $@ $(IDIRS) -DOUTPUT_FILE=results.csv -DDATA_POINTS=100 -DREF $(SOURCES) $^ $(LDLIBS)
 
 bin/bench_%_loop: bench_%.c bin/xmss_loop_u64.s
-	$(CC) $(CFLAGS) -o $@ $(IDIRS) -DOUTPUT_FILE=results.csv -DLOOP $(SOURCES) $^ $(LDLIBS)
+	$(CC) $(CFLAGS) -o $@ $(IDIRS) -DOUTPUT_FILE=results.csv -DDATA_POINTS=100 -DLOOP $(SOURCES) $^ $(LDLIBS)
 
 bin/bench_%_unrolled: bench_%.c bin/xmss_unrolled_u64.s
-	$(CC) $(CFLAGS) -o $@ $(IDIRS) -DOUTPUT_FILE=results.csv -DUNROLLED $(SOURCES) $^ $(LDLIBS)
+	$(CC) $(CFLAGS) -o $@ $(IDIRS) -DOUTPUT_FILE=results.csv -DDATA_POINTS=100 -DUNROLLED $(SOURCES) $^ $(LDLIBS)
 
 
 bin/%.out: bin/%  
