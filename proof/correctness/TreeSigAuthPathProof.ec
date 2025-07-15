@@ -32,6 +32,81 @@ move => ?.
 rewrite get_to_uint (: (0 <= 0 && 0 < 64)) //= /#.
 qed.
 
+lemma W64_oneE : 
+    forall (k : int), 0 < k < 64 => W64.onew.[k] = true by smt(onewE). 
+
+
+lemma onew_one_64 k:
+    0 < k < 64 => W64.onew.[k] = !W64.one.[k].
+ proof.
+move=>i.
+rewrite /W64.onew.
+rewrite !get_to_uint (: 0 <= k < 64) 1:/# /=. 
+case (k = 1) => [-> //=|?]; 
+case (k = 2) => [-> //=|?]; 
+case (k = 3) => [-> //=|?]; 
+case (k = 4) => [-> //=|?]; 
+case (k = 5) => [-> //=|?]; 
+case (k = 6) => [-> //=|?]; 
+case (k = 7) => [-> //=|?]; 
+case (k = 8) => [-> //=|?]; 
+case (k = 9) => [-> //=|?]; 
+case (k = 10) => [-> //=|?]; 
+case (k = 11) => [-> //=|?]; 
+case (k = 12) => [-> //=|?]; 
+case (k = 13) => [-> //=|?]; 
+case (k = 14) => [-> //=|?]; 
+case (k = 15) => [-> //=|?]; 
+case (k = 16) => [-> //=|?]; 
+case (k = 17) => [-> //=|?]; 
+case (k = 18) => [-> //=|?]; 
+case (k = 19) => [-> //=|?]; 
+case (k = 20) => [-> //=|?]; 
+case (k = 21) => [-> //=|?]; 
+case (k = 22) => [-> //=|?]; 
+case (k = 23) => [-> //=|?]; 
+case (k = 24) => [-> //=|?]; 
+case (k = 25) => [-> //=|?]; 
+case (k = 26) => [-> //=|?]; 
+case (k = 27) => [-> //=|?]; 
+case (k = 28) => [-> //=|?]; 
+case (k = 29) => [-> //=|?]; 
+case (k = 30) => [-> //=|?]; 
+case (k = 31) => [-> //=|?]; 
+case (k = 32) => [-> //=|?]; 
+case (k = 33) => [-> //=|?]; 
+case (k = 34) => [-> //=|?]; 
+case (k = 35) => [-> //=|?]; 
+case (k = 36) => [-> //=|?]; 
+case (k = 37) => [-> //=|?]; 
+case (k = 38) => [-> //=|?]; 
+case (k = 39) => [-> //=|?]; 
+case (k = 40) => [-> //=|?]; 
+case (k = 41) => [-> //=|?]; 
+case (k = 42) => [-> //=|?]; 
+case (k = 43) => [-> //=|?]; 
+case (k = 44) => [-> //=|?]; 
+case (k = 45) => [-> //=|?]; 
+case (k = 46) => [-> //=|?]; 
+case (k = 47) => [-> //=|?]; 
+case (k = 48) => [-> //=|?]; 
+case (k = 49) => [-> //=|?]; 
+case (k = 50) => [-> //=|?]; 
+case (k = 51) => [-> //=|?]; 
+case (k = 52) => [-> //=|?]; 
+case (k = 53) => [-> //=|?]; 
+case (k = 54) => [-> //=|?]; 
+case (k = 55) => [-> //=|?]; 
+case (k = 56) => [-> //=|?]; 
+case (k = 57) => [-> //=|?]; 
+case (k = 58) => [-> //=|?]; 
+case (k = 59) => [-> //=|?]; 
+case (k = 60) => [-> //=|?]; 
+case (k = 61) => [-> //=|?]; 
+case (k = 62) => [-> //=|?]; 
+case (k = 63) => [-> //=|/#].
+qed.
+
 lemma xor1_even_64 (x : W64.t) :
     0 <= to_uint x <= W64.max_uint => 
     to_uint x %% 2 = 0 => 
@@ -42,7 +117,21 @@ have w0E : x.[0] = false by apply lsb_even_64.
 rewrite wordP => j?.
 rewrite xorwE.
 have E0: W64.one.[0] by rewrite /W64.one bits2wE initiE //= /int2bs nth_mkseq.
-admit.
+have E1: forall (k : int), 0 < k < 32 => W32.one.[k] = false by smt(W32_oneE).
+case (j = 0) => [-> | ?].
+  + rewrite E0 /=.
+    rewrite eq_sym !get_to_uint.
+    rewrite (: (0 <= 0 && 0 < 32)) 1:/# /=.
+    rewrite to_uintD_small 1:/# /= /#.
+rewrite eq_sym get_to_uint.
+have E: (0 <= j && j < 64) by smt().
+rewrite to_uintD_small 1:/# E /=.
+rewrite get_to_uint E /=.
+have ->: 2^j = 2 * 2^(j - 1) by rewrite -exprS 1:/#. 
+rewrite !divzMr 1?IntOrder.expr_ge0 ~-1://; 1,2: smt(@IntDiv).
+rewrite divzDl //.
+rewrite/(^^) /=.
+rewrite -onew_one_64 1:/# W64_oneE /#.
 qed.
 
 lemma xor1_odd_64 (x : W64.t) :
