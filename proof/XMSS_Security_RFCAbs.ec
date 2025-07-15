@@ -1930,16 +1930,30 @@ seq 1 : (   #pre
                   => bs2int (rev (BytesToBits (toByte (W32.of_int x `<<` W8.of_int (8 - len2 * log2_w %% 8)) (ceil ((len2 * log2_w)%r / 8%r)))))
                    = x.
     + admit. (* Hmm... not sure about this one *)
-    rewrite StdBigop.Bigint.sumr_ge0 2:/=. admit.
+    rewrite StdBigop.Bigint.sumr_ge0 2:/= //=.
+    + by move=> x _; smt(BaseW.valP).
     rewrite (ler_lt_trans (StdBigop.Bigint.BIA.big predT (fun _ => w - 1) (int2lbw len1 (bs2int (rev (BytesToBits m{1})))))).
     rewrite StdBigop.Bigint.ler_sum; 1: by move=> a _ /=; smt(BaseW.valP).
     rewrite StdBigop.Bigint.big_constz count_predT /int2lbw size_mkseq.
     rewrite lez_maxr 1:ge0_len1 /len2 /len1 -log2w_eq /w.
+    (** I am very unsure what is going on here, but I'm rolling with it. **)
     case: logw_vals => -> /=; rewrite -?fromint_div 1:dvdz_mulr //.
     + rewrite (Ring.IntID.mulrC 8) divMr 1://.
       move: (eqz_div 2 8 4 _ _) => // /iffRL /=.
       rewrite from_int_ceil /=.
-      admit.
+      rewrite -lt_fromint -RField.fromintXn.
+      + rewrite -from_int_floor -from_int_floor_addr floor_mono /log2.
+        smt(log_ge0 ge1_n).
+      rewrite -rpow_int //.
+      apply: (RealOrder.ler_lt_trans (4%r ^ (log2 (n * 4 * 3)%r / 2%r))).
+      + have ->: 4%r = 2%r ^ 2%r by smt(@RealExp).
+        rewrite -rpowM // RField.mulrC -RField.mulrA (RField.mulrC (inv 2%r)) RField.mulrV //=.
+        rewrite RealExp.rpowK //.
+        + smt(ge1_n @RealExp).
+        smt(ge1_n @RealExp).
+      apply: rexpr_hmono_ltr=> //; split=> [|_].
+      + smt(log_ge0 ge1_n).
+      by rewrite fromintD; smt(floor_gt).
     admit.
   hoare => /=.
   exlim msg => msgt; call (WOTSchecksum_len1valh msgt).
