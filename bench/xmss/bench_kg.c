@@ -235,6 +235,7 @@ void xmssmt_bench_kg(const xmss_params *params, uint32_t oid) {
 #ifdef REF
         int res  = xmssmt_keypair(pk, sk, oid);
         assert (res != 1);
+        puts("Ok");
 #else
         xmssmt_keypair_jazz(pk, sk);
 #endif
