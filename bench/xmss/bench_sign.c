@@ -9,9 +9,6 @@
 #include "params.h"
 #include "xmss.h"
 
-#ifndef DATA_POINTS
-#define DATA_POINTS 10000
-#endif
 
 #ifndef OUTPUT_FILE
 #define OUTPUT_FILE "csv/xmssmt_sign.csv"
