@@ -234,16 +234,18 @@ void xmssmt_bench_kg(const xmss_params *params, uint32_t oid) {
 
 #ifdef REF
         int res  = xmssmt_keypair(pk, sk, oid);
+        #else
+        xmssmt_keypair_jazz(pk, sk);
+        #endif
+        
+        after = cpucycles();
+
         assert (res != 1);
         puts("Ok");
-#else
-        xmssmt_keypair_jazz(pk, sk);
-#endif
 
-        after = cpucycles();
         observations[i] = (after - cpucycles_overhead) - before;
     }
-
+    
     uint64_t median_val = median(observations, DATA_POINTS);
 
 #ifdef MEDIAN_ONLY
