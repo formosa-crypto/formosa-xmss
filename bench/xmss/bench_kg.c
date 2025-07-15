@@ -233,7 +233,8 @@ void xmssmt_bench_kg(const xmss_params *params, uint32_t oid) {
         before = cpucycles();
 
 #ifdef REF
-        xmssmt_keypair(pk, sk, oid);
+        int res  = xmssmt_keypair(pk, sk, oid);
+        assert (res != 1);
 #else
         xmssmt_keypair_jazz(pk, sk);
 #endif
