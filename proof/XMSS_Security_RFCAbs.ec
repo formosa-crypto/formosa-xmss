@@ -1929,7 +1929,31 @@ seq 1 : (   #pre
                      0 <= x < w ^ len2
                   => bs2int (rev (BytesToBits (toByte (W32.of_int x `<<` W8.of_int (8 - len2 * log2_w %% 8)) (ceil ((len2 * log2_w)%r / 8%r)))))
                    = x.
-    + admit. (* Hmm... not sure about this one *)
+    + move=> ww ww_bnd; rewrite /(`<<`) W32.shlMP.
+      + smt(W32.to_uint_cmp).
+      rewrite W8.of_uintK pow2_8 (pmod_small _ 256) 1:/#.
+      rewrite /BytesToBits.
+      have ->: forall (xs : bool list list), rev (flatten xs) = flatten (rev (map rev xs)).
+      + elim=> /> => x0 xs ih //=.
+        by rewrite flatten_cons rev_cat ih rev_cons flatten_rcons.
+      rewrite -map_comp /W8.w2bits /(\o) /= /toByte /=.
+      rewrite rev_mkseq map_mkseq /(\o) /= rev_mkseq //=.
+      rewrite /flatten /mkseq foldr_map //=.
+      have ->: (fun (x0 : int) (z : bool list) =>
+                  rev (map ("_.[_]" (unpack8 (W32.of_int (ww * 2 ^ (8 - len2 * log2_w %% 8)))).[
+                ceil ((len2 * log2_w)%r / 8%r) - (ceil ((len2 * log2_w)%r / 8%r) - (x0 + 1) + 1)])
+                        (iota_ 0 8)) ++ z)
+             = fun i z=> map (fun j=> (unpack8 (W32.of_int (ww * 2 ^ (8 - len2 * log2_w %% 8)))).[i].[8 - (j + 1)]) (iota_ 0 8) ++ z.
+      + apply: fun_ext=> i; apply: fun_ext=> z.
+        by rewrite -map_rev rev_iota -map_comp /(\o) //= /#.
+      (** not sure this is the right direction;
+          next steps now involve phrasing all of the inner lookups as
+          a function of ww and i: for each i, we build the bool list
+          that corresponds to the ith byte of "shifted ww", and
+          concatenate that on our accumulator
+
+          I still have some endianness concerns **)
+      admit. (* Hmm... not sure about this one *)
     rewrite StdBigop.Bigint.sumr_ge0 2:/= //=.
     + by move=> x _; smt(BaseW.valP).
     rewrite (ler_lt_trans (StdBigop.Bigint.BIA.big predT (fun _ => w - 1) (int2lbw len1 (bs2int (rev (BytesToBits m{1})))))).
