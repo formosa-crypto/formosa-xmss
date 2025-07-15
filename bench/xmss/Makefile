@@ -22,9 +22,9 @@ build: $(BIN)
 asm: $(ASM)
 run: $(OUT)
 
-REF_SOURCES   := $(filter-out ../../submodules/xmss-reference/xmss_core_fast.c, $(wildcard ../../submodules/xmss-reference/*.c))
+REF_SOURCES   := $(filter-out ../../_submodules/xmss-reference/xmss_core_fast.c, $(wildcard ../../_submodules/xmss-reference/*.c))
 BENCH_SOURCES := $(wildcard ../common/*.c)
-IDIRS         := -I ../common/ -I ../../submodules/xmss-reference/
+IDIRS         := -I ../common/ -I ../../_submodules/xmss-reference/
 
 SOURCES := $(REF_SOURCES) $(BENCH_SOURCES)
 
