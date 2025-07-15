@@ -2205,14 +2205,19 @@ proc; while (size leafl <= l
             then ads2adr (set_kpidx (set_typeidx _ad 0) (size leafl{0})) else set_chain_addr (ads2adr (set_kpidx (set_typeidx _ad 0) (size leafl{0}))) (len - 1)
           , (map NBytes.insubd (chunk n (BitsToBytes (flatten (map DigestBlock.val (DBLL.val (pkWOTS_from_skWOTS (DBLL.insubd (map bs2block sks)) ps{0} (set_kpidx (set_typeidx _ad 0) (size leafl{0})))))))))).
   (** FD --- Death and Misery *)
-  + rewrite /pkWOTS_from_skWOTS /= DBLL.insubdK.
+  + (* rewrite chfltn_id *)
+    have ->: forall pkw, chunk n (BitsToBytes (flatten (map DigestBlock.val (DBLL.val pkw))))
+                       = map BitsToBytes (map DigestBlock.val (DBLL.val pkw)).
+    + admit.
+    rewrite /pkWOTS_from_skWOTS /= DBLL.insubdK.
     + move: ge0_len; pose l := len; elim: l.
       + by rewrite iter0.
       by move=> l ge0_l ih'; rewrite iterS // size_rcons ih'.
     rewrite DBLL.insubdK.
     + by rewrite size_map LenNBytes.valP.
-    have ->: map DigestBlock.val (iter len (fun pkWOTS=> rcons pkWOTS (cf ps{0} (set_chidx (set_kpidx (set_typeidx _ad 0) (size leafl{0})) (size pkWOTS)) 0 (w - 1) (DigestBlock.val (nth witness (map bs2block sks) (size pkWOTS))))) [])
-           = iter len (fun pkWOTS=> rcons pkWOTS (DigestBlock.val (cf ps{0} (set_chidx (set_kpidx (set_typeidx _ad 0) (size leafl{0})) (size pkWOTS)) 0 (w - 1) (DigestBlock.val (nth witness (map bs2block sks) (size pkWOTS)))))) [].
+    rewrite -map_comp -map_comp.
+    have womp: map (NBytes.insubd \o BitsToBytes \o DigestBlock.val) (iter len (fun pkWOTS=> rcons pkWOTS (cf ps{0} (set_chidx (set_kpidx (set_typeidx _ad 0) (size leafl{0})) (size pkWOTS)) 0 (w - 1) (DigestBlock.val (nth witness (map bs2block sks) (size pkWOTS))))) [])
+                       = iter len (fun pkWOTS=> rcons pkWOTS ((NBytes.insubd \o BitsToBytes \o DigestBlock.val) (cf ps{0} (set_chidx (set_kpidx (set_typeidx _ad 0) (size leafl{0})) (size pkWOTS)) 0 (w - 1) (DigestBlock.val (nth witness (map bs2block sks) (size pkWOTS)))))) [].
     + move: ge0_len; pose l := len; elim: l.
       + by rewrite !iter0.
       move=> l ge0_l ih'; rewrite !iterS //= map_rcons //= ih' //=.
@@ -2227,7 +2232,8 @@ proc; while (size leafl <= l
       rewrite /ys; move: ge0_l; pose l' := l; elim: l'.
       + by rewrite iter0.
       by move=> l' ge0_l' ih''; rewrite iterS // size_rcons ih''.
-  + admit. (** FD --- Here be a giant pain in the ass. **)
+    rewrite womp.
+    admit. (** FD --- Here be a smooth induction, right? ... right? **)
   by move=> @/pkWOTS_from_skWOTS //=.
 by auto=> />; rewrite range_geq //=; smt(ge1_d).
 qed.
