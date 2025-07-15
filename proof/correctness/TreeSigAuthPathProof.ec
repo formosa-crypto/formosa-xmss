@@ -117,7 +117,6 @@ have w0E : x.[0] = false by apply lsb_even_64.
 rewrite wordP => j?.
 rewrite xorwE.
 have E0: W64.one.[0] by rewrite /W64.one bits2wE initiE //= /int2bs nth_mkseq.
-have E1: forall (k : int), 0 < k < 32 => W32.one.[k] = false by smt(W32_oneE).
 case (j = 0) => [-> | ?].
   + rewrite E0 /=.
     rewrite eq_sym !get_to_uint.
@@ -137,7 +136,23 @@ qed.
 lemma xor1_odd_64 (x : W64.t) :
     0 <= to_uint x <= W64.max_uint => 
     to_uint x %% 2 <> 0 => 
-    (x `^` W64.one) = x - W64.one by admit.
+    (x `^` W64.one) = x - W64.one.
+proof.
+move => /= ??.
+have E0: W64.one.[0] by rewrite /W64.one bits2wE initiE //= /int2bs nth_mkseq.
+rewrite wordP => i?.
+rewrite xorwE.
+case (i = 0) => [-> | ?]; [rewrite E0 |] => /=. 
+  + rewrite !get_to_uint (: (0 <= 0 && 0 < 32)) 1:/# /=.
+    rewrite to_uintB 2:/# uleE /#.
+rewrite/(^^) /=.
+rewrite -onew_one_64 1:/# W64_oneE 1:/# /=.
+rewrite !get_to_uint (: (0 <= i && i < 64)) 1:/# /=.
+rewrite to_uintB /=; first by rewrite uleE /#.
+have ->: 2^i = 2 * 2^(i - 1) by rewrite -exprS 1:/#. 
+rewrite !divzMr 1?IntOrder.expr_ge0 ~-1://; 1,2: smt(@IntDiv).
+smt(@IntDiv).
+qed.
 
 lemma build_auth_path_correct (_pub_seed _sk_seed : W8.t Array32.t, _idx : W32.t, a1 a2 : adrs) :
     n = XMSS_N /\
