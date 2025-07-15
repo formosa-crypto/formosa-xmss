@@ -241,7 +241,7 @@ void xmssmt_bench_sign(const xmss_params *params, uint32_t oid) {
         before = cpucycles();
 
 #ifdef REF
-        resut = xmssmt_sign(sk, sm, (unsigned long long *)&smlen, m, MESSAGE_SIZE);
+        result = xmssmt_sign(sk, sm, (unsigned long long *)&smlen, m, MESSAGE_SIZE);
 #else
         xmssmt_sign_jazz(sk, sm, &smlen, m, MESSAGE_SIZE);
 #endif
