@@ -62,7 +62,7 @@ lemma sign_correct (_sk : xmss_sk, _sm_ptr _smlen_ptr _m_ptr _mlen : W64.t) :
       arg{1}.`5 = _mlen  /\
 
       arg{2}.`1 =_sk /\
-      arg{2}.`2 = load_buf Glob.mem{1} _m_ptr (to_uint _mlen) /\
+      Msg_t.val arg{2}.`2 = load_buf Glob.mem{1} _m_ptr (to_uint _mlen) /\
 
       0 < to_uint _mlen < W64.max_uint /\
       0 <= to_uint _sm_ptr + XMSS_SIG_BYTES < W64.max_uint /\
@@ -94,7 +94,7 @@ proc => /=.
 
 seq 11 0 : (
   sk{1} = DecodeSkNoOID sk{2} /\
-  m{2} = load_buf Glob.mem{1} m_ptr{1} (to_uint mlen{1}) /\
+  Msg_t.val m{2} = load_buf Glob.mem{1} m_ptr{1} (to_uint mlen{1}) /\
 
   _sm_ptr = sm_ptr{1} /\ (* need this for #post *)
 
@@ -143,30 +143,30 @@ seq 0 3 : (
 
 seq 1 0 : (
   #pre /\
-  load_buf Glob.mem{1} (sm_ptr{1} + (of_int 4963)%W64)  (to_uint mlen{1}) = m{2}
+  load_buf Glob.mem{1} (sm_ptr{1} + (of_int 4963)%W64)  (to_uint mlen{1}) = Msg_t.val m{2}
 ).
     + ecall {1} (memcpy_mem_mem Glob.mem{1} sm_ptr{1} (of_int 4963)%W64 m_ptr{1} W64.zero mlen{1}).
       auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 *.
       do split; 1,2: by smt(). 
       move => H15 H16 H17 H18 memL H19 H20.
-      split; (apply (eq_from_nth witness); rewrite !size_load_buf // => j?).
+      split; apply (eq_from_nth witness); rewrite H0 !size_load_buf // => j?.
           * rewrite !nth_load_buf // H20 //=/#.
-          * rewrite H19 !nth_load_buf // H20 /#. 
+          * rewrite H19 !nth_load_buf // H20 /#.
 
 seq 3 0 : (
-  #pre /\ 
+  #pre /\
   loadW64 Glob.mem{1} (to_uint smlen_ptr{1}) = mlen{1} + (of_int XMSS_SIG_BYTES)%W64
 ).
-    + auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19 *.
+    + auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19 H20.
       do split; last by rewrite load_store_W64.
-         - apply (eq_from_nth witness); first by rewrite !size_load_buf // /#.
+         - rewrite H0; apply (eq_from_nth witness); first by rewrite !size_load_buf // /#.
            rewrite size_load_buf 1:/# => j?.
            rewrite !nth_load_buf //.
            rewrite /storeW64 storesE => />.
            rewrite !get_setE !bits8E !ifF 1..7,9:/#.
            smt(disjoint_ptr_ptr).
 
-         - apply (eq_from_nth witness); first by rewrite !size_load_buf // /#.
+         - rewrite -H20; apply (eq_from_nth witness); first rewrite !size_load_buf // /#.
            rewrite size_load_buf 1:/# => j?.
            rewrite !nth_load_buf //.
            rewrite /storeW64 storesE => />. 
@@ -177,7 +177,7 @@ seq 3 0 : (
                     nth witness 
                     (load_buf Glob.mem{1} (_sm_ptr + (of_int 4963)%W64) (to_uint mlen{1}))
                     j by rewrite nth_load_buf // !to_uintD /#.
-            by rewrite H19 nth_load_buf.
+           rewrite nth_load_buf 1:// /#.
 
 seq 1 0 : (#pre /\ to_list idx_bytes{1} = EncodeIdx sk{2}.`idx).
  + auto => /> &1 &2 *.
@@ -189,7 +189,7 @@ seq 1 0 : (#pre /\ to_list idx_bytes{1} = EncodeIdx sk{2}.`idx).
  
 seq 1 0 : (#pre /\ to_uint idx{1} = to_uint sk{2}.`Types.idx).
   + ecall {1} (bytes_to_ull_correct idx_bytes{1} sk{2}.`Types.idx).
-    auto  => /> &1 &2 21? ->.
+    auto => /> &1 &2 22? ->.
     split => [/# | ? result ->].
     by rewrite EncodeIdxK; first by rewrite /XMSS_FULL_HEIGHT /#.   
 
@@ -244,7 +244,7 @@ seq 0 0 : (
   #pre /\
   idx{2} = DecodeIdx (to_list idx_bytes{1}) /\
   sub signature{1} 0 XMSS_INDEX_BYTES = EncodeIdx idx{2}
-); first by auto => /> &1 &2 21? -> ? ->; rewrite EncodeIdxK2. 
+); first by auto => /> &1 &2 22? -> ? ->; rewrite EncodeIdxK2. 
 
 seq 2 0 : (
    #pre /\ 
@@ -261,7 +261,7 @@ seq 2 0 : (
  
 seq 1 0 : (#pre /\ to_list aux_0{1} = EncodeIdx idx_new{2}).
     + ecall {1} (ull_to_bytes_3_correct t64{1}).
-      auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19 H20 H21 ???? T *.
+      auto => /> &1 &2 HM H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19 H20 H21 ???? T *.
       rewrite T !to_uintD /XMSS_FULL_HEIGHT.
       do split; 1,2: by smt().
         - move => H22 H23 result  Hr. 
@@ -286,7 +286,7 @@ seq 1 1 : (
 
      to_list idx_bytes{1} = EncodeIdx (sk{2}.`Types.idx - W32.one)
 ).
-    + auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19? H20 H21 H22 H23 H24 H25 H26 H27 *.
+    + auto => /> &1 &2 HM H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19? H20 H21 H22 H23 H24 H25 H26 H27 *.
       (do split; first last); 1,2,4: by rewrite to_uintD_small /#.
          - ring.
          - by rewrite H20; congr; ring.
@@ -323,7 +323,7 @@ seq 1 1 : (
     to_list index_bytes{1} = toByte idx{2} n 
 ).
     + ecall {1} (ull_to_bytes_32_correct idx{1}).
-      auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19 H20 H21 H22 H23 H24 H25 H26 H27 H28 H29*.
+      auto => /> &1 &2 HM H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19 H20 H21 H22 H23 H24 H25 H26 H27 H28 H29*.
       do split; 1,2: by smt(). 
       move => ?? result ->.
       split; last first.
@@ -369,7 +369,7 @@ seq 1 1 : (
     + inline {1} M(Syscall).__prf_ M(Syscall)._prf; wp; sp; conseq />.      
       exists * in_00{1}, key0{1}; elim * => _P1 _P2.
       call {1} (prf_correctness _P1 _P2) => [/# |].  
-      auto => /> &1 &2 30? -> ? H*.
+      auto => /> &1 &2 31? -> ? H*.
       rewrite NBytes.valKd //=; do split; [|by move => ???->]; apply nbytes_eq.
       rewrite NBytes.insubdK; first by rewrite /P size_to_list /#.
       apply (eq_from_nth witness); first by rewrite NBytes.valP n_val size_to_list.
@@ -377,7 +377,7 @@ seq 1 1 : (
       by rewrite H.
  
 seq 1 0 : (#pre /\ sub signature{1} XMSS_INDEX_BYTES n = NBytes.val _R{2}).
-    + auto => /> &1 &2 19? H0 H1 12? <-; do split; last first.
+    + auto => /> &1 &2 20? H0 H1 12? <-; do split; last first.
          * apply (eq_from_nth witness); first by rewrite size_to_list size_sub n_val.
            rewrite size_sub n_val // => j?.
            by rewrite nth_sub // initiE 1:/# /= ifT 1:/# /copy_8 /XMSS_INDEX_BYTES.
@@ -404,7 +404,7 @@ seq 1 0 : (
 outline {2} [1..2] by { 
     _M' <@ M_Hash.hash (
           (ThreeNBytesBytes.insubd (NBytes.val _R ++ NBytes.val root ++ NBytes.val idx_bytes))%ThreeNBytesBytes, 
-          m); 
+          Msg_t.val m); 
 }.
  
 seq 2 0 : (
@@ -415,7 +415,7 @@ seq 2 0 : (
  
 conseq  ( :
 sk{1} = DecodeSkNoOID sk{2} /\
-m{2} = load_buf Glob.mem{1} m_ptr{1} (to_uint mlen{1}) /\
+Msg_t.val m{2} = load_buf Glob.mem{1} m_ptr{1} (to_uint mlen{1}) /\
 _sm_ptr = sm_ptr{1} /\
 
 0 < to_uint mlen{1} < 18446744073709551615 /\
@@ -440,7 +440,7 @@ address{2} = ots_addr{1} /\
 root{2} = sk{2}.`sk_root /\
 sk_prf{2} = sk{2}.`Types.sk_prf /\
 idx_new{2} = idx{2} + W32.one /\
-load_buf Glob.mem{1} (sm_ptr{1} + (of_int 4963)%W64) (to_uint mlen{1}) = m{2} /\
+load_buf Glob.mem{1} (sm_ptr{1} + (of_int 4963)%W64) (to_uint mlen{1}) = Msg_t.val m{2} /\
 
 (* Idx Bytes *)
 sub signature{1} 0 XMSS_INDEX_BYTES = to_list idx_bytes{1} /\
@@ -516,7 +516,7 @@ sub signature{1} 0 XMSS_INDEX_BYTES = EncodeIdx idx{2}
                mlen{1}.
       elim * => P0 P1 P2 P3 P4 P5.
       call (hash_message_correct P0 P1 P2 P3 P4 P5) => [/# |].
-      auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19 H20 H21 H22 H23 H24 H25 H26 H27 H28 H29 H30 H31.
+      auto => /> &1 &2 HM H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19 H20 H21 H22 H23 H24 H25 H26 H27 H28 H29 H30 H31.
       do split.
          * rewrite /valid_ptr_i H30 n_val /XMSS_SIG_BYTES /= => ?; smt(@W64 pow2_64).
          * smt().
@@ -534,12 +534,12 @@ sub signature{1} 0 XMSS_INDEX_BYTES = EncodeIdx idx{2}
                    rewrite wordP => k?.
                    rewrite !get_to_uint to_uint_zeroextu64 H23 (: (0 <= k < 64)) 1:/# /=.
                    by congr; rewrite to_uintB /= 2:/# uleE /=/#.
-         * apply (eq_from_nth witness); rewrite !size_load_buf //; 1,2,3: by smt().
+         * rewrite HM; apply (eq_from_nth witness); rewrite !size_load_buf //; 1,2,3: by smt().
            move => j?; rewrite !nth_load_buf //. 
            have ->: to_uint (P4 + (of_int 128)%W64) = to_uint P4 + 128 by rewrite to_uintD_small /#. 
            rewrite H30 /XMSS_SIG_BYTES /=.
            have ->: P0.[to_uint m_ptr{1} + j] = nth witness (load_buf P0 m_ptr{1} (to_uint P5)) j by rewrite nth_load_buf /#.
-           rewrite -H17 nth_load_buf //; do congr; rewrite to_uintD_small /#.
+           rewrite -HM -H17 nth_load_buf //; do congr; rewrite to_uintD_small /#.
          * rewrite n_val /= => *; by ring.
 
 swap {2} 3 -2.
