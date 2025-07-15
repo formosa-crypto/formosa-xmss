@@ -222,6 +222,8 @@ void xmssmt_bench_sign(const xmss_params *params, uint32_t oid) {
 
     uint64_t cpucycles_overhead = overhead_of_cpucycles_call();
 
+    int result;
+
     char buf[256] = {0};
 
     if (!file_exists(xstr(OUTPUT_FILE))) {
@@ -239,13 +241,15 @@ void xmssmt_bench_sign(const xmss_params *params, uint32_t oid) {
         before = cpucycles();
 
 #ifdef REF
-        xmssmt_sign(sk, sm, (unsigned long long *)&smlen, m, MESSAGE_SIZE);
+        resut = xmssmt_sign(sk, sm, (unsigned long long *)&smlen, m, MESSAGE_SIZE);
 #else
         xmssmt_sign_jazz(sk, sm, &smlen, m, MESSAGE_SIZE);
 #endif
 
         after = cpucycles();
         observations[i] = (after - cpucycles_overhead) - before;
+
+        assert(result == 0);
     }
 
     uint64_t median_val = median(observations, DATA_POINTS);

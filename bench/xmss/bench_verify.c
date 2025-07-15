@@ -9,10 +9,6 @@
 #include "params.h"
 #include "xmss.h"
 
-#ifndef DATA_POINTS
-#define DATA_POINTS 10000
-#endif
-
 #ifndef OUTPUT_FILE
 #define OUTPUT_FILE "csv/xmssmt_kg.csv"
 #endif
@@ -227,6 +223,8 @@ void xmssmt_bench_verify(const xmss_params *params, uint32_t oid) {
 
     uint64_t cpucycles_overhead = overhead_of_cpucycles_call();
 
+    int result;
+
     char buf[256] = {0};
 
     if (!file_exists(xstr(OUTPUT_FILE))) {
@@ -248,7 +246,7 @@ void xmssmt_bench_verify(const xmss_params *params, uint32_t oid) {
         before = cpucycles();
         
         #ifdef REF
-        xmssmt_sign_open(m, (unsigned long long *)&mlen, sm, params->bytes + MESSAGE_SIZE, pk);
+        result = xmssmt_sign_open(m, (unsigned long long *)&mlen, sm, params->bytes + MESSAGE_SIZE, pk);
         #else
         xmssmt_sign_open_jazz(m, &mlen, sm, params->bytes + MESSAGE_SIZE, pk);
         #endif
@@ -256,6 +254,7 @@ void xmssmt_bench_verify(const xmss_params *params, uint32_t oid) {
         after = cpucycles();
         observations[i] = (after - cpucycles_overhead) - before;
 
+        assert(result == 0);
     }
 
     uint64_t median_val = median(observations, DATA_POINTS);
