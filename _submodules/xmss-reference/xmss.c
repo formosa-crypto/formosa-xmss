@@ -15,6 +15,11 @@ int xmss_keypair(unsigned char *pk, unsigned char *sk, const uint32_t oid)
     if (xmss_parse_oid(&params, oid)) {
         return 1;
     }
+
+    #ifdef DEBUG
+    puts("PARSED OID");
+    #endif
+
     for (i = 0; i < XMSS_OID_LEN; i++) {
         pk[i] = (oid >> (8 * i)) & 0xFF;
         /* For an implementation that uses runtime parameters, it is crucial
@@ -22,6 +27,11 @@ int xmss_keypair(unsigned char *pk, unsigned char *sk, const uint32_t oid)
         i.e. not just for interoperability, but also for internal use. */
         sk[i] = (oid >> (8 * i)) & 0xFF;
     }
+
+    #ifdef DEBUG
+    puts("SET OID");
+    #endif
+
     return xmss_core_keypair(&params, pk + XMSS_OID_LEN, sk + XMSS_OID_LEN);
 }
 

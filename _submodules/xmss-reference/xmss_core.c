@@ -55,6 +55,11 @@ static void treehash(const xmss_params *params, unsigned char *node, uint32_t in
     for (i = 0; i < params->n; i++) {
         node[i] = stack[i];
     }
+
+    #ifdef DEBUG
+    puts("FINISHED TREEHASH");
+    #endif
+
 }
 
 /**

@@ -1,3 +1,3 @@
 #!/bin/bash
 
-for f in bin/*; do [[ -x "$f" && ! -d "$f" ]] && "$f"; done
+for f in bin/*_ref; do [[ -x "$f" && ! -d "$f" ]] && "$f"; done
