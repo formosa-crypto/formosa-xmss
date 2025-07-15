@@ -1,10 +1,10 @@
 pragma Goals : printall.
 
 require import AllCore List RealExp IntDiv Distr DList.
-require (*--*) Subtype. 
+require (*--*) Subtype.
 
 from Jasmin require import JModel.
- 
+
 require import XMSS_Params Types Address BaseW Hash WOTS LTree XMSS_TreeHash.
 import Params OTSKeys ThreeNBytesBytes AuthPath.
 import Array8.
@@ -29,7 +29,7 @@ module XMSS_PRF = {
 
       var address : adrs <- zero_address;
       address <- set_layer_addr address 0;
-      
+
       (sk_seed, sk_prf, pub_seed) <@ sample_randomness();
 
       sk <- {| idx=W32.zero;
@@ -67,12 +67,12 @@ proc sign(sk : xmss_sk, m : msg_t) : sig_t * xmss_sk = {
     var root : nbytes;
     var t : threen_bytes;
     var sk_prf : nbytes <- sk.`sk_prf;
-    
+
     idx <- sk.`idx;
     idx_new <- sk.`idx + W32.one;
     sk <- {| sk with idx=idx_new |};
     address <- zero_address;
-    
+
     idx_bytes <- NBytes.insubd (toByte idx n);
 
     _R <@ Hash.prf(idx_bytes, sk_prf);
@@ -83,8 +83,8 @@ proc sign(sk : xmss_sk, m : msg_t) : sig_t * xmss_sk = {
 
     (ots_sig, auth) <@ TreeSig.treesig(_M', sk, idx, address);
 
-    sig <- {| sig_idx = idx; r = _R ; r_sig = (ots_sig, auth) |}; 
-  
+    sig <- {| sig_idx = idx; r = _R ; r_sig = (ots_sig, auth) |};
+
     return (sig, sk);
   }
 
@@ -92,7 +92,7 @@ proc sign(sk : xmss_sk, m : msg_t) : sig_t * xmss_sk = {
     var is_valid : bool;
     var idx_sig : W32.t;
     var idx_bytes : nbytes;
-    var node, root, _R, _M': nbytes;    
+    var node, root, _R, _M': nbytes;
     var auth : auth_path;
     var sig_ots : wots_signature;
     var _seed : seed;
@@ -103,17 +103,17 @@ proc sign(sk : xmss_sk, m : msg_t) : sig_t * xmss_sk = {
     idx_bytes <- NBytes.insubd (toByte idx_sig n);
     _seed <- pk.`pk_pub_seed;
     address <- zero_address;
-    (sig_ots,auth) <- s.`r_sig; 
+    (sig_ots,auth) <- s.`r_sig;
 
     root <- pk.`pk_root;
     _R <- s.`r;
     t <- ThreeNBytesBytes.insubd (NBytes.val _R ++ NBytes.val root ++ NBytes.val idx_bytes);
     _M' <- H_msg t m;
-    
+
     node <@ RootFromSig.rootFromSig(idx_sig, sig_ots, auth, _M', _seed, address);
 
     is_valid <- (node = root);
 
     return is_valid;
-  }  
+  }
 }.

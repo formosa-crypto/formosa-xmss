@@ -7,8 +7,10 @@ from Jasmin require import JModel.
 (* XMSS_TREE_HEIGHT in the implementation *)
 const h : { int | 0 < h } as h_g0.
 
+(* Maximum number of message bytes *)
+const mmb : { int | 1 <= mmb } as ge1_mmb.
+
 (* Length of the digest *)
-(* const n : { int | 1 <= n } as ge1_n. *)
 (*
   Need that 32 bits fit in n bytes (or toByte(., n) might
   truncate 32-bit index
