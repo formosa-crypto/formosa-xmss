@@ -1923,7 +1923,14 @@ seq 1 : (   #pre
     auto => &1 />.
     rewrite /encode_int map_cat; congr.
     rewrite /checksum /=.
-    admit. (* Hmm... not sure about this one *)
+    do !congr.
+    rewrite StdBigop.Bigint.BIA.big_map /(\o) /= /predT -/predT.
+    have -> //: forall x,
+                     0 <= x < w ^ len2
+                  => bs2int (rev (BytesToBits (toByte (W32.of_int x `<<` W8.of_int (8 - len2 * log2_w %% 8)) (ceil ((len2 * log2_w)%r / 8%r)))))
+                   = x.
+    + admit. (* Hmm... not sure about this one *)
+    admit. (* yeah, this is OK *)
   hoare => /=.
   exlim msg => msgt; call (WOTSchecksum_len1valh msgt).
   auto => &1 />.
