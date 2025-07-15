@@ -1930,7 +1930,17 @@ seq 1 : (   #pre
                   => bs2int (rev (BytesToBits (toByte (W32.of_int x `<<` W8.of_int (8 - len2 * log2_w %% 8)) (ceil ((len2 * log2_w)%r / 8%r)))))
                    = x.
     + admit. (* Hmm... not sure about this one *)
-    admit. (* yeah, this is OK *)
+    rewrite StdBigop.Bigint.sumr_ge0 2:/=. admit.
+    rewrite (ler_lt_trans (StdBigop.Bigint.BIA.big predT (fun _ => w - 1) (int2lbw len1 (bs2int (rev (BytesToBits m{1})))))).
+    rewrite StdBigop.Bigint.ler_sum; 1: by move=> a _ /=; smt(BaseW.valP).
+    rewrite StdBigop.Bigint.big_constz count_predT /int2lbw size_mkseq.
+    rewrite lez_maxr 1:ge0_len1 /len2 /len1 -log2w_eq /w.
+    case: logw_vals => -> /=; rewrite -?fromint_div 1:dvdz_mulr //.
+    + rewrite (Ring.IntID.mulrC 8) divMr 1://.
+      move: (eqz_div 2 8 4 _ _) => // /iffRL /=.
+      rewrite from_int_ceil /=.
+      admit.
+    admit.
   hoare => /=.
   exlim msg => msgt; call (WOTSchecksum_len1valh msgt).
   auto => &1 />.
@@ -3150,21 +3160,21 @@ move=> rng_i ltj_i rng_m.
 rewrite (int2bs_cat i j) 1:/# nth_cat (: !i < size (int2bs i (to_uint m))) /=; 1: by smt(size_int2bs).
 rewrite size_int2bs (:  (i - max 0 i)  = 0) 1:/#/=.
 rewrite (int2bs_cat 1 (j-i)) 1:/# nth_cat (: 0 < size (int2bs 1 (to_uint m %/ 2 ^ i))) /=; 1: by smt(size_int2bs).
-rewrite /(int2bs 1) nth_mkseq 1:/# /= /(`>>`) /= (modz_small _ 256) 1:/#. 
+rewrite /(int2bs 1) nth_mkseq 1:/# /= /(`>>`) /= (modz_small _ 256) 1:/#.
 
 + case (to_uint m %/ 2 ^ i %% 2 <> 0 ) => Hbit.
   + have ->/= : (m `>>>` i) = W32.of_int (to_uint (m `>>>` i) %/ 2 * 2) + W32.one by smt(@W32 @IntDiv).
-    have  /=:= (W32.of_uintK (to_uint m %/ 2 ^ i - 1)). 
+    have  /=:= (W32.of_uintK (to_uint m %/ 2 ^ i - 1)).
     rewrite modz_small;1: by split; smt( @W32 pow2_32).
   move =><-; rewrite -to_uint_eq; apply W32.wordP => k kb; rewrite xorwE.
     + case(k = 0).
       + move => ->.  rewrite !get_to_uint /= !of_uintK /=.
-        rewrite !(modz_small _ 4294967296);1,2: by split;smt( @W32 pow2_32).  
+        rewrite !(modz_small _ 4294967296);1,2: by split;smt( @W32 pow2_32).
         by smt().
     move => ?.
     have ->/= : W32.one.[k] = false by rewrite of_intwE /=; smt(@IntDiv).
-  rewrite !of_intwE /= /int_bit /= kb /= !(modz_small _ 4294967296);1,2: by split;  smt( @W32 pow2_32). 
-  have -> : (to_uint (m `>>>` i) %/ 2 * 2 + 1) %/ 2 ^ k = to_uint (m `>>>` i)  %/ 2 ^ k; last first. rewrite to_uint_shr 1:/#. by  smt(@W32).  
+  rewrite !of_intwE /= /int_bit /= kb /= !(modz_small _ 4294967296);1,2: by split;  smt( @W32 pow2_32).
+  have -> : (to_uint (m `>>>` i) %/ 2 * 2 + 1) %/ 2 ^ k = to_uint (m `>>>` i)  %/ 2 ^ k; last first. rewrite to_uint_shr 1:/#. by smt(@W32).
   have [# + _] /=:= divmod_mul (2^(i-1)) (2) (to_uint (idx `>>>` j) %/ 2) 0 _ _;1,2:smt(StdOrder.IntOrder.expr_gt0).
   rewrite -exprSr 1:/# /= => ->;rewrite -divz_mulp;1,2:smt(StdOrder.IntOrder.expr_gt0).
   smt(Ring.IntID.exprSr).
