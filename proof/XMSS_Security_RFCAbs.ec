@@ -1813,23 +1813,61 @@ qed.
    we exit the loop for leaf 2^h - 1 we have produced a
    hash at level h *)
 lemma si_heights_in_loop_bnd start lidxo t ss ps ad offset k :
-    0 <= t <= h
- => 0 <= start <= 2^h - 2^t
- => 2^t %| start
- => 0 <= lidxo < 2^t
- => hw (lpathst (lidxo + 1) t) <= hw (lpathst lidxo t)
- => hw (lpathst (lidxo + 1) t) <= offset <= hw (lpathst lidxo t) + 1
- => 2 <= offset
- => (nth witness (stack_increment start lidxo t ss ps ad offset) (offset - 1)).`2 = 
-    (nth witness (stack_increment start lidxo t ss ps ad offset) (offset - 2)).`2
- => 0 <= k < offset
- => 0 <= (nth witness (stack_increment start lidxo t ss ps ad offset) k).`2 < h.
+     0 <= t <= h
+  => 0 <= start <= 2^h - 2^t
+  => 2^t %| start
+  => 0 <= lidxo < 2^t
+  => hw (lpathst (lidxo + 1) t) <= hw (lpathst lidxo t)
+  => hw (lpathst (lidxo + 1) t) <= offset <= hw (lpathst lidxo t) + 1
+  => 2 <= offset
+  => (nth witness (stack_increment start lidxo t ss ps ad offset) (offset - 1)).`2 = 
+     (nth witness (stack_increment start lidxo t ss ps ad offset) (offset - 2)).`2
+  => 0 <= k < offset
+  => 0 <= (nth witness (stack_increment start lidxo t ss ps ad offset) k).`2 < h.
 proof.
-move=> * @/stack_increment /=; rewrite ltrNge ifF 1:/# sfl_size ~-1:/#.
-have := si_size_in_loop start lidxo t ss ps ad offset _ _ _ _ _ _ _ _;1..8:smt().
-rewrite nth_cat size_take 1:/# sfl_size 1..4:/# /=.
-case (offset = hw (lpathst lidxo t) + 1) => ?.
-admitted.
+move=> *; have := si_size_in_loop start lidxo t ss ps ad offset _ _ _ _ _ _ _ _; ~-1:smt().
+case=> *; pose s := stack_increment _ _ _ _ _ _ _.
+have ?: forall x, x \in stack_from_leaf start lidxo t ss ps ad => 0 <= x.`2 < t.
+- move=> x; case/mapP => bs [] @/paths_from_leaf; rewrite ifF ~-1:/# => + -> /=.
+  rewrite pmap_map => /mapP[bso]; rewrite mem_filter /predC1 /=.
+  case: bso => //= ? [+ <<-] - /mapP[] i [] /mem_range ?.
+  rewrite /extract_path; case _: (nth _ _ _) => //= ? ->.
+  split; last by smt(size_rcons size_ge0).
+  rewrite size_rcons opprD addrA addrAC subr_ge0.
+  rewrite ler_subr_addl addrC -ltzE size_take_condle ~-1:/#.
+  rewrite /lpathst size_rev b2i0_eq ~-1:/# /=.
+  by rewrite BS2Int.size_int2bs /#.
+have: nth witness s k \in s by apply: mem_nth; smt().
+move: (nth _ _ _) => [??]; rewrite /s /stack_increment /= => {s}.
+case _: (hw _ < hw _) => /= ?.
+- (rewrite mem_cat; case => /=; last (case=> _ ->> /=; apply: h_g0)); smt(h_g0).
+rewrite mem_cat /=; case; first by move/mem_take; smt().
+case=> _ ->>; case _: (offset = _) => /= [?|]; first by apply: h_g0.
+pose s := stack_from_leaf _ _ _ _ _ _; pose x := nth _ _ _.
+case: (t = 0) => [->>|nz_t].
+- have: 0 <= lidxo < 2^0 by done.
+  by rewrite expr0; smt(stack_from_leaf0).
+rewrite /s sfl_size ~-1:/# => hsz; have: x \in drop 1 s.
+- have ->: x = nth witness (drop 1 s) (offset - 2).
+  - by rewrite nth_drop ~-1:/# addrCA /=.
+  apply: mem_nth; split=> [|_]; first by smt().
+  rewrite size_drop // /s sfl_size ~-1:/#.
+  by rewrite ler_maxr; smt(ge0_hw).
+rewrite /s /stack_from_leaf -map_drop /paths_from_leaf ifF 1:/#.
+rewrite pmap_map -map_drop -map_comp /= => /mapP @/(\o) [].
+move=> + [+ ->] - [|bso]; first by move=> /mem_drop /mem_filter @/predC1.
+move=> hmem; have: Some bso \in map (extract_path (lpathst lidxo t)) (range 1 t).
+- move: hmem; rewrite (range_cat 1 0 t) ~-1:/#.
+  rewrite map_cat filter_cat rangeS /= {1}/extract_path.
+  case: (nth _ _ _) => @{1}/predC1 /=.
+  - by rewrite drop0 => /mem_filter [].
+  - by move=> /mem_drop /mem_filter [].
+case/mapP=> [i] [] /mem_range rgi @/extract_path.
+case: (nth _ _ _) => //= ->; rewrite size_rcons.
+rewrite opprD !addrA /= size_take_condle ~-1:/#.
+rewrite /lpathst size_rev b2i0_eq 1:/# /=.
+by rewrite BS2Int.size_int2bs /#.
+qed.
 
 lemma si_reduced_node start lidxo t ss ps ad offset :
      0 <= t <= h
