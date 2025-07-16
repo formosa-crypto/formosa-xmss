@@ -2080,8 +2080,8 @@ seq 1 : (   #pre
         elim: X ge0_i z0 j => /= [? ? | i ge0_i ih z0 j].
         + by rewrite iota0.
         by rewrite iotaS 1:// /= /ft /= -/ft ih /#.
-      have toto: forall i,
-           0 <= i < X
+      have /= toto: forall i,
+           0 <= i < X * 8
         => nth false (foldr ft [] (iota_ 0 X)) i = WW.[(0 + (i %/ 8)) * 8 + 7 - i %% 8].
       + pose ftj :=
           (fun (j : int) (i : int) (z : bool list) =>
@@ -2129,6 +2129,9 @@ seq 1 : (   #pre
         + apply: fun_ext=> x; apply: fun_ext=> z0.
           by rewrite addzA.
         by rewrite -/(ftj (z + 1)) ih /#.
+      rewrite (StdBigop.Bigint.BIA.eq_big_int _ _ _ (fun i=> 2 ^ i * b2i (WW.[i %/ 8 * 8 + 7 - i %% 8]))).
+      + by move=> i /toto /= ->.
+      rewrite /WW.
       admit. (* Hmm... not sure about this one *)
     rewrite StdBigop.Bigint.sumr_ge0 2:/= //=.
     + by move=> x _; smt(BaseW.valP).
@@ -2154,18 +2157,24 @@ seq 1 : (   #pre
       apply: rexpr_hmono_ltr=> //; split=> [|_].
       + smt(log_ge0 ge1_n).
       by rewrite fromintD; smt(floor_gt).
-    admit.
-    (* This one is tighter than seems at first glance 
-    rewrite exprD_nneg 2:// 2:/= 2:(Ring.IntID.mulrC _ 16).
-    + admit.
-    rewrite (Ring.IntID.mulrC 8) divMr 1:// /= from_int_ceil /=.
-    have ltr_le_pmul : forall (x1 y1 x2 y2 : int),
-      0 < x1 => 0 < x2 => x1 <= y1 => x2 < y2 => x1 * x2 < y1 * y2.
-    by smt(@StdOrder.IntOrder).
-    rewrite (Ring.IntID.mulrC 15) (Ring.IntID.mulrC 16) &(ltr_le_pmul) //; 1: smt(ge1_n).
-    rewrite /log2 -mulrA fromintM ?logM ?lt_fromint //; 1:smt(ge1_n).
-    admit.
-    *)
+    have ->: 8 = 4 * 2 by done.
+    rewrite from_int_ceil (mulzA 4) mulKz // -mulzA /=.
+    rewrite mulzA (mulzC n) -mulzA /=.
+    rewrite -lt_fromint -RField.fromintXn.
+    + rewrite -from_int_floor -from_int_floor_addr floor_mono /log2.
+      smt(log_ge0 ge1_n).
+    apply: (RealOrder.ler_lt_trans (16%r ^ (log2 (30 * n)%r / 4%r))).
+    + have ->: 16%r = 2%r ^ 4%r.
+      + rewrite (rpowD _ 1%r 3%r) // rpow1 //.
+        rewrite (rpowD _ 1%r 2%r) // rpow1 //.
+        by rewrite (rpowD _ 1%r 1%r) // rpow1 //.
+      rewrite -rpowM // RField.mulrC.
+      rewrite -RField.mulrA (RField.mulrC _ 4%r) RField.mulrV //=.
+      by rewrite /log2 RealExp.rpowK //; smt(ge1_n).
+    rewrite -rpow_int //.
+    apply: rexpr_hmono_ltr=> //; split=> [|_].
+    + smt(log_ge0 ge1_n).
+    by rewrite fromintD; smt(floor_gt).
   hoare => /=.
   exlim msg => msgt; call (WOTSchecksum_len1valh msgt).
   auto => &1 />.
