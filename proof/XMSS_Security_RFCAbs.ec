@@ -1976,6 +1976,33 @@ seq 1 : (   #pre
           concatenate that on our accumulator
 
           I still have some endianness concerns **)
+      pose WW := W32.of_int (ww * 2 ^ (8 - len2 * log2_w %% 8)).
+      pose F := (fun i z=>
+                   [WW.[i * 8 + 7]; WW.[i * 8 + 6]; WW.[i * 8 + 5]; WW.[i * 8 + 4]; WW.[i * 8 + 3]; WW.[i * 8 + 2]; WW.[i * 8 + 1]; WW.[i * 8 + 0]] ++ z).
+      rewrite (eq_in_foldr _ F _ [] _ (iota_ 0 (ceil ((len2 * log2_w)%r / 8%r)))) /F //=.
+      + move=> x /mem_iota /= x_bnd.
+        apply: fun_ext=> z @/F; congr.
+        rewrite (iotaS _ 7) //= (iotaS _ 6) //= (iotaS _ 5) //= (iotaS _ 4) //=.
+        rewrite (iotaS _ 3) //= (iotaS _ 2) //= (iotaS _ 1) //= iota1 //=.
+        rewrite !get_unpack8.
+        + admit. (* prove a general result on len2 * log2_w / 8 *)
+        by rewrite !W4u8.bits8iE.
+      rewrite /bs2int.
+      move=> {F}.
+      pose WWb := (foldr _ _ _).
+      have->: size WWb = ceil ((len2 * log2_w)%r / 8%r) * 8.
+      + admit.
+      have toto: forall i,
+           0 <= i < ceil ((len2 * log2_w)%r / 8%r) * 8
+        => b2i (nth false WWb i) = b2i (WW.[ceil ((len2 * log2_w)%r / 8%r) * 8 - (i + 1)]).
+      + move=> i i_bnd @/WWb.
+        pose l := ceil ((len2 * log2_w)%r / 8%r).
+        have: l <= ceil ((len2 * log2_w)%r / 8%r) by done.
+(*        have: 0 <= l. admit.
+        elim: l.
+        + rewrite iota0 //=.
+*)
+        admit.
       admit. (* Hmm... not sure about this one *)
     rewrite StdBigop.Bigint.sumr_ge0 2:/= //=.
     + by move=> x _; smt(BaseW.valP).
