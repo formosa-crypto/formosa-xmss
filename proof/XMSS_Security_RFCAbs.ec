@@ -2065,54 +2065,70 @@ seq 1 : (   #pre
         by rewrite get_unpack8 1:// ?bits8iE //.
       rewrite /bs2int.
       move=> {F}.
-      pose WWb := (foldr _ _ _).
-      have->: size WWb = ceil ((len2 * log2_w)%r / 8%r) * 8.
-      + rewrite /WWb; pose i := ceil _.
-        pose ft :=
-          (fun (i : int) (z : bool list) =>
-               WW.[i * 8 + 7] :: WW.[i * 8 + 6] :: WW.[i * 8 + 5] ::
-               WW.[i * 8 + 4] :: WW.[i * 8 + 3] :: WW.[i * 8 + 2] ::
-               WW.[i * 8 + 1] :: WW.[i * 8] :: z).
-        suff /#:
+      pose X := ceil ((len2 * log2_w)%r / 8%r).
+      pose ft :=
+        (fun (i : int) (z : bool list) =>
+             WW.[i * 8 + 7] :: WW.[i * 8 + 6] :: WW.[i * 8 + 5] ::
+             WW.[i * 8 + 4] :: WW.[i * 8 + 3] :: WW.[i * 8 + 2] ::
+             WW.[i * 8 + 1] :: WW.[i * 8] :: z).
+      have->: size (foldr ft [] (iota_ 0 X)) = ceil ((len2 * log2_w)%r / 8%r) * 8.
+      + suff /#:
           forall z0 j,
-            size (foldr ft z0 (iota_ j i)) = size z0 + i * 8.
+            size (foldr ft z0 (iota_ j X)) = size z0 + X * 8.
         move=> z0 j.
-        have ge0_i : 0 <= i by exact: ge0_cln2lg2w.
-        elim: i ge0_i z0 j => /= [? ? | i ge0_i ih z0 j].
+        have ge0_i : 0 <= X by exact: ge0_cln2lg2w.
+        elim: X ge0_i z0 j => /= [? ? | i ge0_i ih z0 j].
         + by rewrite iota0.
         by rewrite iotaS 1:// /= /ft /= -/ft ih /#.
       have toto: forall i,
-           0 <= i < ceil ((len2 * log2_w)%r / 8%r) * 8
-        => nth false WWb i = WW.[i]. (* OK, the index on the right here is wrong, but it's not as easy as just going X - (i + 1): the bytes are read in order, but the bits within each byte are read in reverse order. come up with a closed form formula for that. *)
-      + move=> i @/WWb.
-        pose X := ceil ((len2 * log2_w)%r / 8%r).
-        pose ft :=
-          (fun (i : int) (z : bool list) =>
-               WW.[i * 8 + 7] :: WW.[i * 8 + 6] :: WW.[i * 8 + 5] ::
-               WW.[i * 8 + 4] :: WW.[i * 8 + 3] :: WW.[i * 8 + 2] ::
-               WW.[i * 8 + 1] :: WW.[i * 8] :: z).
-        move: i; have: 0 <= X by exact: ge0_cln2lg2w.
+           0 <= i < X
+        => nth false (foldr ft [] (iota_ 0 X)) i = WW.[(0 + (i %/ 8)) * 8 + 7 - i %% 8].
+      + pose ftj :=
+          (fun (j : int) (i : int) (z : bool list) =>
+               WW.[(j + i) * 8 + 7] :: WW.[(j + i) * 8 + 6] :: WW.[(j + i) * 8 + 5] ::
+               WW.[(j + i) * 8 + 4] :: WW.[(j + i) * 8 + 3] :: WW.[(j + i) * 8 + 2] ::
+               WW.[(j + i) * 8 + 1] :: WW.[(j + i) * 8] :: z).
+        have -> {ft}: ft = ftj 0 by done.
+        pose {2 4}z := 0; have: 0 <= z by done.
+        move: z.
+        have: 0 <= X by exact: ge0_cln2lg2w.
         elim: X=> />; 1:smt().
-        move=> X ge0_X ih i ge0_i i_bnd.
-        rewrite iotaS //=.
-        case (i = 0) => [eqi_0 | neqi_0]; 1: rewrite eqi_0 /=. (* a formula that makes this one true is what we're after. *) admit.
-        (* do all the cases for i < 8 individually, then induction hypothesis can be applied *)
-        case (i = 1) => [eqi_1 | neqi_1]; 1: rewrite eqi_1 /=.
-        + admit.
-        case (i = 2) => [eqi_2 | neqi_2]; 1: rewrite eqi_2 /=.
-        + admit.
-        case (i = 3) => [eqi_3 | neqi_3]; 1: rewrite eqi_3 /=.
-        + admit.
-        case (i = 4) => [eqi_4 | neqi_4]; 1: rewrite eqi_4 /=.
-        + admit.
-        case (i = 5) => [eqi_5 | neqi_5]; 1: rewrite eqi_5 /=.
-        + admit.
-        case (i = 6) => [eqi_6 | neqi_6]; 1: rewrite eqi_6 /=.
-        + admit.
-        case (i = 7) => [eqi_7 | neqi_7]; 1: rewrite eqi_7 /=.
-        + admit.
-        rewrite /ft /= -/ft; do ? (rewrite ifF 1:/#).
-        admit.
+        move=> X ge0_X ih z ge0_z i ge0_i i_le_SX.
+        rewrite iotaS=> />.
+        case: (i < 8)=> [lt8_i | /lezNgt ge8_i].
+        + rewrite /ftj //=.
+          case: (i = 0)=> />.
+          case: (i = 1)=> />.
+          case: (i = 2)=> />.
+          case: (i = 3)=> />.
+          case: (i = 4)=> />.
+          case: (i = 5)=> />.
+          case: (i = 6)=> />.
+          by case: (i = 7)=> /> /#.
+        rewrite /ftj /=; do ? (rewrite ifF 1:/#).
+        rewrite (iota_addl 1 0) foldr_map /=.
+        (* rewrite under lambda *)
+        have ->: (fun (x : int) (z0 : bool list) =>
+                       WW.[(z + (1 + x)) * 8 + 7]
+                    :: WW.[(z + (1 + x)) * 8 + 6]
+                    :: WW.[(z + (1 + x)) * 8 + 5]
+                    :: WW.[(z + (1 + x)) * 8 + 4]
+                    :: WW.[(z + (1 + x)) * 8 + 3]
+                    :: WW.[(z + (1 + x)) * 8 + 2]
+                    :: WW.[(z + (1 + x)) * 8 + 1]
+                    :: WW.[(z + (1 + x)) * 8] :: z0)
+               = (fun (x : int) (z0 : bool list) =>
+                       WW.[((z + 1) + x) * 8 + 7]
+                    :: WW.[((z + 1) + x) * 8 + 6]
+                    :: WW.[((z + 1) + x) * 8 + 5]
+                    :: WW.[((z + 1) + x) * 8 + 4]
+                    :: WW.[((z + 1) + x) * 8 + 3]
+                    :: WW.[((z + 1) + x) * 8 + 2]
+                    :: WW.[((z + 1) + x) * 8 + 1]
+                    :: WW.[((z + 1) + x) * 8] :: z0).
+        + apply: fun_ext=> x; apply: fun_ext=> z0.
+          by rewrite addzA.
+        by rewrite -/(ftj (z + 1)) ih /#.
       admit. (* Hmm... not sure about this one *)
     rewrite StdBigop.Bigint.sumr_ge0 2:/= //=.
     + by move=> x _; smt(BaseW.valP).
