@@ -1994,14 +1994,19 @@ seq 1 : (   #pre
       + admit.
       have toto: forall i,
            0 <= i < ceil ((len2 * log2_w)%r / 8%r) * 8
-        => b2i (nth false WWb i) = b2i (WW.[ceil ((len2 * log2_w)%r / 8%r) * 8 - (i + 1)]).
-      + move=> i i_bnd @/WWb.
-        pose l := ceil ((len2 * log2_w)%r / 8%r).
-        have: l <= ceil ((len2 * log2_w)%r / 8%r) by done.
-(*        have: 0 <= l. admit.
-        elim: l.
-        + rewrite iota0 //=.
+        => nth false WWb i = WW.[i]. (* OK, the index on the right here is wrong, but it's not as easy as just going X - (i + 1): the bytes are read in order, but the bits within each byte are read in reverse order. come up with a closed form formula for that. *)
+      + move=> i @/WWb.
+        pose X := ceil ((len2 * log2_w)%r / 8%r).
+(*        have ->: WW.[X * 8 - (i + 1)] = if X = 0 then false else WW.[X * 8 - (i + 1)].
+        + admit. (* X <> 0 *)
 *)
+        move: i; have: 0 <= X.
+        + admit. (* X > 0 *)
+        elim: X=> />; 1:smt().
+        move=> X ge0_X ih i ge0_i i_bnd.
+        rewrite iotaS //=.
+        case (i = 0)=> />. (* a formula that makes this one true is what we're after. *) admit.
+        (* do all the cases for i < 8 individually, then induction hypothesis can be applied *)
         admit.
       admit. (* Hmm... not sure about this one *)
     rewrite StdBigop.Bigint.sumr_ge0 2:/= //=.
