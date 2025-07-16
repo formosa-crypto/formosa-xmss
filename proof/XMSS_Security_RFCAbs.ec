@@ -2027,9 +2027,8 @@ seq 1 : (   #pre
                      0 <= x < w ^ len2
                   => bs2int (rev (BytesToBits (toByte (W32.of_int x `<<` W8.of_int (8 - len2 * log2_w %% 8)) (ceil ((len2 * log2_w)%r / 8%r)))))
                    = x.
-    + move=> ww ww_bnd; rewrite /(`<<`) W32.shlMP.
-      + smt(W32.to_uint_cmp).
-      rewrite W8.of_uintK pow2_8 (pmod_small _ 256) 1:/#.
+    + move=> ww ww_bnd.
+      pose WW := W32.of_int ww `<<` W8.of_int (8 - len2 * log2_w %% 8).
       rewrite /BytesToBits.
       have ->: forall (xs : bool list list), rev (flatten xs) = flatten (rev (map rev xs)).
       + elim=> /> => x0 xs ih //=.
@@ -2038,20 +2037,12 @@ seq 1 : (   #pre
       rewrite rev_mkseq map_mkseq /(\o) /= rev_mkseq //=.
       rewrite /flatten /mkseq foldr_map //=.
       have ->: (fun (x0 : int) (z : bool list) =>
-                  rev (map ("_.[_]" (unpack8 (W32.of_int (ww * 2 ^ (8 - len2 * log2_w %% 8)))).[
+                  rev (map ("_.[_]" (unpack8 WW).[
                 ceil ((len2 * log2_w)%r / 8%r) - (ceil ((len2 * log2_w)%r / 8%r) - (x0 + 1) + 1)])
                         (iota_ 0 8)) ++ z)
-             = fun i z=> map (fun j=> (unpack8 (W32.of_int (ww * 2 ^ (8 - len2 * log2_w %% 8)))).[i].[8 - (j + 1)]) (iota_ 0 8) ++ z.
+             = fun i z=> map (fun j=> (unpack8 WW).[i].[8 - (j + 1)]) (iota_ 0 8) ++ z.
       + apply: fun_ext=> i; apply: fun_ext=> z.
         by rewrite -map_rev rev_iota -map_comp /(\o) //= /#.
-      (** not sure this is the right direction;
-          next steps now involve phrasing all of the inner lookups as
-          a function of ww and i: for each i, we build the bool list
-          that corresponds to the ith byte of "shifted ww", and
-          concatenate that on our accumulator
-
-          I still have some endianness concerns **)
-      pose WW := W32.of_int (ww * 2 ^ (8 - len2 * log2_w %% 8)).
       pose F := (fun i z=>
                    [WW.[i * 8 + 7]; WW.[i * 8 + 6]; WW.[i * 8 + 5]; WW.[i * 8 + 4]; WW.[i * 8 + 3]; WW.[i * 8 + 2]; WW.[i * 8 + 1]; WW.[i * 8 + 0]] ++ z).
       rewrite (eq_in_foldr _ F _ [] _ (iota_ 0 (ceil ((len2 * log2_w)%r / 8%r)))) /F //=.
@@ -2131,8 +2122,17 @@ seq 1 : (   #pre
         by rewrite -/(ftj (z + 1)) ih /#.
       rewrite (StdBigop.Bigint.BIA.eq_big_int _ _ _ (fun i=> 2 ^ i * b2i (WW.[i %/ 8 * 8 + 7 - i %% 8]))).
       + by move=> i /toto /= ->.
-      rewrite /WW.
+      rewrite (StdBigop.Bigint.BIA.eq_big_int _ _ _ (fun i=> 2 ^ i * (to_uint WW %/ 2 ^ (i %/ 8 * 8 + 7 - i %% 8) %% 2))).
+      + move=> i i_bnd /=.
+        by rewrite b2i_get 1:/#.
+      rewrite /WW /(`<<`) W8.to_uint_small; 1:smt(pmod_small).
+      rewrite W32.to_uint_shl 1:/#.
+      rewrite W32.of_uintK pmod_small.
+      + admit. (* waka waka *)
+      rewrite pmod_small.
+      + admit. (* waka waka *)
       admit. (* Hmm... not sure about this one *)
+      (* Why does all of this simplify away? It looks like all the instances of i simplify out, which is not good at all. *)
     rewrite StdBigop.Bigint.sumr_ge0 2:/= //=.
     + by move=> x _; smt(BaseW.valP).
     rewrite (ler_lt_trans (StdBigop.Bigint.BIA.big predT (fun _ => w - 1) (int2lbw len1 (bs2int (rev (BytesToBits m{1})))))).
