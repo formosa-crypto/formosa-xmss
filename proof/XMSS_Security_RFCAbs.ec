@@ -9,11 +9,7 @@ require XMSS_TW Checksum.
 require XMSS_RFC_Abs.
 clone import XMSS_RFC_Abs as XMSSRFCAbs.
 import XMSS_Params Types Address BaseW.
-(*
-require (****) XMSS_TW.
-require import XMSS_PRF.
-import Params Types XMSS_Types Hash WOTS Address LTree BaseW.
-*)
+
 import IntOrder.
 
 op BitsToBytes (bits : bool list) : W8.t list = map W8.bits2w (chunk W8.size bits).
@@ -1961,6 +1957,47 @@ lemma WOTSchecksum_len1val _ml :
          res = StdBigop.Bigint.BIA.big predT (fun (i : int) => w - 1 - i) _ml] = 1%r.
 proof. by conseq WOTSchecksum_ll (WOTSchecksum_len1valh _ml). qed.
 
+lemma ge0_cln2lg2w :
+  0 <= ceil ((len2 * log2_w)%r / 8%r).
+proof.
+(* rewrite /i /len2 /len1 /w; case logw_vals => -> /=. *)
+(* + rewrite /log2 (: 4%r = 2%r ^ 2); 1:smt(@RField). *)
+(*   rewrite eqi_log22i 1:// -(fromint_div (8 * n)) 1:dvdz_mulr 1://. *)
+(*   rewrite (Ring.IntID.mulrC 8) divMr 1:// /=. *)
+(*   pose flr := floor _. *)
+(*   rewrite -le_fromint &(StdOrder.RealOrder.ler_trans _ _ _ _ (ceil_ge (((flr + 1) * 2)%r / 8%r))). *)
+(*   rewrite StdOrder.RealOrder.ler_pdivl_mulr 1:// /= le_fromint -lez_divLR 1,2:// /=. *)
+(*   rewrite -(StdOrder.IntOrder.ler_subl_addr) /= (: 3 = floor 3%r) 1:// 1:from_int_floor 1://. *)
+(*   rewrite floor_mono StdOrder.RealOrder.ler_pdivl_mulr 1:// /=. *)
+(*   rewrite (StdOrder.RealOrder.ler_trans (log 2%r (2%r ^ 3))) . *)
+(*   rewrite log_ge0 1:// fromintM -StdOrder.RealOrder.ler_pdivr_mulr 1://. *)
+(*   rewrite (StdOrder.RealOrder.ler_trans 1%r) 1:StdOrder.RealOrder.ler_pdivr_mulr 1,2://. *)
+(*   by rewrite (StdOrder.RealOrder.ler_trans (n * 4)%r) 1:le_fromint 2:ceil_ge; 1:smt(ge1_n). *)
+rewrite /i /len2 /len1 /w; case logw_vals => -> /=.
++ rewrite /log2 (: 4%r = 2%r ^ 2); 1:smt(@RField).
+  rewrite eqi_log22i 1:// -(fromint_div (8 * n)) 1:dvdz_mulr 1://.
+  rewrite (Ring.IntID.mulrC 8) divMr 1:// /=.
+  pose flr := floor _.
+  rewrite -le_fromint &(StdOrder.RealOrder.ler_trans _ _ _ _ (ceil_ge (((flr + 1) * 2)%r / 8%r))).
+  rewrite StdOrder.RealOrder.ler_pdivl_mulr 1:// /= le_fromint mulr_ge0 // addr_ge0 2://.
+  rewrite (: 0 = floor 0%r) 1:// 1:from_int_floor 1://.
+  rewrite floor_mono StdOrder.RealOrder.ler_pdivl_mulr 1:// /=.
+  rewrite log_ge0 1:// fromintM -StdOrder.RealOrder.ler_pdivr_mulr 1://.
+  rewrite (StdOrder.RealOrder.ler_trans 1%r) 1:StdOrder.RealOrder.ler_pdivr_mulr 1,2://.
+  by rewrite (StdOrder.RealOrder.ler_trans (n * 4)%r) 1:le_fromint 2:ceil_ge; 1:smt(ge1_n).
+rewrite /log2 (: 16%r = 2%r ^ (2 + 2)) 1:RField.exprD_nneg 1,2://; 1:smt(@RField).
+rewrite /= eqi_log22i 1:// -(fromint_div (8 * n)) 1:dvdz_mulr 1://.
+rewrite (Ring.IntID.mulrC 8) divMr 1:// /=.
+pose flr := floor _.
+rewrite -le_fromint &(StdOrder.RealOrder.ler_trans _ _ _ _ (ceil_ge (((flr + 1) * 4)%r / 8%r))).
+rewrite StdOrder.RealOrder.ler_pdivl_mulr 1:// /= le_fromint mulr_ge0 // addr_ge0 2://.
+rewrite (: 0 = floor 0%r) 1:// 1:from_int_floor 1://.
+rewrite floor_mono StdOrder.RealOrder.ler_pdivl_mulr 1:// /=.
+rewrite log_ge0 1:// fromintM -StdOrder.RealOrder.ler_pdivr_mulr 1://.
+rewrite (StdOrder.RealOrder.ler_trans 1%r) 1:StdOrder.RealOrder.ler_pdivr_mulr 1,2://.
+by rewrite (StdOrder.RealOrder.ler_trans (n * 2)%r) 1:le_fromint 2:ceil_ge; 1:smt(ge1_n).
+qed.
+
 lemma WOTSEncodeP _ml :
   phoare[WOTS_Encode.encode : arg = _ml
          ==>
@@ -2022,29 +2059,59 @@ seq 1 : (   #pre
         apply: fun_ext=> z @/F; congr.
         rewrite (iotaS _ 7) //= (iotaS _ 6) //= (iotaS _ 5) //= (iotaS _ 4) //=.
         rewrite (iotaS _ 3) //= (iotaS _ 2) //= (iotaS _ 1) //= iota1 //=.
-        rewrite !get_unpack8.
-        + admit. (* prove a general result on len2 * log2_w / 8 *)
-        by rewrite !W4u8.bits8iE.
+        case (0 <= x < 4) => rngx; last first.
+        + rewrite (W4u8.Pack.get_out (JWord.W4u8.unpack8 WW)) 1:// ?(W32.get_out WW (x * _ + _)) 1..7:/#.
+          by rewrite (W32.get_out WW (x * _)) 1:/# ?zerowE.
+        by rewrite get_unpack8 1:// ?bits8iE //.
       rewrite /bs2int.
       move=> {F}.
       pose WWb := (foldr _ _ _).
       have->: size WWb = ceil ((len2 * log2_w)%r / 8%r) * 8.
-      + admit.
+      + rewrite /WWb; pose i := ceil _.
+        pose ft :=
+          (fun (i : int) (z : bool list) =>
+               WW.[i * 8 + 7] :: WW.[i * 8 + 6] :: WW.[i * 8 + 5] ::
+               WW.[i * 8 + 4] :: WW.[i * 8 + 3] :: WW.[i * 8 + 2] ::
+               WW.[i * 8 + 1] :: WW.[i * 8] :: z).
+        suff /#:
+          forall z0 j,
+            size (foldr ft z0 (iota_ j i)) = size z0 + i * 8.
+        move=> z0 j.
+        have ge0_i : 0 <= i by exact: ge0_cln2lg2w.
+        elim: i ge0_i z0 j => /= [? ? | i ge0_i ih z0 j].
+        + by rewrite iota0.
+        by rewrite iotaS 1:// /= /ft /= -/ft ih /#.
       have toto: forall i,
            0 <= i < ceil ((len2 * log2_w)%r / 8%r) * 8
         => nth false WWb i = WW.[i]. (* OK, the index on the right here is wrong, but it's not as easy as just going X - (i + 1): the bytes are read in order, but the bits within each byte are read in reverse order. come up with a closed form formula for that. *)
       + move=> i @/WWb.
         pose X := ceil ((len2 * log2_w)%r / 8%r).
-(*        have ->: WW.[X * 8 - (i + 1)] = if X = 0 then false else WW.[X * 8 - (i + 1)].
-        + admit. (* X <> 0 *)
-*)
-        move: i; have: 0 <= X.
-        + admit. (* X > 0 *)
+        pose ft :=
+          (fun (i : int) (z : bool list) =>
+               WW.[i * 8 + 7] :: WW.[i * 8 + 6] :: WW.[i * 8 + 5] ::
+               WW.[i * 8 + 4] :: WW.[i * 8 + 3] :: WW.[i * 8 + 2] ::
+               WW.[i * 8 + 1] :: WW.[i * 8] :: z).
+        move: i; have: 0 <= X by exact: ge0_cln2lg2w.
         elim: X=> />; 1:smt().
         move=> X ge0_X ih i ge0_i i_bnd.
         rewrite iotaS //=.
-        case (i = 0)=> />. (* a formula that makes this one true is what we're after. *) admit.
+        case (i = 0) => [eqi_0 | neqi_0]; 1: rewrite eqi_0 /=. (* a formula that makes this one true is what we're after. *) admit.
         (* do all the cases for i < 8 individually, then induction hypothesis can be applied *)
+        case (i = 1) => [eqi_1 | neqi_1]; 1: rewrite eqi_1 /=.
+        + admit.
+        case (i = 2) => [eqi_2 | neqi_2]; 1: rewrite eqi_2 /=.
+        + admit.
+        case (i = 3) => [eqi_3 | neqi_3]; 1: rewrite eqi_3 /=.
+        + admit.
+        case (i = 4) => [eqi_4 | neqi_4]; 1: rewrite eqi_4 /=.
+        + admit.
+        case (i = 5) => [eqi_5 | neqi_5]; 1: rewrite eqi_5 /=.
+        + admit.
+        case (i = 6) => [eqi_6 | neqi_6]; 1: rewrite eqi_6 /=.
+        + admit.
+        case (i = 7) => [eqi_7 | neqi_7]; 1: rewrite eqi_7 /=.
+        + admit.
+        rewrite /ft /= -/ft; do ? (rewrite ifF 1:/#).
         admit.
       admit. (* Hmm... not sure about this one *)
     rewrite StdBigop.Bigint.sumr_ge0 2:/= //=.
@@ -2072,6 +2139,17 @@ seq 1 : (   #pre
       + smt(log_ge0 ge1_n).
       by rewrite fromintD; smt(floor_gt).
     admit.
+    (* This one is tighter than seems at first glance 
+    rewrite exprD_nneg 2:// 2:/= 2:(Ring.IntID.mulrC _ 16).
+    + admit.
+    rewrite (Ring.IntID.mulrC 8) divMr 1:// /= from_int_ceil /=.
+    have ltr_le_pmul : forall (x1 y1 x2 y2 : int),
+      0 < x1 => 0 < x2 => x1 <= y1 => x2 < y2 => x1 * x2 < y1 * y2.
+    by smt(@StdOrder.IntOrder).
+    rewrite (Ring.IntID.mulrC 15) (Ring.IntID.mulrC 16) &(ltr_le_pmul) //; 1: smt(ge1_n).
+    rewrite /log2 -mulrA fromintM ?logM ?lt_fromint //; 1:smt(ge1_n).
+    admit.
+    *)
   hoare => /=.
   exlim msg => msgt; call (WOTSchecksum_len1valh msgt).
   auto => &1 />.
