@@ -3226,32 +3226,32 @@ rewrite /(int2bs 1) nth_mkseq 1:/# /= /(`>>`) /= (modz_small _ 256) 1:/#.
 
 + case (to_uint m %/ 2 ^ i %% 2 <> 0 ) => Hbit.
   + have ->/= : (m `>>>` i) = W32.of_int (to_uint (m `>>>` i) %/ 2 * 2) + W32.one by smt(@W32 @IntDiv).
-    have  /=:= (W32.of_uintK (to_uint m %/ 2 ^ i - 1)). 
-    rewrite modz_small;1: by split; smt( @W32 pow2_32).
-    move =><-; rewrite -to_uint_eq; apply W32.wordP => k kb; rewrite xorwE.
+    have  /=:= (W32.of_uintK (to_uint m %/ 2 ^ i - 1)).
+    rewrite pmod_small; 1: split; 1,2: smt(@IntDiv @W32 pow2_32).
+    move => <-; rewrite -to_uint_eq; apply W32.wordP => k kb; rewrite xorwE.
     + case(k = 0).
-      + move => ->.  rewrite !get_to_uint /= !of_uintK /=.
-        rewrite !(modz_small _ 4294967296);1,2: by split;smt( @W32 pow2_32).  
-        by smt().
+      + move => ->.
+        rewrite !get_to_uint /= !of_uintK /=.
+        by rewrite !(pmod_small _ 4294967296); smt(@IntDiv @W32 pow2_32).
     move => ?.
     have ->/= : W32.one.[k] = false by rewrite of_intwE /=; smt(@IntDiv).
-    rewrite to_uint_shr /= 1:/# !of_intwE /= /int_bit /= kb /= !(modz_small _ 4294967296);1,2: by split;  smt( @W32 pow2_32).
+    rewrite to_uint_shr /= 1:/# !of_intwE /= /int_bit /= kb /= !(pmod_small _ 4294967296);1,2: by split; smt(@IntDiv @W32 pow2_32).
     do 4!congr; have  -> : 2^k = 2^(k-1)*2 by rewrite -exprSr;smt().
     rewrite !(divzMl);1..4:  smt(StdOrder.IntOrder.expr_gt0).
     by smt(@IntDiv).
 + have ->/= : (m `>>>` i) = W32.of_int (to_uint (m `>>>` i) %/ 2 * 2) by smt(@W32 @IntDiv).
-    have  /=:= (W32.of_uintK (to_uint m %/ 2 ^ i + 1)). 
-    rewrite modz_small;1: by split; smt( @W32 pow2_32).
+    have  /=:= (W32.of_uintK (to_uint m %/ 2 ^ i + 1)).
+    rewrite pmod_small;1: by split; smt(@IntDiv @W32 pow2_32).
     move =><-; rewrite -to_uint_eq; apply W32.wordP => k kb; rewrite xorwE.
     + case(k = 0).
       move => ->; rewrite !get_to_uint /= !of_uintK /=.
-      rewrite !(modz_small _ 4294967296);1,2: by split;smt( @W32 pow2_32).  
+      rewrite !(pmod_small _ 4294967296);1,2: by split;smt(@IntDiv @W32 pow2_32).  
       by smt().
     move => ?.
     have -> /=: W32.one.[k] = false.
     + rewrite of_intwE /= kb /int_bit neqF /= pdiv_small; split => // _.
       by rewrite -(Ring.IntID.expr0 2); smt(gt_exprsbde expr_gt0).
-    rewrite to_uint_shr /= 1:/# !of_intwE /= /int_bit /= kb /= !(modz_small _ 4294967296);1,2: by split;  smt( @W32 pow2_32).
+    rewrite to_uint_shr /= 1:/# !of_intwE /= /int_bit /= kb /= !(pmod_small _ 4294967296);1,2: by split; smt(@IntDiv @W32 pow2_32).
     do 4!congr; have  -> : 2^k = 2^(k-1)*2 by rewrite -exprSr;smt().
     rewrite !(divzMl);1..4:  smt(StdOrder.IntOrder.expr_gt0).
     by smt(@IntDiv).
@@ -3266,7 +3266,7 @@ move => *.
 rewrite {1}(divz_eq m (2^(j))).
 case (i = j) => *; 1: smt(@IntDiv @Ring.IntID).
 have ->/= : m %/ 2 ^ j = 0 by smt().
-have ? : (2 ^ j - 1) %/ 2 ^ i * 2 ^ i < 2^j  %/ 2 ^ i * 2 ^ i; last by  smt(@IntDiv @Ring.IntID).
+have ? : (2 ^ j - 1) %/ 2 ^ i * 2 ^ i < 2 ^ j %/ 2 ^ i * 2 ^ i; last by smt(@IntDiv @Ring.IntID).
 have <- := int2bsK (j+1) (2 ^ j - 1) _ _;1,2: smt(@StdOrder.IntOrder).
 have -> : 2 ^ j %/ 2 ^ i * 2 ^ i = 2^j by smt(@Ring.IntID @IntDiv).
 rewrite int2bsS 1:/# /= bs2int_rcons size_int2bs (: max 0 j = j) 1:/#.
@@ -3283,18 +3283,12 @@ lemma cnsh_val ps (idx : W32.t) (i : int) (lfs : dgstblock list) :
   =>
   rev (cons_ap_trh_gen
         (list2tree (take (2 ^ i) (drop ((to_uint idx %/ 2 ^ i) * 2 ^ i) lfs)))
-        (* (bs2int (drop (s - i) (int2bs s (to_uint idx)))) lfs))) *)
         (rev (take i (int2bs h (to_uint idx))))
         ps (set_typeidx (adr2ads zero_address) 2) i (to_uint idx %/ 2 ^ i))
-        (* (bs2int (drop i (int2bs s (to_uint idx))))) *)
   =
   mkseq (fun j =>
          val_bt_trh (list2tree (take (2 ^ j) (drop (to_uint ((idx `>>` W8.of_int j) `^` W32.one) * 2 ^ j) lfs)))
-                                   (* (list2tree (take (2 ^ i) (drop ((to_uint idx %/ 2 ^ i) * 2 ^ i) lfs))) *)
-                                (* (drop (to_uint ((idx `>>` W8.of_int i) `^` W32.one) * 2 ^ i) lfs))) *)
          ps (set_typeidx (adr2ads zero_address) 2) j (to_uint ((idx `>>` W8.of_int j) `^` W32.one)))
-         (* (to_uint idx %/ 2 ^ j)) *)
-         (* (to_uint ((idx `>>` W8.of_int i) `^` W32.one) %/ 2)) *)
         i.
 proof.
 move=> ge0_i.
