@@ -16,11 +16,11 @@ clone import XMSS_Security_RFCAbs as XMSSSecToAbs with
   op XMSSRFCAbs.ltree <- ltree
 proof *.
 
-
 import XMSSRFCAbs.
 
+
 module H_msg = {
-  proc o(mkm : threen_bytes * W8.t list) : nbytes = {
+  proc o(mkm : threen_bytes * msg_t) : nbytes = {
     return H_msg mkm.`1 mkm.`2;
   }
 }.

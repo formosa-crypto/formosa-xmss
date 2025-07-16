@@ -120,7 +120,13 @@ realize gt0_w by rewrite expr_gt0.
 clone import XMSS_TW as XMSS_Security with
   type mseed <- nbytes,
   type mkey <- nbytes,
-  type msgXMSSTW <- W8.t list,
+  type msgXMSSTW <- msg_t,
+  op MsgXMSSTW.enum <= map Msg_t.insubd
+                           (flatten
+                              (mkseq (fun (i : int) =>
+                                        map BitsToBytes
+                                            (mkseq (fun (j : int) =>
+                                                    (BS2Int.int2bs (8 * i) j)) (2 ^ (8 * i)))) mmb)),
   op mkg <-
     (fun (ms : nbytes) (i : FLXMSSTW.SA.index) =>
      prf ms (NBytes.insubd (toByte (W32.of_int (FLXMSSTW.SA.Index.val i)) n))),
@@ -258,12 +264,44 @@ rewrite /= (: 8 * n = size (BytesToBits (NBytes.val x))).
 by rewrite BS2Int.bs2intK BytesToBitsK mem_iota BS2Int.bs2int_ge0 BS2Int.bs2int_le2Xs.
 qed.
 realize MsgXMSSTW.enum_spec.
-admitted. (*
-            TODO: axiomatize this
-            this shouldn't be necessary, but current HtS requires it.
-            Need to introduce finite type for arbitrary-length messages
-            in RFC spec.
-          *)
+move => x; rewrite count_uniq_mem.
++ rewrite ?map_inj_in_uniq.
+  + move => y z; rewrite -?flatten_mapP => -[i] [+ /= +] [j] [] /=.
+    rewrite ?mem_iota ?mapP => /= -[ge0_i ltmmb_i] [bs +] [ge0_j ltmmb_j] [bs'].
+    rewrite ?mkseqP => -[] -[k] [rngk -> ->] -[] -[l] [rngl -> ->].
+    move/(congr1 Msg_t.val); rewrite ?Msg_t.insubdK 3://.
+    + by rewrite /BitsToBytes 1:size_map size_chunk 1:// size_int2bs lez_maxr 1:/# mulKz.
+    by rewrite /BitsToBytes 1:size_map size_chunk 1:// size_int2bs lez_maxr 1:/# mulKz.
+  rewrite &(FL_XMSS_TW.SA.WTW.uniq_flatten_map_in) 3:iota_uniq.
+  + rewrite -(all_nthP _ _ witness) size_map size_iota => i rngi.
+    rewrite (nth_map witness) 1:size_iota 1:// /=.
+    rewrite &(map_inj_in_uniq).
+    + move => bs bs'; rewrite ?mkseqP => -[j] [+ +] [k] [].
+      rewrite ?nth_iota 2:/=; 1:smt(ge1_mmb).
+      move=> rngj -> rngk ->.
+      by move/(congr1 BytesToBits); rewrite ?BitsToBytesK 1,2:size_int2bs; 1,2: smt(dvdz_mulr).
+    rewrite &(map_inj_in_uniq).
+    + move=> j k.
+      rewrite ?mem_iota ?nth_iota 2:/=; 1:smt(ge1_mmb).
+      move => [ge0_j lt28i] [ge0_k lt28i_k].
+      by move/(congr1 bs2int); rewrite ?int2bsK 2,4:// 1,2:/#.
+    by apply iota_uniq.
+  move=> i j; rewrite ?mem_iota /= ?hasP => rngi rngj [y] -[].
+  rewrite ?mapP => -[bs] + [bs']; rewrite ?mkseqP => -[] [k] [rngk ->] -> [] [l] [rngl ->].
+  move/(congr1 BytesToBits); rewrite ?BitsToBytesK 1,2:size_int2bs; 1,2: smt(dvdz_mulr).
+  move=> eqint2bs; have: size (int2bs (8 * j) k) = size (int2bs (8 * i) l) by smt().
+  by rewrite 2!size_int2bs 2?lez_maxr 1:/# /#.
+rewrite b2i_eq1 mapP; exists (Msg_t.val x).
+rewrite Msg_t.valKd /= -flatten_mapP /=.
+exists (size (Msg_t.val x)); split.
++ by rewrite mem_iota; smt(size_ge0 Msg_t.valP).
+rewrite mapP; exists (BytesToBits (Msg_t.val x)).
+rewrite BytesToBitsK /= mkseqP; exists (bs2int (BytesToBits (Msg_t.val x))).
+rewrite (: (8 * size (Msg_t.val x)) = size (BytesToBits (Msg_t.val x))).
++ rewrite /BytesToBits (size_flatten_ctt 8) 2:size_map 2://.
+  by move=> bs /mapP [x' ->]; rewrite size_w2bits.
+by rewrite bs2intK bs2int_ge0 bs2int_le2Xs.
+qed.
 realize dmseed_ll by apply /dmap_ll /dlist_ll /W8.dword_ll.
 realize dmkey_ll.
 rewrite duniform_ll -size_eq0 2!size_map size_iota.
@@ -1789,23 +1827,8 @@ lemma si_heights_in_loop_bnd start lidxo t ss ps ad offset k :
 proof.
 move=> * @/stack_increment /=; rewrite ltrNge ifF 1:/# sfl_size ~-1:/#.
 have := si_size_in_loop start lidxo t ss ps ad offset _ _ _ _ _ _ _ _;1..8:smt().
-rewrite nth_cat size_take 1:/# sfl_size 1..4:/# /=. 
-case (offset = hw (lpathst lidxo t) + 1) => ?. 
-(* 
-+ have ->/= : !(offset - 1 < hw (lpathst lidxo t)) by smt().
-  case (k < hw (lpathst lidxo t));last by smt.
-  move => H.
-  rewrite nth_take 1,2:/#. 
-  rewrite /stack_from_leaf (nth_map witness) /=;1: smt(pfl_size). 
-  admit.
-have ->/= : (offset - 1 < hw (lpathst lidxo t)) by smt(@List). (pfl_size).
-  case (k < hw (lpathst lidxo t));last by smt.
-  move => H.
-  rewrite nth_take 1,2:/#. 
-  rewrite /stack_from_leaf (nth_map witness) /=;1: smt(pfl_size). 
-*)
-
-  
+rewrite nth_cat size_take 1:/# sfl_size 1..4:/# /=.
+case (offset = hw (lpathst lidxo t) + 1) => ?.
 admitted.
 
 lemma si_reduced_node start lidxo t ss ps ad offset :
@@ -2897,9 +2920,9 @@ op skrel (sks : skXMSSTWRFC) (skr : xmss_sk) : bool =
 
 
 module RFC_O (O : DSS_RFC.RO.POracle) = {
-  proc o(xm : threen_bytes * W8.t list) : nbytes  = {
+  proc o(xm : threen_bytes * msg_t) : nbytes  = {
     var x : threen_bytes;
-    var m : W8.t list;
+    var m : msg_t;
     var xs : W8.t list list;
     var mk : nbytes;
     var root : dgstblock;
@@ -3002,10 +3025,6 @@ lemma list2tree_takedrop (s : 'a list) (bs : bool list) (e : int) :
   =
   list2tree (take (2 ^ (e - size bs)) (drop (bs2int (rev bs) * 2 ^ (e - size bs)) s)).
 proof.
-(* move=> ge0_e; elim: e ge0_e bs s. smt(size_ge0). *)
-(* move=> i ge0_i ih. *)
-(* elim. admit. *)
-(* move => b bs ih2 /= s. *)
 elim: bs e s => /= [e s ge0_e eqsz gtszbs_e | b bs ih].
 + by rewrite subbt_empty oget_some bs2int_nil /= drop0 -eqsz take_size.
 move=> e + ge0_e; elim: e ge0_e.
@@ -3207,32 +3226,32 @@ rewrite /(int2bs 1) nth_mkseq 1:/# /= /(`>>`) /= (modz_small _ 256) 1:/#.
 
 + case (to_uint m %/ 2 ^ i %% 2 <> 0 ) => Hbit.
   + have ->/= : (m `>>>` i) = W32.of_int (to_uint (m `>>>` i) %/ 2 * 2) + W32.one by smt(@W32 @IntDiv).
-    have  /=:= (W32.of_uintK (to_uint m %/ 2 ^ i - 1)). 
-    rewrite modz_small;1: by split; smt( @W32 pow2_32).
-    move =><-; rewrite -to_uint_eq; apply W32.wordP => k kb; rewrite xorwE.
+    have  /=:= (W32.of_uintK (to_uint m %/ 2 ^ i - 1)).
+    rewrite pmod_small; 1: split; 1,2: smt(@IntDiv @W32 pow2_32).
+    move => <-; rewrite -to_uint_eq; apply W32.wordP => k kb; rewrite xorwE.
     + case(k = 0).
-      + move => ->.  rewrite !get_to_uint /= !of_uintK /=.
-        rewrite !(modz_small _ 4294967296);1,2: by split;smt( @W32 pow2_32).  
-        by smt().
+      + move => ->.
+        rewrite !get_to_uint /= !of_uintK /=.
+        by rewrite !(pmod_small _ 4294967296); smt(@IntDiv @W32 pow2_32).
     move => ?.
     have ->/= : W32.one.[k] = false by rewrite of_intwE /=; smt(@IntDiv).
-    rewrite to_uint_shr /= 1:/# !of_intwE /= /int_bit /= kb /= !(modz_small _ 4294967296);1,2: by split;  smt( @W32 pow2_32).
+    rewrite to_uint_shr /= 1:/# !of_intwE /= /int_bit /= kb /= !(pmod_small _ 4294967296);1,2: by split; smt(@IntDiv @W32 pow2_32).
     do 4!congr; have  -> : 2^k = 2^(k-1)*2 by rewrite -exprSr;smt().
     rewrite !(divzMl);1..4:  smt(StdOrder.IntOrder.expr_gt0).
     by smt(@IntDiv).
 + have ->/= : (m `>>>` i) = W32.of_int (to_uint (m `>>>` i) %/ 2 * 2) by smt(@W32 @IntDiv).
-    have  /=:= (W32.of_uintK (to_uint m %/ 2 ^ i + 1)). 
-    rewrite modz_small;1: by split; smt( @W32 pow2_32).
+    have  /=:= (W32.of_uintK (to_uint m %/ 2 ^ i + 1)).
+    rewrite pmod_small;1: by split; smt(@IntDiv @W32 pow2_32).
     move =><-; rewrite -to_uint_eq; apply W32.wordP => k kb; rewrite xorwE.
     + case(k = 0).
       move => ->; rewrite !get_to_uint /= !of_uintK /=.
-      rewrite !(modz_small _ 4294967296);1,2: by split;smt( @W32 pow2_32).  
+      rewrite !(pmod_small _ 4294967296);1,2: by split;smt(@IntDiv @W32 pow2_32).  
       by smt().
     move => ?.
     have -> /=: W32.one.[k] = false.
     + rewrite of_intwE /= kb /int_bit neqF /= pdiv_small; split => // _.
       by rewrite -(Ring.IntID.expr0 2); smt(gt_exprsbde expr_gt0).
-    rewrite to_uint_shr /= 1:/# !of_intwE /= /int_bit /= kb /= !(modz_small _ 4294967296);1,2: by split;  smt( @W32 pow2_32).
+    rewrite to_uint_shr /= 1:/# !of_intwE /= /int_bit /= kb /= !(pmod_small _ 4294967296);1,2: by split; smt(@IntDiv @W32 pow2_32).
     do 4!congr; have  -> : 2^k = 2^(k-1)*2 by rewrite -exprSr;smt().
     rewrite !(divzMl);1..4:  smt(StdOrder.IntOrder.expr_gt0).
     by smt(@IntDiv).
@@ -3247,7 +3266,7 @@ move => *.
 rewrite {1}(divz_eq m (2^(j))).
 case (i = j) => *; 1: smt(@IntDiv @Ring.IntID).
 have ->/= : m %/ 2 ^ j = 0 by smt().
-have ? : (2 ^ j - 1) %/ 2 ^ i * 2 ^ i < 2^j  %/ 2 ^ i * 2 ^ i; last by  smt(@IntDiv @Ring.IntID).
+have ? : (2 ^ j - 1) %/ 2 ^ i * 2 ^ i < 2 ^ j %/ 2 ^ i * 2 ^ i; last by smt(@IntDiv @Ring.IntID).
 have <- := int2bsK (j+1) (2 ^ j - 1) _ _;1,2: smt(@StdOrder.IntOrder).
 have -> : 2 ^ j %/ 2 ^ i * 2 ^ i = 2^j by smt(@Ring.IntID @IntDiv).
 rewrite int2bsS 1:/# /= bs2int_rcons size_int2bs (: max 0 j = j) 1:/#.
@@ -3256,35 +3275,29 @@ rewrite int2bsK 1,2:/#.
 by smt(@IntDiv).
 qed.
 
-lemma cnsh_val ps (idx : W32.t) (i s : int) (lfs : dgstblock list) :
-     0 <= i < 32
-  => i <= s
-  => 0 <= to_uint idx < 2 ^ s
-  => size lfs = 2 ^ s
+lemma cnsh_val ps (idx : W32.t) (i : int) (lfs : dgstblock list) :
+     0 <= i
+  => i <= h
+  => 0 <= to_uint idx < 2 ^ h
+  => size lfs = 2 ^ h
   =>
   rev (cons_ap_trh_gen
         (list2tree (take (2 ^ i) (drop ((to_uint idx %/ 2 ^ i) * 2 ^ i) lfs)))
-        (* (bs2int (drop (s - i) (int2bs s (to_uint idx)))) lfs))) *)
-        (rev (take i (int2bs s (to_uint idx))))
+        (rev (take i (int2bs h (to_uint idx))))
         ps (set_typeidx (adr2ads zero_address) 2) i (to_uint idx %/ 2 ^ i))
-        (* (bs2int (drop i (int2bs s (to_uint idx))))) *)
   =
   mkseq (fun j =>
          val_bt_trh (list2tree (take (2 ^ j) (drop (to_uint ((idx `>>` W8.of_int j) `^` W32.one) * 2 ^ j) lfs)))
-                                   (* (list2tree (take (2 ^ i) (drop ((to_uint idx %/ 2 ^ i) * 2 ^ i) lfs))) *)
-                                (* (drop (to_uint ((idx `>>` W8.of_int i) `^` W32.one) * 2 ^ i) lfs))) *)
          ps (set_typeidx (adr2ads zero_address) 2) j (to_uint ((idx `>>` W8.of_int j) `^` W32.one)))
-         (* (to_uint idx %/ 2 ^ j)) *)
-         (* (to_uint ((idx `>>` W8.of_int i) `^` W32.one) %/ 2)) *)
         i.
 proof.
-move=> [#] ge0_i.
-elim: i ge0_i s idx lfs ps.
+move=> ge0_i.
+elim: i ge0_i idx lfs ps.
 (* + move=> idx lfs ps ge0_idx; rewrite expr0 size_eq1 => rngidx [lf] ->. *)
-+ move=> lt32i s idx lfs ps ge0_s rngidx eq2s_lfs /=.
++ move=> idx lfs ps ge0_h rngidx eq2s_lfs /=.
   rewrite mkseq0 take0 rev_nil (drop_take1_nth witness) 1:/#.
-  by rewrite list2tree1 /= rev_nil //.
-move=> i ge0_i ih s idx lfs ps lt32_i les_i rngidx eq2s_lfs /=.
+  rewrite list2tree1 /= rev_nil //.
+move=> i ge0_i ih idx lfs ps les_i rngidx eq2s_lfs /=.
 rewrite mkseqS 1:// /=.
 rewrite {1}exprD_nneg 1,2:// /= (: 2 ^ i * 2 = 2 ^ i + 2 ^ i) 1:/#.
 rewrite takeD 1,2:expr_ge0 1,2://.
@@ -3299,33 +3312,37 @@ rewrite (list2treeS i) 1://.
   + by move: ge2i1_if; rewrite exprD_nneg; smt(expr_ge0).
   by move: ge2i1_if; rewrite exprD_nneg; smt(expr_ge0).
 rewrite (take_nth witness) 1:size_int2bs 1:/# rev_rcons /=.
-case (nth witness (int2bs s (to_uint idx)) i) => nthv.
+case (nth witness (int2bs h (to_uint idx)) i) => nthv.
 + rewrite rev_cons.
   congr.
-  rewrite -(ih s idx lfs ps) 1:// 1:/# 1,2:// 1,2:/#.
+  rewrite -(ih idx lfs ps) 1:// 1:/# 1,2://.
   congr. congr. congr. congr.
   rewrite drop_drop 1:expr_ge0 1:// 1:mulr_ge0 1:divz_ge0 1:expr_gt0 3:expr_ge0 1,3://; 1: smt(to_uint_cmp).
   congr.
-  rewrite (divr2i_p1 _ i s) 1:// 1:/# 1:// nthv /= exprD_nneg 1,2:// /#.
-  by rewrite (divr2i_p1 _ i s) 1:// 1:/# 1:// nthv /=.
+  rewrite (divr2i_p1 _ i h) 1:// 1:/# 1:// nthv /= exprD_nneg 1,2:// /#.
+  by rewrite (divr2i_p1 _ i h) 1:// 1:/# 1:// nthv /=.
   congr. congr. congr. congr.
-  rewrite (shrxor1_divr2i _ _ s) 1:// 1,2:/# 1:// nthv /= mulrDl /=.
-  by rewrite (divr2i_p1 _ i s) 1:// 1:/# 1:// nthv /= exprD_nneg 1,2:// /#.
-  rewrite (shrxor1_divr2i _ _ s) 1:// 1,2:/# 1:// nthv /=.
-  by rewrite (divr2i_p1 _ i s) 1:// 1:/# 1:// nthv /=.
+  rewrite (shrxor1_divr2i _ _ h) 2:/# 2://; 1: smt(h_max).
+  rewrite nthv /= mulrDl /=.
+  by rewrite (divr2i_p1 _ i h) 1:// 1:/# 1:// nthv /= exprD_nneg 1,2:// /#.
+  rewrite (shrxor1_divr2i _ _ h) 2:/# 2://; 1: smt(h_max).
+  rewrite nthv /=.
+  by rewrite (divr2i_p1 _ i h) 1:// 1:/# 1:// nthv /=.
 rewrite rev_cons.
 congr.
-rewrite -(ih s idx lfs ps) 1:// 1,2:/# 1,2://.
+rewrite -(ih idx lfs ps) 1:// 1:/# 1,2://.
 congr. congr. congr. congr. congr.
-by rewrite (divr2i_p1 _ i s) 1:// 1:/# 1:// nthv /= exprD_nneg 1,2:// /#.
-by rewrite (divr2i_p1 _ i s) 1:// 1:/# 1:// nthv /=.
+by rewrite (divr2i_p1 _ i h) 1:// 1:/# 1:// nthv /= exprD_nneg 1,2:// /#.
+by rewrite (divr2i_p1 _ i h) 1:// 1:/# 1:// nthv /=.
 congr. congr. congr.
 rewrite drop_drop 1:expr_ge0 1:// 1:mulr_ge0 1:divz_ge0 1:expr_gt0 3:expr_ge0 1,3://; 1: smt(to_uint_cmp).
 congr.
-rewrite (shrxor1_divr2i _ _ s) 1:// 1,2:/# 1:// nthv /= mulrDl /=.
-by rewrite (divr2i_p1 _ i s) 1:// 1:/# 1:// nthv /= exprD_nneg 1,2:// /#.
-rewrite (shrxor1_divr2i _ _ s) 1:// 1,2:/# 1:// nthv /=.
-by rewrite (divr2i_p1 _ i s) 1:// 1:/# 1:// nthv /=.
+rewrite (shrxor1_divr2i _ _ h) 2:/# 2://; 1: smt(h_max).
+rewrite nthv /= mulrDl /=.
+by rewrite (divr2i_p1 _ i h) 1:// 1:/# 1:// nthv /= exprD_nneg 1,2:// /#.
+rewrite (shrxor1_divr2i _ _ h) 2:/# 2://; 1: smt(h_max).
+rewrite nthv /=.
+by rewrite (divr2i_p1 _ i h) 1:// 1:/# 1:// nthv /=.
 qed.
 
 
@@ -3377,8 +3394,8 @@ have sz_cnsap : size cnsap = h.
   + by rewrite &(list2tree_height) 1:/# 1:size_map 1:size_range; 1:smt(expr_ge0).
   + rewrite &(list2tree_fullybalanced _ h) 1:/# 1:size_map 1:size_range; 1:smt(expr_ge0).
 rewrite -sz_cnsap -nth_rev 1:/#.
-move: (cnsh_val ps idx h h (map (leafnode_from_idx ss ps (adr2ads zero_address)) (range 0 (2 ^ h))) _ _ _ _) => //.
-+ smt(ge0_h h_max).
+move: (cnsh_val ps idx h (map (leafnode_from_idx ss ps (adr2ads zero_address)) (range 0 (2 ^ h))) _ _ _ _) => //.
++ smt(ge0_h).
 + rewrite size_map size_range; smt(size_ge0 ge0_h).
 pose cnsapi := cons_ap_trh_gen _ _ _ _ _ _.
 have -> ->: cnsap = cnsapi.
@@ -3712,9 +3729,11 @@ seq 1 1 : (   #pre
     rewrite /RFC.skr2sko XAddress.insubdK /valid_xadrs ?HAX.Adrs.insubdK ?zeroidxsE ?zeroadiP ?zeroxadiP /=.
     rewrite /set_typeidx HAX.Adrs.insubdK 1:valid_xadrsidxs_adrsidxs 1:zeroxadiP /put /=.
     rewrite /set_kpidx /set_idx HAX.Adrs.insubdK 1:valid_xadrsidxs_adrsidxs 1:zeroxadiP /put /=.
-    rewrite to_uint_small //;1:smt(Index.valP ge1_h h_max pow2_32 gt_exprsbde).
-    do split;1..4: smt(w_vals gt2_len Index.valP ge1_h h_max pow2_32 gt_exprsbde).
-     move => *; rewrite !get_setE;  smt(Array8.initiE).
+    rewrite to_uint_small /=; 1:smt(Index.valP ge1_h h_max pow2_32 gt_exprsbde).
+    split; 1: smt(Index.valP ge1_h h_max pow2_32 gt_exprsbde w_vals gt2_len).
+    move=> j ge0_j lt3_j; rewrite ?setE ?initE.
+    rewrite ifT 1:/# /=.
+    by do ? (rewrite ifF 1:/# ?initE ifT 1:/# ?initE /=).
   outline{2} [1 .. 8] by { msg <@ WOTS_Encode.encode(M0); }.
   ecall{2} (WOTSEncodeP M0{2}).
   skip => &1 &2 />.
@@ -3764,17 +3783,6 @@ by rewrite /RFC.skr2sko /= eqv /= to_uintD_small; smt(pow2_32 expr_ge0 h_max gt_
 by rewrite /RFC.skr2sko /= eqv /=; smt(pow2_32 expr_ge0 h_max gt_exprsbde h_g0).
 by rewrite to_uintD_small /=;smt( l_max h_max).
 qed.
-(*
-lemma
-s{2}.`sig_idx.[i] =
-nth witness (flatten (map W8.w2bits (rev (mkseq (nth W8.zero (to_list (unpack8 s{2}.`sig_idx))) n)))) i
-
-
-rng_s21: 0 <= to_uint s{2}.`sig_idx < l
-i: int
-rngi: 0 <= i < h
-nth witness (mkseq (fun (i0 : int) => s{2}.`sig_idx.[i0]) 32) i = nth witness (BytesToBits (toByte s{2}.`sig_idx n)) i
-*)
 
 lemma flrdv_intdiv i d:
   0 <= i => 1 <= d => floor (i%r / d%r) = i %/ d.
@@ -4184,10 +4192,10 @@ require (*****) DigitalSignaturesROM.
 clone import DigitalSignaturesROM as DSS_TOP with
   type pk_t <- xmss_pk,
   type sk_t <- xmss_sk,
-  type msg_t <- W8.t list,
+  type msg_t <- msg_t,
   type sig_t <- sig_t,
 
-  type in_t <- nbytes * (dgstblock * index * W8.t list),
+  type in_t <- nbytes * (dgstblock * index * msg_t),
   type out_t <- msgFLXMSSTW,
   type d_in_t <- int,
   type d_out_t <- bool,
@@ -4209,7 +4217,7 @@ module (S : Scheme_RO) (O : RO.POracle) = {
    proc sign = XMSS_RFC_Abs(RFC_O(O)).sign
 
    (* THIS IS A HACK BECAUSE RFC SHOULD BE CHECKING FOR IDX RANGE.  *)
-   proc verify(pk : xmss_pk, m : W8.t list, sig : sig_t) : bool  = {
+   proc verify(pk : xmss_pk, m : msg_t, sig : sig_t) : bool  = {
        var r;
        r <@ XMSS_RFC_Abs(RFC_O(O)).verify(pk,m,sig);
        return 0 <= to_uint sig.`sig_idx < l && r;
@@ -4217,7 +4225,7 @@ module (S : Scheme_RO) (O : RO.POracle) = {
 }.
 
 module B_Oracles(O : DSS_RFC.DSS.KeyUpdating.SOracle_CMA) : SOracle_CMA = {
-   proc sign(m : W8.t list) : sig_t = {
+   proc sign(m : msg_t) : sig_t = {
       var sig;
       sig <@ O.sign(m);
       return ({| sig_idx = W32.of_int (Index.val sig.`2.`1) ; r = sig.`1;
@@ -4228,7 +4236,7 @@ module B_Oracles(O : DSS_RFC.DSS.KeyUpdating.SOracle_CMA) : SOracle_CMA = {
 }.
 
 module (B(A : Adv_EUFCMA_RO) : DSS_RFC.KeyUpdatingROM.Adv_EUFCMA_RO) (RO : RO.POracle, O : DSS_RFC.DSS.KeyUpdating.SOracle_CMA) = {
-   proc forge(pk : pkXMSSTWRFC) : W8.t list * sigXMSSTW = {
+   proc forge(pk : pkXMSSTWRFC) : msg_t * sigXMSSTW = {
          var f;
          f <@ A(RO,B_Oracles(O)).forge({| pk_oid = impl_oid; pk_root = NBytes.insubd (BitsToBytes (DigestBlock.val pk.`1)); pk_pub_seed = pk.`2|});
          return (f.`1,

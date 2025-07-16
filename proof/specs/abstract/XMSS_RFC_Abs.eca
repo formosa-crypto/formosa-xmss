@@ -55,7 +55,7 @@ op rand_hash : seed -> adrs -> nbytes -> nbytes -> nbytes.
   (modulo concatenating public values to output)
 *)
 module type Oracle = {
-  proc o(mkm : threen_bytes * W8.t list) : nbytes
+  proc o(mkm : threen_bytes * msg_t) : nbytes
 }.
 
 

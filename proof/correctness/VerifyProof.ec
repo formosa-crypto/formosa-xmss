@@ -68,8 +68,8 @@ lemma verify_correctness (ptr_m           (* Apontador p mensagem *)
    
       arg{1} = (ptr_m, ptr_mlen, ptr_sm, sm_len, _pk) /\ 
       arg{2}.`1 = EncodePkNoOID _pk /\  (* pk *)
-      arg{2}.`2 = load_buf Glob.mem{1} (ptr_sm + (of_int XMSS_SIG_BYTES)%W64) 
-                  (to_uint (sm_len  - (of_int XMSS_SIG_BYTES)%W64)) /\ (* message *)
+      Types.Msg_t.val arg{2}.`2 = load_buf Glob.mem{1} (ptr_sm + (of_int XMSS_SIG_BYTES)%W64) 
+                                  (to_uint (sm_len  - (of_int XMSS_SIG_BYTES)%W64)) /\ (* message *)
       arg{2}.`3 = EncodeSignature (load_sig_mem Glob.mem{1} ptr_sm) (* signature *)  /\
 
       0 <= to_uint ptr_m + to_uint sm_len < W64.max_uint
@@ -214,7 +214,7 @@ seq 1 0 : (
         #{/~t64{1} = smlen{1} - (of_int 4963)%W64}pre /\
         loadW64 Glob.mem{1} (to_uint mlen_ptr{1}) = smlen{1} - (of_int 4963)%W64
 ).
-- auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19 H20 H21 H22 H23 H24 H25 H26 *.
+- auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19 HM H20 H21 H22 H23 H24 H25 H26 *.
   rewrite load_store_W64 /XMSS_FULL_HEIGHT /=.
   rewrite /XMSS_FULL_HEIGHT /= in H1.
   have E :  disjoint_ptr (to_uint ptr_sm) (XMSS_SIG_BYTES) (to_uint ptr_mlen) 8 by smt().
@@ -225,7 +225,7 @@ seq 1 0 : (
       rewrite /disjoint_ptr /XMSS_SIG_BYTES in E.  
       smt(disjoint_ptr_ptr).
   do split; 1,2: by smt().
-    + apply (eq_from_nth witness); rewrite !size_load_buf //; 1..3: by rewrite to_uintB ?of_uintK ?uleE /#.
+    + rewrite HM; apply (eq_from_nth witness); rewrite !size_load_buf //; 1..3: by rewrite to_uintB ?of_uintK ?uleE /#.
       rewrite /XMSS_SIG_BYTES. 
       have ->: to_uint (sm_len - (of_int 4963)%W64) = to_uint sm_len - XMSS_SIG_BYTES.
          * rewrite to_uintB; 1: by rewrite uleE /#.
@@ -267,14 +267,14 @@ swap {2} [5..7] -3.
   
 seq 2 0 : (
   #pre /\
-  load_buf Glob.mem{1} (m_ptr{1} + (of_int XMSS_SIG_BYTES)%W64) (to_uint smlen{1} - XMSS_SIG_BYTES) = m{2}
+  load_buf Glob.mem{1} (m_ptr{1} + (of_int XMSS_SIG_BYTES)%W64) (to_uint smlen{1} - XMSS_SIG_BYTES) = Types.Msg_t.val m{2}
 ).
 - sp.
   exists * m_ptr{1}, sm_ptr{1}, bytes{1}, Glob.mem{1}.
   elim * => P0 P2 P4 Pmem.
   call {1} (memcpy_mem_mem Pmem P0 (W64.of_int 4963)  P2 (W64.of_int 4963) P4).
   auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 
-                   H16 H17 H18 H19 H20 H21 H22 H23 H24 H25 H26 H27 H28 H29.
+                   H16 H17 H18 H19 HM H20 H21 H22 H23 H24 H25 H26 H27 H28 H29.
   have E0 : to_uint (sm_len - (of_int 4963)%W64) = to_uint sm_len - 4963 by rewrite to_uintB; [rewrite uleE /# |]; rewrite of_uintK.
 
   (* adicionar offset ao apontador = remover offset da length *)
@@ -299,7 +299,7 @@ seq 3 2 : (
 outline {2} [1..2] by { 
     _M' <@ M_Hash.hash (
           (ThreeNBytesBytes.insubd (NBytes.val _R ++ NBytes.val root ++ NBytes.val idx_bytes))%ThreeNBytesBytes, 
-          m); 
+          Types.Msg_t.val m); 
 }.
 
 seq 2 0 : (
@@ -311,15 +311,15 @@ seq 1 0 : (#pre /\ bytes{1} = smlen{1} - (of_int 4963)%W64); first by auto.
 
 seq 0 0 : (
   #pre /\
-  load_buf Glob.mem{1} (m_ptr{1} + (of_int (4963 - 32 - 3 * 32 + 128))%W64) (to_uint bytes{1}) = m{2}
+  load_buf Glob.mem{1} (m_ptr{1} + (of_int (4963 - 32 - 3 * 32 + 128))%W64) (to_uint bytes{1}) = Types.Msg_t.val m{2}
 ).
 - auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 
-  H16 H17 H18 H19 H20 H21 H22 H23 H24 H25 H26 H27 H28 H29
+  H16 H17 H18 H19 HM H20 H21 H22 H23 H24 H25 H26 H27 H28 H29
   H30 H31 H32. 
   apply (eq_from_nth witness); rewrite !size_load_buf //; 1..3:smt(@W64 pow2_64).
   have ->: to_uint (sm_len - (of_int 4963)%W64) = to_uint sm_len - 4963 by rewrite to_uintB ?uleE of_uintK /#.
   move => i?.
-  rewrite !nth_load_buf //; first by rewrite to_uintB ?uleE of_uintK /#.
+  rewrite HM !nth_load_buf //; first by rewrite to_uintB ?uleE of_uintK /#.
   congr.
   rewrite !to_uintD !of_uintK /= /XMSS_SIG_BYTES /#. 
  
@@ -331,7 +331,7 @@ seq 1 1 : (
   elim * => P0 P1 P2 P3 P4 P5.
   call {1} (hash_message_correct P0 P1 P2 P3 P4 P5) => [/# |]. 
   auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 
-  H16 H17 H18 H19 H20 H21 H22 H23 H24 H25 H26 H27 H28 H29
+  H16 H17 H18 H19 HM H20 H21 H22 H23 H24 H25 H26 H27 H28 H29
   H30 H31 H32 H33.
   do split.
    + smt(@W64 pow2_64).
@@ -579,7 +579,7 @@ do split.
  
 swap {2} 1 1.
 seq 3 1 : (#pre /\ i{1} = W32.zero /\ ={idx_leaf}).
-- auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19 H20 H21 H22 H23 H24 H25 H26 H27 H28 H29 H30 H31 H32 H33 H34.
+- auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19 HM H20 H21 H22 H23 H24 H25 H26 H27 H28 H29 H30 H31 H32 H33 H34.
   rewrite andwC; congr; first by smt(@W32 pow2_32).
   by rewrite h_val d_val /(`<<`).
 
@@ -660,7 +660,7 @@ seq 1 1 : (#pre /\ to_list leaf{1} = NBytes.val nodes0{2}).
 - exists * wots_pk{1}, pub_seed{1}, ltree_addr{1}, address0{2}.
   elim * => P0 P1 P2 P3.
   call (ltree_correct P0 P1 P2 P3) => [/#|]. 
-  auto => /> &1 &2 21? -> ? H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18; split => [| /#].
+  auto => /> &1 &2 22? -> ? H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18; split => [| /#].
   rewrite -enc_dec_wots_pk 1:/# //= NBytes.valKd /#.
 
  
@@ -675,7 +675,7 @@ conseq />.
 exists * leaf{1}, pub_seed{1}, idx_leaf{1}, t64{1}, node_addr{1}, address0{2}.
 elim * => P0 P1 P2 P3 P4 P5.
 call (compute_root_equiv P0 P1 P2 P3 P4 P5) => [/# |].
-skip => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19 H20 -> H22 H23 H24 H25 H26 H27 H28 H29 H30 H31 H32 H33 H34 H35
+skip => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19 HM H20 -> H22 H23 H24 H25 H26 H27 H28 H29 H30 H31 H32 H33 H34 H35
                  H36 H37 H38 H39 H40 -> H41.
 rewrite !to_uintD; (do split; 4..11: by smt()); 1,2: by rewrite NBytes.valKd.
 - have ->: auth{2} = (nth witness (EncodeSignature (load_sig_mem Glob.mem{1} ptr_sm)).`r_sigs (to_uint i{1})).`2 by smt().

@@ -1,4 +1,5 @@
 require import AllCore List.
+require Subtype.
 from Jasmin require import JModel.
 
 require import Params.
@@ -46,7 +47,15 @@ type sig_t = { sig_idx : W32.t;
                r : nbytes ;
                r_sig : (wots_signature * auth_path) }.
 
-type msg_t = W8.t list.
 
+
+clone import Subtype as Msg_t with
+  type T <- W8.t list,
+    op P <- fun wl => 0 <= size wl < mmb
+
+proof *.
+realize inhabited by exists []; smt(ge1_mmb).
+
+type msg_t = Msg_t.sT.
 
 type xmss_keypair = xmss_sk * xmss_pk.
