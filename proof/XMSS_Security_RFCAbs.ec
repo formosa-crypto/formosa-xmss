@@ -2011,6 +2011,20 @@ rewrite /int2lbw nth_mkseq // /=.
 rewrite BaseW.insubdK //.
 + smt(w_vals).
 rewrite /bs2int /BytesToBits.
+rewrite (StdBigop.Bigint.BIA.eq_big_int _ _ _ (fun i=> 2 ^ i * b2i (_ml.[i %/ (8 %/ log2_w)].[i %% (8 %/ log2_w)]))).
++ move=> j /=; rewrite size_rev.
+  have szP: size (flatten (map W8.w2bits _ml)) = 8 * size _ml.
+  + rewrite /flatten=> {inv}; elim: _ml=> />.
+    by move=> m ml ih; rewrite size_cat ih /#.
+  rewrite szP=> j_bnd; congr; congr.
+  rewrite nth_rev szP //= /flatten foldr_map /w2bits /mkseq -iotaredE /=.
+  move: j_bnd=> {szP inv}.
+  elim: _ml=> />.
+  move=> w _ml ih ge0_j j_lt //=.
+  have ->: (8 * (1 + size _ml) - (j + 1) - 8) = 8 * size _ml - (j + 1) by smt().
+(** FIXME: Reverse byte order, correct bit order **)
+  case: (j %/ (8 %/ log2_w) = 0).
+  admit.
 (* This is where the reverse bit-ordering fuckery pops up *)
 admitted.
 
