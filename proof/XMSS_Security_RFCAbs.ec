@@ -1914,6 +1914,10 @@ module WOTS_Encode = {
   }
 }.
 
+lemma fllg2w :
+  floor (log2 w%r) = log2_w.
+proof. by rewrite -log2w_eq from_int_floor. qed.
+
 lemma basew_valh _ml l:
   hoare[Top.BaseW.BaseW.base_w : arg = (_ml, l) /\ 0 <= l
          ==>
@@ -1923,17 +1927,63 @@ proc.
 while (0 <= consumed <= outlen
     /\ out = consumed
     /\ size base_w = outlen
-    /\ (consumed %% (8 %/ log2_w) = 0 => bits = 0)
+    /\ (_in = if consumed = 0 then 0 else (1 + (consumed - 1) %/ (8 %/ log2_w)))
+    /\ (total = if consumed = 0 then W8.zero else nth witness X (_in - 1))
+    /\ (consumed %% (8 %/ log2_w) = 0 <=> bits = 0)
     /\ (   consumed %% (8 %/ log2_w) <> 0
-        => bits
-         = 8 - (1 + consumed %% (8 %/ log2_w)) * log2_w)
+        <=> bits
+         = 8 - (consumed %% (8 %/ log2_w)) * log2_w)
     /\ (forall i,
              0 <= i < consumed
           => nth 0 base_w i
-           = to_uint ((nth witness X (i %/ (8 %/ log2_w)) `>>` W8.of_int ((8 - (1 + (i %% (8 %/ log2_w))) * log2_w))) `&` W8.of_int (w - 1)))).
+           = to_uint ((nth witness X (i %/ (8 %/ log2_w)) `>>`
+                       W8.of_int ((8 - (1 + (i %% (8 %/ log2_w))) * log2_w))) `&` W8.of_int (w - 1)))).
 + auto=> /> &0 ge0_consumed _.
   move=> bits0 bits_neq0 ih consumed_lt_outlen.
-  admit.
+  split=> [eq0_bits | neq0_bits]; split => [/#||/#|].
+  + rewrite size_put /=.
+    split; 1: case (consumed{0} = 0) => eq0_cons.
+    + by rewrite eq0_cons /=.
+    + move/iffRL: bits0 => /(_ eq0_bits).
+      by case (logw_vals) => -> /=; smt(@IntDiv).
+    split; 1: by rewrite (: consumed{0} + 1 <> 0) 1:/#.
+    split; 1: split.
+    + move/iffRL: bits0 => /(_ eq0_bits).
+      rewrite -modzDm => -> /=; rewrite modz_mod pmod_small //=.
+      by case (logw_vals) => ->.
+    + by rewrite fllg2w; case (logw_vals) => -> /=.
+    split; 1: split; 2: smt(fllg2w logw_vals).
+    + move/iffRL: bits0 => /(_ eq0_bits).
+      rewrite -modzDm => -> /=.
+      by rewrite modz_mod pmod_small //=; [ case (logw_vals) => -> | rewrite fllg2w].
+    move=> i ge0_i ltcons1_i; rewrite nth_put 1:/#.
+    case (i = consumed{0}) => [eqcons_i | neqcons_i].
+    + rewrite eqcons_i /= -?log2w_eq from_int_floor /=.
+      case (consumed{0} = 0) => [-> // | neq0_cons].
+      move/iffRL: (bits0) => /(_ eq0_bits) => -> /=.
+      have -> /#: (consumed{0} - 1) %/ (8 %/ log2_w) = consumed{0} %/ (8 %/ log2_w) - 1.
+      by rewrite divzDl 1:/# divNz 1:// /=; 1: case (logw_vals) => ->.
+    by rewrite ifF 2:ih /#.
+  split.
+  + by rewrite size_put /=.
+  split; 1: case (consumed{0} = 0) => eq0_cons.
+  + by move: bits0; smt(mod0z).
+  + rewrite ifF 1:/#; congr.
+    move/iffLR /contra: bits0 => /(_ neq0_bits) modneq0.
+    by admit.
+  have neq0_cons : consumed{0} <> 0 by smt(mod0z).
+  rewrite neq0_cons /= ifF 1:/# /=.
+  have -> /=: bits{0} = 8 - consumed{0} %% (8 %/ log2_w) * log2_w by smt().
+  split.
+  + admit.
+  split.
+  + admit.
+  move => i ge0_i ltcons1_i.
+  rewrite nth_put 1:/#.
+  case (i = consumed{0}) => [eqcons_i | neqcons_i].
+  + rewrite eqcons_i /=.
+    admit.
+  by rewrite ih /#.
 auto=> /> ge0_l; split.
 + by rewrite size_nseq /#.
 move=> bw _ c /lezNgt l_ge_c _ c_ge_l sbw_l _ _.
@@ -1995,19 +2045,6 @@ proof. by conseq WOTSchecksum_ll (WOTSchecksum_len1valh _ml). qed.
 lemma ge0_cln2lg2w :
   0 <= ceil ((len2 * log2_w)%r / 8%r).
 proof.
-(* rewrite /i /len2 /len1 /w; case logw_vals => -> /=. *)
-(* + rewrite /log2 (: 4%r = 2%r ^ 2); 1:smt(@RField). *)
-(*   rewrite eqi_log22i 1:// -(fromint_div (8 * n)) 1:dvdz_mulr 1://. *)
-(*   rewrite (Ring.IntID.mulrC 8) divMr 1:// /=. *)
-(*   pose flr := floor _. *)
-(*   rewrite -le_fromint &(StdOrder.RealOrder.ler_trans _ _ _ _ (ceil_ge (((flr + 1) * 2)%r / 8%r))). *)
-(*   rewrite StdOrder.RealOrder.ler_pdivl_mulr 1:// /= le_fromint -lez_divLR 1,2:// /=. *)
-(*   rewrite -(StdOrder.IntOrder.ler_subl_addr) /= (: 3 = floor 3%r) 1:// 1:from_int_floor 1://. *)
-(*   rewrite floor_mono StdOrder.RealOrder.ler_pdivl_mulr 1:// /=. *)
-(*   rewrite (StdOrder.RealOrder.ler_trans (log 2%r (2%r ^ 3))) . *)
-(*   rewrite log_ge0 1:// fromintM -StdOrder.RealOrder.ler_pdivr_mulr 1://. *)
-(*   rewrite (StdOrder.RealOrder.ler_trans 1%r) 1:StdOrder.RealOrder.ler_pdivr_mulr 1,2://. *)
-(*   by rewrite (StdOrder.RealOrder.ler_trans (n * 4)%r) 1:le_fromint 2:ceil_ge; 1:smt(ge1_n). *)
 rewrite /i /len2 /len1 /w; case logw_vals => -> /=.
 + rewrite /log2 (: 4%r = 2%r ^ 2); 1:smt(@RField).
   rewrite eqi_log22i 1:// -(fromint_div (8 * n)) 1:dvdz_mulr 1://.
