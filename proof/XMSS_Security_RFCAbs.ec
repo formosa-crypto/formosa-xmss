@@ -1915,18 +1915,53 @@ module WOTS_Encode = {
 }.
 
 lemma basew_valh _ml l:
-  hoare[Top.BaseW.BaseW.base_w : arg = (_ml, l)
+  hoare[Top.BaseW.BaseW.base_w : arg = (_ml, l) /\ 0 <= l
          ==>
          res = map BaseW.val (int2lbw l (BS2Int.bs2int (rev (BytesToBits _ml))))].
 proof.
-proc. admitted.
+proc.
+while (0 <= consumed <= outlen
+    /\ out = consumed
+    /\ size base_w = outlen
+    /\ (consumed %% (8 %/ log2_w) = 0 => bits = 0)
+    /\ (   consumed %% (8 %/ log2_w) <> 0
+        => bits
+         = 8 - (1 + consumed %% (8 %/ log2_w)) * log2_w)
+    /\ (forall i,
+             0 <= i < consumed
+          => nth 0 base_w i
+           = to_uint ((nth witness X (i %/ (8 %/ log2_w)) `>>` W8.of_int ((8 - (1 + (i %% (8 %/ log2_w))) * log2_w))) `&` W8.of_int (w - 1)))).
++ auto=> /> &0 ge0_consumed _.
+  move=> bits0 bits_neq0 ih consumed_lt_outlen.
+  admit.
+auto=> /> ge0_l; split.
++ by rewrite size_nseq /#.
+move=> bw _ c /lezNgt l_ge_c _ c_ge_l sbw_l _ _.
+have ->> {l_ge_c c_ge_l}: c = l by smt().
+move=> inv.
+apply: (eq_from_nth witness).
++ admit.
+move=> i; rewrite sbw_l=> i_bnd.
+rewrite (nth_map witness).
++ admit.
+rewrite /int2lbw nth_mkseq // /=.
+rewrite BaseW.insubdK //.
++ smt(w_vals).
+rewrite /bs2int /BytesToBits.
+(* This is where the reverse bit-ordering fuckery pops up *)
+admitted.
 
 lemma basew_val _ml l:
-  phoare[Top.BaseW.BaseW.base_w : arg = (_ml, l)
+  phoare[Top.BaseW.BaseW.base_w : arg = (_ml, l) /\ 0 <= l
          ==>
          res = map BaseW.val (int2lbw l (BS2Int.bs2int (rev (BytesToBits _ml))))] = 1%r.
 proof.
-proc. admitted.
+conseq (: 0 <= outlen ==> true) (basew_valh _ml l)=> //.
+proc.
+while (0 <= consumed <= outlen) (outlen - consumed).
++ by auto=> /> /#.
+by auto=> /> /#.
+qed.
 
 lemma WOTSchecksum_len1valh _ml :
   hoare[WOTS.checksum : arg = _ml /\ size _ml = len1
@@ -2007,6 +2042,7 @@ lemma WOTSEncodeP _ml :
 proof.
 (* FD --- MM: Moved this here, removing one of the admits below. This one is used elsewhere as well. *)
 proc.
+print BaseW.
 wp.
 seq 1 : (   #pre
          /\ msg = map BaseW.val (int2lbw len1 (BS2Int.bs2int (rev (BytesToBits _ml))))) => //.
@@ -2131,6 +2167,10 @@ seq 1 : (   #pre
       + admit. (* waka waka *)
       rewrite pmod_small.
       + admit. (* waka waka *)
+      rewrite -{2}(int2bsK (ceil ((len2 * log2_w)%r / 8%r) * 8) ww).
+      + admit. admit.
+      rewrite /bs2int /int2bs.
+      search nth int2bs.
       admit. (* Hmm... not sure about this one *)
       (* Why does all of this simplify away? It looks like all the instances of i simplify out, which is not good at all. *)
     rewrite StdBigop.Bigint.sumr_ge0 2:/= //=.
