@@ -1970,19 +1970,32 @@ while (0 <= consumed <= outlen
   + by move: bits0; smt(mod0z).
   + rewrite ifF 1:/#; congr.
     move/iffLR /contra: bits0 => /(_ neq0_bits) modneq0.
-    by admit.
+    rewrite {1}(edivzP consumed{0} (8 %/ log2_w)) -addzA.
+    rewrite divzMDl; 1:smt(val_log2w).
+    rewrite (pdiv_small (consumed{0} %% (8 %/ log2_w) - 1)) //.
+    smt(val_log2w modz_cmp).
   have neq0_cons : consumed{0} <> 0 by smt(mod0z).
   rewrite neq0_cons /= ifF 1:/# /=.
   have -> /=: bits{0} = 8 - consumed{0} %% (8 %/ log2_w) * log2_w by smt().
-  split.
-  + admit.
+  rewrite fllg2w; split.
+  + rewrite -addzA -Ring.IntID.opprD /= -(mulzDl _ 1).
+    case: ((consumed{0} + 1) %% (8 %/ log2_w) = 0)=> />; 2:smt(@IntDiv).
+    rewrite -/(_ %| _) dvdzP=> - [] q.
+    rewrite eq_sym -Domain.subr_eq=> <-.
+    by rewrite modzMDl modNz //=; smt(val_log2w).
   split.
   + admit.
   move => i ge0_i ltcons1_i.
   rewrite nth_put 1:/#.
   case (i = consumed{0}) => [eqcons_i | neqcons_i].
   + rewrite eqcons_i /=.
-    admit.
+    congr; congr; congr; 2:smt().
+    congr.
+    rewrite {1}(edivzP (consumed{0}) (8 %/ log2_w)).
+    rewrite -addzA divzMDl.
+    + smt(val_log2w).
+    rewrite (pdiv_small (consumed{0} %% (8%/ log2_w) - 1)) //.
+    smt(val_log2w modz_cmp).
   by rewrite ih /#.
 auto=> /> ge0_l; split.
 + by rewrite size_nseq /#.
@@ -1993,7 +2006,7 @@ apply: (eq_from_nth witness).
 + admit.
 move=> i; rewrite sbw_l=> i_bnd.
 rewrite (nth_map witness).
-+ admit.
++ by rewrite size_int2lbw // bs2int_ge0.
 rewrite /int2lbw nth_mkseq // /=.
 rewrite BaseW.insubdK //.
 + smt(w_vals).
