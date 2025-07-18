@@ -113,6 +113,7 @@ clone import Checksum as CS with
 proof *.
 realize gt0_w by rewrite expr_gt0.
 
+
 clone import XMSS_TW as XMSS_Security with
   type mseed <- nbytes,
   type mkey <- nbytes,
@@ -1919,9 +1920,14 @@ lemma fllg2w :
 proof. by rewrite -log2w_eq from_int_floor. qed.
 
 lemma basew_valh _ml l:
-  hoare[Top.BaseW.BaseW.base_w : arg = (_ml, l) /\ 0 <= l
+  hoare[Top.BaseW.BaseW.base_w : arg = (_ml, l) /\ l %/ (8 %/ log2_w) < size _ml /\ 0 <= l
          ==>
-         res = map BaseW.val (int2lbw l (BS2Int.bs2int (rev (BytesToBits _ml))))].
+         res
+         =
+         map BS2Int.bs2int
+             (mkseq (fun i => take log2_w (drop (8 - (1 + (i %% (8 %/ log2_w))) * log2_w) (W8.w2bits _ml.[i %/ (8 %/ log2_w)])))
+                    l)
+       ].
 proof.
 proc.
 while (0 <= consumed <= outlen
@@ -2017,31 +2023,52 @@ while (0 <= consumed <= outlen
     rewrite (pdiv_small (consumed{0} %% (8%/ log2_w) - 1)) //.
     smt(val_log2w modz_cmp).
   by rewrite ih /#.
-auto=> /> ge0_l; split.
+auto=> /> szml ge0_l; split.
 + by rewrite size_nseq /#.
 move=> bw _ c /lezNgt l_ge_c _ c_ge_l sbw_l _ _.
 have ->> {l_ge_c c_ge_l}: c = l by smt().
 move=> inv.
-apply: (eq_from_nth witness).
+apply: (eq_from_nth 0).
 + by rewrite sbw_l size_map size_mkseq lez_maxr.
-move=> i; rewrite sbw_l=> i_bnd.
-rewrite (nth_map witness).
-+ by rewrite size_int2lbw // bs2int_ge0.
-rewrite /int2lbw nth_mkseq // /=.
-rewrite BaseW.insubdK; 1: smt(w_vals).
-rewrite /bs2int /BytesToBits.
-have szP : size (flatten (map W8.w2bits _ml)) = 8 * size _ml.
-+ rewrite (size_flatten_ctt 8) 2:size_map 2://.
-  by move=> bs /mapP [x] [_ ->]; rewrite size_w2bits.
-rewrite size_rev szP.
-rewrite (StdBigop.Bigint.BIA.eq_big_int _ _ _
-         (fun i=> 2 ^ i * b2i (_ml.[i %/ (8 %/ log2_w)].[i %% (8 %/ log2_w)]))).
-+ move=> j /= j_bnd; congr; congr.
-  rewrite nth_rev //= ?szP 1:// (BitChunking.nth_flatten false 8).
-  + by rewrite allP /= => bs /mapP [x] [_ ->]; rewrite size_w2bits.
-  rewrite divzDl 1:dvdz_mulr 1:// mulKz 1:// -modzDm modzMr /= modz_mod.
-  admit.
-admitted.
+move=> i; rewrite sbw_l => i_bnd.
+rewrite (nth_map witness 0) 1:size_mkseq 1:lez_maxr 1,2://.
+rewrite nth_mkseq 1:// /= inv 1://.
+rewrite /to_uint /(`>>`) /bs2int size_take 2:size_drop 3:?size_w2bits 3:lez_maxr; 1..3: smt(logw_vals).
+(* have geql2w : log2_w <= 8 - log2_w * i %% (8 %/ log2_w) by smt(logw_vals). *)
+have geql2w : log2_w <= 8 - (8 - (1 + i %% (8 %/ log2_w)) * log2_w) by smt(logw_vals).
+pose ifte := if _ then _ else _; rewrite (: ifte = log2_w) 1:/#.
+rewrite (StdBigop.Bigint.BIA.big_cat_int log2_w 0 8); 1,2:smt(logw_vals).
+rewrite (StdBigop.Bigint.BIA.big1_seq _ _ (range log2_w 8)) 2:/=.
++ move=> j -[_ /mem_range rngj] /=.
+  rewrite (: ! (W8.of_int (w - 1)).[j]) /= 2://.
+  rewrite /w (: log2_w = max 0 log2_w) 2:W8.masklsbE; 1,2: smt(logw_vals).
+apply StdBigop.Bigint.BIA.eq_big_int => j rngj /=; congr; congr.
+rewrite (: 0 <= j < 8) 2:/= 2:(: (W8.of_int (w - 1)).[j]) /=; 1:smt(logw_vals).
++ rewrite /w (: log2_w = max 0 log2_w) 2:W8.masklsbE; 1,2: smt(logw_vals).
+rewrite nth_take 1,2:/# nth_drop 2:/#; 1: smt(logw_vals).
+rewrite /w2bits nth_mkseq 2:/=; 1:smt(logw_vals).
+rewrite (nth_change_dfl witness W8.zero).
++ smt(@IntDiv).
+by congr; smt(logw_vals).
+(* + by rewrite sbw_l size_map size_mkseq lez_maxr. *)
+(* move=> i; rewrite sbw_l=> i_bnd. *)
+(* rewrite (nth_map witness). *)
+(* + by rewrite size_int2lbw // bs2int_ge0. *)
+(* rewrite /int2lbw nth_mkseq // /=. *)
+(* rewrite BaseW.insubdK; 1: smt(w_vals). *)
+(* rewrite /bs2int /BytesToBits. *)
+(* have szP : size (flatten (map W8.w2bits _ml)) = 8 * size _ml. *)
+(* + rewrite (size_flatten_ctt 8) 2:size_map 2://. *)
+(*   by move=> bs /mapP [x] [_ ->]; rewrite size_w2bits. *)
+(* rewrite size_rev szP. *)
+(* rewrite (StdBigop.Bigint.BIA.eq_big_int _ _ _ *)
+(*          (fun i=> 2 ^ i * b2i (_ml.[i %/ (8 %/ log2_w)].[i %% (8 %/ log2_w)]))). *)
+(* + move=> j /= j_bnd; congr; congr. *)
+(*   rewrite nth_rev //= ?szP 1:// (BitChunking.nth_flatten false 8). *)
+(*   + by rewrite allP /= => bs /mapP [x] [_ ->]; rewrite size_w2bits. *)
+(*   rewrite divzDl 1:dvdz_mulr 1:// mulKz 1:// -modzDm modzMr /= modz_mod. *)
+(*   admit. *)
+(* admitted. *)
 (*
 rewrite (StdBigop.Bigint.BIA.eq_big_int _ _ _ (fun i=> 2 ^ i * b2i (_ml.[i %/ (8 %/ log2_w)].[i %% (8 %/ log2_w)]))).
 + move=> j /=; rewrite size_rev.
@@ -2059,6 +2086,8 @@ have szP : size (flatten (map W8.w2bits _ml)) = 8 * size _ml.
 (* This is where the reverse bit-ordering fuckery pops up *)
 admitted
 *)
+qed.
+
 lemma basew_val _ml l:
   phoare[Top.BaseW.BaseW.base_w : arg = (_ml, l) /\ 0 <= l
          ==>

@@ -380,7 +380,7 @@ module WOTS = {
     sig <- nseq len witness;
 
     (* Generate sk from the secret seed *)
-    wots_skey <@ pseudorandom_genSK(sk_seed, pub_seed, address); 
+    wots_skey <@ pseudorandom_genSK(sk_seed, pub_seed, address);
 
     (* Convert message to base w *)
     msg <@ BaseW.base_w(M, len1);
