@@ -1920,7 +1920,7 @@ lemma fllg2w :
 proof. by rewrite -log2w_eq from_int_floor. qed.
 
 lemma basew_valh _ml l:
-  hoare[Top.BaseW.BaseW.base_w : arg = (_ml, l) /\ l < size _ml * (8 %/ log2_w) /\ 0 <= l
+  hoare[Top.BaseW.BaseW.base_w : arg = (_ml, l) /\ l <= (8 %/ log2_w) * size _ml /\ 0 <= l
          ==>
          res
          =
@@ -2053,7 +2053,7 @@ by congr; smt(logw_vals).
 qed.
 
 lemma basew_val _ml l:
-  phoare[Top.BaseW.BaseW.base_w : arg = (_ml, l) /\ l < size _ml * (8 %/ log2_w) /\ 0 <= l
+  phoare[Top.BaseW.BaseW.base_w : arg = (_ml, l) /\ l <= (8 %/ log2_w) * size _ml /\ 0 <= l
          ==>
          res = map
                  BS2Int.bs2int
@@ -2070,7 +2070,7 @@ qed.
 
 (* From local conversions to global conversion *)
 lemma basew_eq _ml l:
-     0 <= l < (8 %/ log2_w) * size _ml
+     0 <= l <= (8 %/ log2_w) * size _ml
   => map bs2int (mkseq (fun i=> take log2_w (drop (8 - (1 + (i %% (8 %/ log2_w))) * log2_w)
                                                   (W8.w2bits _ml.[i %/ (8 %/ log2_w)]))) l)
    = map bs2int (mkseq (fun i=> take log2_w (drop ((i %/ (8 %/ log2_w)) * 8 + (8 - (1 + (i %% (8 %/ log2_w))) * log2_w)) (BytesToBits _ml))) l).
@@ -2161,12 +2161,43 @@ rewrite (StdOrder.RealOrder.ler_trans 1%r) 1:StdOrder.RealOrder.ler_pdivr_mulr 1
 by rewrite (StdOrder.RealOrder.ler_trans (n * 2)%r) 1:le_fromint 2:ceil_ge; 1:smt(ge1_n).
 qed.
 
+lemma basew_encoded_int_inner (_ml : W8.t list) l :
+     0 <= l
+  => l <= (8 %/ log2_w) * size _ml
+  =>
+  (mkseq (fun i=> take log2_w (drop ((i %/ (8 %/ log2_w)) * 8 + (8 - (1 + (i %% (8 %/ log2_w))) * log2_w)) (BytesToBits _ml))) l)
+  =
+  (take l (chunk log2_w (BytesToBits _ml))).
+proof.
+move=> ge0_l le_l.
+apply (eq_from_nth witness); rewrite size_mkseq ?size_take ?lez_maxr 1,2://.
++ admit.
+move => i rng_i.
+rewrite nth_mkseq 2:nth_take 1,2:// 1:/# /=.
+rewrite nth_mkseq /=.
++ admit.
+abort.
+
+lemma basew_encoded_int (_ml : W8.t list) l :
+     0 <= l
+  => l <= (8 %/ log2_w) * size _ml
+  =>
+  map bs2int (mkseq (fun i=> take log2_w (drop ((i %/ (8 %/ log2_w)) * 8 + (8 - (1 + (i %% (8 %/ log2_w))) * log2_w)) (BytesToBits _ml))) l)
+  =
+  map BaseW.val (int2lbw l (bs2int (flatten (rev (chunk log2_w (BytesToBits _ml)))))).
+proof.
+abort.
+lemma len2_bnd :
+  len2 <= 8 %/ log2_w * ceil ((len2 * log2_w)%r / 8%r).
+proof. admitted.
+
 lemma WOTSEncodeP _ml :
-  phoare[WOTS_Encode.encode : arg = _ml /\ len1  < size _ml * (8 %/ log2_w)
+  phoare[WOTS_Encode.encode : arg = _ml /\ len1 <= (8 %/ log2_w) * size _ml
          ==>
          res
          =
-         map BaseW.val (encode_int Params.len1 (BS2Int.bs2int (rev (BytesToBits _ml))) Params.len2) ]= 1%r.
+         (* map BaseW.val (encode_int Params.len1 (BS2Int.bs2int (rev (BytesToBits _ml))) Params.len2) ]= 1%r. *)
+         map BaseW.val (encode_int Params.len1 (BS2Int.bs2int (flatten (rev (map W8.w2bits _ml)))) Params.len2) ]= 1%r.
 proof.
 (* FD --- MM: Moved this here, removing one of the admits below. This one is used elsewhere as well. *)
 proc.
@@ -2186,7 +2217,54 @@ seq 1 : (   #pre
   + sp; exlim csum_bytes => csbt.
     call (basew_val csbt len2).
     auto => &1 /> ltszm_len1.
+    split; rewrite size_rev size_mkseq ge0_len2 lez_maxr ?ge0_cln2lg2w len2_bnd //=.
+    rewrite /encode_int map_cat /checksum /=.
+    rewrite /int2lbw basew_eq 2:?map_mkseq /(\o) .
+    + by rewrite size_rev size_mkseq ge0_len2 lez_maxr ?ge0_cln2lg2w len2_bnd.
+    pose mksq1 := mkseq _ _.
+(*     mksq1 = *)
+(* mkseq (fun (x : int) => BaseW.val (BaseW.insubd (bs2int (rev (BytesToBits m{1})) %/ w ^ (len1 - 1 - x) %% w))) len1 *)
+    congr.
+    + apply eq_in_mkseq => i rng_i /=.
+      rewrite BaseW.insubdK; 1: by rewrite modn_ge0 2:ltz_pmod 1:divz_ge0 1:expr_gt0 2:bs2int_ge0 /=; smt(w_vals).
+      rewrite -bs2int_mod; 1: smt(logw_vals).
+      do 2! congr.
+      rewrite /w -exprM bs2int_div; 1:smt(ge0_len1 logw_vals).
+      rewrite /len1.
+      rewrite -log2w_eq -fromint_div 1:dvdz_mulr; 1:smt(logw_vals).
+      rewrite (Ring.IntID.mulrC 8 n) divMr; 1:smt(logw_vals).
+      rewrite from_int_ceil.
+      rewrite /BytesToBits.
+      (* rewrite /bs2int. *)
+      
+      move: (rev_take ((size (BytesToBits m{1}) - (log2_w * (n * (8 %/ log2_w) - 1 - i))))
+                      (BytesToBits m{1})).
+      have -> /(_ _):
+        (size (BytesToBits m{1}) - (size (BytesToBits m{1}) - log2_w * (n * (8 %/ log2_w) - 1 - i)))
+        =
+        (log2_w * (n * (8 %/ log2_w) - 1 - i)) by smt().
+      + admit.
+      move=> <-.
+      rewrite /bs2int.
+      rweri
+        (BytesToBits m{1})
+      
+            ).
+      congr.
+        
+                   (). admit.
+    congr.
+    
     admit.
+    rewrite basew_eq. admit.
+    rewrite /checksum /=.
+    basew_eq
+    
+    rewrite size_rev size_mkseq.
+    rewrite /len2 /len1 /w /log2.
+    case logw_vals=> -> /=.
+    + rewrite (: 4%r= 2%r ^ 2%r) 2:logK 2,3://; 1:smt(@RealExp).
+      admit.
   hoare => /=.
   exlim msg => msgt; call (WOTSchecksum_len1valh msgt).
   auto => &1 /> ltszm_len1.
