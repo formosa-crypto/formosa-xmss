@@ -2333,6 +2333,17 @@ rewrite mulKz. smt(logw_vals).
 by rewrite divNz 1:// /=; smt(logw_vals).
 qed.
 
+lemma basew_val_int2lbw _ml l:
+  phoare[Top.BaseW.BaseW.base_w : arg = (_ml, l) /\ l = (8 %/ log2_w) * size _ml /\ 0 <= l
+         ==>
+         res
+         =
+         map BaseW.val (int2lbw l (bs2int (flatten (rev (map W8.w2bits _ml))))) ] = 1%r.
+proof.
+conseq (basew_val _ml l) => /> *.
+by rewrite ?basew_encoded_int_inner 1,2:// ?basew_encoded_int 1://.
+qed.
+
 (* lemma basew_encoded_take_int (_ml : W8.t list) l : *)
 (*      0 <= l *)
 (*   (* => l <= (8 %/ log2_w) * size _ml *) *)
@@ -2446,12 +2457,15 @@ qed.
 (* by rewrite divNz 1:// /=; smt(logw_vals). *)
 (* qed. *)
 
-lemma len2_bnd :
-  len2 <= 8 %/ log2_w * ceil ((len2 * log2_w)%r / 8%r).
+
+lemma len2_eq8lgw :
+  len2 = 8 %/ log2_w * ceil ((len2 * log2_w)%r / 8%r).
 proof. admitted.
 
+
 lemma WOTSEncodeP _ml :
-  phoare[WOTS_Encode.encode : arg = _ml /\ len1 <= (8 %/ log2_w) * size _ml
+  phoare[WOTS_Encode.encode : arg = _ml /\ len1 = (8 %/ log2_w) * size _ml
+         (* /\ len1 <= (8 %/ log2_w) * size _ml *)
          ==>
          res
          =
@@ -2464,66 +2478,171 @@ wp.
 seq 1 : (   #pre
          /\ msg
             =
-            map bs2int (mkseq (fun i=> take log2_w (drop (i %/ (8 %/ log2_w) * 8 + (8 - (1 + (i %% (8 %/ log2_w))) * log2_w)) (BytesToBits _ml))) len1)) => //.
-+ call (basew_val _ml len1).
-  skip => /> ?; split => *; 1: by rewrite ge0_len1.
-  by rewrite basew_eq; 1: smt(ge0_len1).
+            (* map bs2int (mkseq (fun i=> take log2_w (drop (i %/ (8 %/ log2_w) * 8 + (8 - (1 + (i %% (8 %/ log2_w))) * log2_w)) (BytesToBits _ml))) len1)) => //. *)
+            map BaseW.val (int2lbw len1 (bs2int (flatten (rev (map W8.w2bits _ml)))))) => //.
++ call (basew_val_int2lbw _ml len1).
+  by skip => /> eql1; rewrite ge0_len1.
+  (* split => *; 1: by rewrite ge0_len1. basew_eq *)
+  (* by rewrite basew_encoded_int_inner 2:basew_encoded_int 3://; 1,2: smt(ge0_len1). *)
 + seq 1 : (   #pre
            /\ csum = StdBigop.Bigint.BIA.big predT (fun (i : int) => w - 1 - i) msg) => //.
   + exlim msg => msgt; call (WOTSchecksum_len1val msgt).
     auto => &1 />.
     by rewrite size_map size_mkseq; smt(ge0_len1).
   + sp; exlim csum_bytes => csbt.
-    call (basew_val csbt len2).
+    call (basew_val_int2lbw csbt len2).
     auto => &1 /> ltszm_len1.
-    split; rewrite size_rev size_mkseq ge0_len2 lez_maxr ?ge0_cln2lg2w len2_bnd //=.
+    split; rewrite size_rev size_mkseq ge0_len2 lez_maxr ?ge0_cln2lg2w 1:{1}len2_eq8lgw 1://=.
     rewrite /encode_int map_cat /checksum /=.
-    rewrite /int2lbw basew_eq 2:?map_mkseq /(\o) .
-    + by rewrite size_rev size_mkseq ge0_len2 lez_maxr ?ge0_cln2lg2w len2_bnd.
-    pose mksq1 := mkseq _ _.
-(*     mksq1 = *)
-(* mkseq (fun (x : int) => BaseW.val (BaseW.insubd (bs2int (rev (BytesToBits m{1})) %/ w ^ (len1 - 1 - x) %% w))) len1 *)
     congr.
-    + apply eq_in_mkseq => i rng_i /=.
-      rewrite BaseW.insubdK; 1: by rewrite modn_ge0 2:ltz_pmod 1:divz_ge0 1:expr_gt0 2:bs2int_ge0 /=; smt(w_vals).
-      rewrite -bs2int_mod; 1: smt(logw_vals).
-      do 2! congr.
-      rewrite /w -exprM bs2int_div; 1:smt(ge0_len1 logw_vals).
-      rewrite /len1.
-      rewrite -log2w_eq -fromint_div 1:dvdz_mulr; 1:smt(logw_vals).
-      rewrite (Ring.IntID.mulrC 8 n) divMr; 1:smt(logw_vals).
-      rewrite from_int_ceil.
-      rewrite /BytesToBits.
-      (* rewrite /bs2int. *)
-      
-      move: (rev_take ((size (BytesToBits m{1}) - (log2_w * (n * (8 %/ log2_w) - 1 - i))))
-                      (BytesToBits m{1})).
-      have -> /(_ _):
-        (size (BytesToBits m{1}) - (size (BytesToBits m{1}) - log2_w * (n * (8 %/ log2_w) - 1 - i)))
-        =
-        (log2_w * (n * (8 %/ log2_w) - 1 - i)) by smt().
-      + admit.
-      move=> <-.
-      rewrite /bs2int.
-      rweri
-        (BytesToBits m{1})
-      
-            ).
-      congr.
-        
-                   (). admit.
+    rewrite StdBigop.Bigint.BIA.big_map /(\o) /predT /= -/predT.
     congr.
-    
     admit.
-    rewrite basew_eq. admit.
-    rewrite /checksum /=.
-    basew_eq
-    
-    rewrite size_rev size_mkseq.
-    rewrite /len2 /len1 /w /log2.
-    case logw_vals=> -> /=.
-    + rewrite (: 4%r= 2%r ^ 2%r) 2:logK 2,3://; 1:smt(@RealExp).
-      admit.
+    (* Yeee...
+    have -> //:
+      forall x,
+        0 <= x < w ^ len2 =>
+        int2lbw len2 (bs2int (flatten (rev (map W8.w2bits (toByte (W32.of_int x `<<` W8.of_int (8 - len2 * log2_w %% 8)) (ceil ((len2 * log2_w)%r / 8%r)))))))
+        =
+        int2lbw len2 x.
+    + move=> ww ww_bnd.
+      pose WW := W32.of_int ww `<<` W8.of_int (8 - len2 * log2_w %% 8).
+      (* have: forall (xs : bool list list), rev (flatten xs) = flatten (rev (map rev xs)). *)
+      (* + elim=> /> => x0 xs ih //=. *)
+      (*   by rewrite flatten_cons rev_cat ih rev_cons flatten_rcons. *)
+      rewrite /W8.w2bits /(\o) /= /toByte /=.
+      rewrite rev_mkseq map_mkseq /(\o) /= rev_mkseq //=.
+      rewrite /flatten /mkseq foldr_map //=.
+      have ->: (fun (x : int) (z : bool list) =>
+        map ("_.[_]" (unpack8 WW).[ceil ((len2 * log2_w)%r / 8%r) - (ceil ((len2 * log2_w)%r / 8%r) - (x + 1) + 1)])
+          (iota_ 0 8) ++
+        z)
+        = fun i z=> map (fun j=> (unpack8 WW).[i].[j]) (iota_ 0 8) ++ z.
+      + apply: fun_ext=> i; apply: fun_ext=> z.
+        by congr; apply (eq_in_map) => /= /#.
+      pose F := (fun i z=>
+                   [WW.[i * 8]; WW.[i * 8 + 1]; WW.[i * 8 + 2]; WW.[i * 8 + 3];
+                    WW.[i * 8 + 4]; WW.[i * 8 + 5]; WW.[i * 8 + 6]; WW.[i * 8 + 7]] ++ z).
+      rewrite (eq_in_foldr _ F _ [] _ (iota_ 0 (ceil ((len2 * log2_w)%r / 8%r)))) /F //=.
+      + move=> x /mem_iota /= x_bnd.
+        apply: fun_ext=> z @/F; congr.
+        rewrite (iotaS _ 7) 1:// (iotaS _ 6) 1:// (iotaS _ 5) 1:// (iotaS _ 4) 1:// /=.
+        rewrite (iotaS _ 3) 1:// (iotaS _ 2) 1:// (iotaS _ 1) 1:// (iotaS _ 0) 1:// /=.
+        rewrite iota0 1:// /=.
+        case (0 <= x < 4) => rngx; last first.
+        + rewrite (W4u8.Pack.get_out (JWord.W4u8.unpack8 WW)) 1:// ?(W32.get_out WW (x * _ + _)) 1..7:/#.
+          by rewrite (W32.get_out WW (x * _)) 1:/# ?zerowE.
+        by rewrite get_unpack8 1:// ?bits8iE.
+      rewrite /int2lbw &(eq_in_mkseq) => i rng_i /=.
+      congr.
+      rewrite /w -exprM bs2int_div 2:bs2int_mod; 1,2: smt(ge0_len2 logw_vals).
+      rewrite /bs2int.
+      move=> {F}.
+      (* pose X := ceil ((len2 * log2_w)%r / 8%r). *)
+      pose ft :=
+        (fun (i : int) (z : bool list) =>
+           WW.[i * 8] :: WW.[i * 8 + 1] :: WW.[i * 8 + 2] :: WW.[i * 8 + 3] ::
+           WW.[i * 8 + 4] :: WW.[i * 8 + 5] :: WW.[i * 8 + 6] :: WW.[i * 8 + 7] :: z).
+     rewrite -(int2bsK (log2_w * len2) ww); 1: smt(ge0_len2 logw_vals).
+     + move: ww_bnd => @/w; rewrite -exprM; smt(ge0_len2 logw_vals).
+     rewrite bs2int_div 2:bs2int_mod; 1,2: smt(ge0_len2 logw_vals).
+     rewrite /bs2int.
+.     have ->: size (foldr ft [] (iota_ 0 X)) = ceil ((len2 * log2_w)%r / 8%r) * 8.
+      + suff /#:
+          forall z0 j,
+            size (foldr ft z0 (iota_ j X)) = size z0 + X * 8.
+        move=> z0 j.
+        have ge0_i : 0 <= X by exact: ge0_cln2lg2w.
+        elim: X ge0_i z0 j => /= [? ? | i ge0_i ih z0 j].
+        + by rewrite iota0.
+        by rewrite iotaS 1:// /= /ft /= -/ft ih /#.
+      have /= toto: forall i,
+           0 <= i < X * 8
+        => nth false (foldr ft [] (iota_ 0 X)) i = WW.[(0 + (i %/ 8)) * 8 + i %% 8].
+      + pose ftj :=
+          (fun (j : int) (i : int) (z : bool list) =>
+               WW.[(j + i) * 8] :: WW.[(j + i) * 8 + 1] :: WW.[(j + i) * 8 + 2] ::
+               WW.[(j + i) * 8 + 3] :: WW.[(j + i) * 8 + 4] :: WW.[(j + i) * 8 + 5] ::
+               WW.[(j + i) * 8 + 6] :: WW.[(j + i) * 8 + 7] :: z).
+        have -> {ft}: ft = ftj 0 by done.
+        pose {2 4}z := 0; have: 0 <= z by done.
+        move: z.
+        have: 0 <= X by exact: ge0_cln2lg2w.
+        elim: X=> />; 1:smt().
+        move=> X ge0_X ih z ge0_z i ge0_i i_le_SX.
+        rewrite iotaS=> />.
+        case: (i < 8)=> [lt8_i | /lezNgt ge8_i].
+        + rewrite /ftj //=.
+          case: (i = 0)=> />.
+          case: (i = 1)=> />.
+          case: (i = 2)=> />.
+          case: (i = 3)=> />.
+          case: (i = 4)=> />.
+          case: (i = 5)=> />.
+          case: (i = 6)=> />.
+          by case: (i = 7)=> /> /#.
+        rewrite /ftj /=; do ? (rewrite ifF 1:/#).
+        rewrite (iota_addl 1 0) foldr_map /=.
+        (* rewrite under lambda *)
+        have ->: (fun (x : int) (z0 : bool list) =>
+                       WW.[(z + (1 + x)) * 8]
+                    :: WW.[(z + (1 + x)) * 8 + 1]
+                    :: WW.[(z + (1 + x)) * 8 + 2]
+                    :: WW.[(z + (1 + x)) * 8 + 3]
+                    :: WW.[(z + (1 + x)) * 8 + 4]
+                    :: WW.[(z + (1 + x)) * 8 + 5]
+                    :: WW.[(z + (1 + x)) * 8 + 6]
+                    :: WW.[(z + (1 + x)) * 8 + 7] :: z0)
+               = (fun (x : int) (z0 : bool list) =>
+                       WW.[((z + 1) + x) * 8]
+                    :: WW.[((z + 1) + x) * 8 + 1]
+                    :: WW.[((z + 1) + x) * 8 + 2]
+                    :: WW.[((z + 1) + x) * 8 + 3]
+                    :: WW.[((z + 1) + x) * 8 + 4]
+                    :: WW.[((z + 1) + x) * 8 + 5]
+                    :: WW.[((z + 1) + x) * 8 + 6]
+                    :: WW.[((z + 1) + x) * 8 + 7] :: z0).
+        + apply: fun_ext=> x; apply: fun_ext=> z0.
+          by rewrite addzA.
+        by rewrite -/(ftj (z + 1)) ih /#.
+      rewrite (StdBigop.Bigint.BIA.eq_big_int _ _ _ (fun i=> 2 ^ i * b2i (WW.[i]))).
+      + by move=> i /toto /= ->; rewrite -divz_eq.
+      rewrite (StdBigop.Bigint.BIA.eq_big_int _ _ _ (fun i=> 2 ^ i * (to_uint WW %/ 2 ^ i %% 2))).
+      + move=> i i_bnd /=.
+        by rewrite b2i_get 1:/#.
+      (* len2 = ceil ((len2 * log2_w)%r / 8%r) * 8 %/ log2_w) ? *)
+      rewrite /WW /(`<<`) W8.to_uint_small; 1:smt(pmod_small).
+      rewrite W32.to_uint_shl 1:/#.
+      rewrite W32.of_uintK pmod_small.
+      + rewrite pmod_small.
+        + admit.
+        admit. (* waka waka *)
+      rewrite pmod_small.
+      + admit. (* waka waka *)
+    rewrite /int2lbw &(eq_in_mkseq) => i rng_i /=.
+    congr.
+    rewrite (range_cat ((ceil ((len2 * log2_w)%r / 8%r) * 8) - (len2 * log2_w))).
+    + admit.
+    + admit.
+    rewrite StdBigop.Bigint.BIA.big_cat -{3}(Ring.IntID.add0r ww); congr.
+    + admit.
+    rewrite -{2}(int2bsK (len2 * log2_w) ww); 1: smt(ge0_len2 logw_vals).
+    + by move: ww_bnd => @/w; rewrite -exprM /#.
+    rewrite /bs2int /int2bs size_mkseq lez_maxr; 1: smt(ge0_len2 logw_vals).
+    print range_add.
+    have ->:
+      range 0 (len2 * log2_w)
+      =
+      (map ((+) (len2 * log2_w - ceil ((len2 * log2_w)%r / 8%r) * 8))
+       (range (ceil ((len2 * log2_w)%r / 8%r) * 8 - len2 * log2_w) (ceil ((len2 * log2_w)%r / 8%r) * 8))).
+    + rewrite &(eq_from_nth witness) ?size_map ?size_range 1:/# /=.
+      move=> i rngi.
+      by rewrite (nth_map witness) 1:size_range 1:/# ?nth_range /#.
+    rewrite StdBigop.Bigint.BIA.big_mapT /(\o) /=.
+    apply StdBigop.Bigint.BIA.eq_big_int => i rng_i /=.
+    rewrite nth_mkseq 1:// /=. admit.
+     (* admit. *)
+*)
   hoare => /=.
   exlim msg => msgt; call (WOTSchecksum_len1valh msgt).
   auto => &1 /> ltszm_len1.
@@ -2531,7 +2650,7 @@ seq 1 : (   #pre
 hoare => /=.
 call(basew_valh _ml len1).
 auto=> /> ltszm_len1; split=> *; 1: smt(ge0_len1).
-by rewrite basew_eq; smt(ge0_len1).
+by rewrite basew_encoded_int_inner 2:basew_encoded_int 3://; 1,2: smt(ge0_len2).
 qed.
 (*     have -> //: forall x, *)
 (*                      0 <= x < w ^ len2 *)
@@ -2873,6 +2992,7 @@ qed.
 (*   by rewrite size_map size_mkseq; smt(ge0_len1). *)
 (* by hoare => /=; call(basew_valh _ml len1). *)
 (* qed. *)
+*)
 
 lemma chfltn_id pkw:
   chunk n (BitsToBytes (flatten (map DigestBlock.val (DBLL.val pkw))))
