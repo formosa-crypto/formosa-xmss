@@ -2161,32 +2161,291 @@ rewrite (StdOrder.RealOrder.ler_trans 1%r) 1:StdOrder.RealOrder.ler_pdivr_mulr 1
 by rewrite (StdOrder.RealOrder.ler_trans (n * 2)%r) 1:le_fromint 2:ceil_ge; 1:smt(ge1_n).
 qed.
 
+(*
+  The Jasmin Word library interprets the bytes as little-endian,
+  meaning that the lower indices of the list represent lower
+  significant bits, influencing interpretation of operations such
+  as bit-shifting. For example, given a byte
+  on a byte b_0;b_1;b_2;b_3;b_4;b_5;b_6;b_7, a right shift (`>>>` operator)
+  by say 2 results in b_2;b_3;b_4;b_5;b_6;b_7;0;0, so 0 bits are inserted
+  on the high end of the list, not the low end.
+*)
 lemma basew_encoded_int_inner (_ml : W8.t list) l :
-     0 <= l
-  => l <= (8 %/ log2_w) * size _ml
+  0 <= l
   =>
-  (mkseq (fun i=> take log2_w (drop ((i %/ (8 %/ log2_w)) * 8 + (8 - (1 + (i %% (8 %/ log2_w))) * log2_w)) (BytesToBits _ml))) l)
+  (mkseq (fun i => take log2_w
+          (drop (8 - (1 + (i %% (8 %/ log2_w))) * log2_w)
+           (W8.w2bits _ml.[i %/ (8 %/ log2_w)]))) l)
   =
-  (take l (chunk log2_w (BytesToBits _ml))).
+  (mkseq (fun i =>
+          (rev (take log2_w
+                (drop (i %% (8 %/ log2_w) * log2_w)
+                 (rev (W8.w2bits _ml.[i %/ (8 %/ log2_w)])))))) l).
 proof.
-move=> ge0_l le_l.
-apply (eq_from_nth witness); rewrite size_mkseq ?size_take ?lez_maxr 1,2://.
-+ admit.
-move => i rng_i.
-rewrite nth_mkseq 2:nth_take 1,2:// 1:/# /=.
-rewrite nth_mkseq /=.
-+ admit.
-abort.
+move=> ge0_l.
+apply (eq_from_nth witness); rewrite ?size_mkseq 1://.
+rewrite lez_maxr 1:// => i rng_i.
+rewrite ?nth_mkseq 1,2:// /=.
+rewrite -{1}(revK (W8.w2bits _)).
+rewrite {1}(: 8 = size (rev (w2bits _ml.[i %/ (8 %/ log2_w)]))) 1:size_rev 1:size_w2bits 1://.
+rewrite -rev_take 1:size_rev 1:size_w2bits; 1:smt(logw_vals).
+apply (eq_from_nth witness).
++ rewrite size_rev ?size_take ?size_rev ?size_take ?size_rev; 1..3:smt(logw_vals).
+  by rewrite ?size_drop ?size_rev ?size_w2bits; smt(logw_vals).
+move => j.
+rewrite ?size_take ?size_rev ?size_take ?size_rev ?size_w2bits; 1,2: smt(logw_vals).
+pose ifte0 := if _ then _ else _; rewrite (: ifte0 = log2_w); 1: by smt(logw_vals).
+move=> rng_j.
+rewrite nth_take ?nth_rev ?size_take ?size_rev ?size_w2bits ?size_drop ?size_rev ?size_w2bits; 1..10: smt(logw_vals).
+rewrite ?nth_take; 1..4:smt(logw_vals).
+rewrite ?nth_drop ?nth_rev; 1..4:smt(logw_vals).
+by congr; rewrite size_w2bits; smt(logw_vals).
+qed.
+
+
+lemma take_drop_flatten_nth_ctt (n : int) (i j : int) (s : 'a list list) :
+  0 < n =>
+  0 <= i <= n - j %% n =>
+  0 <= j =>
+  (forall (x : 'a list), x \in s => size x = n) =>
+  take i (drop j (flatten s)) = take i (drop (j %% n) (nth [] s (j %/ n))).
+proof.
+elim: s n i j.
++ move=> n i j rngi _.
+  by rewrite flatten_nil.
+move=> x s ih n i j gt0_n rng_i ge0_j /= szin.
+rewrite flatten_cons.
+rewrite drop_cat (: size x = n) 1:/#.
+case (j < n) => [ltn_j | /lezNgt gen_j].
++ rewrite ifT 1:pdiv_small 1,2://.
+  move: rng_i; rewrite pmod_small 1:// => rng_i.
+  rewrite take_cat size_drop 1:/# lez_maxr 1:/#.
+  have [-> | eqiszx] //=: i <= size x - j by smt(@IntDiv).
+  by rewrite -eqiszx take0 /= cats0 take_oversize 1:size_drop /#.
+rewrite ifF; 1: smt(@IntDiv).
+rewrite (ih n i (j - n)); 1..4: smt(@IntDiv).
+congr; congr; 1: smt(@IntDiv).
+congr; rewrite divzDr 1:dvdzN 1:dvdzz divNz; 1,2: smt(@IntDiv).
+by rewrite (pdiv_small (n - 1)); 1:smt(@IntDiv).
+qed.
 
 lemma basew_encoded_int (_ml : W8.t list) l :
      0 <= l
-  => l <= (8 %/ log2_w) * size _ml
+  (* => l <= (8 %/ log2_w) * size _ml *)
+  => l = (8 %/ log2_w) * size _ml
   =>
-  map bs2int (mkseq (fun i=> take log2_w (drop ((i %/ (8 %/ log2_w)) * 8 + (8 - (1 + (i %% (8 %/ log2_w))) * log2_w)) (BytesToBits _ml))) l)
+  map bs2int
+  (mkseq (fun i =>
+          (rev (take log2_w
+                (drop (i %% (8 %/ log2_w) * log2_w)
+                 (rev (W8.w2bits _ml.[i %/ (8 %/ log2_w)])))))) l)
   =
-  map BaseW.val (int2lbw l (bs2int (flatten (rev (chunk log2_w (BytesToBits _ml)))))).
+  map BaseW.val (int2lbw l (bs2int (flatten (rev (map W8.w2bits _ml))))).
 proof.
-abort.
+move=> ge0_l eq_l.
+rewrite ?map_mkseq /(\o).
+apply eq_in_mkseq => i rng_i /=.
+rewrite BaseW.insubdK.
++ by rewrite ltz_pmod 2:modz_ge0; 1,2: smt(w_vals).
+rewrite /w -exprM bs2int_div.
++ rewrite mulr_ge0; smt(logw_vals).
+rewrite bs2int_mod; 1:smt(logw_vals).
+congr.
+rewrite rev_take.
++ rewrite ?size_drop ?size_rev ?size_w2bits; smt(logw_vals).
+rewrite size_drop ?size_rev ?size_w2bits 2:lez_maxr; 1,2:smt(logw_vals).
+rewrite rev_drop ?size_rev ?size_w2bits; 1:smt(logw_vals).
+rewrite revK.
+rewrite (take_drop_flatten_nth_ctt 8) 1://; 1,2:smt(logw_vals).
++ by move=> x; rewrite mem_rev => /mapP [y [_ ->]]; rewrite size_w2bits.
+rewrite nth_rev 1:size_map.
++ rewrite ltz_divLR 1://; smt(logw_vals).
+rewrite (nth_map W8.zero) 1:size_map; 1: smt(logw_vals).
+rewrite size_map.
+rewrite drop_take /=; 1,2: smt(logw_vals).
+have ->: (8 - i %% (8 %/ log2_w) * log2_w - (8 - i %% (8 %/ log2_w) * log2_w - log2_w)) = log2_w by smt().
+rewrite eq_l.
+congr.
+congr.
+rewrite ?mulrBr /=. rewrite mulrA.
+rewrite -divMr. smt(logw_vals).
+rewrite mulKz. smt(logw_vals).
+rewrite -modzBm -(modzBm (8 * _)) modzMr /=.
+rewrite modzNm modNz 2://. smt(logw_vals).
+rewrite (pmod_small (_ - 1) 8). smt(logw_vals).
+rewrite (: 8 - 1 - (log2_w - 1) = 8 - log2_w).
+by ring.
+rewrite mulrC -modzMmr.
+have rngim8 : 0 <= i %% 8 < 8 by smt(@IntDiv).
+case (i %% 8 = 0) => [eq0 | neq0].
++ have -> /=: (i %% (8 %/ log2_w)) = 0 by smt(logw_vals).
+  rewrite eq0 /=; smt(logw_vals).
+case (i %% 8 = 1) => [eq1 | neq1].
++ have -> /=: (i %% (8 %/ log2_w)) = 1 by smt(logw_vals).
+  rewrite eq1 /=; smt(logw_vals).
+case (i %% 8 = 2) => [eq2 | neq2].
++ case (logw_vals) => -> /=.
+  + have -> /=: (i %% 4) = 2 by smt().
+    smt().
+  have -> /=: (i %% 2) = 0 by smt().
+  smt().
+case (i %% 8 = 3) => [eq3 | neq3].
++ case (logw_vals) => -> /=.
+  + have -> /=: (i %% 4) = 3 by smt().
+    smt().
+  have -> /=: (i %% 2) = 1 by smt().
+  smt().
+case (i %% 8 = 4) => ?.
++ case (logw_vals) => -> /=.
+  + have -> /=: (i %% 4) = 0 by smt().
+    smt().
+  have -> /=: (i %% 2) = 0 by smt().
+  smt().
+case (i %% 8 = 5) => ?.
++ case (logw_vals) => -> /=.
+  + have -> /=: (i %% 4) = 1 by smt().
+    smt().
+  have -> /=: (i %% 2) = 1 by smt().
+  smt().
+case (i %% 8 = 6) => ?.
++ case (logw_vals) => -> /=.
+  + have -> /=: (i %% 4) = 2 by smt().
+    smt().
+  have -> /=: (i %% 2) = 0 by smt().
+  smt().
+case (i %% 8 = 7) => ?.
++ case (logw_vals) => -> /=.
+  + have -> /=: (i %% 4) = 3 by smt().
+    smt().
+  have -> /=: (i %% 2) = 1 by smt().
+  smt().
++ smt().
+rewrite ?mulrBr /= mulrA -divMr 2:mulKz; 1,2:smt(logw_vals).
+have ->: (8 * size _ml - log2_w - log2_w * i) = 8 * size _ml - (log2_w * (i + 1)) by smt().
+rewrite divzDl 1:dvdz_mulr 1:// /= mulKz 1://.
+rewrite ?opprD /= ?addrA /=.
+rewrite divNz // /=. smt(logw_vals).
+rewrite {2}(: 8 = (8 %/ log2_w) * log2_w). smt(logw_vals).
+rewrite (Ring.IntID.mulrC _ log2_w).
+rewrite divz_mulp; 1,2: smt(logw_vals).
+rewrite divzDl 1:dvdz_mulr; 1:smt(logw_vals).
+rewrite mulKz. smt(logw_vals).
+by rewrite divNz 1:// /=; smt(logw_vals).
+qed.
+
+(* lemma basew_encoded_take_int (_ml : W8.t list) l : *)
+(*      0 <= l *)
+(*   (* => l <= (8 %/ log2_w) * size _ml *) *)
+(*   => l <= (8 %/ log2_w) * size _ml *)
+(*   => *)
+(*   map bs2int *)
+(*   (mkseq (fun i => *)
+(*           (rev (take log2_w *)
+(*                 (drop (i %% (8 %/ log2_w) * log2_w) *)
+(*                  (rev (W8.w2bits _ml.[i %/ (8 %/ log2_w)])))))) l) *)
+(*   = *)
+(*   map BaseW.val (int2lbw l (bs2int (flatten (rev (take (l %/ (8 %/ log2_w)) (map W8.w2bits _ml)))))). *)
+(* proof. *)
+(* move=> ge0_l le_l. *)
+(* have: l %/ (8 %/ log2_w) <= size _ml. *)
+(* + rewrite lez_divLR.  smt(logw_vals). *)
+(* + smt(lez_) *)
+(* rewrite ?map_mkseq /(\o). *)
+(* apply eq_in_mkseq => i rng_i /=. *)
+(* rewrite BaseW.insubdK. *)
+(* + by rewrite ltz_pmod 2:modz_ge0; 1,2: smt(w_vals). *)
+(* rewrite /w -exprM bs2int_div. *)
+(* + rewrite mulr_ge0; smt(logw_vals). *)
+(* rewrite bs2int_mod; 1:smt(logw_vals). *)
+(* congr. *)
+(* rewrite rev_take. *)
+(* + rewrite ?size_drop ?size_rev ?size_w2bits; smt(logw_vals). *)
+(* rewrite size_drop ?size_rev ?size_w2bits 2:lez_maxr; 1,2:smt(logw_vals). *)
+(* rewrite rev_drop ?size_rev ?size_w2bits; 1:smt(logw_vals). *)
+(* rewrite revK. *)
+(* rewrite (take_drop_flatten_nth_ctt 8) 1://; 1,2:smt(logw_vals). *)
+(* + by move=> x; rewrite mem_rev => /mem_take /mapP [y [_ ->]]; rewrite size_w2bits. *)
+(* rewrite nth_rev 1:size_take 2:size_map; 1: smt(logw_vals). *)
+(* +  *)
+(* + rewrite ltz_divLR 1://; smt(logw_vals). *)
+(* rewrite nth_take 1:// 1:size_take 1:// 1:size_map; 1: smt(logw_vals). *)
+(* rewrite (nth_map W8.zero) 1:size_take 1:// 1:size_map; 1: smt(logw_vals). *)
+(* rewrite size_take 1:// size_map (: (if l < size _ml then l else size _ml) = l). *)
+(* + move: eq_l. case logw_vals => -> /=. *)
+(*   case. rewrite  *)
+(*   smt(size_ge0). *)
+(*   size_ge0). *)
+(* rewrite drop_take /=; 1,2: smt(logw_vals). *)
+(* have ->: (8 - i %% (8 %/ log2_w) * log2_w - (8 - i %% (8 %/ log2_w) * log2_w - log2_w)) = log2_w by smt(). *)
+(* rewrite eq_l. *)
+(* congr. *)
+(* congr. *)
+(* rewrite ?mulrBr /=. rewrite mulrA. *)
+(* rewrite -divMr. smt(logw_vals). *)
+(* rewrite mulKz. smt(logw_vals). *)
+(* rewrite -modzBm -(modzBm (8 * _)) modzMr /=. *)
+(* rewrite modzNm modNz 2://. smt(logw_vals). *)
+(* rewrite (pmod_small (_ - 1) 8). smt(logw_vals). *)
+(* rewrite (: 8 - 1 - (log2_w - 1) = 8 - log2_w). *)
+(* by ring. *)
+(* rewrite mulrC -modzMmr. *)
+(* have rngim8 : 0 <= i %% 8 < 8 by smt(@IntDiv). *)
+(* case (i %% 8 = 0) => [eq0 | neq0]. *)
+(* + have -> /=: (i %% (8 %/ log2_w)) = 0 by smt(logw_vals). *)
+(*   rewrite eq0 /=; smt(logw_vals). *)
+(* case (i %% 8 = 1) => [eq1 | neq1]. *)
+(* + have -> /=: (i %% (8 %/ log2_w)) = 1 by smt(logw_vals). *)
+(*   rewrite eq1 /=; smt(logw_vals). *)
+(* case (i %% 8 = 2) => [eq2 | neq2]. *)
+(* + case (logw_vals) => -> /=. *)
+(*   + have -> /=: (i %% 4) = 2 by smt(). *)
+(*     smt(). *)
+(*   have -> /=: (i %% 2) = 0 by smt(). *)
+(*   smt(). *)
+(* case (i %% 8 = 3) => [eq3 | neq3]. *)
+(* + case (logw_vals) => -> /=. *)
+(*   + have -> /=: (i %% 4) = 3 by smt(). *)
+(*     smt(). *)
+(*   have -> /=: (i %% 2) = 1 by smt(). *)
+(*   smt(). *)
+(* case (i %% 8 = 4) => ?. *)
+(* + case (logw_vals) => -> /=. *)
+(*   + have -> /=: (i %% 4) = 0 by smt(). *)
+(*     smt(). *)
+(*   have -> /=: (i %% 2) = 0 by smt(). *)
+(*   smt(). *)
+(* case (i %% 8 = 5) => ?. *)
+(* + case (logw_vals) => -> /=. *)
+(*   + have -> /=: (i %% 4) = 1 by smt(). *)
+(*     smt(). *)
+(*   have -> /=: (i %% 2) = 1 by smt(). *)
+(*   smt(). *)
+(* case (i %% 8 = 6) => ?. *)
+(* + case (logw_vals) => -> /=. *)
+(*   + have -> /=: (i %% 4) = 2 by smt(). *)
+(*     smt(). *)
+(*   have -> /=: (i %% 2) = 0 by smt(). *)
+(*   smt(). *)
+(* case (i %% 8 = 7) => ?. *)
+(* + case (logw_vals) => -> /=. *)
+(*   + have -> /=: (i %% 4) = 3 by smt(). *)
+(*     smt(). *)
+(*   have -> /=: (i %% 2) = 1 by smt(). *)
+(*   smt(). *)
+(* + smt(). *)
+(* rewrite ?mulrBr /= mulrA -divMr 2:mulKz; 1,2:smt(logw_vals). *)
+(* have ->: (8 * size _ml - log2_w - log2_w * i) = 8 * size _ml - (log2_w * (i + 1)) by smt(). *)
+(* rewrite divzDl 1:dvdz_mulr 1:// /= mulKz 1://. *)
+(* rewrite ?opprD /= ?addrA /=. *)
+(* rewrite divNz // /=. smt(logw_vals). *)
+(* rewrite {2}(: 8 = (8 %/ log2_w) * log2_w). smt(logw_vals). *)
+(* rewrite (Ring.IntID.mulrC _ log2_w). *)
+(* rewrite divz_mulp; 1,2: smt(logw_vals). *)
+(* rewrite divzDl 1:dvdz_mulr; 1:smt(logw_vals). *)
+(* rewrite mulKz. smt(logw_vals). *)
+(* by rewrite divNz 1:// /=; smt(logw_vals). *)
+(* qed. *)
+
 lemma len2_bnd :
   len2 <= 8 %/ log2_w * ceil ((len2 * log2_w)%r / 8%r).
 proof. admitted.
