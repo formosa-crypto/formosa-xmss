@@ -2702,8 +2702,44 @@ call (: arg = (csb, len2)
 + by conseq (basew_val_int2lbw_len2 csb len2)=> />; smt(ge0_len2).
 auto=> /> &0 sz_msgP msg_elemsP; split=> [|_ _].
 + split.
-  + admit. (* this is the big'un *)
-  rewrite /toByte size_rev size_mkseq; smt(ge0_cln2lg2w len2_ge8lw_rel).
+  + rewrite -map_rev {2}/toByte revK map_mkseq /(\o) /=.
+    pose WW := W32.of_int _ `<<` _.
+    rewrite (eq_in_mkseq _ (fun i=> WW.[i * 8 + 0] :: WW.[i * 8 + 1]
+                                 :: WW.[i * 8 + 2] :: WW.[i * 8 + 3]
+                                 :: WW.[i * 8 + 4] :: WW.[i * 8 + 5]
+                                 :: WW.[i * 8 + 6] :: WW.[i * 8 + 7] :: [])).
+    + move=> i i_bnd @/w2bits @/unpack8 @/(\bits8) /=.
+      rewrite /mkseq -iotaredE /=.
+      rewrite !initE /=.
+      have bnd_le_4: ceil ((len2 * log2_w)%r / 8%r) <= 4.
+      + admit. (* this *must* have been proved in dealing with the checksum property *)
+      by have -> //: 0 <= i < 4 by smt().
+    have ->: flatten (mkseq (fun i=> WW.[i * 8 + 0] :: WW.[i * 8 + 1]
+                                  :: WW.[i * 8 + 2] :: WW.[i * 8 + 3]
+                                  :: WW.[i * 8 + 4] :: WW.[i * 8 + 5]
+                                  :: WW.[i * 8 + 6] :: WW.[i * 8 + 7] :: [])
+                            (ceil ((len2 * log2_w)%r / 8%r)))
+          = mkseq (fun i=> WW.[i]) (8 * ceil ((len2 * log2_w)%r / 8%r)).
+    + apply: (eq_from_nth witness).
+      + rewrite size_mkseq (size_flatten_ctt 8) 2:size_mkseq 2:/#.
+        by move=> bs @/mkseq /mapP.
+      rewrite (size_flatten_ctt 8) 2:size_mkseq.
+      + by move=> bs @/mkseq /mapP.
+      move=> i i_bnd; rewrite nth_mkseq 1:/# /=.
+      rewrite (BitChunking.nth_flatten witness 8).
+      + by rewrite allP=> x @/mkseq /mapP.
+      by rewrite nth_mkseq /#.
+    have ->: mkseq (fun i=> WW.[i]) (8 * ceil ((len2 * log2_w)%r / 8%r))
+           = take (8 * ceil ((len2 * log2_w)%r / 8%r)) (w2bits WW).
+    + apply: (eq_from_nth witness).
+      + rewrite size_mkseq size_take; admit (* size conditions *).
+      move=> i; rewrite size_mkseq=> i_bnd; rewrite nth_mkseq 1:/# /=.
+      rewrite nth_take 1:/#.
+      + admit. (* if 8 * ceil (...) <= 0 contradiction, so we must have i < ... *)
+      rewrite /w2bits nth_mkseq //.
+      admit (* see above, and 8 * 4 = 32 *).
+    admit. (* big'un, but it now looks reasonable-ish *)
+  by rewrite /toByte size_rev size_mkseq; smt(ge0_cln2lg2w len2_ge8lw_rel).
 congr; rewrite /checksum /=.
 have ->: len1 = size (map BaseW.insubd msg{0}).
 + by rewrite size_map.
