@@ -2507,30 +2507,39 @@ conseq (: csum_base_w = map BaseW.val (checksum len1 (bw2int (map BaseW.insubd m
   rewrite size_rev size_map smlP -eq_fromint -!RField.fromintXn 1..3:#smt:(size_ge0 val_log2w).
   rewrite -RField.exprM !RField.fromintXn 1,2:#smt:(size_ge0 val_log2w) eq_fromint.
   by congr; smt(val_log2w).
-(* So all we need to do now is show that the above yields the Base W encoding of the checksum *)
-(* FIXME: we should really do it properly Hoare-style *)
-(* FIXME PROPERLY: the checksum specification should be about lists of base W digits *)
-seq 1 : (   len1 = 8 %/ log2_w * size _ml
+seq 1 : (   len1 = size msg
+         /\ all (fun x=> 0 <= x < w) msg
          /\ csum = StdBigop.Bigint.BIA.big predT (fun (i : int) => w - 1 - i) msg) => //; last first.
 + hoare => /=.
   exlim msg => msgt; call (WOTSchecksum_len1valh msgt).
   auto => &1 /> ltszm_len1.
-  by rewrite size_map size_mkseq; smt(ge0_len1).
+  rewrite size_map size_mkseq; split=> [|_]; 1:smt(ge0_len1).
+  split; 1:smt(ge0_len1).
+  rewrite all_map (List.eq_all _ predT) 2:all_predT.
+  by move=> x @/predT @/preim /=; exact:BaseW.valP.
 + exlim msg => msgt; call (WOTSchecksum_len1val msgt).
-  by auto => &1 />; rewrite size_map size_mkseq; smt(ge0_len1).
+  auto=> &1 />; rewrite size_map size_mkseq=> _.
+  split=> [|_]; 1:smt(ge0_len1).
+  split; 1:smt(ge0_len1).
+  rewrite all_map (List.eq_all _ predT) 2:all_predT.
+  by move=> x @/predT @/preim /=; exact:BaseW.valP.
 sp; exlim csum, csum_bytes=> cs csb.
 call (: arg = (csb, len2)
      /\ bs2int (flatten (rev (map W8.w2bits arg.`1))) = cs
      /\ len2 = 8 %/ log2_w * size arg.`1
      ==> res = map BaseW.val (int2lbw len2 cs)).
 + by conseq (basew_val_int2lbw csb len2)=> />; smt(ge0_len2).
-auto=> /> &0 sz_mlP; split=> [|_].
-+ (* representation of checksum; the big'un *) admit.
-move=> _; congr; rewrite /checksum /=.
+auto=> /> &0 sz_msgP msg_elemsP; split=> [|_ _].
++ split.
+  + admit. (* this is the big'un *)
+  by rewrite /toByte size_rev size_mkseq; smt(ge0_cln2lg2w len2_eq8lgw).
+congr; rewrite /checksum /=.
 have ->: len1 = size (map BaseW.insubd msg{0}).
-+ (* missing relation between msg{0} and _ml *) admit.
++ by rewrite size_map.
 rewrite bw2intK /= StdBigop.Bigint.BIA.big_map /(\o) /predT -/predT.
-congr. admit. (* this feels wrong again *)
+congr; apply: StdBigop.Bigint.BIA.eq_big_seq.
+move: msg_elemsP=> /List.allP msg_elemsP w /msg_elemsP /= w_bnd.
+by rewrite BaseW.insubdK.
 qed.
 
 lemma chfltn_id pkw:
