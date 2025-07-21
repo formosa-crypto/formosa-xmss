@@ -2229,9 +2229,8 @@ congr; rewrite divzDr 1:dvdzN 1:dvdzz divNz; 1,2: smt(@IntDiv).
 by rewrite (pdiv_small (n - 1)); 1:smt(@IntDiv).
 qed.
 
-lemma basew_encoded_int (_ml : W8.t list) l :
+lemma basew_encoded_int_exact (_ml : W8.t list) l :
      0 <= l
-  (* => l <= (8 %/ log2_w) * size _ml *)
   => l = (8 %/ log2_w) * size _ml
   =>
   map bs2int
@@ -2333,7 +2332,238 @@ rewrite mulKz. smt(logw_vals).
 by rewrite divNz 1:// /=; smt(logw_vals).
 qed.
 
-lemma basew_val_int2lbw _ml l:
+lemma basew_encoded_int_take_div (_ml : W8.t list) l :
+     0 < l
+  => l < (8 %/ log2_w) * size _ml
+  => (8 %/ log2_w) %| l
+  =>
+  map bs2int
+  (mkseq (fun i =>
+          (rev (take log2_w
+                (drop (i %% (8 %/ log2_w) * log2_w)
+                 (rev (W8.w2bits _ml.[i %/ (8 %/ log2_w)])))))) l)
+  =
+  map BaseW.val (int2lbw l (bs2int (flatten (rev (take (l %/ (8 %/ log2_w)) (map W8.w2bits _ml)))))).
+proof.
+move=> ge0_l ltmm_l dvdww_l.
+have ltm_ldv: l %/ (8 %/ log2_w) < size _ml by smt(ltz_divLR logw_vals).
+rewrite ?map_mkseq /(\o).
+apply eq_in_mkseq => i rng_i /=.
+rewrite BaseW.insubdK.
++ by rewrite ltz_pmod 2:modz_ge0; 1,2: smt(w_vals).
+rewrite /w -exprM bs2int_div.
++ rewrite mulr_ge0; smt(logw_vals).
+rewrite bs2int_mod; 1:smt(logw_vals).
+rewrite rev_take.
++ rewrite ?size_drop ?size_rev ?size_w2bits; smt(logw_vals).
+rewrite size_drop ?size_rev ?size_w2bits 2:lez_maxr; 1,2:smt(logw_vals).
+rewrite rev_drop ?size_rev ?size_w2bits; 1:smt(logw_vals).
+rewrite (take_drop_flatten_nth_ctt 8) 1://; 1,2:smt(logw_vals).
++ by move=> x; rewrite mem_rev => /mem_take /mapP [y [_ ->]]; rewrite size_w2bits.
+have ltl1i : log2_w * (l - 1 - i) %/ 8 < l %/ (8 %/ log2_w).
++ rewrite ltz_divRL //. smt(logw_vals). smt(logw_vals).
+rewrite revK nth_rev 1:size_take 2:size_map 2:ltm_ldv /=; 1: smt(logw_vals size_map).
++ by rewrite lez_divRL /#.
+rewrite size_take 2:size_map 2:ltm_ldv 2:/= 2:nth_take; 1,2,3: smt(logw_vals).
+rewrite (nth_map W8.zero).
++ smt().
+rewrite drop_take /=; 1,2: smt(logw_vals).
+have ->: (8 - i %% (8 %/ log2_w) * log2_w - (8 - i %% (8 %/ log2_w) * log2_w - log2_w)) = log2_w by smt().
+congr; congr; congr.
+rewrite ?mulrBr -modzDm /= -(modzDm (log2_w * l)).
+move/iffLR: (dvdzE 8 (log2_w * l)) => /(_ _).
+rewrite (: 8 = log2_w * (8 %/ log2_w)). smt(logw_vals).
+rewrite dvdz_mul 1:dvdzz //.
+move=> -> /=.
+rewrite modNz //. smt(logw_vals).
+case (i = 0)=> [-> /=| neq0_i].
+smt(logw_vals).
+rewrite modNz //. smt(logw_vals).
+rewrite -modzBm /= modz_mod (pmod_small (_ - 1)).
+smt(logw_vals).
+rewrite opprB ?addrA /=. rewrite -(modzBm 8) /= modNz //=. smt(logw_vals).
+rewrite -(modzBm _ 1) modz_mod modzBm (pmod_small (_ - 1)). smt(logw_vals).
+rewrite opprB addrA /=.
+rewrite -modzBm -(modzBm 15) /=.
+rewrite -(modzBm _ 1) modz_mod modzBm (pmod_small log2_w).
+smt(logw_vals).
+move=> {neq0_i}.
+rewrite /= opprB addrA /= -modzMmr.
+have rngim8 : 0 <= i %% 8 < 8 by smt(@IntDiv).
+case (i %% 8 = 0) => [eq0 | neq0].
++ have -> /=: (i %% (8 %/ log2_w)) = 0.
+  move/dvdzP: eq0 => [q ->].
+  rewrite -dvdzE dvdz_mull. smt(logw_vals).
+  rewrite eq0 /=; smt(logw_vals).
+case (i %% 8 = 1) => [eq1 | neq1].
++ case (logw_vals) => -> /=.
+  + have -> /=: (i %% 4) = 1 by smt().
+    smt().
+  have -> /=: (i %% 2) = 1 by smt().
+  smt().
+case (i %% 8 = 2) => [eq2 | neq2].
++ case (logw_vals) => -> /=.
+  + have -> /=: (i %% 4) = 2 by smt().
+    smt().
+  have -> /=: (i %% 2) = 0 by smt().
+  smt().
+case (i %% 8 = 3) => [eq3 | neq3].
++ case (logw_vals) => -> /=.
+  + have -> /=: (i %% 4) = 3 by smt().
+    smt().
+  have -> /=: (i %% 2) = 1 by smt().
+  smt().
+case (i %% 8 = 4) => ?.
++ case (logw_vals) => -> /=.
+  + have -> /=: (i %% 4) = 0 by smt().
+    smt().
+  have -> /=: (i %% 2) = 0 by smt().
+  smt().
+case (i %% 8 = 5) => ?.
++ case (logw_vals) => -> /=.
+  + have -> /=: (i %% 4) = 1 by smt().
+    smt().
+  have -> /=: (i %% 2) = 1 by smt().
+  smt().
+case (i %% 8 = 6) => ?.
++ case (logw_vals) => -> /=.
+  + have -> /=: (i %% 4) = 2 by smt().
+    smt().
+  have -> /=: (i %% 2) = 0 by smt().
+  smt().
+case (i %% 8 = 7) => ?.
++ case (logw_vals) => -> /=.
+  + have -> /=: (i %% 4) = 3 by smt().
+    smt().
+  have -> /=: (i %% 2) = 1 by smt().
+  smt().
++ smt().
+congr; congr.
+rewrite {3}(: 8 = (8 %/ log2_w) * log2_w). smt(logw_vals).
+rewrite (Ring.IntID.mulrC _ log2_w).
+rewrite divz_mulp; 1,2: smt(logw_vals).
+rewrite mulKz. smt(logw_vals).
+rewrite (: l - 1 - i = (l - i - 1)) 1:/#.
+rewrite -divNz. smt(). smt(logw_vals).
+rewrite opprB.
+rewrite divzDr 1:dvdzN 1:// divNz 1://.
+smt(logw_vals).
+by rewrite divzDl 1:// divNz 1:// /=; smt(logw_vals).
+qed.
+
+lemma basew_encoded_int_drop_gen (_ml : W8.t list) l :
+     0 <= l
+  => l <= (8 %/ log2_w) * size _ml
+  =>
+  map bs2int
+  (mkseq (fun i =>
+          (rev (take log2_w
+                (drop (i %% (8 %/ log2_w) * log2_w)
+                 (rev (W8.w2bits _ml.[i %/ (8 %/ log2_w)])))))) l)
+  =
+  map BaseW.val (int2lbw l (bs2int (drop (size _ml * 8 - l * log2_w) (flatten (rev (map W8.w2bits _ml)))))).
+proof.
+move=> ge0_l ^ lemm_l.
+case => [ltmml | eqmml]; last first.
++ have ->: (size _ml * 8 - l * log2_w) = 0.
+  + by rewrite eqmml; smt(logw_vals).
+  by rewrite drop0 basew_encoded_int_exact.
+have ltm_ldv: l %/ (8 %/ log2_w) < size _ml by smt(ltz_divLR logw_vals).
+rewrite ?map_mkseq /(\o).
+apply eq_in_mkseq => i rng_i /=.
+rewrite BaseW.insubdK.
++ by rewrite ltz_pmod 2:modz_ge0; 1,2: smt(w_vals).
+rewrite /w -exprM bs2int_div.
++ rewrite mulr_ge0; smt(logw_vals).
+rewrite bs2int_mod; 1:smt(logw_vals).
+rewrite drop_drop. smt(logw_vals). smt(logw_vals).
+rewrite rev_take.
++ rewrite ?size_drop ?size_rev ?size_w2bits; smt(logw_vals).
+rewrite size_drop ?size_rev ?size_w2bits 2:lez_maxr; 1,2:smt(logw_vals).
+rewrite rev_drop ?size_rev ?size_w2bits; 1:smt(logw_vals).
+rewrite (take_drop_flatten_nth_ctt 8) 1://; 1,2:smt(logw_vals).
++ by move=> x; rewrite mem_rev => /mapP [y [_ ->]]; rewrite size_w2bits.
+(* have ltl1i : log2_w * (l - 1 - i) %/ 8 < l %/ (8 %/ log2_w). *)
+(* + admit. *)
+rewrite revK nth_rev size_map; 1: smt(logw_vals size_map).
+rewrite (nth_map W8.zero). smt(logw_vals).
+rewrite drop_take /=; 1,2: smt(logw_vals).
+have ->: (8 - i %% (8 %/ log2_w) * log2_w - (8 - i %% (8 %/ log2_w) * log2_w - log2_w)) = log2_w by smt().
+congr; congr; congr.
+rewrite ?mulrBr addrA /=.
+have ->:
+  (log2_w * l - log2_w * 1 - log2_w * i + size _ml * 8 - l * log2_w)
+  =
+  8 * size _ml - (i + 1) * log2_w.
+smt().
+rewrite -modzBm modzMr /=.
+rewrite -modzMml -modzDml.
+have rngim8 : 0 <= i %% 8 < 8 by smt(@IntDiv).
+case (i %% 8 = 0) => [eq0 | neq0].
++ have -> /=: (i %% (8 %/ log2_w)) = 0.
+  move/dvdzP: eq0 => [q ->].
+  rewrite -dvdzE dvdz_mull. smt(logw_vals).
+  rewrite eq0 /=; smt(logw_vals).
+case (i %% 8 = 1) => [eq1 | neq1].
++ case (logw_vals) => -> /=.
+  + have -> /=: (i %% 4) = 1 by smt().
+    smt().
+  have -> /=: (i %% 2) = 1 by smt().
+  smt().
+case (i %% 8 = 2) => [eq2 | neq2].
++ case (logw_vals) => -> /=.
+  + have -> /=: (i %% 4) = 2 by smt().
+    smt().
+  have -> /=: (i %% 2) = 0 by smt().
+  smt().
+case (i %% 8 = 3) => [eq3 | neq3].
++ case (logw_vals) => -> /=.
+  + have -> /=: (i %% 4) = 3 by smt().
+    smt().
+  have -> /=: (i %% 2) = 1 by smt().
+  smt().
+case (i %% 8 = 4) => ?.
++ case (logw_vals) => -> /=.
+  + have -> /=: (i %% 4) = 0 by smt().
+    smt().
+  have -> /=: (i %% 2) = 0 by smt().
+  smt().
+case (i %% 8 = 5) => ?.
++ case (logw_vals) => -> /=.
+  + have -> /=: (i %% 4) = 1 by smt().
+    smt().
+  have -> /=: (i %% 2) = 1 by smt().
+  smt().
+case (i %% 8 = 6) => ?.
++ case (logw_vals) => -> /=.
+  + have -> /=: (i %% 4) = 2 by smt().
+    smt().
+  have -> /=: (i %% 2) = 0 by smt().
+  smt().
+case (i %% 8 = 7) => ?.
++ case (logw_vals) => -> /=.
+  + have -> /=: (i %% 4) = 3 by smt().
+    smt().
+  have -> /=: (i %% 2) = 1 by smt().
+  smt().
++ smt().
+congr; congr.
+rewrite ?mulrBr addrA.
+have ->:
+  (log2_w * l - log2_w * 1 - log2_w * i + size _ml * 8 - l * log2_w)
+  =
+  8 * size _ml - (i + 1) * log2_w.
++ smt().
+rewrite divzDl 1:dvdz_mulr 1:// mulKz 1://.
+rewrite {2}(: 8 = log2_w * (8 %/ log2_w)). smt(logw_vals).
+rewrite divz_mulp; 1,2: smt(logw_vals).
+rewrite (: - (i + 1) * log2_w = (- (i + 1)) * log2_w) 1:/#.
+rewrite mulzK; 1: smt(logw_vals).
+rewrite divNz 1:/#. smt(logw_vals).
+simplify. smt().
+qed.
+
+lemma basew_val_int2lbw_len1 _ml l:
   phoare[Top.BaseW.BaseW.base_w : arg = (_ml, l) /\ l = (8 %/ log2_w) * size _ml /\ 0 <= l
          ==>
          res
@@ -2341,125 +2571,44 @@ lemma basew_val_int2lbw _ml l:
          map BaseW.val (int2lbw l (bs2int (flatten (rev (map W8.w2bits _ml))))) ] = 1%r.
 proof.
 conseq (basew_val _ml l) => /> *.
-by rewrite ?basew_encoded_int_inner 1,2:// ?basew_encoded_int 1://.
+by rewrite ?basew_encoded_int_inner 1,2:// ?basew_encoded_int_exact 1://.
 qed.
 
-(* lemma basew_encoded_take_int (_ml : W8.t list) l : *)
-(*      0 <= l *)
-(*   (* => l <= (8 %/ log2_w) * size _ml *) *)
-(*   => l <= (8 %/ log2_w) * size _ml *)
-(*   => *)
-(*   map bs2int *)
-(*   (mkseq (fun i => *)
-(*           (rev (take log2_w *)
-(*                 (drop (i %% (8 %/ log2_w) * log2_w) *)
-(*                  (rev (W8.w2bits _ml.[i %/ (8 %/ log2_w)])))))) l) *)
-(*   = *)
-(*   map BaseW.val (int2lbw l (bs2int (flatten (rev (take (l %/ (8 %/ log2_w)) (map W8.w2bits _ml)))))). *)
-(* proof. *)
-(* move=> ge0_l le_l. *)
-(* have: l %/ (8 %/ log2_w) <= size _ml. *)
-(* + rewrite lez_divLR.  smt(logw_vals). *)
-(* + smt(lez_) *)
-(* rewrite ?map_mkseq /(\o). *)
-(* apply eq_in_mkseq => i rng_i /=. *)
-(* rewrite BaseW.insubdK. *)
-(* + by rewrite ltz_pmod 2:modz_ge0; 1,2: smt(w_vals). *)
-(* rewrite /w -exprM bs2int_div. *)
-(* + rewrite mulr_ge0; smt(logw_vals). *)
-(* rewrite bs2int_mod; 1:smt(logw_vals). *)
-(* congr. *)
-(* rewrite rev_take. *)
-(* + rewrite ?size_drop ?size_rev ?size_w2bits; smt(logw_vals). *)
-(* rewrite size_drop ?size_rev ?size_w2bits 2:lez_maxr; 1,2:smt(logw_vals). *)
-(* rewrite rev_drop ?size_rev ?size_w2bits; 1:smt(logw_vals). *)
-(* rewrite revK. *)
-(* rewrite (take_drop_flatten_nth_ctt 8) 1://; 1,2:smt(logw_vals). *)
-(* + by move=> x; rewrite mem_rev => /mem_take /mapP [y [_ ->]]; rewrite size_w2bits. *)
-(* rewrite nth_rev 1:size_take 2:size_map; 1: smt(logw_vals). *)
-(* +  *)
-(* + rewrite ltz_divLR 1://; smt(logw_vals). *)
-(* rewrite nth_take 1:// 1:size_take 1:// 1:size_map; 1: smt(logw_vals). *)
-(* rewrite (nth_map W8.zero) 1:size_take 1:// 1:size_map; 1: smt(logw_vals). *)
-(* rewrite size_take 1:// size_map (: (if l < size _ml then l else size _ml) = l). *)
-(* + move: eq_l. case logw_vals => -> /=. *)
-(*   case. rewrite  *)
-(*   smt(size_ge0). *)
-(*   size_ge0). *)
-(* rewrite drop_take /=; 1,2: smt(logw_vals). *)
-(* have ->: (8 - i %% (8 %/ log2_w) * log2_w - (8 - i %% (8 %/ log2_w) * log2_w - log2_w)) = log2_w by smt(). *)
-(* rewrite eq_l. *)
-(* congr. *)
-(* congr. *)
-(* rewrite ?mulrBr /=. rewrite mulrA. *)
-(* rewrite -divMr. smt(logw_vals). *)
-(* rewrite mulKz. smt(logw_vals). *)
-(* rewrite -modzBm -(modzBm (8 * _)) modzMr /=. *)
-(* rewrite modzNm modNz 2://. smt(logw_vals). *)
-(* rewrite (pmod_small (_ - 1) 8). smt(logw_vals). *)
-(* rewrite (: 8 - 1 - (log2_w - 1) = 8 - log2_w). *)
-(* by ring. *)
-(* rewrite mulrC -modzMmr. *)
-(* have rngim8 : 0 <= i %% 8 < 8 by smt(@IntDiv). *)
-(* case (i %% 8 = 0) => [eq0 | neq0]. *)
-(* + have -> /=: (i %% (8 %/ log2_w)) = 0 by smt(logw_vals). *)
-(*   rewrite eq0 /=; smt(logw_vals). *)
-(* case (i %% 8 = 1) => [eq1 | neq1]. *)
-(* + have -> /=: (i %% (8 %/ log2_w)) = 1 by smt(logw_vals). *)
-(*   rewrite eq1 /=; smt(logw_vals). *)
-(* case (i %% 8 = 2) => [eq2 | neq2]. *)
-(* + case (logw_vals) => -> /=. *)
-(*   + have -> /=: (i %% 4) = 2 by smt(). *)
-(*     smt(). *)
-(*   have -> /=: (i %% 2) = 0 by smt(). *)
-(*   smt(). *)
-(* case (i %% 8 = 3) => [eq3 | neq3]. *)
-(* + case (logw_vals) => -> /=. *)
-(*   + have -> /=: (i %% 4) = 3 by smt(). *)
-(*     smt(). *)
-(*   have -> /=: (i %% 2) = 1 by smt(). *)
-(*   smt(). *)
-(* case (i %% 8 = 4) => ?. *)
-(* + case (logw_vals) => -> /=. *)
-(*   + have -> /=: (i %% 4) = 0 by smt(). *)
-(*     smt(). *)
-(*   have -> /=: (i %% 2) = 0 by smt(). *)
-(*   smt(). *)
-(* case (i %% 8 = 5) => ?. *)
-(* + case (logw_vals) => -> /=. *)
-(*   + have -> /=: (i %% 4) = 1 by smt(). *)
-(*     smt(). *)
-(*   have -> /=: (i %% 2) = 1 by smt(). *)
-(*   smt(). *)
-(* case (i %% 8 = 6) => ?. *)
-(* + case (logw_vals) => -> /=. *)
-(*   + have -> /=: (i %% 4) = 2 by smt(). *)
-(*     smt(). *)
-(*   have -> /=: (i %% 2) = 0 by smt(). *)
-(*   smt(). *)
-(* case (i %% 8 = 7) => ?. *)
-(* + case (logw_vals) => -> /=. *)
-(*   + have -> /=: (i %% 4) = 3 by smt(). *)
-(*     smt(). *)
-(*   have -> /=: (i %% 2) = 1 by smt(). *)
-(*   smt(). *)
-(* + smt(). *)
-(* rewrite ?mulrBr /= mulrA -divMr 2:mulKz; 1,2:smt(logw_vals). *)
-(* have ->: (8 * size _ml - log2_w - log2_w * i) = 8 * size _ml - (log2_w * (i + 1)) by smt(). *)
-(* rewrite divzDl 1:dvdz_mulr 1:// /= mulKz 1://. *)
-(* rewrite ?opprD /= ?addrA /=. *)
-(* rewrite divNz // /=. smt(logw_vals). *)
-(* rewrite {2}(: 8 = (8 %/ log2_w) * log2_w). smt(logw_vals). *)
-(* rewrite (Ring.IntID.mulrC _ log2_w). *)
-(* rewrite divz_mulp; 1,2: smt(logw_vals). *)
-(* rewrite divzDl 1:dvdz_mulr; 1:smt(logw_vals). *)
-(* rewrite mulKz. smt(logw_vals). *)
-(* by rewrite divNz 1:// /=; smt(logw_vals). *)
-(* qed. *)
+lemma basew_val_int2lbw_len1h _ml l:
+  hoare[Top.BaseW.BaseW.base_w : arg = (_ml, l) /\ l = (8 %/ log2_w) * size _ml /\ 0 <= l
+         ==>
+         res
+         =
+         map BaseW.val (int2lbw l (bs2int (flatten (rev (map W8.w2bits _ml))))) ].
+proof.
+conseq (basew_val _ml l) => /> *.
+by rewrite ?basew_encoded_int_inner 1,2:// ?basew_encoded_int_exact 1://.
+qed.
 
+lemma basew_val_int2lbw_len2 _ml l:
+  phoare[Top.BaseW.BaseW.base_w : arg = (_ml, l) /\ l <= (8 %/ log2_w) * size _ml /\ 0 <= l
+         ==>
+         res
+         =
+         map BaseW.val (int2lbw l (bs2int (drop (size _ml * 8 - l * log2_w) (flatten (rev (map W8.w2bits _ml)))))) ] = 1%r.
+proof.
+conseq (basew_val _ml l) => /> *.
+by rewrite ?basew_encoded_int_inner 1,2:// ?basew_encoded_int_drop_gen.
+qed.
 
-lemma len2_eq8lgw :
-  len2 = 8 %/ log2_w * ceil ((len2 * log2_w)%r / 8%r).
+lemma basew_val_int2lbw_len2h _ml l:
+  hoare[Top.BaseW.BaseW.base_w : arg = (_ml, l) /\ l <= (8 %/ log2_w) * size _ml /\ 0 <= l
+         ==>
+         res
+         =
+         map BaseW.val (int2lbw l (bs2int (drop (size _ml * 8 - l * log2_w) (flatten (rev (map W8.w2bits _ml)))))) ].
+proof.
+conseq (basew_val _ml l) => /> *.
+by rewrite ?basew_encoded_int_inner 1,2:// ?basew_encoded_int_drop_gen.
+qed.
+
+lemma len2_ge8lw_rel :
+  len2 <= 8 %/ log2_w * ceil ((len2 * log2_w)%r / 8%r).
 proof. admitted.
 
 lemma WOTSEncodeP _ml :
@@ -2488,10 +2637,9 @@ seq 1 : (   #pre
             =
             map BaseW.val (int2lbw len1 (bs2int (flatten (rev (map W8.w2bits _ml)))))) => //; last first.
 + hoare => /=.
-  call(basew_valh _ml len1).
-  auto=> /> ltszm_len1; split=> *; 1: smt(ge0_len1).
-  by rewrite basew_encoded_int_inner 2:basew_encoded_int 3://; 1,2: smt(ge0_len2).
-+ call (basew_val_int2lbw _ml len1).
+  call(basew_val_int2lbw_len1h _ml len1).
+  by auto=> />; smt(ge0_len1).
++ call (basew_val_int2lbw_len1 _ml len1).
   by skip => /> eql1; rewrite ge0_len1.
 (* We try to keep things intelligible by separating the mathematical
    aspects of the checksum from representation-related issues *)
@@ -2525,14 +2673,14 @@ seq 1 : (   len1 = size msg
   by move=> x @/predT @/preim /=; exact:BaseW.valP.
 sp; exlim csum, csum_bytes=> cs csb.
 call (: arg = (csb, len2)
-     /\ bs2int (flatten (rev (map W8.w2bits arg.`1))) = cs
-     /\ len2 = 8 %/ log2_w * size arg.`1
+     /\ bs2int (drop (size csb * 8 - len2 * log2_w) (flatten (rev (map W8.w2bits arg.`1)))) = cs
+     /\ len2 <= 8 %/ log2_w * size arg.`1
      ==> res = map BaseW.val (int2lbw len2 cs)).
-+ by conseq (basew_val_int2lbw csb len2)=> />; smt(ge0_len2).
++ by conseq (basew_val_int2lbw_len2 csb len2)=> />; smt(ge0_len2).
 auto=> /> &0 sz_msgP msg_elemsP; split=> [|_ _].
 + split.
   + admit. (* this is the big'un *)
-  by rewrite /toByte size_rev size_mkseq; smt(ge0_cln2lg2w len2_eq8lgw).
+  rewrite /toByte size_rev size_mkseq; smt(ge0_cln2lg2w len2_ge8lw_rel).
 congr; rewrite /checksum /=.
 have ->: len1 = size (map BaseW.insubd msg{0}).
 + by rewrite size_map.
@@ -4965,3 +5113,4 @@ auto => /> &1 &2 H1????????;do split.
 
 by smt().
 qed.
+c
