@@ -2163,10 +2163,10 @@ qed.
 
 (*
   The Jasmin Word library interprets the bytes as little-endian,
-  meaning that the lower indices of the list represent lower
+  meaning that the lower indices of the list represent least
   significant bits, influencing interpretation of operations such
   as bit-shifting. For example, given a byte
-  on a byte b_0;b_1;b_2;b_3;b_4;b_5;b_6;b_7, a right shift (`>>>` operator)
+  b_0;b_1;b_2;b_3;b_4;b_5;b_6;b_7, a right shift (`>>>` operator)
   by say 2 results in b_2;b_3;b_4;b_5;b_6;b_7;0;0, so 0 bits are inserted
   on the high end of the list, not the low end.
 *)
@@ -2462,7 +2462,6 @@ lemma len2_eq8lgw :
   len2 = 8 %/ log2_w * ceil ((len2 * log2_w)%r / 8%r).
 proof. admitted.
 
-
 lemma WOTSEncodeP _ml :
   phoare[WOTS_Encode.encode : arg = _ml /\ len1 = (8 %/ log2_w) * size _ml
          (* /\ len1 <= (8 %/ log2_w) * size _ml *)
@@ -2472,33 +2471,48 @@ lemma WOTSEncodeP _ml :
          (* map BaseW.val (encode_int Params.len1 (BS2Int.bs2int (rev (BytesToBits _ml))) Params.len2) ]= 1%r. *)
          map BaseW.val (encode_int Params.len1 (BS2Int.bs2int (flatten (rev (map W8.w2bits _ml)))) Params.len2) ]= 1%r.
 proof.
-(* FD --- MM: Moved this here, removing one of the admits below. This one is used elsewhere as well. *)
 proc.
-wp.
+(* Treat the base W encoded message and the base W encoded checksum as separate lists of base W digits *)
+wp; conseq (: msg = map BaseW.val (int2lbw len1 (bs2int (flatten (rev (map W8.w2bits _ml)))))
+           /\ csum_base_w = map BaseW.val (checksum len1 (bs2int (flatten (rev (map W8.w2bits _ml)))) len2))
+           (: _ ==> size msg = len1)=> //.
++ move=> &0 _ cs ms; rewrite map_cat //=; split=> />.
+  + move=> + sms_len1; apply: eqseq_cat.
+    + by rewrite size_map size_int2lbw 1:ge0_len1 1:bs2int_ge0.
++ seq 1: (size msg = len1); 2:by conseq (: true).
+  inline *; wp; while (size base_w = outlen).
+  + by auto=> /> &0 _; rewrite !size_put.
+  by auto; rewrite size_nseq #smt:(ge0_len1).
 seq 1 : (   #pre
          /\ msg
             =
-            (* map bs2int (mkseq (fun i=> take log2_w (drop (i %/ (8 %/ log2_w) * 8 + (8 - (1 + (i %% (8 %/ log2_w))) * log2_w)) (BytesToBits _ml))) len1)) => //. *)
-            map BaseW.val (int2lbw len1 (bs2int (flatten (rev (map W8.w2bits _ml)))))) => //.
+            map BaseW.val (int2lbw len1 (bs2int (flatten (rev (map W8.w2bits _ml)))))) => //; last first.
++ hoare => /=.
+  call(basew_valh _ml len1).
+  auto=> /> ltszm_len1; split=> *; 1: smt(ge0_len1).
+  by rewrite basew_encoded_int_inner 2:basew_encoded_int 3://; 1,2: smt(ge0_len2).
 + call (basew_val_int2lbw _ml len1).
   by skip => /> eql1; rewrite ge0_len1.
-  (* split => *; 1: by rewrite ge0_len1. basew_eq *)
-  (* by rewrite basew_encoded_int_inner 2:basew_encoded_int 3://; 1,2: smt(ge0_len1). *)
-+ seq 1 : (   #pre
-           /\ csum = StdBigop.Bigint.BIA.big predT (fun (i : int) => w - 1 - i) msg) => //.
-  + exlim msg => msgt; call (WOTSchecksum_len1val msgt).
-    auto => &1 />.
-    by rewrite size_map size_mkseq; smt(ge0_len1).
-  + sp; exlim csum_bytes => csbt.
-    call (basew_val_int2lbw csbt len2).
-    auto => &1 /> ltszm_len1.
-    split; rewrite size_rev size_mkseq ge0_len2 lez_maxr ?ge0_cln2lg2w 1:{1}len2_eq8lgw 1://=.
-    rewrite /encode_int map_cat /checksum /=.
-    congr.
-    rewrite StdBigop.Bigint.BIA.big_map /(\o) /predT /= -/predT.
-    congr.
-    admit.
-    (* Yeee...
+(* So all we need to do now is show that the above yields the Base W encoding of the checksum *)
+(* FIXME: we should really do it properly Hoare-style *)
+(* FIXME PROPERLY: the checksum specification should be about lists of base W digits *)
+seq 1 : (   #pre
+         /\ csum = StdBigop.Bigint.BIA.big predT (fun (i : int) => w - 1 - i) msg) => //; last first.
++ hoare => /=.
+  exlim msg => msgt; call (WOTSchecksum_len1valh msgt).
+  auto => &1 /> ltszm_len1.
+  by rewrite size_map size_mkseq; smt(ge0_len1).
++ exlim msg => msgt; call (WOTSchecksum_len1val msgt).
+  by auto => &1 />; rewrite size_map size_mkseq; smt(ge0_len1).
+sp; exlim csum_bytes => csbt.
+call (basew_val_int2lbw csbt len2).
+auto => &1 /> ltszm_len1.
+split; rewrite size_rev size_mkseq ge0_len2 lez_maxr ?ge0_cln2lg2w 1:{1}len2_eq8lgw 1://=.
+congr.
+rewrite StdBigop.Bigint.BIA.big_map /(\o) /predT /= -/predT.
+admit.
+(*
+(* Yeeeeee *)
     have -> //:
       forall x,
         0 <= x < w ^ len2 =>
@@ -2507,9 +2521,6 @@ seq 1 : (   #pre
         int2lbw len2 x.
     + move=> ww ww_bnd.
       pose WW := W32.of_int ww `<<` W8.of_int (8 - len2 * log2_w %% 8).
-      (* have: forall (xs : bool list list), rev (flatten xs) = flatten (rev (map rev xs)). *)
-      (* + elim=> /> => x0 xs ih //=. *)
-      (*   by rewrite flatten_cons rev_cat ih rev_cons flatten_rcons. *)
       rewrite /W8.w2bits /(\o) /= /toByte /=.
       rewrite rev_mkseq map_mkseq /(\o) /= rev_mkseq //=.
       rewrite /flatten /mkseq foldr_map //=.
@@ -2538,7 +2549,6 @@ seq 1 : (   #pre
       rewrite /w -exprM bs2int_div 2:bs2int_mod; 1,2: smt(ge0_len2 logw_vals).
       rewrite /bs2int.
       move=> {F}.
-      (* pose X := ceil ((len2 * log2_w)%r / 8%r). *)
       pose ft :=
         (fun (i : int) (z : bool list) =>
            WW.[i * 8] :: WW.[i * 8 + 1] :: WW.[i * 8 + 2] :: WW.[i * 8 + 3] ::
@@ -2547,7 +2557,7 @@ seq 1 : (   #pre
      + move: ww_bnd => @/w; rewrite -exprM; smt(ge0_len2 logw_vals).
      rewrite bs2int_div 2:bs2int_mod; 1,2: smt(ge0_len2 logw_vals).
      rewrite /bs2int.
-.     have ->: size (foldr ft [] (iota_ 0 X)) = ceil ((len2 * log2_w)%r / 8%r) * 8.
+     have ->: size (foldr ft [] (iota_ 0 X)) = ceil ((len2 * log2_w)%r / 8%r) * 8.
       + suff /#:
           forall z0 j,
             size (foldr ft z0 (iota_ j X)) = size z0 + X * 8.
@@ -2643,15 +2653,6 @@ seq 1 : (   #pre
     rewrite nth_mkseq 1:// /=. admit.
      (* admit. *)
 *)
-  hoare => /=.
-  exlim msg => msgt; call (WOTSchecksum_len1valh msgt).
-  auto => &1 /> ltszm_len1.
-  by rewrite size_map size_mkseq; smt(ge0_len1).
-hoare => /=.
-call(basew_valh _ml len1).
-auto=> /> ltszm_len1; split=> *; 1: smt(ge0_len1).
-by rewrite basew_encoded_int_inner 2:basew_encoded_int 3://; 1,2: smt(ge0_len2).
-qed.
 (*     have -> //: forall x, *)
 (*                      0 <= x < w ^ len2 *)
 (*                   => bs2int (rev (BytesToBits (toByte (W32.of_int x `<<` W8.of_int (8 - len2 * log2_w %% 8)) (ceil ((len2 * log2_w)%r / 8%r))))) *)
@@ -2992,7 +2993,7 @@ qed.
 (*   by rewrite size_map size_mkseq; smt(ge0_len1). *)
 (* by hoare => /=; call(basew_valh _ml len1). *)
 (* qed. *)
-*)
+qed.
 
 lemma chfltn_id pkw:
   chunk n (BitsToBytes (flatten (map DigestBlock.val (DBLL.val pkw))))
