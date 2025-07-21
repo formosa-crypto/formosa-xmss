@@ -2609,7 +2609,30 @@ qed.
 
 lemma len2_ge8lw_rel :
   len2 <= 8 %/ log2_w * ceil ((len2 * log2_w)%r / 8%r).
-proof. admitted.
+proof.
+case (8 %/ log2_w %| len2) => dvdln2.
++ rewrite mulrC -lez_divLR 2://; 1: smt(logw_vals).
+  rewrite -le_fromint (RealOrder.ler_trans ((len2 * log2_w)%r / 8%r)).
+  + by rewrite fromint_div // fromintM fromint_div /=; smt(logw_vals).
+  smt(ceil_ge).
+rewrite lez_eqVlt; right; rewrite mulrC -ltz_divLR.
++ smt(logw_vals).
+rewrite -lt_fromint (RealOrder.ltr_le_trans ((len2 * log2_w)%r / 8%r)).
++ move: (edivzP len2 (8 %/ log2_w)) => [deflen2 _].
+  rewrite {2}deflen2 mulrDl.
+  have ->:
+    len2 %/ (8 %/ log2_w) * (8 %/ log2_w) * log2_w
+    =
+    len2 %/ (8 %/ log2_w) * 8.
+    by smt(logw_vals).
+rewrite ?fromintD ?fromintM RField.mulrDl /= RField.mulrK 1://.
+suff /#:
+  0%r < (len2 %% (8 %/ log2_w))%r * log2_w%r / 8%r.
+rewrite RealOrder.divr_gt0 1:RealOrder.mulr_gt0 3://; 2: smt(logw_vals).
+rewrite lt_fromint; move: dvdln2 (modz_ge0 len2 (8 %/ log2_w) _); 1: smt(logw_vals).
+by rewrite dvdzE lez_eqVlt eq_sym => ->.
+apply ceil_ge.
+qed.
 
 lemma WOTSEncodeP _ml :
   phoare[WOTS_Encode.encode : arg = _ml /\ len1 = (8 %/ log2_w) * size _ml
