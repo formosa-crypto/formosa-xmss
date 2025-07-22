@@ -2483,8 +2483,6 @@ rewrite size_drop ?size_rev ?size_w2bits 2:lez_maxr; 1,2:smt(logw_vals).
 rewrite rev_drop ?size_rev ?size_w2bits; 1:smt(logw_vals).
 rewrite (take_drop_flatten_nth_ctt 8) 1://; 1,2:smt(logw_vals).
 + by move=> x; rewrite mem_rev => /mapP [y [_ ->]]; rewrite size_w2bits.
-(* have ltl1i : log2_w * (l - 1 - i) %/ 8 < l %/ (8 %/ log2_w). *)
-(* + admit. *)
 rewrite revK nth_rev size_map; 1: smt(logw_vals size_map).
 rewrite (nth_map W8.zero). smt(logw_vals).
 rewrite drop_take /=; 1,2: smt(logw_vals).
@@ -2729,15 +2727,28 @@ auto=> /> &0 sz_msgP msg_elemsP; split=> [|_ _].
       rewrite (BitChunking.nth_flatten witness 8).
       + by rewrite allP=> x @/mkseq /mapP.
       by rewrite nth_mkseq /#.
-    have ->: mkseq (fun i=> WW.[i]) (8 * ceil ((len2 * log2_w)%r / 8%r))
-           = take (8 * ceil ((len2 * log2_w)%r / 8%r)) (w2bits WW).
-    + apply: (eq_from_nth witness).
-      + rewrite size_mkseq size_take; admit (* size conditions *).
-      move=> i; rewrite size_mkseq=> i_bnd; rewrite nth_mkseq 1:/# /=.
-      rewrite nth_take 1:/#.
-      + admit. (* if 8 * ceil (...) <= 0 contradiction, so we must have i < ... *)
-      rewrite /w2bits nth_mkseq //.
-      admit (* see above, and 8 * 4 = 32 *).
+    have le32_8c : (8 * ceil ((len2 * log2_w)%r / 8%r)) <= 32.
+    + admit. (* ceil ((len2 * log2_w)%r / 8%r) <= 4, see above *)
+    (* have ->: mkseq (fun i=> WW.[i]) (8 * ceil ((len2 * log2_w)%r / 8%r)) *)
+    (*        = take (8 * ceil ((len2 * log2_w)%r / 8%r)) (w2bits WW). *)
+    (* + apply: (eq_from_nth witness). *)
+    (*   + by rewrite size_mkseq size_take 1:mulr_ge0 1:// 1:ge0_cln2lg2w size_w2bits; smt(ge0_cln2lg2w). *)
+    (*   move=> i; rewrite size_mkseq=> i_bnd; rewrite nth_mkseq 1:/# /=. *)
+    (*   rewrite nth_take 1,2:/#. *)
+    (*   by rewrite /w2bits nth_mkseq // 1:/#. *)
+    rewrite /toByte size_rev size_mkseq lez_maxr; 1: smt(ge0_cln2lg2w len2_ge8lw_rel).
+    rewrite drop_mkseq; 1: split; 2:smt(logw_vals ge0_len2 ge0_cln2lg2w).
+    + by rewrite IntOrder.ler_subr_addl /= -lez_divRL; smt(logw_vals len2_ge8lw_rel).
+    rewrite /(\o) /= (: (8 * ceil ((len2 * log2_w)%r / 8%r) - (ceil ((len2 * log2_w)%r / 8%r) * 8 - len2 * log2_w)) = len2 * log2_w) 1:/#.
+    rewrite /WW /(`<<`) /= (pmod_small _ 256); 1: smt(modz_ge0 ltz_pmod).
+    rewrite (eq_in_mkseq _ (fun x => (W32.int_bit (StdBigop.Bigint.BIA.big predT (fun (i : int) => w - 1 - i) msg{0})
+                                                  (ceil ((len2 * log2_w)%r / 8%r) * 8 - len2 * log2_w + x - (8 - len2 * log2_w %% 8))))).
+    + move=> i rngi /=; rewrite W32.of_intwE.
+      rewrite (: 0 <= ceil ((len2 * log2_w)%r / 8%r) * 8 - len2 * log2_w + i < 32).
+      + admit.
+      rewrite (: 0 <= ceil ((len2 * log2_w)%r / 8%r) * 8 - len2 * log2_w + i - (8 - len2 * log2_w %% 8) < 32) 2://.
+      admit.
+    rewrite /bs2int size_mkseq.
     admit. (* big'un, but it now looks reasonable-ish *)
   by rewrite /toByte size_rev size_mkseq; smt(ge0_cln2lg2w len2_ge8lw_rel).
 congr; rewrite /checksum /=.
@@ -5172,4 +5183,3 @@ auto => /> &1 &2 H1????????;do split.
 
 by smt().
 qed.
-c
