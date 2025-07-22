@@ -114,6 +114,14 @@ proof *.
 realize gt0_w by rewrite expr_gt0.
 
 
+lemma rev_flatten (s : 'a list list) :
+  rev (flatten s) = flatten (rev (map rev s)).
+proof.
+elim: s. smt().
+move => i s ih /=.
+by rewrite rev_cons flatten_rcons -ih flatten_cons rev_cat.
+qed.
+
 clone import XMSS_TW as XMSS_Security with
   type mseed <- nbytes,
   type mkey <- nbytes,
@@ -150,9 +158,12 @@ clone import XMSS_TW as XMSS_Security with
   op FLXMSSTW.SA.WTW.dpseed <- dmap (dlist W8.dword Params.n) NBytes.insubd,
   op FLXMSSTW.SA.WTW.ddgstblock <- duniform FLXMSSTW.SA.WTW.DigestBlockFT.enum,
   theory FLXMSSTW.SA.WTW.BaseW <- CS.BaseW,
+  (* op FLXMSSTW.SA.WTW.encode_msgWOTS <= (fun (m : msgWOTS) => *)
+  (*                                       EmsgWOTS.mkemsgWOTS (encode_int len1 *)
+  (*                                                            (BS2Int.bs2int (rev (DigestBlock.val m))) len2)), *)
   op FLXMSSTW.SA.WTW.encode_msgWOTS <= (fun (m : msgWOTS) =>
                                         EmsgWOTS.mkemsgWOTS (encode_int len1
-                                                             (BS2Int.bs2int (rev (DigestBlock.val m))) len2)),
+                                                             (BS2Int.bs2int (flatten (rev (chunk 8 (DigestBlock.val m))))) len2)),
   op FLXMSSTW.SA.WTW.ch <= (fun (g : nbytes -> FLXMSSTW.SA.adrs -> bool list -> dgstblock) (ps : nbytes)
                                 (ad : FLXMSSTW.SA.adrs) (s i : int) (x : bool list) =>
                             (DigestBlock.insubd
@@ -203,7 +214,8 @@ have eq28n_wl1 : 2 ^ (8 * n) = w ^ len1.
 + rewrite /w -exprM; congr.
   rewrite /len1 log2_wP -fromint_div 2:from_int_ceil; first by smt(val_log2w).
   by rewrite -divMr 2:mulKz 3://; first 2 smt(val_log2w).
-move: (checksum_prop_var len1 len2 (BS2Int.bs2int (rev (DigestBlock.val m'))) (BS2Int.bs2int (rev (DigestBlock.val m)))).
+move: (checksum_prop_var len1 len2 (BS2Int.bs2int (flatten (rev (chunk 8 (DigestBlock.val m')))))
+       (BS2Int.bs2int (flatten (rev (chunk 8 (DigestBlock.val m)))))).
 move=> /(_ _ _ _); first 2 by smt(ge1_len1 ge1_len2).
 + rewrite -lt_fromint -RField.fromintXn 1:#smt:(ge1_len2) -rpow_int 1:#smt:(val_w).
   have <- := rpowK w%r ((w - 1) * len1)%r _ _ _; first 3 by smt(val_w ge1_len1).
@@ -212,12 +224,25 @@ move=> /(_ _ _ _); first 2 by smt(ge1_len1 ge1_len2).
   rewrite /len2; pose l1w1 := len1 * (w - 1).
   have ->: log2 l1w1%r / log2 w%r = log w%r l1w1%r; last by smt(floor_bound).
   by rewrite /log2 /log; field; first 2 by smt(ln_eq0 val_w).
+have szmfl : size (flatten (rev (chunk 8 (DigestBlock.val m)))) = 8 * n.
++ rewrite (size_flatten_ctt 8); first by move => x; rewrite mem_rev; smt(in_chunk_size DigestBlock.valP).
+  by rewrite size_rev size_chunk 1://; smt(DigestBlock.valP).
+have szmpfl : size (flatten (rev (chunk 8 (DigestBlock.val m')))) = 8 * n.
++ rewrite (size_flatten_ctt 8); first by move => x; rewrite mem_rev; smt(in_chunk_size DigestBlock.valP).
+  by rewrite size_rev size_chunk 1://; smt(DigestBlock.valP).
 move=> /(_ _ _); first 2 by smt(BS2Int.bs2int_ge0 DigestBlock.valP size_rev BS2Int.bs2int_le2Xs).
 move=> /contra; rewrite negb_forall=> //= /(_ _).
 + rewrite -negP=> /(congr1 (BS2Int.int2bs (8 * n))).
-  rewrite -{1}(DigestBlock.valP m') -(size_rev (DigestBlock.val m')) -{1}(DigestBlock.valP m) -(size_rev (DigestBlock.val m)).
-  rewrite !BS2Int.bs2intK => /(congr1 rev); rewrite !revK => /(congr1 DigestBlock.insubd).
-  by rewrite !DigestBlock.valKd => ->>.
+  rewrite -{-1}szmfl -{1}szmpfl.
+  (* -{1}(DigestBlock.valP m') -{1}(DigestBlock.valP m). *)
+  rewrite !BS2Int.bs2intK => /(congr1 (chunk 8)); rewrite ?flattenK //.
+  + by move => x; rewrite mem_rev; smt(in_chunk_size DigestBlock.valP).
+  + by move => x; rewrite mem_rev; smt(in_chunk_size DigestBlock.valP).
+  move => /(congr1 rev); rewrite ?revK; move => /(congr1 flatten); rewrite ?chunkK //.
+  + by rewrite DigestBlock.valP dvdz_mulr dvdzz.
+  + by rewrite DigestBlock.valP dvdz_mulr dvdzz.
+  move=> /(congr1 (DigestBlock.insubd)).
+  by rewrite ?DigestBlock.valKd /#.
 move=> [] i; rewrite negb_imply (lezNgt (BaseW.val _)) /= => -[Hi Hlt].
 exists i; split; first by exact: Hi.
 rewrite /encode_msgWOTS !EmsgWOTS.getE Hi /= !EmsgWOTS.ofemsgWOTSK //.
@@ -2947,9 +2972,12 @@ seq 1 9: (map BaseW.val (EmsgWOTS.val em){1} = msg{2}
        /\ valid_xidxvalslpch (HAX.Adrs.val ad{1})).
 + outline{2} [2 .. 9] by { msg <@ WOTS_Encode.encode(NBytes.val M); }.
   ecall{2} (WOTSEncodeP (NBytes.val M{2})).
-  auto => &1 &2 /> ? ?.
-  rewrite -/EmsgWOTS.ofemsgWOTS EmsgWOTS.ofemsgWOTSK 2:/#.
-  by rewrite /encode_int size_cat /checksum /int2lbw /= ?size_mkseq; smt(ge1_len1 ge1_len2).
+  auto => &1 &2 /> eqm ?.
+  rewrite -/EmsgWOTS.ofemsgWOTS EmsgWOTS.ofemsgWOTSK.
+  + by rewrite /encode_int size_cat /checksum /int2lbw /= ?size_mkseq; smt(ge1_len1 ge1_len2).
+  rewrite eqm /BytesToBits flattenK 1://; 1: move=> x /mapP [y [_ ->]]; 1: by rewrite size_w2bits.
+  move=> * /=; rewrite /len1 NBytes.valP -log2w_eq -fromint_div; 1: smt(logw_vals).
+  by rewrite from_int_ceil mulrC divMr; smt(logw_vals).
 while (map BaseW.val (EmsgWOTS.val em){1} = msg{2}
     /\ map DigestBlock.val (DBLL.val sig{1}) = map (BytesToBits \o NBytes.val) (LenNBytes.val sig{2})
     /\ ps{1} = _seed{2}
@@ -4489,6 +4517,8 @@ seq 1 1 : (   #pre
   ecall{2} (WOTSEncodeP M0{2}).
   skip => &1 &2 />.
   progress.
+  rewrite /len1 NBytes.valP -log2w_eq -fromint_div; 1: smt(logw_vals).
+  by rewrite from_int_ceil mulrC divMr; smt(logw_vals).
   rewrite /RFC.skr2sko /= zeroidxsE XAddress.insubdK.
   + by rewrite /valid_xadrs HAX.Adrs.insubdK 1:zeroadiP zeroxadiP.
   by rewrite /set_typeidx /set_kpidx HAX.Adrs.insubdK /put /= 1:zeroadiP.
@@ -4519,6 +4549,7 @@ seq 1 1 : (   #pre
   rewrite -/EmsgWOTS.ofemsgWOTS EmsgWOTS.ofemsgWOTSK //.
   rewrite /encode_int size_cat /checksum /int2lbw /= ?size_mkseq.
   smt(ge1_len1 ge1_len2).
+  by rewrite /BytesToBits flattenK 1://; 1: move=> x /mapP [y [_ ->]]; 1: by rewrite size_w2bits.
   smt().
   rewrite size_nseq. smt(ge0_len).
   smt(ge2_len).
