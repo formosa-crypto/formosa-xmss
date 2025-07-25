@@ -2657,13 +2657,103 @@ by rewrite dvdzE lez_eqVlt eq_sym => ->.
 apply ceil_ge.
 qed.
 
+lemma from_int_ceil_addl x r:
+  ceil (x%r + r) = x + ceil r.
+proof. smt(@Real). qed.
+
+lemma len1P:
+  len1 = 8 * n %/ log2_w.
+proof.
+rewrite /len1 {1}(edivzP (8 * n) (log2_w)) fromintD RField.mulrDl.
+rewrite log2_wP -fromint_div 1:/(%|) 1:modzMl // mulzK.
++ by case: val_log2w=> [|[]] ->.
+rewrite from_int_ceil_addl.
+have -> //=: 8 * n %% log2_w = 0.
++ smt(val_log2w).
+by rewrite from_int_ceil.
+qed.
+
+lemma logV x y:
+     0%r < y
+  => log x (inv y) = -log x y.
+proof. by move=> gt0_y; rewrite /log lnV // RField.mulNr. qed.
+
+lemma logb_log b1 b2 x:
+     0%r < b1
+  => b1 <> 1%r
+  => log b1 x / log b1 b2 = log b2 x.
+proof.
+move=> ge0_b1 b1_neq1; rewrite /log RField.invf_div RField.mulrA -(RField.mulrA _ (inv (ln b1))).
+by rewrite RField.mulVf // ln_eq0.
+qed.
+
+lemma Sfloor_ceil (x : real):
+  !isint x <=> floor x + 1 = ceil x.
+proof. by rewrite -cBf_eq1P /#. qed.
+
+lemma isint_logP (b x : real):
+     1%r < b
+  => 1%r <= x
+  => (isint (log b x) <=> exists (n : int), 0 <= n /\ x = b ^ n).
+proof.
+move=> gt1_b ge1_x.
+rewrite /isint; apply: exists_iff=> /= n; split; last first.
++ by move=> [] ge0_n ->; rewrite -rpow_nat 1,2:/# logK /#.
+move=> nP; rewrite andaP.
++ by rewrite -le_fromint -nP log_ge0 1,2:/#.
+move: nP=> + ge0_n - /(congr1 (fun (x : real)=> b ^ x))=> /=.
+by rewrite rpowK 1..3:/# rpow_nat //#.
+qed.
+
+lemma len2P:
+  len2 = len2.
+proof.
+rewrite {2}/len2 logb_log // len1P.
+pose X := log _ _.
+move: (Sfloor_ceil X)=> /iffLR /(_ _).
+rewrite isint_logP //.
++ by rewrite lt_fromint; case: w_vals=> ->.
++ smt(w_vals val_log2w ge1_n).
++ rewrite negb_exists=> /= x.
+  rewrite negb_and; case: (0 <= x)=> //= ge0_x.
+  rewrite RField.fromintXn // eq_fromint.
+  rewrite -negP=> uhoh.
+  have dvd_2X: forall p, p %| w ^ x => exists y, p %| 2 ^ y.
+  + move=> p; case: w_vals=> ->.
+    + move=> p_dvd_4Xx; exists (2 * x).
+      by rewrite Ring.IntID.exprM.
+    + move=> p_dvd_16Xs; exists (4 * x).
+      by rewrite Ring.IntID.exprM.
+  have: (w - 1) %| w ^ x.
+  + by rewrite dvdzP; exists (8 * n %/ log2_w); rewrite uhoh.
+  move=> /dvd_2X [] y; rewrite dvdzP.
+  have: w - 1 %% 2 <> 0 by smt(w_vals @IntDiv).
+  have: prime 2 by smt(@IntDiv).
+  (* smt(w_vals @IntDiv). *)
+abort.
+
+lemma logX (b x y):
+     0%r < b
+  => b <> 1%r
+  => 0%r < x
+  => log b (x ^ y) = y * log b x.
+proof.
+move=> gt0_b b_neq1 gt0_xXy; apply: (inj_rexpr b)=> //.
+by rewrite rpowK // 1:rpow_gt0 // RField.mulrC rpowM // rpowK.
+qed.
+
+lemma log2_wXlen2_div8_le4: ceil ((len2 * log2_w)%r / 8%r) <= 4.
+proof.
+rewrite fromintM -log2_wP -logX // 1:lt_fromint 1:gt0_w.
+rewrite rpow_nat 1:ge0_len2 1:le_fromint 1:ltzW 1:gt0_w.
+rewrite RField.fromintXn 1:ge0_len2.
+abort.
+
 lemma WOTSEncodeP _ml :
   phoare[WOTS_Encode.encode : arg = _ml /\ len1 = (8 %/ log2_w) * size _ml
-         (* /\ len1 <= (8 %/ log2_w) * size _ml *)
          ==>
          res
          =
-         (* map BaseW.val (encode_int Params.len1 (BS2Int.bs2int (rev (BytesToBits _ml))) Params.len2) ]= 1%r. *)
          map BaseW.val (encode_int Params.len1 (BS2Int.bs2int (flatten (rev (map W8.w2bits _ml)))) Params.len2) ]= 1%r.
 proof.
 proc.
@@ -2726,6 +2816,7 @@ call (: arg = (csb, len2)
 auto=> /> &0 sz_msgP msg_elemsP; split=> [|_ _].
 + split.
   + rewrite -map_rev {2}/toByte revK map_mkseq /(\o) /=.
+    pose ww := StdBigop.Bigint.BIA.big predT (fun (i : int) => w - 1 - i) msg{0}.
     pose WW := W32.of_int _ `<<` _.
     rewrite (eq_in_mkseq _ (fun i=> WW.[i * 8 + 0] :: WW.[i * 8 + 1]
                                  :: WW.[i * 8 + 2] :: WW.[i * 8 + 3]
@@ -2734,8 +2825,7 @@ auto=> /> &0 sz_msgP msg_elemsP; split=> [|_ _].
     + move=> i i_bnd @/w2bits @/unpack8 @/(\bits8) /=.
       rewrite /mkseq -iotaredE /=.
       rewrite !initE /=.
-      have bnd_le_4: ceil ((len2 * log2_w)%r / 8%r) <= 4.
-      + admit. (* this *must* have been proved in dealing with the checksum property *)
+      
       by have -> //: 0 <= i < 4 by smt().
     have ->: flatten (mkseq (fun i=> WW.[i * 8 + 0] :: WW.[i * 8 + 1]
                                   :: WW.[i * 8 + 2] :: WW.[i * 8 + 3]
@@ -2754,26 +2844,41 @@ auto=> /> &0 sz_msgP msg_elemsP; split=> [|_ _].
       by rewrite nth_mkseq /#.
     have le32_8c : (8 * ceil ((len2 * log2_w)%r / 8%r)) <= 32.
     + admit. (* ceil ((len2 * log2_w)%r / 8%r) <= 4, see above *)
-    (* have ->: mkseq (fun i=> WW.[i]) (8 * ceil ((len2 * log2_w)%r / 8%r)) *)
-    (*        = take (8 * ceil ((len2 * log2_w)%r / 8%r)) (w2bits WW). *)
-    (* + apply: (eq_from_nth witness). *)
-    (*   + by rewrite size_mkseq size_take 1:mulr_ge0 1:// 1:ge0_cln2lg2w size_w2bits; smt(ge0_cln2lg2w). *)
-    (*   move=> i; rewrite size_mkseq=> i_bnd; rewrite nth_mkseq 1:/# /=. *)
-    (*   rewrite nth_take 1,2:/#. *)
-    (*   by rewrite /w2bits nth_mkseq // 1:/#. *)
     rewrite /toByte size_rev size_mkseq lez_maxr; 1: smt(ge0_cln2lg2w len2_ge8lw_rel).
     rewrite drop_mkseq; 1: split; 2:smt(logw_vals ge0_len2 ge0_cln2lg2w).
     + by rewrite IntOrder.ler_subr_addl /= -lez_divRL; smt(logw_vals len2_ge8lw_rel).
     rewrite /(\o) /= (: (8 * ceil ((len2 * log2_w)%r / 8%r) - (ceil ((len2 * log2_w)%r / 8%r) * 8 - len2 * log2_w)) = len2 * log2_w) 1:/#.
     rewrite /WW /(`<<`) /= (pmod_small _ 256); 1: smt(modz_ge0 ltz_pmod).
-    rewrite (eq_in_mkseq _ (fun x => (W32.int_bit (StdBigop.Bigint.BIA.big predT (fun (i : int) => w - 1 - i) msg{0})
-                                                  (ceil ((len2 * log2_w)%r / 8%r) * 8 - len2 * log2_w + x - (8 - len2 * log2_w %% 8))))).
+    rewrite (eq_in_mkseq _ (fun x => W32.int_bit ww (x + ((ceil ((len2 * log2_w)%r / 8%r) * 8 - len2 * log2_w - 8 + len2 * log2_w %% 8))))).
     + move=> i rngi /=; rewrite W32.of_intwE.
-      rewrite (: 0 <= ceil ((len2 * log2_w)%r / 8%r) * 8 - len2 * log2_w + i < 32).
+      rewrite (: 0 <= ceil ((len2 * log2_w)%r / 8%r) * 8 - len2 * log2_w + i < 32) //=.
       + admit.
-      rewrite (: 0 <= ceil ((len2 * log2_w)%r / 8%r) * 8 - len2 * log2_w + i - (8 - len2 * log2_w %% 8) < 32) 2://.
-      admit.
-    rewrite /bs2int size_mkseq.
+      rewrite (: 0 <= ceil ((len2 * log2_w)%r / 8%r) * 8 - len2 * log2_w + i - (8 - len2 * log2_w %% 8) < 32) //=.
+      + admit.
+      by congr; ring.
+    rewrite {1}(edivzP (len2 * log2_w) 8) fromintD (RField.mulrDl _ _ (inv 8%r)) /=.
+    rewrite -fromint_div 1:/(%|) 1:modzMl //.
+    rewrite mulzK //.
+    have ->: ceil ((len2 * log2_w %/ 8)%r + (len2 * log2_w %% 8)%r / 8%r)
+           = len2 * log2_w %/ 8 + ceil ((len2 * log2_w %% 8)%r / 8%r).
+    + smt(@Real). (* Missing: from_int_ceil_addl *)
+    rewrite mulzDl.
+    have ->: len2 * log2_w %/ 8 * 8 + ceil ((len2 * log2_w %% 8)%r / 8%r) * 8 - len2 * log2_w - 8 + len2 * log2_w %% 8
+           = ceil ((len2 * log2_w %% 8)%r / 8%r) * 8 - 8.
+    + smt().
+    have undiv_8: (len2 * log2_w %% 8) <> 0.
+    + admit. (* we need to show this now... otherwise, we're in trouble *)
+    have ->: ceil ((len2 * log2_w %% 8)%r / 8%r) = 1.
+    + smt(modz_cmp @Real).
+    rewrite mul1z /=.
+    rewrite /bs2int size_mkseq /max.
+    have -> /=: 0 < len2 * log2_w by smt(ge1_len2 val_log2w).
+    rewrite (StdBigop.Bigint.BIA.eq_big_int _ _ _ (fun i=> 2 ^ i * (ww %/ 2 ^ i %% 2))).
+    + move=> i i_bnd /=; rewrite nth_mkseq // /W32.int_bit b2i_mod2.
+      rewrite (pmod_small ww) //.
+      admit. (* already proved elsewhere *)
+print len1.
+print len2.
     admit. (* big'un, but it now looks reasonable-ish *)
   by rewrite /toByte size_rev size_mkseq; smt(ge0_cln2lg2w len2_ge8lw_rel).
 congr; rewrite /checksum /=.
