@@ -2705,32 +2705,48 @@ move: nP=> + ge0_n - /(congr1 (fun (x : real)=> b ^ x))=> /=.
 by rewrite rpowK 1..3:/# rpow_nat //#.
 qed.
 
-lemma len2P:
-  len2 = len2.
+lemma len1P':
+  len1 = (8 %/ log2_w) * n.
+proof. smt(len1P val_log2w). qed.
+
+lemma len2_le_32_div_log2w:
+     n < 2 ^ (32 - 2 * log2_w)
+  => len2 <= 32 %/ log2_w.
 proof.
-rewrite {2}/len2 logb_log // len1P.
-pose X := log _ _.
-move: (Sfloor_ceil X)=> /iffLR /(_ _).
-rewrite isint_logP //.
-+ by rewrite lt_fromint; case: w_vals=> ->.
-+ smt(w_vals val_log2w ge1_n).
-+ rewrite negb_exists=> /= x.
-  rewrite negb_and; case: (0 <= x)=> //= ge0_x.
-  rewrite RField.fromintXn // eq_fromint.
-  rewrite -negP=> uhoh.
-  have dvd_2X: forall p, p %| w ^ x => exists y, p %| 2 ^ y.
-  + move=> p; case: w_vals=> ->.
-    + move=> p_dvd_4Xx; exists (2 * x).
-      by rewrite Ring.IntID.exprM.
-    + move=> p_dvd_16Xs; exists (4 * x).
-      by rewrite Ring.IntID.exprM.
-  have: (w - 1) %| w ^ x.
-  + by rewrite dvdzP; exists (8 * n %/ log2_w); rewrite uhoh.
-  move=> /dvd_2X [] y; rewrite dvdzP.
-  have: w - 1 %% 2 <> 0 by smt(w_vals @IntDiv).
-  have: prime 2 by smt(@IntDiv).
-  (* smt(w_vals @IntDiv). *)
-abort.
+move=> n_lt_2X32.
+rewrite /len2 /log2 fromintM logM.
++ smt(g2_len1).
++ smt(w_vals).
+rewrite RField.mulrDl len1P' fromintM logM.
++ smt(val_log2w).
++ smt(ge4_n).
+rewrite RField.mulrDl.
+have: log 2%r (w - 1)%r < log 2%r w%r.
++ by apply: log_mono_ltr=> //; smt(w_vals).
+case: (w_vals).
++ move=> /val_w_log2 log2_wP; move: n_lt_2X32; rewrite /w log2_wP /=.
+  have ->: 4%r = 2%r ^ 2%r.
+  + by rewrite rpow_nat // RField.fromintXn.
+  rewrite !logK=> //= n_lt_magic.
+  have: log 2%r n%r < 28%r.
+  + rewrite -(RealExp.logK 2%r 28%r) //.
+    apply: log_mono_ltr=> //.
+    + smt(ge4_n).
+    + smt(rpow_gt0).
+    by rewrite rpow_nat // RField.fromintXn // lt_fromint.
+  smt(@Real).
++ move=> /val_w_log4 log2_wP; move: n_lt_2X32; rewrite /w log2_wP /=.
+  have ->: 16%r = 2%r ^ 4%r.
+  + by rewrite rpow_nat // RField.fromintXn.
+  rewrite !logK=> //= n_lt_magic.
+  have: log 2%r n%r < 24%r.
+  + rewrite -(RealExp.logK 2%r 24%r) //.
+    apply: log_mono_ltr=> //.
+    + smt(ge4_n).
+    + smt(rpow_gt0).
+    by rewrite rpow_nat // RField.fromintXn // lt_fromint.
+  smt(@Real).
+qed.
 
 lemma logX (b x y):
      0%r < b
@@ -2742,12 +2758,21 @@ move=> gt0_b b_neq1 gt0_xXy; apply: (inj_rexpr b)=> //.
 by rewrite rpowK // 1:rpow_gt0 // RField.mulrC rpowM // rpowK.
 qed.
 
-lemma log2_wXlen2_div8_le4: ceil ((len2 * log2_w)%r / 8%r) <= 4.
+lemma log2_wXlen2_div8_le4:
+     n < 2 ^ (32 - 2 * log2_w)
+  => ceil ((len2 * log2_w)%r / 8%r) <= 4.
 proof.
-rewrite fromintM -log2_wP -logX // 1:lt_fromint 1:gt0_w.
-rewrite rpow_nat 1:ge0_len2 1:le_fromint 1:ltzW 1:gt0_w.
-rewrite RField.fromintXn 1:ge0_len2.
-admitted.
+move=> n_lt_2X32.
+suff: (len2 * log2_w)%r / 8%r <= 4%r.
++ smt(@Real).
+rewrite fromintM -RField.mulrA RField.mulrC -RealOrder.ler_pdivl_mull.
++ by apply: RealOrder.mulr_gt0; [1:smt(val_log2w)|2:rewrite RealOrder.invr_gt0 //].
+rewrite RField.invf_div RField.mulrAC /=.
+smt(val_log2w len2_le_32_div_log2w).
+qed.
+
+(** FD: is this acceptable in practice? **)
+axiom n_lt_2X32: n < 2 ^ (32 - 2 * log2_w).
 
 lemma WOTSEncodeP _ml :
   phoare[WOTS_Encode.encode : arg = _ml /\ len1 = (8 %/ log2_w) * size _ml
