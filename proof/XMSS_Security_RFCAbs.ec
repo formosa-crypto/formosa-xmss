@@ -2772,6 +2772,7 @@ smt(val_log2w len2_le_32_div_log2w).
 qed.
 
 (** FD: is this acceptable in practice? **)
+(** TODO: Move this somewhere sensible once refined to final value **)
 axiom n_lt_2X32: n < 2 ^ (32 - 2 * log2_w).
 
 lemma WOTSEncodeP _ml :
@@ -2850,7 +2851,7 @@ auto=> /> &0 sz_msgP msg_elemsP; split=> [|_ _].
     + move=> i i_bnd @/w2bits @/unpack8 @/(\bits8) /=.
       rewrite /mkseq -iotaredE /=.
       rewrite !initE /=.
-      by have -> //: 0 <= i < 4 by smt(log2_wXlen2_div8_le4).
+      by have -> //: 0 <= i < 4 by smt(log2_wXlen2_div8_le4 n_lt_2X32).
     have ->: flatten (mkseq (fun i=> WW.[i * 8 + 0] :: WW.[i * 8 + 1]
                                   :: WW.[i * 8 + 2] :: WW.[i * 8 + 3]
                                   :: WW.[i * 8 + 4] :: WW.[i * 8 + 5]
@@ -2867,43 +2868,37 @@ auto=> /> &0 sz_msgP msg_elemsP; split=> [|_ _].
       + by rewrite allP=> x @/mkseq /mapP.
       by rewrite nth_mkseq /#.
     have le32_8c : (8 * ceil ((len2 * log2_w)%r / 8%r)) <= 32.
-    + admit. (* ceil ((len2 * log2_w)%r / 8%r) <= 4, see above *)
+    + smt(log2_wXlen2_div8_le4 n_lt_2X32).
     rewrite /toByte size_rev size_mkseq lez_maxr; 1: smt(ge0_cln2lg2w len2_ge8lw_rel).
-    rewrite drop_mkseq; 1: split; 2:smt(logw_vals ge0_len2 ge0_cln2lg2w).
-    + by rewrite IntOrder.ler_subr_addl /= -lez_divRL; smt(logw_vals len2_ge8lw_rel).
+    rewrite drop_mkseq.
+    + split; 2:smt(logw_vals ge0_len2 ge0_cln2lg2w).
+      by rewrite IntOrder.ler_subr_addl /= -lez_divRL; smt(logw_vals len2_ge8lw_rel).
     rewrite /(\o) /= (: (8 * ceil ((len2 * log2_w)%r / 8%r) - (ceil ((len2 * log2_w)%r / 8%r) * 8 - len2 * log2_w)) = len2 * log2_w) 1:/#.
+    (** Careful now! **)
+    have ->: ceil ((len2 * log2_w)%r / 8%r) * 8 - len2 * log2_w
+           = b2i (len2 * log2_w %% 8 <> 0) * 8 - (len2 * log2_w %% 8).
+    + rewrite {1 2}(edivzP (len2 * log2_w) 8) fromintD fromintM RField.mulrDl.
+      rewrite -RField.mulrA /= from_int_ceil_addl.
+      have ->: ceil ((len2 * log2_w %% 8)%r / 8%r) = b2i (len2 * log2_w %% 8 <> 0).
+      + by case: (len2 * log2_w %% 8 = 0); smt(@Real).
+      smt().
+    (** TODO: what we want here is to reindex mkseq to cancel the shift out **)
     rewrite /WW /(`<<`) /= (pmod_small _ 256); 1: smt(modz_ge0 ltz_pmod).
-    rewrite (eq_in_mkseq _ (fun x => W32.int_bit ww (x + ((ceil ((len2 * log2_w)%r / 8%r) * 8 - len2 * log2_w - 8 + len2 * log2_w %% 8))))).
+    rewrite (eq_in_mkseq _ (fun x => W32.int_bit ww (x - b2i (len2 * log2_w %% 8 = 0) * 8))).
     + move=> i rngi /=; rewrite W32.of_intwE.
-      rewrite (: 0 <= ceil ((len2 * log2_w)%r / 8%r) * 8 - len2 * log2_w + i < 32) //=.
+      (** THIS IS HIGHLY INCORRECT! The whole point is that this sometimes goes out of bounds, but only in places where it is unset anyway. **)
+      (** TODO: fixme **)
+      rewrite (: 0 <= b2i (len2 * log2_w %% 8 <> 0) * 8 - (len2 * log2_w %% 8) + i < 32) //=.
       + admit.
-      rewrite (: 0 <= ceil ((len2 * log2_w)%r / 8%r) * 8 - len2 * log2_w + i - (8 - len2 * log2_w %% 8) < 32) //=.
-      + admit.
-      by congr; ring.
-    rewrite {1}(edivzP (len2 * log2_w) 8) fromintD (RField.mulrDl _ _ (inv 8%r)) /=.
-    rewrite -fromint_div 1:/(%|) 1:modzMl //.
-    rewrite mulzK //.
-    have ->: ceil ((len2 * log2_w %/ 8)%r + (len2 * log2_w %% 8)%r / 8%r)
-           = len2 * log2_w %/ 8 + ceil ((len2 * log2_w %% 8)%r / 8%r).
-    + smt(@Real). (* Missing: from_int_ceil_addl *)
-    rewrite mulzDl.
-    have ->: len2 * log2_w %/ 8 * 8 + ceil ((len2 * log2_w %% 8)%r / 8%r) * 8 - len2 * log2_w - 8 + len2 * log2_w %% 8
-           = ceil ((len2 * log2_w %% 8)%r / 8%r) * 8 - 8.
-    + smt().
-    have undiv_8: (len2 * log2_w %% 8) <> 0.
-    + admit. (* we need to show this now... otherwise, we're in trouble *)
-    have ->: ceil ((len2 * log2_w %% 8)%r / 8%r) = 1.
-    + smt(modz_cmp @Real).
-    rewrite mul1z /=.
+      admit.
     rewrite /bs2int size_mkseq /max.
     have -> /=: 0 < len2 * log2_w by smt(ge1_len2 val_log2w).
     rewrite (StdBigop.Bigint.BIA.eq_big_int _ _ _ (fun i=> 2 ^ i * (ww %/ 2 ^ i %% 2))).
     + move=> i i_bnd /=; rewrite nth_mkseq // /W32.int_bit b2i_mod2.
       rewrite (pmod_small ww) //.
-      admit. (* already proved elsewhere *)
-print len1.
-print len2.
-    admit. (* big'un, but it now looks reasonable-ish *)
+      + admit. (* already proved elsewhere *)
+      admit. (* big'un; the shift has reappeared; all good when len2 * log2_w is not divisible by 8 *)
+    admit.
   by rewrite /toByte size_rev size_mkseq; smt(ge0_cln2lg2w len2_ge8lw_rel).
 congr; rewrite /checksum /=.
 have ->: len1 = size (map BaseW.insubd msg{0}).
