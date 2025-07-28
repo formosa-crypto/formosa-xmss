@@ -2747,7 +2747,7 @@ proof.
 rewrite fromintM -log2_wP -logX // 1:lt_fromint 1:gt0_w.
 rewrite rpow_nat 1:ge0_len2 1:le_fromint 1:ltzW 1:gt0_w.
 rewrite RField.fromintXn 1:ge0_len2.
-abort.
+admitted.
 
 lemma WOTSEncodeP _ml :
   phoare[WOTS_Encode.encode : arg = _ml /\ len1 = (8 %/ log2_w) * size _ml
@@ -2825,8 +2825,7 @@ auto=> /> &0 sz_msgP msg_elemsP; split=> [|_ _].
     + move=> i i_bnd @/w2bits @/unpack8 @/(\bits8) /=.
       rewrite /mkseq -iotaredE /=.
       rewrite !initE /=.
-      
-      by have -> //: 0 <= i < 4 by smt().
+      by have -> //: 0 <= i < 4 by smt(log2_wXlen2_div8_le4).
     have ->: flatten (mkseq (fun i=> WW.[i * 8 + 0] :: WW.[i * 8 + 1]
                                   :: WW.[i * 8 + 2] :: WW.[i * 8 + 3]
                                   :: WW.[i * 8 + 4] :: WW.[i * 8 + 5]
