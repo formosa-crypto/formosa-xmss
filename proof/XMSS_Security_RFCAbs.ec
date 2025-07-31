@@ -2776,9 +2776,19 @@ rewrite RField.invf_div RField.mulrAC /=.
 smt(val_log2w len2bits_lt_32).
 qed.
 
+lemma nondiv_ceil:
+     !8 %| len2 * log2_w
+  => ceil ((len2 * log2_w)%r / 8%r) * 8 = (len2 * log2_w %/ 8) * 8 + 8.
+proof.
+rewrite /(%|)=> mod_nz; rewrite {1}(edivzP (len2 * log2_w) 8).
+rewrite fromintD fromintM RField.mulrDl -RField.mulrA RField.mulrV //=.
+by rewrite from_int_ceil_addl; smt(@Real).
+qed.
+
 (** FD: is this acceptable in practice? **)
 (** TODO: Move this somewhere sensible once refined to final value **)
 axiom n_lt_2X32: n < 2 ^ (30 - 2 * log2_w).
+axiom divisibility_condition: !8 %| len2 * log2_w.
 
 lemma WOTSEncodeP _ml :
   phoare[WOTS_Encode.encode : arg = _ml /\ len1 = (8 %/ log2_w) * size _ml
@@ -2914,8 +2924,7 @@ have le32_8c : (8 * ceil ((len2 * log2_w)%r / 8%r)) <= 32.
 rewrite (eq_in_mkseq _ (fun i=> (csum * 2 ^ (8 - len2 * log2_w %% 8)) %/ 2 ^ i %% 2 <> 0)).
 + move=> i i_bound /=; rewrite W32.of_intwE.
   have -> /=: 0 <= i < 32 by smt(ge0_cln2lg2w).
-  rewrite /W32.int_bit.
-  rewrite (pmod_small _ W32.modulus)=> //.
+  rewrite /W32.int_bit (pmod_small _ W32.modulus)=> //.
   split=> [|_].
   + by rewrite mulr_ge0 1:/# expr_ge0.
   case: (csum = 0)=> [-> //|csum_neq_0].
@@ -2929,14 +2938,35 @@ rewrite (eq_in_mkseq _ (fun i=> (csum * 2 ^ (8 - len2 * log2_w %% 8)) %/ 2 ^ i %
     rewrite fromintM -log2_wP /log2 -logX // 1:#smt:(w_vals).
     rewrite rpow_nat 1:ge0_len2 1:#smt:(w_vals) RField.fromintXn 1:ge0_len2.
     by apply: log_mono_ltr=> //#.
-  admit (* The shift cannot overflow: csum < w ^ len2, so log2 csum < len2 * log_2 w < 32 and all is good *).
+  move: (len2bits_lt_32 n_lt_2X32).
+  rewrite {1 2}(edivzP (len2 * log2_w) 8) le_fromint.
+  have -> /#: len2 * log2_w %/ 8 * 8 + len2 * log2_w %% 8 + (8 - len2 * log2_w %% 8)
+         = len2 * log2_w %/ 8 * 8 + 8.
+  by ring.
 rewrite -/(int2bs _ _) int2bsK.
 + by apply: mulr_ge0=> //; exact: ge0_cln2lg2w.
-+ admit (* Fingers crossed we catch it same time as the one above. *).
-admit. (* This is bad. The encoding we instantiate in the security
-          spec needs to account for the fact that things get shifted
-          even when divisible by 8. This changes the *integer* value
-          of the checksum we encode, but not the actual encoding... *)
++ rewrite (mulzC 8) nondiv_ceil 1:divisibility_condition //.
+  split=> [|_].
+  + by rewrite mulr_ge0 1:/# expr_ge0.
+  case: (csum = 0)=> [-> //=|csum_neq_0].
+  + exact: expr_gt0.
+  rewrite -lt_fromint -(log_mono_ltr 2%r) //.
+  + by rewrite lt_fromint mulr_gt0 1:/# expr_gt0.
+  + by rewrite lt_fromint expr_gt0 //.
+  rewrite fromintM logM 1:/# 1:lt_fromint 1:expr_gt0 //.
+  rewrite -RField.fromintXn // 1:/# -rpow_nat // 1:/# logK //.
+  rewrite -RField.fromintXn 1:#smt:(ge0_len2 val_log2w) -rpow_nat 1:#smt:(ge0_len2 val_log2w) //.
+  rewrite logK //.
+  apply: (RealOrder.ltr_le_trans (len2 * log2_w + (8 - len2 * log2_w %% 8))%r); last by smt().
+  rewrite !fromintD RealOrder.ltr_add2r.
+  rewrite fromintM -log2_wP /log2 -logX // 1:#smt:(w_vals).
+  rewrite rpow_nat 1:ge0_len2 1:#smt:(w_vals) RField.fromintXn 1:ge0_len2.
+  by apply: log_mono_ltr=> //#.
+rewrite nondiv_ceil 1:divisibility_condition //.
+have->: len2 * log2_w %/ 8 * 8 + 8 - len2 * log2_w
+      = 8 - len2 * log2_w %% 8.
++ by rewrite {2}(edivzP (len2 * log2_w) 8); ring.
+by rewrite mulzK; smt(expr_gt0).
 qed.
 
 lemma chfltn_id pkw:

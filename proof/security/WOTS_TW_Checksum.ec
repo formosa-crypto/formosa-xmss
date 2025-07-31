@@ -42,6 +42,7 @@ op encode_int (l1 n l2 : int) : baseW list =
   int2lbw l1 n ++ checksum l1 n l2.
 
 (* Slight variant of checksum_prop lemma that uses encode_int operator and added lengths *)
+(* TODO: build in that l1 = len1 and l2 = len2 and remove all premises on lengths *)
 lemma checksum_prop_var (l1 l2 x x' : int) :
      0 <= l1
   => 0 <= l2
