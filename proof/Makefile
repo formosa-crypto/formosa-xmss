@@ -67,7 +67,7 @@ check_xmss_spec_extra:
 check_xmss_spec_equivs:
 	$(ECRUNTEST) config/tests.config spec-equivs
 
-check_proofs: check_xmss_spec_extra checks_xmss_spec_equivs check_correctness_proof check_security_proof
+check_proofs: check_xmss_spec_extra check_xmss_spec_equivs check_correctness_proof check_security_proof
 
 # --------------------------------------------------------------------------------------------------
 
