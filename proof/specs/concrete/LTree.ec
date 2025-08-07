@@ -267,7 +267,7 @@ while (1 <= _len <= len
     smt(@Real).
   by move=> //=; rewrite -ih /#.
 auto=> />; rewrite fold0 //=; split.
-+ admit. (* FIXME!!!!! this is not currently true *)
++ smt(gt2_len).
 move=> l a p H1 H2.
 have <<- {H1 H2}: 1 = l by smt().
 move=> ge1_len.
