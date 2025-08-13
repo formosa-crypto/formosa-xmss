@@ -270,7 +270,7 @@ declare axiom A_forge_queries (RO <: POracle{-A, -QC_A}) (SO <: SOracle_CMA{-A, 
   High-level security theorem (based on EUF-RMA of FL-XMSS-TW):
   XMSS-TW is EUF-CMA secure in the ROM if mkg (i.e., the function that generates
   indexing keys for the message compression function) is a PRF, MCO (i.e., the message
-  compression function) is a collision-resistant random oracle, and FL-XMSS-TW is EUF-RMA
+  compression function) is a "collision-resistant random oracle", and FL-XMSS-TW is EUF-RMA
   secure
 *)
 lemma EUFCMARO_XMSSTW_EUFRMA &m :
@@ -346,7 +346,7 @@ qed.
   Low-level security theorem (based on properties of KHFs and THFs)
   XMSS-TW is EUF-CMA secure in the ROM if mkg (i.e., the function that generates
   indexing keys for the message compression function) is a PRF; MCO (i.e., the message
-  compression function) is a collision-resistant random oracle; prf_sk (i.e., the
+  compression function) is a "collision-resistant random oracle"; prf_sk (i.e., the
   function used to generate WOTS-TW secret keys) is a PRF; f (i.e., the function used
   in the WOTS-TW chains) has SM-DT-UD-C, SM-DT-TCR-C, and SM-DT-PRE-C; pkco (i.e., the
   fucntion used to compress WOTS-TW public keys to leaves of the binary hash tree) has
@@ -698,7 +698,7 @@ module (R_EUFCMA_EUFCMARFC (A : DSS_RFC.KeyUpdatingROM.Adv_EUFCMA_RO) : Adv_EUFC
 
 
 (* --- Proofs of EUF-CMA property for XMSS-TW (assuming message compression is a RO) --- *)
-section Proofs_EUF_CMA_RO_XMSSTW.
+section Proofs_EUF_CMA_RO_XMSSTWRFC.
 (* -- Declarations -- *)
 (* Models the signing procedure of FL-XMSS-TW *)
 declare op opsign : skFLXMSSTWRFC -> msgFLXMSSTW -> sigFLXMSSTW * skFLXMSSTWRFC.
@@ -725,7 +725,8 @@ declare module A <: DSS_RFC.KeyUpdatingROM.Adv_EUFCMA_RO{
     -TRHC_TCR.O_SMDTTCR_Default, -R_SMDTUDC_Game23WOTSTWES, -R_SMDTTCRC_Game34WOTSTWES,
     -R_PRF_FLXMSSTWESInlineNOPRF, -R_SMDTPREC_Game4WOTSTWES, -R_MEUFGCMAWOTSTWES_EUFRMAFLXMSSTWESNOPRF,
     -R_SMDTTCRCTRH_EUFRMAFLXMSSTWESNOPRF, -R_SMDTTCRCPKCO_EUFRMAFLXMSSTWESNOPRF,
-    -R_SMDTTCRCTRH_EUFRMAFLXMSSTWESNOPRF, -R_EUFRMAFLXMSSTW_EUFRMAFLXMSSTWES}.
+    -R_SMDTTCRCTRH_EUFRMAFLXMSSTWESNOPRF, -R_EUFRMAFLXMSSTW_EUFRMAFLXMSSTWES
+}.
 
 (* The adversary always terminates if the oracle procedures it can call terminate *)
 declare axiom A_forge_ll (RO <: DSS_RFC.RO.POracle{-A}) (SO <: DSS_RFC.DSS.KeyUpdating.SOracle_CMA{-A}) :
@@ -890,7 +891,7 @@ qed.
   High-level security theorem (based on EUF-RMA of FL-XMSS-TW-RFC):
   XMSS-TW-RFC is EUF-CMA secure in the ROM if mkg (i.e., the function that generates
   indexing keys for the message compression function) is a PRF, MCO (i.e., the message
-  compression function) is a collision-resistant random oracle, and FL-XMSS-TW-RFC is EUF-RMA
+  compression function) is a "collision-resistant random oracle", and FL-XMSS-TW-RFC is EUF-RMA
   secure
 *)
 lemma EUFCMARO_XMSSTWRFC_EUFRMA &m :
@@ -996,19 +997,18 @@ move=> /(_ (fun (skfl : skFLXMSSTWRFC) => skfl.`1 = Index.insubd 0)
 move=> /(_ (R_EUFCMA_EUFCMARFC(A)) R_forge_ll R_forge_queries &m) /#.
 qed.
 
-
-
 (* TODO: Adapt higher-level reductions to consider RFC types *)
 (*
   Low-level security theorem (based on properties of KHFs and THFs)
   XMSS-TW is EUF-CMA secure in the ROM if mkg (i.e., the function that generates
   indexing keys for the message compression function) is a PRF; MCO (i.e., the message
-  compression function) is a collision-resistant random oracle; prf_sk (i.e., the
+  compression function) is a "collision-resistant random oracle"; prf_sk (i.e., the
   function used to generate WOTS-TW secret keys) is a PRF; f (i.e., the function used
   in the WOTS-TW chains) has SM-DT-UD-C, SM-DT-TCR-C, and SM-DT-PRE-C; pkco (i.e., the
   fucntion used to compress WOTS-TW public keys to leaves of the binary hash tree) has
   SM-DT-TCR-C; and trh (i.e., the function used to construct the full binary hash tree from
   the leaves) has SM-DT-TCR-C.
+*)
 lemma EUFCMARO_XMSSTWRFC &m :
   Pr[DSS_RFC.KeyUpdatingROM.EUF_CMA_RO(XMSS_TW_RFC, A, DSS_RFC.DSS.KeyUpdating.O_CMA_Default, MCO).main() @ &m : res]
   <=
@@ -1017,36 +1017,50 @@ lemma EUFCMARO_XMSSTWRFC &m :
   +
   Pr[CR_RO(R_EUFCMARO_CRRO(FL_XMSS_TW_RFC, R_EUFCMA_EUFCMARFC(A)), MCO).main() @ &m : res]
   +
-  `|Pr[PRF_SK_PRF.PRF(R_PRF_FLXMSSTWESInlineNOPRF(R_EUFRMAFLXMSSTW_EUFRMAFLXMSSTWES(R_EUFRMA_IEUFRMA(R_EUFCMARO_IEUFRMA(R_EUFCMA_EUFCMARFC(A))))), PRF_SK_PRF.O_PRF_Default).main(false) @ &m : res] -
-  Pr[PRF_SK_PRF.PRF(R_PRF_FLXMSSTWESInlineNOPRF(R_EUFRMAFLXMSSTW_EUFRMAFLXMSSTWES(R_EUFRMA_IEUFRMA(R_EUFCMARO_IEUFRMA(R_EUFCMA_EUFCMARFC(A))))), PRF_SK_PRF.O_PRF_Default).main(true) @ &m : res]|
+  `|Pr[PRF_SK_PRF.PRF(R_PRF_FLXMSSTWESInlineNOPRF(R_EUFRMAFLXMSSTW_EUFRMAFLXMSSTWES(R_EUFRMAFLXMSSTWRFC_EUFRMAFLXMSSTW(R_EUFRMA_IEUFRMA(R_EUFCMARO_IEUFRMA(R_EUFCMA_EUFCMARFC(A)))))), PRF_SK_PRF.O_PRF_Default).main(false) @ &m : res] -
+    Pr[PRF_SK_PRF.PRF(R_PRF_FLXMSSTWESInlineNOPRF(R_EUFRMAFLXMSSTW_EUFRMAFLXMSSTWES(R_EUFRMAFLXMSSTWRFC_EUFRMAFLXMSSTW(R_EUFRMA_IEUFRMA(R_EUFCMARO_IEUFRMA(R_EUFCMA_EUFCMARFC(A)))))), PRF_SK_PRF.O_PRF_Default).main(true) @ &m : res]|
   +
   (w - 2)%r *
-`|Pr[FC_UD.SM_DT_UD_C(R_SMDTUDC_Game23WOTSTWES(R_MEUFGCMAWOTSTWES_EUFRMAFLXMSSTWESNOPRF(R_EUFRMAFLXMSSTW_EUFRMAFLXMSSTWES(R_EUFRMA_IEUFRMA(R_EUFCMARO_IEUFRMA(R_EUFCMA_EUFCMARFC(A)))))), FC_UD.O_SMDTUD_Default, FC.O_THFC_Default).main(false) @ &m : res] -
-  Pr[FC_UD.SM_DT_UD_C(R_SMDTUDC_Game23WOTSTWES(R_MEUFGCMAWOTSTWES_EUFRMAFLXMSSTWESNOPRF(R_EUFRMAFLXMSSTW_EUFRMAFLXMSSTWES(R_EUFRMA_IEUFRMA(R_EUFCMARO_IEUFRMA(R_EUFCMA_EUFCMARFC(A)))))), FC_UD.O_SMDTUD_Default, FC.O_THFC_Default).main(true) @ &m : res]|
+  `|Pr[FC_UD.SM_DT_UD_C(R_SMDTUDC_Game23WOTSTWES(R_MEUFGCMAWOTSTWES_EUFRMAFLXMSSTWESNOPRF(R_EUFRMAFLXMSSTW_EUFRMAFLXMSSTWES(R_EUFRMAFLXMSSTWRFC_EUFRMAFLXMSSTW(R_EUFRMA_IEUFRMA(R_EUFCMARO_IEUFRMA(R_EUFCMA_EUFCMARFC(A))))))), FC_UD.O_SMDTUD_Default, FC.O_THFC_Default).main(false) @ &m : res] -
+    Pr[FC_UD.SM_DT_UD_C(R_SMDTUDC_Game23WOTSTWES(R_MEUFGCMAWOTSTWES_EUFRMAFLXMSSTWESNOPRF(R_EUFRMAFLXMSSTW_EUFRMAFLXMSSTWES(R_EUFRMAFLXMSSTWRFC_EUFRMAFLXMSSTW(R_EUFRMA_IEUFRMA(R_EUFCMARO_IEUFRMA(R_EUFCMA_EUFCMARFC(A))))))), FC_UD.O_SMDTUD_Default, FC.O_THFC_Default).main(true) @ &m : res]|
   +
-  Pr[FC_TCR.SM_DT_TCR_C(R_SMDTTCRC_Game34WOTSTWES(R_MEUFGCMAWOTSTWES_EUFRMAFLXMSSTWESNOPRF(R_EUFRMAFLXMSSTW_EUFRMAFLXMSSTWES(R_EUFRMA_IEUFRMA(R_EUFCMARO_IEUFRMA(R_EUFCMA_EUFCMARFC(A)))))), FC_TCR.O_SMDTTCR_Default, FC.O_THFC_Default).main() @ &m : res]
+  Pr[FC_TCR.SM_DT_TCR_C(R_SMDTTCRC_Game34WOTSTWES(R_MEUFGCMAWOTSTWES_EUFRMAFLXMSSTWESNOPRF(R_EUFRMAFLXMSSTW_EUFRMAFLXMSSTWES(R_EUFRMAFLXMSSTWRFC_EUFRMAFLXMSSTW(R_EUFRMA_IEUFRMA(R_EUFCMARO_IEUFRMA(R_EUFCMA_EUFCMARFC(A))))))), FC_TCR.O_SMDTTCR_Default, FC.O_THFC_Default).main() @ &m : res]
   +
-  Pr[FC_PRE.SM_DT_PRE_C(R_SMDTPREC_Game4WOTSTWES(R_MEUFGCMAWOTSTWES_EUFRMAFLXMSSTWESNOPRF(R_EUFRMAFLXMSSTW_EUFRMAFLXMSSTWES(R_EUFRMA_IEUFRMA(R_EUFCMARO_IEUFRMA(R_EUFCMA_EUFCMARFC(A)))))), FC_PRE.O_SMDTPRE_Default, FC.O_THFC_Default).main() @ &m : res]
+  Pr[FC_PRE.SM_DT_PRE_C(R_SMDTPREC_Game4WOTSTWES(R_MEUFGCMAWOTSTWES_EUFRMAFLXMSSTWESNOPRF(R_EUFRMAFLXMSSTW_EUFRMAFLXMSSTWES(R_EUFRMAFLXMSSTWRFC_EUFRMAFLXMSSTW(R_EUFRMA_IEUFRMA(R_EUFCMARO_IEUFRMA(R_EUFCMA_EUFCMARFC(A))))))), FC_PRE.O_SMDTPRE_Default, FC.O_THFC_Default).main() @ &m : res]
   +
-  Pr[PKCOC_TCR.SM_DT_TCR_C(R_SMDTTCRCPKCO_EUFRMAFLXMSSTWESNOPRF(R_EUFRMAFLXMSSTW_EUFRMAFLXMSSTWES(R_EUFRMA_IEUFRMA(R_EUFCMARO_IEUFRMA(R_EUFCMA_EUFCMARFC(A))))), PKCOC_TCR.O_SMDTTCR_Default, PKCOC.O_THFC_Default).main() @ &m : res]
+  Pr[PKCOC_TCR.SM_DT_TCR_C(R_SMDTTCRCPKCO_EUFRMAFLXMSSTWESNOPRF(R_EUFRMAFLXMSSTW_EUFRMAFLXMSSTWES(R_EUFRMAFLXMSSTWRFC_EUFRMAFLXMSSTW(R_EUFRMA_IEUFRMA(R_EUFCMARO_IEUFRMA(R_EUFCMA_EUFCMARFC(A)))))), PKCOC_TCR.O_SMDTTCR_Default, PKCOC.O_THFC_Default).main() @ &m : res]
   +
-  Pr[TRHC_TCR.SM_DT_TCR_C(R_SMDTTCRCTRH_EUFRMAFLXMSSTWESNOPRF(R_EUFRMAFLXMSSTW_EUFRMAFLXMSSTWES(R_EUFRMA_IEUFRMA(R_EUFCMARO_IEUFRMA(R_EUFCMA_EUFCMARFC(A))))), TRHC_TCR.O_SMDTTCR_Default, TRHC.O_THFC_Default).main() @ &m : res]
+  Pr[TRHC_TCR.SM_DT_TCR_C(R_SMDTTCRCTRH_EUFRMAFLXMSSTWESNOPRF(R_EUFRMAFLXMSSTW_EUFRMAFLXMSSTWES(R_EUFRMAFLXMSSTWRFC_EUFRMAFLXMSSTW(R_EUFRMA_IEUFRMA(R_EUFCMARO_IEUFRMA(R_EUFCMA_EUFCMARFC(A)))))), TRHC_TCR.O_SMDTTCR_Default, TRHC.O_THFC_Default).main() @ &m : res]
+(*   `|Pr[PRF_SK_PRF.PRF(R_PRF_FLXMSSTWESInlineNOPRF(R_EUFRMAFLXMSSTW_EUFRMAFLXMSSTWES()), PRF_SK_PRF.O_PRF_Default).main(false) @ &m : res] - *)
+(*   Pr[PRF_SK_PRF.PRF(R_PRF_FLXMSSTWESInlineNOPRF(R_EUFRMAFLXMSSTW_EUFRMAFLXMSSTWES(R_EUFRMA_IEUFRMA(R_EUFCMARO_IEUFRMA(R_EUFCMA_EUFCMARFC(A))))), PRF_SK_PRF.O_PRF_Default).main(true) @ &m : res]| *)
+(*   + *)
+(*   (w - 2)%r * *)
+(* `|Pr[FC_UD.SM_DT_UD_C(R_SMDTUDC_Game23WOTSTWES(R_MEUFGCMAWOTSTWES_EUFRMAFLXMSSTWESNOPRF(R_EUFRMAFLXMSSTW_EUFRMAFLXMSSTWES(R_EUFRMA_IEUFRMA(R_EUFCMARO_IEUFRMA(R_EUFCMA_EUFCMARFC(A)))))), FC_UD.O_SMDTUD_Default, FC.O_THFC_Default).main(false) @ &m : res] - *)
+(*   Pr[FC_UD.SM_DT_UD_C(R_SMDTUDC_Game23WOTSTWES(R_MEUFGCMAWOTSTWES_EUFRMAFLXMSSTWESNOPRF(R_EUFRMAFLXMSSTW_EUFRMAFLXMSSTWES(R_EUFRMA_IEUFRMA(R_EUFCMARO_IEUFRMA(R_EUFCMA_EUFCMARFC(A)))))), FC_UD.O_SMDTUD_Default, FC.O_THFC_Default).main(true) @ &m : res]| *)
+(*   + *)
+(*   Pr[FC_TCR.SM_DT_TCR_C(R_SMDTTCRC_Game34WOTSTWES(R_MEUFGCMAWOTSTWES_EUFRMAFLXMSSTWESNOPRF(R_EUFRMAFLXMSSTW_EUFRMAFLXMSSTWES(R_EUFRMA_IEUFRMA(R_EUFCMARO_IEUFRMA(R_EUFCMA_EUFCMARFC(A)))))), FC_TCR.O_SMDTTCR_Default, FC.O_THFC_Default).main() @ &m : res] *)
+(*   + *)
+(*   Pr[FC_PRE.SM_DT_PRE_C(R_SMDTPREC_Game4WOTSTWES(R_MEUFGCMAWOTSTWES_EUFRMAFLXMSSTWESNOPRF(R_EUFRMAFLXMSSTW_EUFRMAFLXMSSTWES(R_EUFRMA_IEUFRMA(R_EUFCMARO_IEUFRMA(R_EUFCMA_EUFCMARFC(A)))))), FC_PRE.O_SMDTPRE_Default, FC.O_THFC_Default).main() @ &m : res] *)
+(*   + *)
+(*   Pr[PKCOC_TCR.SM_DT_TCR_C(R_SMDTTCRCPKCO_EUFRMAFLXMSSTWESNOPRF(R_EUFRMAFLXMSSTW_EUFRMAFLXMSSTWES(R_EUFRMA_IEUFRMA(R_EUFCMARO_IEUFRMA(R_EUFCMA_EUFCMARFC(A))))), PKCOC_TCR.O_SMDTTCR_Default, PKCOC.O_THFC_Default).main() @ &m : res] *)
+(*   + *)
+(*   Pr[TRHC_TCR.SM_DT_TCR_C(R_SMDTTCRCTRH_EUFRMAFLXMSSTWESNOPRF(R_EUFRMAFLXMSSTW_EUFRMAFLXMSSTWES(R_EUFRMA_IEUFRMA(R_EUFCMARO_IEUFRMA(R_EUFCMA_EUFCMARFC(A))))), TRHC_TCR.O_SMDTTCR_Default, TRHC.O_THFC_Default).main() @ &m : res] *)
   +
   qS%r * (qS + qH + 1)%r * mu1 dmkey witness
   +
   l%r * mu1 dmsgFLXMSSTW witness.
 proof.
-move: (EUFRMA_FLXMSSTW (R_EUFRMA_IEUFRMA(R_EUFCMARO_IEUFRMA(A))) _ &m) (EUFCMARO_XMSSTW_EUFRMA &m); last first.
+move: (EUFRMA_FLXMSSTWRFC (R_EUFRMA_IEUFRMA(R_EUFCMARO_IEUFRMA(R_EUFCMA_EUFCMARFC(A)))) _ &m) (EUFCMARO_XMSSTWRFC_EUFRMA &m); last first.
 have -> /#:
-  Pr[FLXMSSTW_EUFRMA.EUF_RMA(FL_XMSS_TW, R_EUFRMA_IEUFRMA(R_EUFCMARO_IEUFRMA(A))).main() @ &m : res]
+  Pr[FLXMSSTWRFC_EUFRMA.EUF_RMA(FL_XMSS_TW_RFC, R_EUFRMA_IEUFRMA(R_EUFCMARO_IEUFRMA(R_EUFCMA_EUFCMARFC(A)))).main() @ &m : res]
   =
-  Pr[EUF_RMA(FL_XMSS_TW, R_EUFRMA_IEUFRMA(R_EUFCMARO_IEUFRMA(A))).main() @ &m : res].
+  Pr[EUF_RMA(FL_XMSS_TW_RFC, R_EUFRMA_IEUFRMA(R_EUFCMARO_IEUFRMA(R_EUFCMA_EUFCMARFC(A)))).main() @ &m : res].
 + by byequiv => //; sim.
 proc; inline *.
 wp; call (: true).
 + by move=> RO SO ROll SOll; apply (A_forge_ll RO SO).
 + proc; inline *.
-  wp; rnd; skip => />.
+  auto => />.
   by apply dmkey_ll.
 + proc; inline *.
   by wp; skip.
@@ -1057,6 +1071,6 @@ wp; while (true) (size w).
   by elim: (w{1}) neqel_w => //= /#.
 by wp; skip => />; smt(size_eq0 size_ge0).
 qed.
-*)
-end section Proofs_EUF_CMA_RO_XMSSTW.
+
+end section Proofs_EUF_CMA_RO_XMSSTWRFC.
 end RFC.

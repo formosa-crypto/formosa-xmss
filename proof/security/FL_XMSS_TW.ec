@@ -4956,7 +4956,15 @@ module R_EUFRMAFLXMSSTW_EUFRMAFLXMSSTWES (A : Adv_EUFRMA) : Adv_EUFRMA_FLXMSSTWE
 (* -- Proof of EUF-RMA for Fixed-Length XMSS-TW as standalone -- *)
 section Proof_EUF_RMA_FLXMSSTW.
 (* - Module declarations - *)
-declare module A <: Adv_EUFRMA{-PRF_SK_PRF.O_PRF_Default, -FC.O_THFC_Default, -FC_PRE.O_SMDTPRE_Default, -FC_TCR.O_SMDTTCR_Default, -FC_UD.O_SMDTUD_Default, -O_MEUFGCMA_WOTSTWES, -PKCOC.O_THFC_Default, -PKCOC_TCR.O_SMDTTCR_Default, -TRHC.O_THFC_Default, -TRHC_TCR.O_SMDTTCR_Default, -R_SMDTUDC_Game23WOTSTWES, -R_SMDTTCRC_Game34WOTSTWES, -R_PRF_FLXMSSTWESInlineNOPRF, -R_SMDTPREC_Game4WOTSTWES, -R_MEUFGCMAWOTSTWES_EUFRMAFLXMSSTWESNOPRF, -R_SMDTTCRCTRH_EUFRMAFLXMSSTWESNOPRF, -R_SMDTTCRCPKCO_EUFRMAFLXMSSTWESNOPRF, -R_SMDTTCRCTRH_EUFRMAFLXMSSTWESNOPRF, -R_EUFRMAFLXMSSTW_EUFRMAFLXMSSTWES}.
+declare module A <: Adv_EUFRMA{
+  -PRF_SK_PRF.O_PRF_Default, -FC.O_THFC_Default, -FC_PRE.O_SMDTPRE_Default,
+  -FC_TCR.O_SMDTTCR_Default, -FC_UD.O_SMDTUD_Default, -O_MEUFGCMA_WOTSTWES,
+  -PKCOC.O_THFC_Default, -PKCOC_TCR.O_SMDTTCR_Default, -TRHC.O_THFC_Default,
+  -TRHC_TCR.O_SMDTTCR_Default, -R_SMDTUDC_Game23WOTSTWES, -R_SMDTTCRC_Game34WOTSTWES,
+  -R_PRF_FLXMSSTWESInlineNOPRF, -R_SMDTPREC_Game4WOTSTWES,
+  -R_MEUFGCMAWOTSTWES_EUFRMAFLXMSSTWESNOPRF, -R_SMDTTCRCTRH_EUFRMAFLXMSSTWESNOPRF,
+  -R_SMDTTCRCPKCO_EUFRMAFLXMSSTWESNOPRF, -R_SMDTTCRCTRH_EUFRMAFLXMSSTWESNOPRF,
+  -R_EUFRMAFLXMSSTW_EUFRMAFLXMSSTWES}.
 
 declare axiom A_forge_ll : islossless A.forge.
 
@@ -5030,6 +5038,15 @@ clone import DigitalSignatures as FLXMSSTWRFC with
 
   proof *.
 
+clone import FLXMSSTWRFC.KeyUpdating.EUFRMA as FLXMSSTWRFC_EUFRMA with
+  op n_eufrma <= l,
+
+  op dmsg <= dmsgFLXMSSTW
+
+  proof *.
+  realize ge0_neufrma by smt(IntOrder.expr_ge0 ge1_h).
+  realize dmsg_ll by rewrite /dmsgFLXMSSTW dmsgFLXMSSTW_ll.
+
 module FL_XMSS_TW_RFC : FLXMSSTWRFC.KeyUpdating.Scheme = {
   proc keygen() : pkFLXMSSTWRFC * skFLXMSSTWRFC = {
     var pkO : pkFLXMSSTW;
@@ -5085,14 +5102,18 @@ qed.
 lemma FLXMSSTWRFC_verify_ll: islossless FL_XMSS_TW_RFC.verify.
 proof. by islossless; while true (len - size pkWOTS); auto; smt(size_rcons). qed.
 
-
 equiv Eqv_FLXMSSTW_FLXMSSTWRFC_keygen :
   FL_XMSS_TW.keygen ~ FL_XMSS_TW_RFC.keygen :
    true
    ==>
-   pko2pkr res{1}.`1 = res{2}.`1 /\
-   sko2skr res{1}.`2 res{1}.`1 = res{2}.`2.
-proof. by proc; call (_: true); [ sim | auto]. qed.
+   res{1}.`1 = pkr2pko res{2}.`1 /\
+   res{1}.`2 = skr2sko res{2}.`2.
+proof.
+proc.
+inline FL_XMSS_TW_ES.keygen.
+wp; call (_: true); 1: by sim.
+by auto.
+qed.
 
 equiv Eqv_FLXMSSTW_FLXMSSTWRFC_sign :
   FL_XMSS_TW.sign ~ FL_XMSS_TW_RFC.sign :
@@ -5113,6 +5134,83 @@ equiv Eqv_FLXMSSTW_FLXMSSTWRFC_verify :
    ==>
    ={res}.
 proof. by proc; call (_: true); [sim | skip]. qed.
+
+
+(* -- Reduction adversaries -- *)
+module R_EUFRMAFLXMSSTWRFC_EUFRMAFLXMSSTW (A : FLXMSSTWRFC_EUFRMA.Adv_EUFRMA) : FLXMSSTW_EUFRMA.Adv_EUFRMA = {
+  proc forge(pk : pkFLXMSSTW, msigl : (msgFLXMSSTW * sigFLXMSSTW) list) : msgFLXMSSTW * sigFLXMSSTW = {
+    var msig : msgFLXMSSTW * sigFLXMSSTW;
+
+    msig <@ A.forge(pko2pkr pk, msigl);
+
+    return msig;
+  }
+}.
+
+(* -- Proof of EUF-RMA for Fixed-Length XMSS-TW as standalone -- *)
+section Proof_EUF_RMA_FLXMSSTWRFC.
+(* - Module declarations - *)
+declare module A <: Adv_EUFRMA{
+  -PRF_SK_PRF.O_PRF_Default, -FC.O_THFC_Default, -FC_PRE.O_SMDTPRE_Default,
+  -FC_TCR.O_SMDTTCR_Default, -FC_UD.O_SMDTUD_Default, -O_MEUFGCMA_WOTSTWES,
+  -PKCOC.O_THFC_Default, -PKCOC_TCR.O_SMDTTCR_Default, -TRHC.O_THFC_Default,
+  -TRHC_TCR.O_SMDTTCR_Default, -R_SMDTUDC_Game23WOTSTWES, -R_SMDTTCRC_Game34WOTSTWES,
+  -R_PRF_FLXMSSTWESInlineNOPRF, -R_SMDTPREC_Game4WOTSTWES,
+  -R_MEUFGCMAWOTSTWES_EUFRMAFLXMSSTWESNOPRF, -R_SMDTTCRCTRH_EUFRMAFLXMSSTWESNOPRF,
+  -R_SMDTTCRCPKCO_EUFRMAFLXMSSTWESNOPRF, -R_SMDTTCRCTRH_EUFRMAFLXMSSTWESNOPRF,
+  -R_EUFRMAFLXMSSTW_EUFRMAFLXMSSTWES, -R_EUFRMAFLXMSSTWRFC_EUFRMAFLXMSSTW}.
+
+declare axiom A_forge_ll : islossless A.forge.
+
+
+(* - Steps - *)
+(*
+  First step: Reduce EUF-RMA for Fixed-Length XMSS-TW as standalone (but
+  slightly more aligned with RFC) to EUF-RMA for Fixed-Length XMSS-TW as
+  standalone
+*)
+local lemma Step_EUFRMA_FLXMSSTWRFC_FLXMSSTW &m:
+  Pr[EUF_RMA(FL_XMSS_TW_RFC, A).main() @ &m : res]
+  =
+  Pr[FLXMSSTW_EUFRMA.EUF_RMA(FL_XMSS_TW, R_EUFRMAFLXMSSTWRFC_EUFRMAFLXMSSTW(A)).main() @ &m : res].
+proof.
+byequiv => //=.
+proc.
+inline{2} 4.
+wp; symmetry.
+call Eqv_FLXMSSTW_FLXMSSTWRFC_verify.
+wp; call (_: true).
+wp; while (={msigl} /\ skr2sko sk{2} = sk{1}).
++ wp; call Eqv_FLXMSSTW_FLXMSSTWRFC_sign.
+  by auto => /> /#.
+wp; call Eqv_FLXMSSTW_FLXMSSTWRFC_keygen.
+by skip => &1 &2 /> /#.
+qed.
+
+(* Security Theorem *)
+lemma EUFRMA_FLXMSSTWRFC &m :
+  Pr[EUF_RMA(FL_XMSS_TW_RFC, A).main() @ &m : res]
+  <=
+  `|Pr[PRF_SK_PRF.PRF(R_PRF_FLXMSSTWESInlineNOPRF(R_EUFRMAFLXMSSTW_EUFRMAFLXMSSTWES(R_EUFRMAFLXMSSTWRFC_EUFRMAFLXMSSTW(A))), PRF_SK_PRF.O_PRF_Default).main(false) @ &m : res] -
+    Pr[PRF_SK_PRF.PRF(R_PRF_FLXMSSTWESInlineNOPRF(R_EUFRMAFLXMSSTW_EUFRMAFLXMSSTWES(R_EUFRMAFLXMSSTWRFC_EUFRMAFLXMSSTW(A))), PRF_SK_PRF.O_PRF_Default).main(true) @ &m : res]|
+  +
+  (w - 2)%r *
+  `|Pr[FC_UD.SM_DT_UD_C(R_SMDTUDC_Game23WOTSTWES(R_MEUFGCMAWOTSTWES_EUFRMAFLXMSSTWESNOPRF(R_EUFRMAFLXMSSTW_EUFRMAFLXMSSTWES(R_EUFRMAFLXMSSTWRFC_EUFRMAFLXMSSTW(A)))), FC_UD.O_SMDTUD_Default, FC.O_THFC_Default).main(false) @ &m : res] -
+    Pr[FC_UD.SM_DT_UD_C(R_SMDTUDC_Game23WOTSTWES(R_MEUFGCMAWOTSTWES_EUFRMAFLXMSSTWESNOPRF(R_EUFRMAFLXMSSTW_EUFRMAFLXMSSTWES(R_EUFRMAFLXMSSTWRFC_EUFRMAFLXMSSTW(A)))), FC_UD.O_SMDTUD_Default, FC.O_THFC_Default).main(true) @ &m : res]|
+  +
+  Pr[FC_TCR.SM_DT_TCR_C(R_SMDTTCRC_Game34WOTSTWES(R_MEUFGCMAWOTSTWES_EUFRMAFLXMSSTWESNOPRF(R_EUFRMAFLXMSSTW_EUFRMAFLXMSSTWES(R_EUFRMAFLXMSSTWRFC_EUFRMAFLXMSSTW(A)))), FC_TCR.O_SMDTTCR_Default, FC.O_THFC_Default).main() @ &m : res]
+  +
+  Pr[FC_PRE.SM_DT_PRE_C(R_SMDTPREC_Game4WOTSTWES(R_MEUFGCMAWOTSTWES_EUFRMAFLXMSSTWESNOPRF(R_EUFRMAFLXMSSTW_EUFRMAFLXMSSTWES(R_EUFRMAFLXMSSTWRFC_EUFRMAFLXMSSTW(A)))), FC_PRE.O_SMDTPRE_Default, FC.O_THFC_Default).main() @ &m : res]
+  +
+  Pr[PKCOC_TCR.SM_DT_TCR_C(R_SMDTTCRCPKCO_EUFRMAFLXMSSTWESNOPRF(R_EUFRMAFLXMSSTW_EUFRMAFLXMSSTWES(R_EUFRMAFLXMSSTWRFC_EUFRMAFLXMSSTW(A))), PKCOC_TCR.O_SMDTTCR_Default, PKCOC.O_THFC_Default).main() @ &m : res]
+  +
+  Pr[TRHC_TCR.SM_DT_TCR_C(R_SMDTTCRCTRH_EUFRMAFLXMSSTWESNOPRF(R_EUFRMAFLXMSSTW_EUFRMAFLXMSSTWES(R_EUFRMAFLXMSSTWRFC_EUFRMAFLXMSSTW(A))), TRHC_TCR.O_SMDTTCR_Default, TRHC.O_THFC_Default).main() @ &m : res].
+proof.
+rewrite Step_EUFRMA_FLXMSSTWRFC_FLXMSSTW &(EUFRMA_FLXMSSTW (R_EUFRMAFLXMSSTWRFC_EUFRMAFLXMSSTW(A))) //.
+by proc; call A_forge_ll.
+qed.
+
+end section Proof_EUF_RMA_FLXMSSTWRFC.
 
 end RFC.
 
