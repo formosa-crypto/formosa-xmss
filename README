@@ -9,13 +9,4 @@ Jasmin & ECLib: release-2025.02
 Leftover proof obligations
 ---------------------------
 > `proof/XMSS_Security_RFCAbs.ec`
-  Lemma WOTSEncodeP:
-  Equivalence for the WOTS checksum, due to the fact that the specification uses
-  integers as an intermediate value, requiring consideration of
-  endianness in the implementation that would otherwise not be needed.
-  Currently, we have reduced this to proving (1)
-  bounds on some parameters and (2) equality of the
-  values contributed by bits to the integer value (when their
-  bitstring is interprted as an integer) before and after
-  shift/slice operations.
   
