@@ -1897,22 +1897,203 @@ lemma si_reduced_node start lidxo t ss ps ad offset :
   => 2^t %| start
   => 0 <= lidxo < 2^t
   => hw (lpathst (lidxo + 1) t) <= hw (lpathst lidxo t)
- => hw (lpathst (lidxo + 1) t) <= offset <= hw (lpathst lidxo t) + 1
+  => hw (lpathst (lidxo + 1) t) <= offset <= hw (lpathst lidxo t) + 1
   => 2 <= offset
   => (nth witness (stack_increment start lidxo t ss ps ad offset) (offset - 1)).`2 =
      (nth witness (stack_increment start lidxo t ss ps ad offset) (offset - 2)).`2
   =>
-    let si = (stack_increment start lidxo t ss ps ad offset) in
-    let si1 = (stack_increment start lidxo t ss ps ad (offset - 1)) in
+    let si     = (stack_increment start lidxo t ss ps ad offset) in
+    let si1    = (stack_increment start lidxo t ss ps ad (offset - 1)) in
+    let si_oB1 = nth witness si (offset - 1) in
+    let si_oB2 = nth witness si (offset - 2) in
+
     (nth witness si1 (offset - 2)).`1 =
       trh
         ps
         (set_thtbidx
           (set_typeidx (adr2ads zero_address) trhtype)
-          ((nth witness si (offset - 1)).`2 + 1) ((start + lidxo) %/ 2 ^ ((nth witness si (offset - 1)).`2 + 1)))
-        ((DigestBlock.val (nth witness si (offset - 2)).`1) ++ (DigestBlock.val (nth witness si (offset - 1)).`1)).
+          (si_oB1.`2 + 1) ((start + lidxo) %/ 2 ^ (si_oB1.`2 + 1)))
+        ((DigestBlock.val si_oB2.`1) ++ (DigestBlock.val si_oB1.`1)).
 proof.
-move=> 7? si si1.
+move=> 8? si si1 si_oB1 si_oB2.
+pose s := stack_from_leaf start lidxo t ss ps ad.
+have szs: size s = hw (lpathst lidxo t) by rewrite /s sfl_size ~-1:/#.
+have sz_tk: forall i, 0 < i <= offset => size (take (offset - i) s) = offset - i.
+- by move=> i *; rewrite size_take_condle ~-1:/# szs ifT //#.
+
+have gt0_t: 0 < t.
+- (suff: t <> 0 by smt()); first apply/negP => ->>.
+  have: offset <= hw (lpathst lidxo 0) + 1 by smt().
+  rewrite /lpathst b2i0_eq /= 1:ltr_eqF //.
+  by have [_ ->]: 0 <= lidxo < 2 ^ 0 by done. (* FIXME *)
+  by rewrite hw_rev int2bs0s /= /#.
+
+pose lvl := (nth witness s (offset - 2)).`2.
+
+have rg_lvl: 0 <= lvl < t.
+- have: lvl \in unzip2 s by apply/(map_f snd)/mem_nth; smt().
+  case/mapP=> -[??] /= [] @/s @/stack_from_leaf.
+  case/mapP=> /= bs [] + [] _ ->> ->.
+  rewrite /paths_from_leaf ifF 1:/# pmap_map.
+  case/mapP=> bso; rewrite mem_filter => -[] @/predC1.
+  case: bso => /= [//|] ? + <<- - /mapP[] i [/mem_range rgi].
+  rewrite /extract_path; case: (nth _ _ _) => //= ->.
+  rewrite size_rcons size_take_condle 1:/#.
+  rewrite /lpathst size_rev b2i0_eq 1:/# /=.
+  by rewrite BS2Int.size_int2bs /#.
+
+pose nps := (take (h - (lvl + 1)) (lpath (start + lidxo))).
+pose e := node_from_path nps ss ps ad.
+
+have sz_nps: size nps = h - (lvl + 1).
+- rewrite /nps size_take_condle 1:/# ifT //.
+  rewrite /lpath b2i0_eq 1:/# /= size_rev.
+  by rewrite BS2Int.size_int2bs /#.
+
+have eE: e =
+  let ls = leaves_from_path nps in
+  let nls = map (leafnode_from_idx ss ps ad) ls in
+  let subtree = list2tree nls in
+  val_bt_trh
+    subtree ps (set_typeidx ad trhtype)
+    (h - size nps) (head witness ls %/ 2 ^ (h - size nps)).
+- by rewrite /e /node_from_path /= sz_nps /#.
+
+have si1_oB2E: nth witness si1 (offset - 2) = (e, lvl + 1).
+- rewrite /si1 /stack_increment /= -if_neg ltrNge /= ifT //.
+  rewrite -/s szs ifF 1:/# nth_cat ifF 1:/#.
+  by rewrite sz_tk ~-1:/# /=.
+
+have iB2E:
+    nth witness (stack_increment start lidxo t ss ps ad offset) (offset - 2)
+  = nth witness (stack_from_leaf start lidxo t ss ps ad) (offset - 2).
+- rewrite /stack_increment /= -if_neg ltrNge /= ifT 1://.
+  by rewrite nth_cat sz_tk ~-1:/# ifT 1:/# nth_take ~-1:/#.
+
+have hBnpsE: h - size nps = lvl + 1 by rewrite sz_nps #ring.
+
+pose lfp_nps b n := mkseq ((+) (bs2int (rev nps) * 2 ^ (lvl + 1) + b)) (2^n).
+have lfp_npsE: leaves_from_path nps = lfp_nps 0 (lvl + 1).
+- by rewrite /leaves_from_path ifT 1:/# /= /lfp_nps hBnpsE.
+have sz_lfp_nps: forall b n, size (lfp_nps b n) = 2^n.
+- by move=> *; rewrite size_mkseq; smt(expr_ge0).
+have lfp_npsS: forall n b, 0 <= n =>
+  lfp_nps b (n + 1) = lfp_nps b n ++ lfp_nps (b + 2^n) n.
+- move=> n b ?; rewrite /lfp_nps [2^(n+1)]exprS 1:/#.
+  rewrite (_ : 2 * _ = 2^n + 2^n) 1:#ring.
+  rewrite mkseq_add ?expr_ge0 ~-1:// /=.
+  by congr; apply: eq_map => ? //#.
+have hd_lfp_npsE: forall b n, head witness (lfp_nps b n) =
+  bs2int (rev nps) * 2 ^ (lvl + 1) + b.
+- by move=> b n; rewrite -nth0_head nth_mkseq ?expr_gt0 ~-1:/#.
+
+rewrite si1_oB2E /= eE /= hBnpsE lfp_npsE {1}lfp_npsS 1:/# /=.
+rewrite hd_lfp_npsE /= mulzK ?expf_eq0 ~-1://.
+rewrite map_cat (list2treeS lvl) 1:/# 1?size_map ~-1:/# /=.
+
+have si_oB1_fstE: si_oB1.`2 = lvl.
+- admit.
+
+congr.
+- congr.
+  - admit.
+  - by rewrite si_oB1_fstE.
+  rewrite si_oB1_fstE /nps rev_take ?size_lpath_lt ~-1:/#.
+  rewrite opprD addrA /= /lpath revK b2i0_eq 1:/# /=.
+  by rewrite -bs2int_div ~-1:/# int2bsK ~-1:/#.
+
+pose k' := argmax (fun i => take i (BS2Int.int2bs t lidxo)) (all idfun).
+pose k := min t k'.
+
+have lpEth: lpath lidxo = nseq (h - t) false ++ lpathst lidxo t.
+- rewrite /lpath /lpathst !b2i0_eq ~-1:/# /= (int2bs_cat t h) ~-1:/#.
+  have ->: lidxo %/ 2^t = 0 by smt().
+  by rewrite int2bs0 rev_cat rev_nseq.
+
+have: exists xxx,
+     xxx = take (t - (k + 1)) (lpathst lidxo t)
+  /\ xxx = take (t - (k + 1)) (lpathst (lidxo + 1) t).
+- admit.
+
+case=> xxx [xxxE xxxSE].
+
+have lpE: lpathst lidxo t = xxx ++ false :: nseq k true  by admit.
+have lpSE: lpathst (lidxo + 1) t = xxx  ++ true :: nseq k false by admit.
+
+have ?: hw (lpathst (lidxo + 1) t) = hw (lpathst lidxo t) + 1 - k.
+- by rewrite lpE lpSE !hw_cat /= !hw_nseq ?(b2i0, b2i1); smt(ge0_argmax).
+
+have ?: 0 < k <= t.
+- split=> [|_]; last by rewrite /k minrl.
+
+  admit.
+
+
+have ?: forall i, 0 < i < k => (nth witness s (hw (lpathst lidxo t) + 1 + i)).`2 = i.
+- move=> i rgi; rewrite /s /stack_from_leaf /paths_from_leaf.
+  rewrite ifF 1:/# (range_cat (t - k)) ~-1:/# pmap_cat map_cat nth_cat ifF.
+  - rewrite size_map pfl_r_size_min ~-1:/# /lpathst.
+    rewrite b2i0_eq 1:/# /= hw_rev {2}(_ : t = size (int2bs t lidxo)).  
+    - by rewrite BS2Int.size_int2bs /#.
+    rewrite -rev_drop ?BS2Int.size_int2bs ~-1:/#.
+    rewrite hw_rev -{1}[int2bs _ _](cat_take_drop k) hw_cat.
+    admit.
+  admit.
+
+have ?: last false (lpathst lidxo t).
+- by rewrite lpE last_cat /= last_nseq 1:/#.
+
+congr; congr.
+
+- rewrite /si_oB2 /si /stack_increment /= -if_neg ltrNge /= ifT 1:/#.
+  rewrite nth_cat sz_tk 1:/# ifT 1:/# nth_take ~-1:/# -/s.
+  admit.
+
+- rewrite /si_oB1 /si /stack_increment /= -if_neg ltrNge /= ifT 1:/#.
+  rewrite nth_cat sz_tk 1:/# ifF 1:/# /= -/s.
+  rewrite szs; case _: (offset = _) => /=.
+  - move=> offE; rewrite take_oversize.
+    - by rewrite size_lpath_lt ~-1:/# //.
+    rewrite /node_from_path ifT 1:size_lpath_lt ~-1:/#.
+    pose bt := list2tree _; pose lf := leafnode_from_idx _ _ _ _.
+    suff ->: bt = Leaf lf by done.
+    have lvlE: lvl = 0.
+    - rewrite /lvl offE /= -szs nth_last /s /stack_from_leaf.
+      rewrite /paths_from_leaf ifF 1:/# pmap_map.
+      rewrite (range_cat (t - 1)) ~-1:/# -map_comp /(\o).
+      rewrite map_cat filter_cat (rangeS (t - 1)) /=.
+      rewrite /extract_path (_ : nth false _ _ = true) /=.
+      - by rewrite -{2}[t](size_lpathst_lt lidxo) ~-1:/# nth_last /#.
+      rewrite /predC1 /= map_cat /= last_cat /=.
+      rewrite size_rcons size_take_condle ~-1:/#.
+      by rewrite size_lpathst_lt /#.
+    rewrite /bt /lfp_nps lvlE expr0 /= mkseq1 /= list2tree1 /lf /nps.
+    do 2! congr; rewrite lvlE /=.
+    rewrite {2}/lpath revK b2i0_eq 1:/# /= int2bsK ~-1:/#.
+    rewrite /lpath rev_take.
+    - by rewrite size_rev b2i0_eq 1:/# /= size_int2bs /#.
+    rewrite size_rev b2i0_eq 1:/# /= size_int2bs ler_maxr ~-1:/#.
+    rewrite (_ : h - (h - 1) = 1) 1:#ring revK int2bs_cons /= ~-1:/#.
+    rewrite drop0 int2bsK 1:/#.
+    - by split => [/#|_]; rewrite ltz_divLR // -exprSr /#.
+    suff <-: (start + lidxo) %% 2 = 1 by smt().
+    
+    admit.
+
+  - move=> ?.
+    have -> /=: (nth witness s (offset - 1)).`2 = lvl - 1.
+    - rewrite /s /stack_from_leaf. admit.
+    have ?: 0 < lvl by admit.
+    rewrite /node_from_path ifF.
+    - by rewrite size_take_condle 1:/# size_lpath_lt /#.
+    rewrite ifT /=; first by rewrite size_take_condle ?size_lpath_lt /#.
+    rewrite size_take_condle 1:/# size_lpath_lt 1:/# ifT 1:/#.
+    rewrite (_ : h - (h - lvl) = lvl) 1:#ring; congr; first do 2! congr.
+    - admit.
+
+    - admit.
+
+
 admitted.
 
 
