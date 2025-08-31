@@ -815,7 +815,7 @@ op node_from_path (p : bool list, ss ps : Params.nbytes, ad : SA.adrs) : dgstblo
       then let ls = leaves_from_path p in
            let nls = map (leafnode_from_idx ss ps ad) ls in
            let subtree = list2tree nls in
-               (val_bt_trh subtree ps (set_typeidx ad trhtype)
+               (val_bt_trh subtree ps (set_typeidx ad 2)
                    (h - size p) ((head witness ls) %/ 2 ^ ((h - size p))))
       else witness.
 
@@ -1896,7 +1896,8 @@ lemma hw_pmap_extract_path s i j :
 proof. admitted.
 
 lemma si_reduced_node start lidxo t ss ps ad offset :
-     0 <= t <= h
+     ad = adr2ads zero_address 
+  => 0 <= t <= h
   => 0 <= start <= 2^h - 2^t
   => 2^t %| start
   => 0 <= lidxo < 2^t
@@ -1915,11 +1916,11 @@ lemma si_reduced_node start lidxo t ss ps ad offset :
       trh
         ps
         (set_thtbidx
-          (set_typeidx (adr2ads zero_address) trhtype)
+          (set_typeidx (adr2ads zero_address) 2)
           (si_oB1.`2 + 1) ((start + lidxo) %/ 2 ^ (si_oB1.`2 + 1)))
         ((DigestBlock.val si_oB2.`1) ++ (DigestBlock.val si_oB1.`1)).
 proof.
-move=> 8? si si1 si_oB1 si_oB2.
+move=> 8? Hnf si si1 si_oB1 si_oB2.
 pose s := stack_from_leaf start lidxo t ss ps ad.
 have szs: size s = hw (lpathst lidxo t) by rewrite /s sfl_size ~-1:/#.
 have sz_tk: forall i, 0 < i <= offset => size (take (offset - i) s) = offset - i.
@@ -1959,7 +1960,7 @@ have eE: e =
   let nls = map (leafnode_from_idx ss ps ad) ls in
   let subtree = list2tree nls in
   val_bt_trh
-    subtree ps (set_typeidx ad trhtype)
+    subtree ps (set_typeidx ad 2)
     (h - size nps) (head witness ls %/ 2 ^ (h - size nps)).
 - by rewrite /e /node_from_path /= sz_nps /#.
 
@@ -1995,12 +1996,20 @@ rewrite si1_oB2E /= eE /= hBnpsE lfp_npsE {1}lfp_npsS 1:/# /=.
 rewrite hd_lfp_npsE /= mulzK ?expf_eq0 ~-1://.
 rewrite map_cat (list2treeS lvl) 1:/# 1?size_map ~-1:/# /=.
 
-have si_oB1_fstE: si_oB1.`2 = lvl.
-- admit.
 
+have si_oB1_fstE: si_oB1.`2 = lvl.
++ rewrite /lvl /s /si_oB1 /si /stack_increment /= ifF 1:/# nth_cat ifF 1:/#. 
+  rewrite size_take 1:/# /= sfl_size 1..4:/# /= ifT 1:/# /=.   
+  case (offset = hw (lpathst lidxo t) + 1) => HH.  
+  + rewrite HH /stack_from_leaf (nth_map witness) /=; 1: by rewrite pfl_size /#.
+    have <- : (size (paths_from_leaf lidxo t) - 1) = (hw (lpathst lidxo t) - 1) by rewrite pfl_size 1,2:/#.
+    by rewrite hwnoinc_leaflast 1..3:/#.
+  by move : Hnf; rewrite /stack_increment /= ifF 1:/# ifF 1:/# /= nth_cat /#.
+  
+  
 congr.
 - congr.
-  - admit.
+  - by smt().
   - by rewrite si_oB1_fstE.
   rewrite si_oB1_fstE /nps rev_take ?size_lpath_lt ~-1:/#.
   rewrite opprD addrA /= /lpath revK b2i0_eq 1:/# /=.
@@ -2063,7 +2072,7 @@ have ?: size xxx = t - k.
   by rewrite size_nseq ler_maxr 1:/# size_lpathst /#.
 
 have ?: 0 < k.
-- admit.
+- admit. (* property of integers *)
 
 have ?: forall i, 0 < i < k =>
   (nth witness s (hw (take (t - k) (lpathst lidxo t)) + i)).`2 = i.
@@ -3724,7 +3733,7 @@ phoare tree_hash_correct _ps _ss _lstart _sth :
  ==>
   DigestBlock.insubd (BytesToBits (NBytes.val res)) =
     val_bt_trh (list2tree (map (leafnode_from_idx _ss _ps (adr2ads zero_address))
-     (range _lstart (_lstart + 2^_sth)))) _ps (set_typeidx (adr2ads zero_address) trhtype) _sth
+     (range _lstart (_lstart + 2^_sth)))) _ps (set_typeidx (adr2ads zero_address) 2) _sth
      (* (_lstart %/ 2^(_sth + 1))  ] = 1%r. *)
      (_lstart %/ 2 ^ _sth)  ] = 1%r.
 proof.
@@ -4028,13 +4037,13 @@ have Hsil := si_size_in_loop _lstart i{hr} _sth _ss _ps (adr2ads zero_address) (
       rewrite !ifT;1:smt(size_take sfl_size size_ge0).
       by rewrite !nth_take;smt(size_take sfl_size size_ge0).
    split.
-  + have /= := si_reduced_node _lstart i{hr} _sth _ss _ps (adr2ads zero_address) (to_uint offset{hr}) _ _ _ _ _ _ _ _;1..8:smt().
+  + have /= := si_reduced_node _lstart i{hr} _sth _ss _ps (adr2ads zero_address) (to_uint offset{hr}) _ _ _ _ _ _ _ _ _;1..9:smt().
     rewrite Hk => -> @/trh /=.
     rewrite ifF; 1: smt(ge1_n).
     rewrite /bs2block. do 4! congr.
     rewrite -Hs12 H1 Hk.
     rewrite zeroadsE /set_typeidx (HAX.Adrs.insubdK _ zeroadiP) /put /=.
-    rewrite /set_thtbidx (HAX.Adrs.insubdK [0; 0; 0; trhtype]) 1:/#.
+    rewrite /set_thtbidx (HAX.Adrs.insubdK [0; 0; 0; 2]) 1:/#.
     rewrite /put /= HAX.Adrs.insubdK /valid_adrsidxs /= /valid_xidxvalslp /valid_xidxvalslptrh /=.
     right; right. rewrite /valid_tbidx /valid_thidx /nr_nodes.
     rewrite divz_ge0 1:expr_gt0 1:// /trhtype /=.
@@ -4158,7 +4167,7 @@ swap {2} 2 -1; seq 3 3 : (NBytes.val ss{1} = sk_seed0{2}
 sp;wp => /=.
 conseq (: _
         ==>
-        (val_bt_trh (list2tree leafl{1}) ps{1} (set_typeidx (XAddress.val adc) trhtype) h 0 =
+        (val_bt_trh (list2tree leafl{1}) ps{1} (set_typeidx (XAddress.val (XAddress.insubd (HAX.Adrs.insubd (adr2idxs zero_address)))) 2) h 0 =
          DigestBlock.insubd (BytesToBits (NBytes.val root{2})))).
 + auto => /> &1 *; smt(NBytes.valK Index.insubdK).
 ecall {1} (leaves_correct ps0{1} ss0{1} ad{1}) => /=.
@@ -4700,7 +4709,7 @@ seq 2 1 : (   #pre
                 (let k = to_uint ((idx1{2} `>>` W8.of_int kk) `^` W32.one) in
                  let _lstart = k * 2 ^ kk in
                  (val_bt_trh (list2tree (map (leafnode_from_idx sk_seed0{2} pub_seed0{2} (adr2ads zero_address)) (range _lstart (_lstart + 2 ^ kk))))
-                  pub_seed0{2} (set_typeidx (adr2ads zero_address) trhtype) kk k))))
+                  pub_seed0{2} (set_typeidx (adr2ads zero_address) 2) kk k))))
                   (* (k %/ 2))))) *)
             (h - j{2}); last first.
   + wp; skip => &1 &2 /> eqsk1 eqsk21 eqsk22 eqsk231 eqsk232 le2h1_idx.
