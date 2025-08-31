@@ -1891,6 +1891,10 @@ rewrite /lpathst size_rev b2i0_eq 1:/# /=.
 by rewrite BS2Int.size_int2bs /#.
 qed.
 
+lemma hw_pmap_extract_path s i j :
+  hw (take j (drop i s)) = size (pmap (extract_path s) (range i (i+j))).
+proof. admitted.
+
 lemma si_reduced_node start lidxo t ss ps ad offset :
      0 <= t <= h
   => 0 <= start <= 2^h - 2^t
@@ -2002,8 +2006,7 @@ congr.
   rewrite opprD addrA /= /lpath revK b2i0_eq 1:/# /=.
   by rewrite -bs2int_div ~-1:/# int2bsK ~-1:/#.
 
-pose k' := argmax (fun i => take i (BS2Int.int2bs t lidxo)) (all idfun).
-pose k := min t k'.
+pose k := argmax (fun i => take i (rcons (BS2Int.int2bs t lidxo) false)) (all idfun).
 
 have lpEth: lpath lidxo = nseq (h - t) false ++ lpathst lidxo t.
 - rewrite /lpath /lpathst !b2i0_eq ~-1:/# /= (int2bs_cat t h) ~-1:/#.
@@ -2011,34 +2014,68 @@ have lpEth: lpath lidxo = nseq (h - t) false ++ lpathst lidxo t.
   by rewrite int2bs0 rev_cat rev_nseq.
 
 have: exists xxx,
-     xxx = take (t - (k + 1)) (lpathst lidxo t)
-  /\ xxx = take (t - (k + 1)) (lpathst (lidxo + 1) t).
-- admit.
+     lpathst lidxo t = xxx ++ nseq k true
+  /\ lpathst (lidxo + 1) t = rev (behead (rev xxx)) ++ true :: nseq k false
+  /\ !(last false xxx)
+  /\ k <= t.
+- case: (lidxo = 2^t - 1).
+  - have := hwincSE_lpathst lidxo t _ _; ~-1:smt().
+    case=> [|/#] - [# _ ^heq -> ->] ?; exists [].
+    suff ->: t = k by rewrite /= rev_nil cat0s.
+    apply/eq_sym/argmax_eq; first smt().
+    - apply/List.allP=> b /=; rewrite -cats1 take_cat_le.
+      rewrite size_int2bs ifT 1:/# => /mem_take.
+      move: heq; rewrite /lpathst b2i0_eq 1:/# /=.
+      move/(congr1 rev); rewrite revK rev_nseq => ->.
+      by rewrite mem_nseq 1:/#.
+    - move=> j ?; rewrite -has_predC; apply/hasP => /=.
+      exists false; split=> //; rewrite -cats1 take_cat_le.
+      by rewrite size_int2bs ifF 1:/# /= mem_cat; right; smt().
+  move=> ?; have := int2bs_incSE t lidxo _ _ _; ~-1:smt().
+  (pose k' := argmax _ _) => /= [# ??? eqE eqSE]; have eq_k_k': k' = k.
+  apply/eq_sym/argmax_eq; first smt(ge0_argmax).
+  - apply/List.allP => /= b; rewrite -cats1 take_cat_le.
+    rewrite size_int2bs ifT 1:/# eqE take_cat_le.
+    by rewrite size_nseq ifT 1:/# take_nseq -1:mem_nseq; smt(ge0_argmax).
+  - move=> j ?; rewrite -has_predC; apply/hasP => /=.
+    exists false; split=> //; rewrite eqE -cats1 -catA.
+    rewrite take_cat_le size_nseq ifF; first smt(ge0_argmax).
+    rewrite mem_cat; right; rewrite -cat1s -catA /=.
+    by rewrite ifF; 1: smt(ge0_argmax).
+  exists (rcons (rev (drop (k' + 1) (int2bs t lidxo))) false); do! split.
+  - by rewrite /lpathst b2i0_eq 1:/# /= {1}eqE rev_cat rev_cons rev_nseq eq_k_k'.
+  - rewrite /lpathst b2i0_eq 1:/# /= {1}eqSE rev_cat rev_cons rev_nseq.
+    by rewrite rev_rcons /= revK -cats1 -catA /= eq_k_k'.
+  - by rewrite last_rcons.
+  - smt().
 
-case=> xxx [xxxE xxxSE].
-
-have lpE: lpathst lidxo t = xxx ++ false :: nseq k true  by admit.
-have lpSE: lpathst (lidxo + 1) t = xxx  ++ true :: nseq k false by admit.
+case=> xxx [# lpE lpSE lst_xxx ?].
 
 have ?: hw (lpathst (lidxo + 1) t) = hw (lpathst lidxo t) + 1 - k.
-- by rewrite lpE lpSE !hw_cat /= !hw_nseq ?(b2i0, b2i1); smt(ge0_argmax).
+- rewrite lpE lpSE !hw_cat hw_rev /= !hw_nseq /=; ~-1: smt(ge0_argmax).
+  suff ->: hw (behead (rev xxx)) = hw xxx by ring.
+  elim/last_ind: {lpE lpSE} xxx lst_xxx => //=.
+  move=> xxx b _; rewrite last_rcons => ->.
+  by rewrite rev_rcons /= hw_rcons hw_rev.
 
-have ?: 0 < k <= t.
-- split=> [|_]; last by rewrite /k minrl.
+have ?: size xxx = t - k.
+- move/(congr1 List.size): lpE; rewrite size_cat.
+  by rewrite size_nseq ler_maxr 1:/# size_lpathst /#.
 
-  admit.
+have ?: 0 < k.
+- admit.
 
-
-have ?: forall i, 0 < i < k => (nth witness s (hw (lpathst lidxo t) + 1 + i)).`2 = i.
+have ?: forall i, 0 < i < k =>
+  (nth witness s (hw (take (t - k) (lpathst lidxo t)) + i)).`2 = i.
 - move=> i rgi; rewrite /s /stack_from_leaf /paths_from_leaf.
   rewrite ifF 1:/# (range_cat (t - k)) ~-1:/# pmap_cat map_cat nth_cat ifF.
-  - rewrite size_map pfl_r_size_min ~-1:/# /lpathst.
-    rewrite b2i0_eq 1:/# /= hw_rev {2}(_ : t = size (int2bs t lidxo)).  
-    - by rewrite BS2Int.size_int2bs /#.
-    rewrite -rev_drop ?BS2Int.size_int2bs ~-1:/#.
-    rewrite hw_rev -{1}[int2bs _ _](cat_take_drop k) hw_cat.
-    admit.
-  admit.
+  - by rewrite size_map pfl_r_size_min ~-1:/# /lpathst /#.
+  rewrite size_map -(hw_pmap_extract_path _ 0 (t - k)) drop0.
+  rewrite [(_ - hw _)%Int]addrC !addrA /= (nth_map witness) /=.
+  - rewrite {3}(_ : t = t - k + k) 1:#ring -hw_pmap_extract_path.
+    rewrite lpE drop_cat ifF 1:/# (_ : size xxx = t - k) //=.
+    rewrite drop0 take_nseq 1:/# hw_nseq /#.
+  admit.    
 
 have ?: last false (lpathst lidxo t).
 - by rewrite lpE last_cat /= last_nseq 1:/#.
@@ -2077,8 +2114,15 @@ congr; congr.
     rewrite drop0 int2bsK 1:/#.
     - by split => [/#|_]; rewrite ltz_divLR // -exprSr /#.
     suff <-: (start + lidxo) %% 2 = 1 by smt().
-    
-    admit.
+    have ->: (start + lidxo) %% 2 = lidxo %% 2.
+    - have /dvdzP[q ->]: 2^t %| start by done.
+      rewrite (Ring.IntID.exprS 2 (t - 1)) 1:/#.
+      by rewrite mulrA mulrAC modzMDl.
+    move: lpE; rewrite /lpathst b2i0_eq 1:/# /=.
+    move/(congr1 rev); rewrite revK rev_cat rev_nseq.
+    move/(congr1 (head false)); rewrite -!nth0_head.
+    rewrite nth_cat size_nseq ifT 1:/# nth_nseq 1:/#.
+    by rewrite /int2bs nth_mkseq 1:/# /=; smt().
 
   - move=> ?.
     have -> /=: (nth witness s (offset - 1)).`2 = lvl - 1.
