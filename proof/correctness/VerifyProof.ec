@@ -57,9 +57,6 @@ lemma verify_correctness (ptr_m           (* Apontador p mensagem *)
       0 <= to_uint ptr_mlen + 8 < W64.max_uint /\
       0 <= to_uint ptr_mlen < W64.max_uint /\
 
-      disjoint_ptr   (to_uint ptr_m)  (to_uint sm_len) 
-                     (to_uint ptr_sm) (to_uint sm_len) /\
-          
       disjoint_ptr   (to_uint ptr_m) (to_uint sm_len)
                      (to_uint ptr_mlen) 8 /\ (* 1 W64 = 8 bytes *)
 
@@ -214,7 +211,7 @@ seq 1 0 : (
         #{/~t64{1} = smlen{1} - (of_int 4963)%W64}pre /\
         loadW64 Glob.mem{1} (to_uint mlen_ptr{1}) = smlen{1} - (of_int 4963)%W64
 ).
-- auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19 HM H20 H21 H22 H23 H24 H25 H26 *.
+- auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19 HM H20 H21 H22 H23 H24 H25*.
   rewrite load_store_W64 /XMSS_FULL_HEIGHT /=.
   rewrite /XMSS_FULL_HEIGHT /= in H1.
   have E :  disjoint_ptr (to_uint ptr_sm) (XMSS_SIG_BYTES) (to_uint ptr_mlen) 8 by smt().
@@ -225,7 +222,7 @@ seq 1 0 : (
       rewrite /disjoint_ptr /XMSS_SIG_BYTES in E.  
       smt(disjoint_ptr_ptr).
   do split; 1,2: by smt().
-    + rewrite HM; apply (eq_from_nth witness); rewrite !size_load_buf //; 1..3: by rewrite to_uintB ?of_uintK ?uleE /#.
+    + rewrite H19; apply (eq_from_nth witness); rewrite !size_load_buf //; 1..3: by rewrite to_uintB ?of_uintK ?uleE /#.
       rewrite /XMSS_SIG_BYTES. 
       have ->: to_uint (sm_len - (of_int 4963)%W64) = to_uint sm_len - XMSS_SIG_BYTES.
          * rewrite to_uintB; 1: by rewrite uleE /#.
@@ -274,12 +271,12 @@ seq 2 0 : (
   elim * => P0 P2 P4 Pmem.
   call {1} (memcpy_mem_mem Pmem P0 (W64.of_int 4963)  P2 (W64.of_int 4963) P4).
   auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 
-                   H16 H17 H18 H19 HM H20 H21 H22 H23 H24 H25 H26 H27 H28 H29.
+                   H16 H17 H18 H19 HM H20 H21 H22 H23 H24 H25 H26 H27 H28.
   have E0 : to_uint (sm_len - (of_int 4963)%W64) = to_uint sm_len - 4963 by rewrite to_uintB; [rewrite uleE /# |]; rewrite of_uintK.
 
   (* adicionar offset ao apontador = remover offset da length *)
   have E1 : disjoint_ptr (to_uint ptr_sm) (to_uint sm_len) (to_uint ptr_m + XMSS_SIG_BYTES) (to_uint sm_len - XMSS_SIG_BYTES) by smt(). 
-  rewrite H27 E0 /#. 
+  rewrite H26 E0 /#. 
 
 seq 3 2 : (
   #pre /\ 
@@ -315,11 +312,11 @@ seq 0 0 : (
 ).
 - auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 
   H16 H17 H18 H19 HM H20 H21 H22 H23 H24 H25 H26 H27 H28 H29
-  H30 H31 H32. 
+  H30 H31. 
   apply (eq_from_nth witness); rewrite !size_load_buf //; 1..3:smt(@W64 pow2_64).
   have ->: to_uint (sm_len - (of_int 4963)%W64) = to_uint sm_len - 4963 by rewrite to_uintB ?uleE of_uintK /#.
   move => i?.
-  rewrite HM !nth_load_buf //; first by rewrite to_uintB ?uleE of_uintK /#.
+  rewrite H19 !nth_load_buf //; first by rewrite to_uintB ?uleE of_uintK /#.
   congr.
   rewrite !to_uintD !of_uintK /= /XMSS_SIG_BYTES /#. 
  
@@ -332,15 +329,13 @@ seq 1 1 : (
   call {1} (hash_message_correct P0 P1 P2 P3 P4 P5) => [/# |]. 
   auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 
   H16 H17 H18 H19 HM H20 H21 H22 H23 H24 H25 H26 H27 H28 H29
-  H30 H31 H32 H33.
-  do split.
-   + smt(@W64 pow2_64).
+  H30 H31 H32.
+  do split; 1,3: by smt(@W64 pow2_64).
    + rewrite to_uintB ?uleE of_uintK /= /#. 
-   + smt(@W64 pow2_64).
    + smt().
    + apply three_nbytes_eq; apply (eq_from_nth witness); rewrite !ThreeNBytesBytes.valP ?n_val // => i?. 
      rewrite !ThreeNBytesBytes.insubdK ?size_cat ?size_toByte_32 // ?n_val ?size_to_list ?size_toByte_64 //= ?NBytes.valP ?n_val //=.
-     rewrite H31; do congr. 
+     rewrite H30; do congr. 
         * apply (eq_from_nth witness); rewrite NBytes.valP n_val ?size_to_list // => j?.
           rewrite get_to_list initiE //.
           have ->: _pk.[j] = nth witness (sub _pk 0 n) j by rewrite nth_sub /#. 
@@ -579,7 +574,7 @@ do split.
  
 swap {2} 1 1.
 seq 3 1 : (#pre /\ i{1} = W32.zero /\ ={idx_leaf}).
-- auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19 HM H20 H21 H22 H23 H24 H25 H26 H27 H28 H29 H30 H31 H32 H33 H34.
+- auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19 HM H20 H21 H22 H23 H24 H25 H26 H27 H28 H29 H30 H31 H32 H33.
   rewrite andwC; congr; first by smt(@W32 pow2_32).
   by rewrite h_val d_val /(`<<`).
 
@@ -660,10 +655,8 @@ seq 1 1 : (#pre /\ to_list leaf{1} = NBytes.val nodes0{2}).
 - exists * wots_pk{1}, pub_seed{1}, ltree_addr{1}, address0{2}.
   elim * => P0 P1 P2 P3.
   call (ltree_correct P0 P1 P2 P3) => [/#|]. 
-  auto => /> &1 &2 22? -> ? H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18; split => [| /#].
-  rewrite -enc_dec_wots_pk 1:/# //= NBytes.valKd /#.
+auto => /> &1 &2 22? -> /#.
 
- 
 seq 0 2 : (#{/~sub ltree_addr{1} 0 5 = sub address0{2} 0 5}pre /\ sub node_addr{1} 0 5 = sub address0{2} 0 5).
 - inline {1}; auto => /> *; do split; apply (eq_from_nth witness); rewrite !size_sub // => i?; rewrite !nth_sub //= !get_setE //; smt(sub_k).
  
@@ -675,16 +668,6 @@ conseq />.
 exists * leaf{1}, pub_seed{1}, idx_leaf{1}, t64{1}, node_addr{1}, address0{2}.
 elim * => P0 P1 P2 P3 P4 P5.
 call (compute_root_equiv P0 P1 P2 P3 P4 P5) => [/# |].
-skip => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19 HM H20 -> H22 H23 H24 H25 H26 H27 H28 H29 H30 H31 H32 H33 H34 H35
-                 H36 H37 H38 H39 H40 -> H41.
-rewrite !to_uintD; (do split; 4..11: by smt()); 1,2: by rewrite NBytes.valKd.
-- have ->: auth{2} = (nth witness (EncodeSignature (load_sig_mem Glob.mem{1} ptr_sm)).`r_sigs (to_uint i{1})).`2 by smt().
-  rewrite /EncodeSignature => />.
-  rewrite (nth_map witness); first by rewrite size_chunk 1:/# size_sub_list size_load_sig /#.
-  rewrite nth_chunk 1:/# ?size_sub_list ?size_load_sig 1,2:/#.
-  rewrite /EncodeReducedSignature => />.
-  congr.
-  apply (eq_from_nth witness); first by rewrite size_sub_list 1:/# size_load_buf /#.
-  rewrite size_sub_list 1:/# => k?.
-  rewrite nth_sub_list // nth_take 1,2:/# nth_drop 1,2:/# nth_sub_list /#.
+skip => /> &1 &2 41? ->.
+rewrite !to_uintD /#.
 qed.
