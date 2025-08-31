@@ -18,8 +18,17 @@ RUN apt-get --quiet --assume-yes update && \
       ocaml ocaml-native-compilers camlp4-extra opam \
       autoconf debianutils libgmp-dev pkg-config zlib1g-dev \
       vim build-essential python3 python3-pip m4 libgsl-dev \ 
-      libpcre3-dev jq parallel valgrind bash-completion \
+      jq parallel valgrind bash-completion \
       libtext-diff-perl libssl-dev
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+       ca-certificates apt-transport-https lsb-release gnupg2 \
+    && wget -O- https://packages.sury.org/php/apt.gpg | tee /etc/apt/trusted.gpg.d/sury.gpg >/dev/null \
+    && echo "deb https://packages.sury.org/php/ $(lsb_release -sc) main" \
+       | tee /etc/apt/sources.list.d/php.list \
+    && apt-get update
+
+RUN apt-get --quiet --assume-yes install libpcre3-dev
 
 RUN apt-get --quiet --assume-yes clean
 
