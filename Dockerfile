@@ -79,5 +79,4 @@ RUN git clone https://gitlab.com/jasmin-lang/jasmin-compiler.git jasmin-compiler
 COPY --chown=$USER:$USER . /home/$USER/xmss-jasmin
 WORKDIR /home/$USER/xmss-jasmin
 
-ENTRYPOINT ["opam", "exec", "--"]
 CMD ["/bin/bash", "--login"]

@@ -1,12 +1,27 @@
 This currently runs with the following tool versions:
 
 EasyCrypt (security) version: r2025.03
-EasyCrypt (correctness) version: r2025.03 (& main)
+EasyCrypt (correctness) version: r2025.03
 
 Jasmin & ECLib: release-2025.02
 
+# Working with Docker
 
-Leftover proof obligations
----------------------------
-> `proof/XMSS_Security_RFCAbs.ec`
-  
+We provide a Docker image that installs all the needed
+dependencies. Just run:
+
+    make docker
+
+This will create a ready-to-use Docker image and copy the contents of
+this archive inside the Docker container.
+
+You can enter the Docker image by running:
+
+    make run-docker
+
+This will give you an interactive shell inside the Docker
+container. The working directory will contains a copy of this archive.
+
+To check the proofs, run:
+
+    opam exec -- make -C proof
