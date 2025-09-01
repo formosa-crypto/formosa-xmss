@@ -7,7 +7,7 @@ default:
 	@true
 
 docker:
-	docker build -t xmss .
+	docker build -t jasmin-xmss .
 
 run-docker:
-	docker run -ti xmss
+	docker run --rm -ti jasmin-xmss

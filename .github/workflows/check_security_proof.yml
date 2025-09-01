@@ -32,13 +32,14 @@ jobs:
                 run: |
                     opam update
                     opam pin add -n easycrypt easycrypt
+                    opam install --deps-only --depext-only --confirm-level=unsafe-yes easycrypt
                     opam install --deps-only easycrypt
             -   name: Install EasyCrypt
                 run: opam install easycrypt
             -   name: Configure SMT provers
                 run: opam config exec -- easycrypt why3config -why3 ~/.why3.conf
             -   name: Check project (security)
-                run: ${{ format('opam config exec -- easycrypt runtest -report report.log -raw-args -gcstats {0} {1}', 'proof/config/tests.config', 'security') }}
+                run: opam config exec -- make -C proof "EC_FLAGS=-report ../report.log -raw-args -gcstats" check_security
             -   uses: actions/upload-artifact@v4
                 name: Upload report
                 with:

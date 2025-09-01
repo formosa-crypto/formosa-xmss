@@ -24,4 +24,4 @@ container. The working directory will contains a copy of this archive.
 
 To check the proofs, run:
 
-    opam exec -- make -C proof
+    make -C proof

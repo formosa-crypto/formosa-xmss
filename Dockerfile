@@ -1,82 +1,97 @@
-FROM debian:stable-20250610-slim
-
-LABEL version="0.0.1"
-LABEL maintainer="rui.fernandes@mpi-sp.org" 
+FROM debian:bookworm-slim
 
 ARG USER="xmss-user"
+ARG DEBIAN_FRONTEND=noninteractive
 
 ARG EASYCRYPT_RELEASE=r2025.03
 ARG JASMIN_RELEASE=release-2025.06
+ARG OCAML_RELEASE=ocaml.4.14.2
 
 SHELL ["/bin/bash", "-c"]
 
 RUN apt-get --quiet --assume-yes update && \
     apt-get --quiet --assume-yes upgrade && \
     apt-get --quiet --assume-yes install apt-utils && \
-    apt-get --quiet --assume-yes install \
-      sudo wget curl git time xz-utils libicu-dev \
-      ocaml ocaml-native-compilers camlp4-extra opam \
-      autoconf debianutils libgmp-dev pkg-config zlib1g-dev \
-      vim build-essential python3 python3-pip m4 libgsl-dev \ 
-      jq parallel valgrind bash-completion \
-      libtext-diff-perl libssl-dev
+    apt-get --quiet --assume-yes install wget sudo build-essential && \
+    apt-get --quiet --assume-yes clean
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-       ca-certificates apt-transport-https lsb-release gnupg2 \
-    && wget -O- https://packages.sury.org/php/apt.gpg | tee /etc/apt/trusted.gpg.d/sury.gpg >/dev/null \
-    && echo "deb https://packages.sury.org/php/ $(lsb_release -sc) main" \
-       | tee /etc/apt/sources.list.d/php.list \
-    && apt-get update
+# Install opam system packages
+RUN sudo apt-get --quiet --assume-yes install opam && \
+    sudo apt-get --quiet --assume-yes clean
 
-RUN apt-get --quiet --assume-yes install libpcre3-dev
-
-RUN apt-get --quiet --assume-yes clean
-
-RUN echo "%sudo  ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/sudoers && \
-    chown root:root /etc/sudoers.d/sudoers && \
-    chmod 0400 /etc/sudoers.d/sudoers && \
-    useradd --create-home --shell /bin/bash --home-dir /home/$USER --user-group --groups sudo --uid 1001 $USER
+# Setup final user
+COPY --chown=root:root --chmod=0400 docker-parts/sudoers /etc/sudoers.d/
+RUN useradd -ms /bin/bash -d /home/$USER -g root -G sudo -u 1001 $USER
 
 USER $USER
 WORKDIR /home/$USER
 
-RUN curl -L https://nixos.org/nix/install > nix-install && \
-    sh nix-install
+ENV PATH="/home/${USER}/bin:$PATH"
 
-# Install EasyCrypt & SMT Solvers
-RUN export OPAMYES=true OPAMVERBOSE=0 OPAMJOBS=$(nproc) && \
-    opam init --disable-sandboxing --compiler=ocaml.4.14.2 && \
-    opam install opam-depext && \
-    opam pin add -n alt-ergo 2.5.2 && \
-    opam install alt-ergo && \
+# Install nix
+RUN sh <(wget -O - https://nixos.org/nix/install)
+
+# Install opam
+ENV OPAMYES=true
+ENV OPAMJOBS=2
+
+RUN opam init --disable-sandboxing --compiler=${OCAML_RELEASE} --auto-setup && \
     opam clean
 
-RUN wget --no-verbose --show-progress --progress=bar:force:noscroll --timeout=10 --waitretry=5 --tries=5 \
-    -O cvc4 https://github.com/CVC4/CVC4-archived/releases/download/1.8/cvc4-1.8-x86_64-linux-opt && \ 
-    sudo install -D cvc4 /usr/local/bin/
+# Install Alt-Ergo
+COPY --chmod=0755 --chown=1001:0 docker-parts/alt-ergo bin/run-alt-ergo
 
-RUN wget --no-verbose --show-progress --progress=bar:force:noscroll --timeout=10 --waitretry=5 --tries=5 \
-    https://github.com/Z3Prover/z3/releases/download/z3-4.13.0/z3-4.13.0-x64-glibc-2.35.zip && \
-    unzip -j z3-4.13.0-x64-glibc-2.35.zip z3-4.13.0-x64-glibc-2.35/bin/z3 && \
-    sudo install -D z3 /usr/local/bin/
+RUN \
+    version=2.5.2 && \
+    opam switch create --no-switch alt-ergo-${version} ocaml-system && \
+    opam pin     --switch=alt-ergo-${version} add -n alt-ergo ${version} && \
+    opam install --switch=alt-ergo-${version} --deps-only --confirm-level=unsafe-yes alt-ergo && \
+    opam install --switch=alt-ergo-${version} alt-ergo && \
+    opam clean   --switch=alt-ergo-${version} && \
+    ln -s run-alt-ergo ~/bin/alt-ergo-${version}
 
+# Install CVC4
+RUN \
+    version=1.8 && \
+    wget -O cvc4 https://github.com/CVC4/CVC4-archived/releases/download/${version}/cvc4-${version}-x86_64-linux-opt && \
+    install -m 0755 cvc4 ~/bin/cvc4-${version} && \
+    rm -f cvc4
+
+# Install Z3
+RUN \
+    version=4.13.0 && glibc=2.35 && \
+    wget -O z3.zip https://github.com/Z3Prover/z3/releases/download/z3-${version}/z3-${version}-x64-glibc-${glibc}.zip && \
+    unzip -j z3.zip z3-${version}-x64-glibc-${glibc}/bin/z3 && \
+    install -m 0755 z3 ~/bin/z3-${version} && \
+    rm -f z3 z3.zip
+
+# Install EasyCrypt
 RUN eval $(opam env) && \
-    export OPAMYES=true OPAMVERBOSE=0 OPAMJOBS=$(nproc) && \
     opam pin -n add easycrypt https://github.com/EasyCrypt/easycrypt.git#${EASYCRYPT_RELEASE} && \ 
-    opam depext easycrypt && \
+    opam install --deps-only --depext-only --confirm-level=unsafe-yes easycrypt && \
+    opam install --deps-only easycrypt && \
     opam install easycrypt && \
+    opam clean && \
     easycrypt why3config
 
-# Install Jasmin & set ECLib
+# Install Jasmin && EcLib
 RUN git clone https://gitlab.com/jasmin-lang/jasmin-compiler.git jasmin-compiler && \
     cd jasmin-compiler && git checkout ${JASMIN_RELEASE} && \
     USER=$USER source /home/$USER/.nix-profile/etc/profile.d/nix.sh && \
     nix-channel --update && \
-    cd compiler/ && nix-shell --command "make" && \
-    sudo install -D jasmin* /usr/local/bin/ && \
-    cd - && echo -e "[general]\nidirs = Jasmin:$(pwd)/eclib" > ~/.config/easycrypt/easycrypt.conf
+    { cd compiler/ && nix-shell --command "make" && install -D jasmin* ~/bin; }
 
-COPY --chown=$USER:$USER . /home/$USER/xmss-jasmin
+COPY --chown=$USER:0 docker-parts/easycrypt.conf /home/$USER/.config/easycrypt/easycrypt.conf
+RUN sed -i s/__USER__/${USER}/g ~/.config/easycrypt/easycrypt.conf
+
+# Install test system dependencies
+RUN sudo apt-get --quiet --assume-yes install valgrind libssl-dev python3-yaml && \
+    sudo apt-get --quiet --assume-yes clean
+
+# Copy repository
+COPY --chown=$USER:0 . /home/$USER/xmss-jasmin
 WORKDIR /home/$USER/xmss-jasmin
 
+# Configure entry point
+ENTRYPOINT ["opam", "exec", "--"]
 CMD ["/bin/bash", "--login"]
