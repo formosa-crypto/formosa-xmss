@@ -45,7 +45,7 @@ RUN curl -L https://nixos.org/nix/install > nix-install && \
 
 # Install EasyCrypt & SMT Solvers
 RUN export OPAMYES=true OPAMVERBOSE=0 OPAMJOBS=$(nproc) && \
-    opam init --disable-sandboxing && \
+    opam init --disable-sandboxing --compiler=ocaml.4.14.2 && \
     opam install opam-depext && \
     opam pin add -n alt-ergo 2.5.2 && \
     opam install alt-ergo && \
