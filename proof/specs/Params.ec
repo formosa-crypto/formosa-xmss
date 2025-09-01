@@ -16,11 +16,19 @@ const mmb : { int | 1 <= mmb } as ge1_mmb.
   truncate 32-bit index
 *)
 const n : { int | 4 <= n } as ge4_n.
-axiom len32b_n : n <= 954437175. (* n needs to be such that len fits in 32 bits *)
 
 lemma ge1_n : 1 <= n by smt(ge4_n).
 
 op log2_w : { int | log2_w = 2 \/ log2_w = 4 } as logw_vals.
+
+axiom n_lt_2X32: n < 2 ^ (30 - 2 * log2_w).
+
+(* n needs to be such that len fits in 32 bits *)
+lemma len32b_n : n <= 954437175.
+proof.
+apply (StdOrder.IntOrder.ler_trans (2 ^ (30 - 2 * log2_w))); 1: smt(n_lt_2X32).
+by case: logw_vals => -> /=.
+qed.
 
 lemma ge0_log2_w : 0 <= log2_w.
 proof.
@@ -55,6 +63,8 @@ qed.
 const len1 : int = ceil ((8 * n)%r / log2 w%r).
 const len2 : int = floor (log2 (len1 * (w - 1))%r / log2 w%r) + 1.
 const len  : int = len1 + len2.
+
+axiom divisibility_condition: !8 %| len2 * log2_w.
 
 axiom ge1_h : 1 <= h.
 axiom h_max : h < 32. (* Overflows may happen unless h is upper bounded *)

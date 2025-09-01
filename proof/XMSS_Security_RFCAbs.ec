@@ -3030,11 +3030,6 @@ rewrite fromintD fromintM RField.mulrDl -RField.mulrA RField.mulrV //=.
 by rewrite from_int_ceil_addl; smt(@Real).
 qed.
 
-(** FD: is this acceptable in practice? **)
-(** TODO: Move this somewhere sensible once refined to final value **)
-axiom n_lt_2X32: n < 2 ^ (30 - 2 * log2_w).
-axiom divisibility_condition: !8 %| len2 * log2_w.
-
 lemma WOTSEncodeP _ml :
   phoare[WOTS_Encode.encode : arg = _ml /\ len1 = (8 %/ log2_w) * size _ml
          ==>
