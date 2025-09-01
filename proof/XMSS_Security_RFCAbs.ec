@@ -2074,8 +2074,8 @@ have ?: size xxx = t - k.
 have ?: 0 < k.
 - admit. (* property of integers *)
 
-have ?: forall i, 0 < i < k =>
-  (nth witness s (hw (take (t - k) (lpathst lidxo t)) + i)).`2 = i.
+have nth_sk: forall i, 0 <= i < k =>
+  (nth witness s (hw (take (t - k) (lpathst lidxo t)) + i)).`2 = k - (i + 1).
 - move=> i rgi; rewrite /s /stack_from_leaf /paths_from_leaf.
   rewrite ifF 1:/# (range_cat (t - k)) ~-1:/# pmap_cat map_cat nth_cat ifF.
   - by rewrite size_map pfl_r_size_min ~-1:/# /lpathst /#.
@@ -2084,7 +2084,17 @@ have ?: forall i, 0 < i < k =>
   - rewrite {3}(_ : t = t - k + k) 1:#ring -hw_pmap_extract_path.
     rewrite lpE drop_cat ifF 1:/# (_ : size xxx = t - k) //=.
     rewrite drop0 take_nseq 1:/# hw_nseq /#.
-  admit.    
+  rewrite pmap_map eq_in_filter_predT.
+  - move=> p /mapP[j] [] /mem_range ? ->.
+    rewrite lpE /extract_path nth_cat ifT //.
+    by rewrite ifF 1:/# nth_nseq //#.
+  rewrite -map_comp /(\o) (nth_map witness) /=.
+  - by rewrite size_range /#.
+  rewrite nth_range 1:/# /extract_path ifT.
+  - by rewrite lpE nth_cat ifF /= 1:/# nth_nseq /#.  
+  rewrite oget_some size_rcons size_take 1:/# ifT.
+  - smt(size_lpathst).
+  by ring.
 
 have ?: last false (lpathst lidxo t).
 - by rewrite lpE last_cat /= last_nseq 1:/#.
@@ -2093,6 +2103,7 @@ congr; congr.
 
 - rewrite /si_oB2 /si /stack_increment /= -if_neg ltrNge /= ifT 1:/#.
   rewrite nth_cat sz_tk 1:/# ifT 1:/# nth_take ~-1:/# -/s.
+
   admit.
 
 - rewrite /si_oB1 /si /stack_increment /= -if_neg ltrNge /= ifT 1:/#.
@@ -2135,7 +2146,7 @@ congr; congr.
 
   - move=> ?.
     have -> /=: (nth witness s (offset - 1)).`2 = lvl - 1.
-    - rewrite /s /stack_from_leaf. admit.
+    - admit.
     have ?: 0 < lvl by admit.
     rewrite /node_from_path ifF.
     - by rewrite size_take_condle 1:/# size_lpath_lt /#.
