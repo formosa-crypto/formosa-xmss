@@ -17,7 +17,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Build docker image
-        run: docker build --build-arg EASYCRYPT_RELEASE= -t jasmin-xmss .
+        run: docker build --build-arg EASYCRYPT_RELEASE= --build-arg OCAML_RELEASE=5.3.0 -t jasmin-xmss .
 
       - name: Check correctness proofs
         run: docker run --rm jasmin-xmss /usr/bin/time -v make -C proof/ extract check_correctness
