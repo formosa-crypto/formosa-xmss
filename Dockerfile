@@ -85,7 +85,7 @@ COPY --chown=$USER:0 docker-parts/easycrypt.conf /home/$USER/.config/easycrypt/e
 RUN sed -i s/__USER__/${USER}/g ~/.config/easycrypt/easycrypt.conf
 
 # Install test system dependencies
-RUN sudo apt-get --quiet --assume-yes install valgrind libssl-dev python3-yaml && \
+RUN sudo apt-get --quiet --assume-yes install time valgrind libssl-dev python3-yaml && \
     sudo apt-get --quiet --assume-yes clean
 
 # Copy repository
