@@ -173,64 +173,6 @@ module (XMSS_TW : Scheme_RO) (RO : POracle) = {
 }.
 
 
-(* --- Reduction adversaries --- *)
-(*
-module (R_PRF_EUFCMAROXMSSTW (A : Adv_EUFCMA_RO) : Adv_PRF) (O : Oracle_PRF) = {
-  module O_CMA_R_PRF_EUFCMAROXMSSTW : SOracle_CMA = {
-    include var O_Base_Default
-
-    var skfl : skFLXMSSTW
-
-    proc init(skfl_init : skFLXMSSTW) = {
-      skfl <- skfl_init;
-      qs <- [];
-    }
-
-    proc sign(m : msgXMSSTW) : sigXMSSTW = {
-      var idx : index;
-      var mk : mkey;
-      var cm : msgFLXMSSTW;
-      var sigfl : sigFLXMSSTW;
-      var sig : sigXMSSTW;
-
-      idx <- skfl.`1;
-
-      mk <@ O.query(idx);
-
-      cm <@ MCO.o(mk, m);
-
-      (sigfl, skfl) <@ FL_XMSS_TW.sign(skfl, cm);
-
-      sig <- (mk, sigfl);
-
-      return sig;
-    }
-  }
-
-  proc distinguish() : bool = {
-    var pk : pkXMSSTW;
-    var skfl : skFLXMSSTW;
-    var m : msgXMSSTW;
-    var sig : sigXMSSTW;
-    var is_valid, is_fresh;
-
-    MCO.init();
-
-    (pk, skfl) <@ FL_XMSS_TW.keygen();
-
-    O_CMA_R_PRF_EUFCMAROXMSSTW.init(skfl);
-
-    (m, sig) <@ A(MCO, O_CMA_R_PRF_EUFCMAROXMSSTW).forge(pk);
-
-    is_valid <@ XMSS_TW(MCO).verify(pk, m, sig);
-
-    is_fresh <@ O_CMA_R_PRF_EUFCMAROXMSSTW.fresh(m);
-
-    return is_valid /\ is_fresh;
-  }
-}.
-*)
-
 (* --- Proofs of EUF-CMA property for XMSS-TW (assuming message compression is a RO) --- *)
 section Proofs_EUF_CMA_RO_XMSSTW.
 (* -- Declarations -- *)
@@ -402,6 +344,125 @@ wp; while (true) (size w).
 by wp; skip => />; smt(size_eq0 size_ge0).
 qed.
 
+(* High-level security theorem with M-ETCR (instead of CR) *)
+lemma EUFCMARO_XMSSTW_METCRRO_EUFRMA &m :
+  Pr[EUF_CMA_RO(XMSS_TW, A, O_CMA_Default, MCO).main() @ &m : res]
+  <=
+  `| Pr[PRF(R_PRF_EUFCMARO(FL_XMSS_TW, A), O_PRF_Default).main(false) @ &m : res] -
+     Pr[PRF(R_PRF_EUFCMARO(FL_XMSS_TW, A), O_PRF_Default).main(true) @ &m : res] |
+  +
+  Pr[M_ETCR_RO(R_EUFCMARO_METCRRO(FL_XMSS_TW, A), O_METCR, MCO).main() @ &m : res]
+  +
+  Pr[EUF_RMA(FL_XMSS_TW, R_EUFRMA_IEUFRMA(R_EUFCMARO_IEUFRMA(A))).main() @ &m : res]
+  +
+  qS%r * (qS + qH + 1)%r * mu1 dmkey witness
+  +
+  l%r * mu1 dmsgFLXMSSTW witness.
+proof.
+have ->:
+  Pr[EUF_CMA_RO(XMSS_TW, A, O_CMA_Default, MCO).main() @ &m : res]
+  =
+  Pr[EUF_CMA_RO(WithPRF.AL_KU_DSS(FL_XMSS_TW), A, O_CMA_Default, MCO).main() @ &m : res].
++ byequiv => //.
+  proc; inline{1} 2; inline{2} 2.
+  seq 5 5 : (={O_Base_Default.qs, m, is_valid}); last by sim.
+  inline{1} 5; inline{2} 5.
+  inline{1} 11; inline{2} 11.
+  wp; call(: true) => />; 1: by sim.
+  wp; call(: ={ERO.m}) => />; 1: by wp.
+  wp; call(: ={O_Base_Default.qs, O_CMA_Default.sk, ERO.m}) => />; first 2 by sim.
+  inline *.
+  wp; while (={ss1, ss0, ps1, ps0, ms, leafl0, ad0, ERO.m}); 1: by sim.
+  wp; do 3! rnd.
+  while (={w, ERO.m}); 1: by wp; rnd; wp; skip.
+  by wp; skip.
+move: (ALKUDSS_EUFCMARO_PRF_METCRRO_EUFRMA FL_XMSS_TW FLXMSSTW_sign_ll FLXMSSTW_verify_ll qS rng_qS qH ge0_qH).
+move=> /(_ (fun (skfl : skFLXMSSTW) => skfl.`1 = Index.insubd 0)
+           (fun (skfl : skFLXMSSTW) => (Index.insubd (Index.val skfl.`1 + 1), skfl.`2, skfl.`3, skfl.`4))
+           opsign _ FLXMSSTW_sign_fun _ _ _ _).
++ proc; inline *.
+  wp; while (true).
+  - wp; while (true); 1: by wp.
+    wp; while (true); 1: by wp.
+    by wp.
+  by wp; do 2! rnd; skip.
++ move=> skfl.
+  proc; inline *.
+  wp => />; while (true).
+  - wp; while (true); 1: by wp.
+    wp; while (true); 1: by wp.
+    by wp.
+  wp; while (true); 1: by wp.
+  wp; while (true); 1: by wp.
+  by wp; skip.
++ move=> i j skfl /= init_sk [ge0i leqS_i] [ge0_j leqS_j] neqj_i.
+  have fupd_it:
+    forall (k : int), 0 <= k => k < qS =>
+      (fold (fun (sk : skFLXMSSTW) =>
+        ((Index.insubd ((Index.val sk.`1) + 1)), sk.`2, sk.`3, sk.`4)) skfl k).`1
+      =
+      Index.insubd k.
+  - elim => [@/fupd | k ge0_k @/fupd ih ltqS_k1].
+    * by rewrite fold0.
+    rewrite foldS //= ih 2:Index.insubdK //; smt(rng_qS).
+  rewrite fupd_it // fupd_it //.
+  move: neqj_i; apply contra => eqins_ij.
+  by rewrite -(Index.insubdK i) 2:-(Index.insubdK j) 3:eqins_ij; 1,2: smt(rng_qS).
++ by sim.
++ by sim.
+by move=> /(_ A A_forge_ll A_forge_queries &m).
+qed.
+
+(* Low-level security theorem with M-ETCR (instead of CR) *)
+lemma EUFCMARO_XMSSTW_METCRRO  &m :
+  Pr[EUF_CMA_RO(XMSS_TW, A, O_CMA_Default, MCO).main() @ &m : res]
+  <=
+  `| Pr[MKG_PRF.PRF(R_PRF_EUFCMARO(FL_XMSS_TW, A), O_PRF_Default).main(false) @ &m : res] -
+     Pr[MKG_PRF.PRF(R_PRF_EUFCMARO(FL_XMSS_TW, A), O_PRF_Default).main(true) @ &m : res] |
+  +
+  Pr[M_ETCR_RO(R_EUFCMARO_METCRRO(FL_XMSS_TW, A), O_METCR, MCO).main() @ &m : res]
+  +
+  `|Pr[PRF_SK_PRF.PRF(R_PRF_FLXMSSTWESInlineNOPRF(R_EUFRMAFLXMSSTW_EUFRMAFLXMSSTWES(R_EUFRMA_IEUFRMA(R_EUFCMARO_IEUFRMA(A)))), PRF_SK_PRF.O_PRF_Default).main(false) @ &m : res] -
+  Pr[PRF_SK_PRF.PRF(R_PRF_FLXMSSTWESInlineNOPRF(R_EUFRMAFLXMSSTW_EUFRMAFLXMSSTWES(R_EUFRMA_IEUFRMA(R_EUFCMARO_IEUFRMA(A)))), PRF_SK_PRF.O_PRF_Default).main(true) @ &m : res]|
+  +
+  (w - 2)%r *
+`|Pr[FC_UD.SM_DT_UD_C(R_SMDTUDC_Game23WOTSTWES(R_MEUFGCMAWOTSTWES_EUFRMAFLXMSSTWESNOPRF(R_EUFRMAFLXMSSTW_EUFRMAFLXMSSTWES(R_EUFRMA_IEUFRMA(R_EUFCMARO_IEUFRMA(A))))), FC_UD.O_SMDTUD_Default, FC.O_THFC_Default).main(false) @ &m : res] -
+  Pr[FC_UD.SM_DT_UD_C(R_SMDTUDC_Game23WOTSTWES(R_MEUFGCMAWOTSTWES_EUFRMAFLXMSSTWESNOPRF(R_EUFRMAFLXMSSTW_EUFRMAFLXMSSTWES(R_EUFRMA_IEUFRMA(R_EUFCMARO_IEUFRMA(A))))), FC_UD.O_SMDTUD_Default, FC.O_THFC_Default).main(true) @ &m : res]|
+  +
+  Pr[FC_TCR.SM_DT_TCR_C(R_SMDTTCRC_Game34WOTSTWES(R_MEUFGCMAWOTSTWES_EUFRMAFLXMSSTWESNOPRF(R_EUFRMAFLXMSSTW_EUFRMAFLXMSSTWES(R_EUFRMA_IEUFRMA(R_EUFCMARO_IEUFRMA(A))))), FC_TCR.O_SMDTTCR_Default, FC.O_THFC_Default).main() @ &m : res]
+  +
+  Pr[FC_PRE.SM_DT_PRE_C(R_SMDTPREC_Game4WOTSTWES(R_MEUFGCMAWOTSTWES_EUFRMAFLXMSSTWESNOPRF(R_EUFRMAFLXMSSTW_EUFRMAFLXMSSTWES(R_EUFRMA_IEUFRMA(R_EUFCMARO_IEUFRMA(A))))), FC_PRE.O_SMDTPRE_Default, FC.O_THFC_Default).main() @ &m : res]
+  +
+  Pr[PKCOC_TCR.SM_DT_TCR_C(R_SMDTTCRCPKCO_EUFRMAFLXMSSTWESNOPRF(R_EUFRMAFLXMSSTW_EUFRMAFLXMSSTWES(R_EUFRMA_IEUFRMA(R_EUFCMARO_IEUFRMA(A)))), PKCOC_TCR.O_SMDTTCR_Default, PKCOC.O_THFC_Default).main() @ &m : res]
+  +
+  Pr[TRHC_TCR.SM_DT_TCR_C(R_SMDTTCRCTRH_EUFRMAFLXMSSTWESNOPRF(R_EUFRMAFLXMSSTW_EUFRMAFLXMSSTWES(R_EUFRMA_IEUFRMA(R_EUFCMARO_IEUFRMA(A)))), TRHC_TCR.O_SMDTTCR_Default, TRHC.O_THFC_Default).main() @ &m : res]
+  +
+  qS%r * (qS + qH + 1)%r * mu1 dmkey witness
+  +
+  l%r * mu1 dmsgFLXMSSTW witness.
+proof.
+move: (EUFRMA_FLXMSSTW (R_EUFRMA_IEUFRMA(R_EUFCMARO_IEUFRMA(A))) _ &m) (EUFCMARO_XMSSTW_METCRRO_EUFRMA &m); last first.
+have -> /#:
+  Pr[FLXMSSTW_EUFRMA.EUF_RMA(FL_XMSS_TW, R_EUFRMA_IEUFRMA(R_EUFCMARO_IEUFRMA(A))).main() @ &m : res]
+  =
+  Pr[EUF_RMA(FL_XMSS_TW, R_EUFRMA_IEUFRMA(R_EUFCMARO_IEUFRMA(A))).main() @ &m : res].
++ by byequiv => //; sim.
+proc; inline *.
+wp; call (: true).
++ by move=> RO SO ROll SOll; apply (A_forge_ll RO SO).
++ proc; inline *.
+  wp; rnd; skip => />.
+  by apply dmkey_ll.
++ proc; inline *.
+  by wp; skip.
+wp; while (true) (size w).
++ move=> z.
+  wp; rnd; wp; skip => /> &1 neqel_w.
+  split; 2: by apply dmsgFLXMSSTW_ll.
+  by elim: (w{1}) neqel_w => //= /#.
+by wp; skip => />; smt(size_eq0 size_ge0).
+qed.
+
 end section Proofs_EUF_CMA_RO_XMSSTW.
 
 end Original.
@@ -413,8 +474,6 @@ theory RFC.
 
 type pkXMSSTWRFC = pkFLXMSSTWRFC.
 type skXMSSTWRFC = mseed * skFLXMSSTWRFC.
-(* type msgXMSSTWRFC = msgXMSSTW. *)
-(* type sigXMSSTWRFC = sigXMSSTW. *)
 
 clone import DigitalSignaturesROM as DSS_RFC with
   type pk_t <- pkXMSSTWRFC,
@@ -460,7 +519,7 @@ module (XMSS_TW_RFC : DSS_RFC.KeyUpdatingROM.Scheme_RO) (RO : DSS_RFC.RO.POracle
     idx <- skfl.`1;
     root <- skfl.`3.`1;
     mk <- mkg ms idx;
-    (* TODO: cm <@ RO.o((mk, root, idx), m); *)
+
     cm <@ RO.o(mk, (root, idx, m));
     (sigfl, skfl) <@ FL_XMSS_TW_RFC.sign(skfl, cm);
     sig <- (mk, sigfl);
@@ -481,7 +540,7 @@ module (XMSS_TW_RFC : DSS_RFC.KeyUpdatingROM.Scheme_RO) (RO : DSS_RFC.RO.POracle
     mk <- sig.`1;
     sigfl <- sig.`2;
     idx <- sigfl.`1;
-    (* TODO: cm <@ RO.o((mk, root, idx), m); *)
+
     cm <@ RO.o(mk, (root, idx, m));
     ver <@ FL_XMSS_TW_RFC.verify(pk, cm, sigfl);
 
@@ -568,62 +627,6 @@ import Repro MCORO MCOROLE.
 import EUFRMAEqv DSS_FL DSS_FL_EUFRMA.
 import WithPRF MKG MKG_PRF DSS_AL_PRF KeyUpdatingROM DSS KeyUpdating.
 import WS.
-(*
-module (R_PRF_EUFCMAROXMSSTWRFC (A : Adv_EUFCMA_RO) : Adv_PRF) (O : Oracle_PRF) = {
-  module O_CMA_R_PRF_EUFCMAROXMSSTWRFC : SOracle_CMA = {
-    include var O_Base_Default
-
-    var skfl : skFLXMSSTWRFC
-
-    proc init(skfl_init : skFLXMSSTWRFC) = {
-      skfl <- skfl_init;
-      qs <- [];
-    }
-
-    proc sign(dbim : dgstblock * index * msgXMSSTW) : sigXMSSTW = {
-      var idx : index;
-      var mk : mkey;
-      var cm : msgFLXMSSTW;
-      var sigfl : sigFLXMSSTW;
-      var sig : sigXMSSTW;
-
-      idx <- skfl.`1;
-
-      mk <@ O.query(idx);
-
-      cm <@ MCO.o(mk, dbim);
-
-      (sigfl, skfl) <@ FL_XMSS_TW_RFC.sign(skfl, cm);
-
-      sig <- (mk, sigfl);
-
-      return sig;
-    }
-  }
-
-  proc distinguish() : bool = {
-    var pk : pkXMSSTWRFC;
-    var skfl : skFLXMSSTWRFC;
-    var dbim : dgstblock * index * msgXMSSTW;
-    var sig : sigXMSSTW;
-    var is_valid, is_fresh;
-
-    MCO.init();
-
-    (pk, skfl) <@ FL_XMSS_TW_RFC.keygen();
-
-    O_CMA_R_PRF_EUFCMAROXMSSTWRFC.init(skfl);
-
-    (dbim, sig) <@ A(MCO, O_CMA_R_PRF_EUFCMAROXMSSTWRFC).forge(pk);
-
-    is_valid <@ XMSS_TW_RFC(MCO).verify(pk, dbim.`3, sig);
-
-    is_fresh <@ O_CMA_R_PRF_EUFCMAROXMSSTWRFC.fresh(dbim);
-
-    return is_valid /\ is_fresh;
-  }
-}.
-*)
 
 module (QC_A_RFC (A : DSS_RFC.KeyUpdatingROM.Adv_EUFCMA_RO) : DSS_RFC.KeyUpdatingROM.Adv_EUFCMA_RO)
                  (RO : DSS_RFC.RO.POracle)
@@ -783,108 +786,62 @@ proc.
 inline 2.
 by wp; call (_: true); wp.
 qed.
+
 (*
-local module R_EUFCMA_EUFCMARFC_QS (RO : RO.POracle) (O : SOracle_CMA) = {
-  include var R_EUFCMA_EUFCMARFC(A, RO, O) [-forge]
-
-  proc forge(pk : pkXMSSTWRFC) : (dgstblock * index * msgXMSSTW) * sigXMSSTW = {
-    var ps : pseed;
-    var m : msgXMSSTW;
-    var sig : sigXMSSTW;
-
-    (root, ps) <- pk;
-    idx <- Index.insubd 0;
-
-    (m, sig) <@ QC_A_RFC(A, RO, R_EUFCMA_EUFCMARFC(A, RO, O).R_O).forge(pk);
-
-    return ((root, sig.`2.`1, m), sig);
-  }
-}.
-
-local lemma EqPr_RQS &m :
-  Pr[EUF_CMA_RO(WithPRF.AL_KU_DSS(FL_XMSS_TW_RFC), R_EUFCMA_EUFCMARFC(A), O_CMA_Default, MCO).main() @ &m : res]
-  =
-  Pr[EUF_CMA_RO(WithPRF.AL_KU_DSS(FL_XMSS_TW_RFC), R_EUFCMA_EUFCMARFC_QS, O_CMA_Default, MCO).main() @ &m : res].
+  Success probability for adversary against EUF-CMA-RO of XMSS_TW_RFC as
+  specified in this file is bounded by (actually equal) to that for the generic
+  hash-then-sign transform applied to FL_XMSS_TW_RFC.
+*)
+local lemma EqPr_EUFCMARO_XMSSTWRFC_ALKUDSSFL &m:
+  Pr[DSS_RFC.KeyUpdatingROM.EUF_CMA_RO(XMSS_TW_RFC, A, DSS_RFC.DSS.KeyUpdating.O_CMA_Default, MCO).main() @ &m : res]
+  <=
+  Pr[EUF_CMA_RO(WithPRF.AL_KU_DSS(FL_XMSS_TW_RFC), R_EUFCMA_EUFCMARFC(A), O_CMA_Default, MCO).main() @ &m : res].
 proof.
 byequiv => //.
 proc.
-inline main; inline{1} 4; inline{2} 4; inline{2} 7.
-seq 7 11: ( ={sig0, pk, m0, R_EUFCMA_EUFCMARFC.root, O_Base_Default.qs, ERO.m}); last by sim.
+inline main.
+inline fresh verify.
+inline{2} 4; inline{2} 7.
+wp; call (: true); 1: by sim.
+wp; call (: ={ERO.m}); 1: by wp.
+wp; call (:  ={ERO.m}
+          /\ DSS_RFC.DSS.KeyUpdating.O_CMA_Default.sk{1} = O_CMA_Default.sk{2}
+          /\ DSS_RFC.DSS.KeyUpdating.O_CMA_Default.sk{1}.`2.`3.`1 = R_EUFCMA_EUFCMARFC.root{2}
+          /\ DSS_RFC.DSS.KeyUpdating.O_CMA_Default.sk{1}.`2.`1 = R_EUFCMA_EUFCMARFC.idx{2}
+          /\ (forall m,
+              m \in DSS_RFC.DSS.O_Base_Default.qs{1}
+              <=>
+              m \in map (fun (q : _ * _ * _) => q.`3) O_Base_Default.qs{2})).
+proc.
 wp.
-call (_: ={glob O_CMA_Default, glob R_EUFCMA_EUFCMARFC, ERO.m}).
-+ proc.
-  by inline{2} 2; sim.
-+ proc.
-  by inline{2} o; wp.
-by conseq />; sim.
+inline{1} 1.
+inline{2} 2; inline{2} 3.
+inline sign.
+wp; call (_: true); 1: by sim.
+wp; while (={skWOTS0, em, ps0, ad0} /\ sig3{1} = sig5{2}); 1: by sim.
+wp; call (_: true); 1: by sim.
+wp; call (_: ={ERO.m}); 1: by wp.
+wp; skip => &1 &2 /> eqqs _ _ _ mx.
+rewrite mem_rcons mapP /=; split.
++ case => [->|].
+  exists ((O_CMA_Default.sk{2}.`2.`3.`1, O_CMA_Default.sk{2}.`2.`1, m{2})); smt(mem_rcons).
+move=> mxin.
+move/iffLR: (eqqs mx) => /(_ mxin).
+rewrite mapP => -[x] [xin /=] eq3.
+exists x; smt(mem_rcons).
+move => -[x] []; rewrite mem_rcons /= => -[-> //|].
+rewrite eqqs mapP => t d; right.
+exists x => /#.
+by proc; inline o; wp.
+seq 1 1 : (={glob A, ERO.m}); 1: by sim.
+inline init; wp.
+inline keygen; wp; call (_: true); 1: by sim.
+auto => &1 &2 /> ms msin ss ssin ps psin sigw /> ->.
+rewrite /sko2skr /pko2pkr /pkr2pko /= => msig qs1 qs2 sk eqskvl qsrel.
+rewrite &(contra) qsrel mapP; pose tup := (_, _, _).
+by move=> tp; exists tup => /#.
 qed.
 
-local lemma R_forge_ll (RO <: POracle{-R_EUFCMA_EUFCMARFC_QS}) (SO <: SOracle_CMA{-R_EUFCMA_EUFCMARFC_QS}) :
-  islossless RO.o => islossless SO.sign => islossless R_EUFCMA_EUFCMARFC_QS(RO, SO).forge.
-proof.
-move=> RO_ll SO_ll.
-proc.
-inline 3; wp; sp.
-call (A_forge_ll
-      (<: QC_A_RFC(A, RO, R_EUFCMA_EUFCMARFC(A, RO, SO).R_O).QC_RO)
-      (<: QC_A_RFC(A, RO, R_EUFCMA_EUFCMARFC(A, RO, SO).R_O).QC_SO)).
-+ proc; call RO_ll; by wp.
-+ proc; inline 2; wp.
-  by call SO_ll; wp.
-by wp.
-qed.
-
-local lemma R_forge_queries (RO <: POracle{-R_EUFCMA_EUFCMARFC_QS, -QC_A})
-                            (SO <: SOracle_CMA{-R_EUFCMA_EUFCMARFC_QS, -QC_A}) :
-  hoare[R_EUFCMA_EUFCMARFC_QS(QC_A(R_EUFCMA_EUFCMARFC_QS, RO, SO).QC_RO, QC_A(R_EUFCMA_EUFCMARFC_QS, RO, SO).QC_SO).forge :
-    QC_A.cH = 0 /\ QC_A.cS = 0 ==> QC_A.cH <= qH /\ QC_A.cS <= qS].
-proof.
-proc.
-inline 3.
-wp; sp.
-call (_:
-      QC_A_RFC.cS = QC_A.cS /\ QC_A_RFC.cH = QC_A.cH
-      /\ QC_A_RFC.cS = 0 /\ QC_A_RFC.cH = 0
-      ==>
-      QC_A.cH <= qH /\ QC_A.cS <= qS) => //.
-conseq (: QC_A_RFC.cS = QC_A.cS /\ QC_A_RFC.cH = QC_A.cH
-         ==>
-         QC_A_RFC.cS = QC_A.cS /\ QC_A_RFC.cH = QC_A.cH)
-       (A_forge_queries
-        (<: QC_A(R_EUFCMA_EUFCMARFC_QS, RO, SO).QC_RO)
-        (<: R_EUFCMA_EUFCMARFC(A, QC_A(R_EUFCMA_EUFCMARFC_QS, RO, SO).QC_RO, QC_A(R_EUFCMA_EUFCMARFC_QS, RO, SO).QC_SO).R_O)) => //.
-proc (QC_A_RFC.cS = QC_A.cS /\ QC_A_RFC.cH = QC_A.cH) => //.
-+ proc.
-  inline 2; inline 3.
-  by wp; call (_: true); wp.
-proc.
-inline 2.
-by wp; call (_: true); wp.
-qed.
-
-*)
-(* local module EUF_CMA_RO_R = { *)
-(*   proc main() : bool = { *)
-(*     var pk : pk_al_t; *)
-(*     var sk : WithPRF.sk_al_t; *)
-(*     var m : dgstblock * index * msgXMSSTW; *)
-(*     var sig : sig_al_t; *)
-(*     var is_valid : bool; *)
-(*     var is_fresh : bool; *)
-
-(*     MCO.init(); *)
-
-(*     (pk, sk) <@ WithPRF.AL_KU_DSS(FL_XMSS_TW_RFC, MCO).keygen(); *)
-(*     DSS_AL_PRF.DSS.KeyUpdating.O_CMA_Default(WithPRF.AL_KU_DSS(FL_XMSS_TW_RFC, MCO)).init(sk); *)
-
-(*     (m, sig) <@ R_EUFCMA_EUFCMARFC(A, MCO, DSS_AL_PRF.DSS.KeyUpdating.O_CMA_Default(WithPRF.AL_KU_DSS(FL_XMSS_TW_RFC, MCO))).forge(pk); *)
-
-(*     is_valid <@ WithPRF.AL_KU_DSS(FL_XMSS_TW_RFC, MCO).verify(pk, m, sig); *)
-(*     is_fresh <@ DSS_AL_PRF.DSS.KeyUpdating.O_CMA_Default(WithPRF.AL_KU_DSS(FL_XMSS_TW_RFC, MCO)).fresh(m); *)
-
-(*     return is_valid /\ is_fresh; *)
-(*   } *)
-(* }. *)
 
 (* -- Security theorems -- *)
 (*
@@ -908,58 +865,7 @@ lemma EUFCMARO_XMSSTWRFC_EUFRMA &m :
   +
   l%r * mu1 dmsgFLXMSSTW witness.
 proof.
-have LePrR_A:
-  Pr[DSS_RFC.KeyUpdatingROM.EUF_CMA_RO(XMSS_TW_RFC, A, DSS_RFC.DSS.KeyUpdating.O_CMA_Default, MCO).main() @ &m : res]
-  <=
-  Pr[EUF_CMA_RO(WithPRF.AL_KU_DSS(FL_XMSS_TW_RFC), R_EUFCMA_EUFCMARFC(A), O_CMA_Default, MCO).main() @ &m : res].
-+ byequiv => //.
-  proc.
-  inline main.
-  inline fresh verify.
-  inline{2} 4; inline{2} 7.
-  wp; call (: true); 1: by sim.
-  wp; call (: ={ERO.m}); 1: by wp.
-  wp; call (:  ={ERO.m}
-            /\ DSS_RFC.DSS.KeyUpdating.O_CMA_Default.sk{1} = O_CMA_Default.sk{2}
-            /\ DSS_RFC.DSS.KeyUpdating.O_CMA_Default.sk{1}.`2.`3.`1 = R_EUFCMA_EUFCMARFC.root{2}
-            /\ DSS_RFC.DSS.KeyUpdating.O_CMA_Default.sk{1}.`2.`1 = R_EUFCMA_EUFCMARFC.idx{2}
-            /\ (forall m,
-                m \in DSS_RFC.DSS.O_Base_Default.qs{1}
-                <=>
-                m \in map (fun (q : _ * _ * _) => q.`3) O_Base_Default.qs{2})).
-  proc.
-  wp.
-  inline{1} 1.
-  inline{2} 2; inline{2} 3.
-  inline sign.
-  (* wp; call (_: DSS_RFC.DSS.KeyUpdating.O_CMA_Default.sk{1} = O_CMA_Default.sk{2} *)
-  (*           /\ O_CMA_Default.sk{1}.`2.`3.`1 = R_EUFCMA_EUFCMARFC.root{2} *)
-  (*           /\ O_CMA_Default.sk{1}.`2.`1 = Index.insubd R_EUFCMA_EUFCMARFC.idx{2}). *)
-  (* + inline sign. *)
-  (*   wp 19 19. *)
-  wp; call (_: true); 1: by sim.
-  wp; while (={skWOTS0, em, ps0, ad0} /\ sig3{1} = sig5{2}); 1: by sim.
-  wp; call (_: true); 1: by sim.
-  wp; call (_: ={ERO.m}); 1: by wp.
-  wp; skip => &1 &2 /> eqqs _ _ _ mx.
-  rewrite mem_rcons mapP /=; split.
-  + case => [->|].
-    exists ((O_CMA_Default.sk{2}.`2.`3.`1, O_CMA_Default.sk{2}.`2.`1, m{2})); smt(mem_rcons).
-  move=> mxin.
-  move/iffLR: (eqqs mx) => /(_ mxin).
-  rewrite mapP => -[x] [xin /=] eq3.
-  exists x; smt(mem_rcons).
-  move => -[x] []; rewrite mem_rcons /= => -[-> //|].
-  rewrite eqqs mapP => t d; right.
-  exists x => /#.
-  by proc; inline o; wp.
-  seq 1 1 : (={glob A, ERO.m}); 1: by sim.
-  inline init; wp.
-  inline keygen; wp; call (_: true); 1: by sim.
-  auto => &1 &2 /> ms msin ss ssin ps psin sigw /> ->.
-  rewrite /sko2skr /pko2pkr /pkr2pko /= => msig qs1 qs2 sk eqskvl qsrel.
-  rewrite &(contra) qsrel mapP; pose tup := (_, _, _).
-  move=> tp; exists tup => /#.
+move: (EqPr_EUFCMARO_XMSSTWRFC_ALKUDSSFL &m).
 move: (ALKUDSS_EUFCMARO_PRF_CRRO_EUFRMA FL_XMSS_TW_RFC FLXMSSTWRFC_sign_ll FLXMSSTWRFC_verify_ll qS rng_qS qH ge0_qH).
 move=> /(_ (fun (skfl : skFLXMSSTWRFC) => skfl.`1 = Index.insubd 0)
            (fun (skfl : skFLXMSSTWRFC) => (Index.insubd (Index.val skfl.`1 + 1), skfl.`2, skfl.`3))
@@ -1036,6 +942,109 @@ lemma EUFCMARO_XMSSTWRFC &m :
   l%r * mu1 dmsgFLXMSSTW witness.
 proof.
 move: (EUFRMA_FLXMSSTWRFC (R_EUFRMA_IEUFRMA(R_EUFCMARO_IEUFRMA(R_EUFCMA_EUFCMARFC(A)))) _ &m) (EUFCMARO_XMSSTWRFC_EUFRMA &m); last first.
+have -> /#:
+  Pr[FLXMSSTWRFC_EUFRMA.EUF_RMA(FL_XMSS_TW_RFC, R_EUFRMA_IEUFRMA(R_EUFCMARO_IEUFRMA(R_EUFCMA_EUFCMARFC(A)))).main() @ &m : res]
+  =
+  Pr[EUF_RMA(FL_XMSS_TW_RFC, R_EUFRMA_IEUFRMA(R_EUFCMARO_IEUFRMA(R_EUFCMA_EUFCMARFC(A)))).main() @ &m : res].
++ by byequiv => //; sim.
+proc; inline *.
+wp; call (: true).
++ by move=> RO SO ROll SOll; apply (A_forge_ll RO SO).
++ proc; inline *.
+  auto => />.
+  by apply dmkey_ll.
++ proc; inline *.
+  by wp; skip.
+wp; while (true) (size w).
++ move=> z.
+  wp; rnd; wp; skip => /> &1 neqel_w.
+  split; 2: by apply dmsgFLXMSSTW_ll.
+  by elim: (w{1}) neqel_w => //= /#.
+by wp; skip => />; smt(size_eq0 size_ge0).
+qed.
+
+(* High-level security theorem with M-ETCR (instead of CR) *)
+lemma EUFCMARO_XMSSTWRFC_METCRRO_EUFRMA &m :
+  Pr[DSS_RFC.KeyUpdatingROM.EUF_CMA_RO(XMSS_TW_RFC, A, DSS_RFC.DSS.KeyUpdating.O_CMA_Default, MCO).main() @ &m : res]
+  <=
+  `| Pr[PRF(R_PRF_EUFCMARO(FL_XMSS_TW_RFC, R_EUFCMA_EUFCMARFC(A)), O_PRF_Default).main(false) @ &m : res] -
+     Pr[PRF(R_PRF_EUFCMARO(FL_XMSS_TW_RFC, R_EUFCMA_EUFCMARFC(A)), O_PRF_Default).main(true) @ &m : res] |
+  +
+  Pr[M_ETCR_RO(R_EUFCMARO_METCRRO(FL_XMSS_TW_RFC, R_EUFCMA_EUFCMARFC(A)), O_METCR, MCO).main() @ &m : res]
+  +
+  Pr[EUF_RMA(FL_XMSS_TW_RFC, R_EUFRMA_IEUFRMA(R_EUFCMARO_IEUFRMA(R_EUFCMA_EUFCMARFC(A)))).main() @ &m : res]
+  +
+  qS%r * (qS + qH + 1)%r * mu1 dmkey witness
+  +
+  l%r * mu1 dmsgFLXMSSTW witness.
+proof.
+move: (EqPr_EUFCMARO_XMSSTWRFC_ALKUDSSFL &m).
+move: (ALKUDSS_EUFCMARO_PRF_METCRRO_EUFRMA FL_XMSS_TW_RFC FLXMSSTWRFC_sign_ll FLXMSSTWRFC_verify_ll qS rng_qS qH ge0_qH).
+move=> /(_ (fun (skfl : skFLXMSSTWRFC) => skfl.`1 = Index.insubd 0)
+           (fun (skfl : skFLXMSSTWRFC) => (Index.insubd (Index.val skfl.`1 + 1), skfl.`2, skfl.`3))
+           opsign _ FLXMSSTWRFC_sign_fun _ _ _ _).
++ proc; inline *.
+  wp; while (true).
+  - wp; while (true); 1: by wp.
+    wp; while (true); 1: by wp.
+    by wp.
+  by wp; do 2! rnd; skip.
++ move=> skfl.
+  proc; inline *.
+  wp => />; while (true).
+  - wp; while (true); 1: by wp.
+    wp; while (true); 1: by wp.
+    by wp.
+  wp; while (true); 1: by wp.
+  wp; while (true); 1: by wp.
+  by wp; skip.
++ move=> i j skfl /= init_sk [ge0i leqS_i] [ge0_j leqS_j] neqj_i.
+  have fupd_it:
+    forall (k : int), 0 <= k => k < qS =>
+      (fold (fun (sk : skFLXMSSTWRFC) =>
+        ((Index.insubd ((Index.val sk.`1) + 1)), sk.`2, sk.`3)) skfl k).`1
+      =
+      Index.insubd k.
+  - elim => [@/fupd | k ge0_k @/fupd ih ltqS_k1].
+    * by rewrite fold0.
+    rewrite foldS //= ih 2:Index.insubdK //; smt(rng_qS).
+  rewrite fupd_it // fupd_it //.
+  move: neqj_i; apply contra => eqins_ij.
+  by rewrite -(Index.insubdK i) 2:-(Index.insubdK j) 3:eqins_ij; 1,2: smt(rng_qS).
++ by sim.
++ by sim.
+move=> /(_ (R_EUFCMA_EUFCMARFC(A)) R_forge_ll R_forge_queries &m) /#.
+qed.
+
+(* Low-level security theorem with M-ETCR (instead of CR) *)
+lemma EUFCMARO_XMSSTWRFC_METCRRO &m :
+  Pr[DSS_RFC.KeyUpdatingROM.EUF_CMA_RO(XMSS_TW_RFC, A, DSS_RFC.DSS.KeyUpdating.O_CMA_Default, MCO).main() @ &m : res]
+  <=
+  `| Pr[MKG_PRF.PRF(R_PRF_EUFCMARO(FL_XMSS_TW_RFC, R_EUFCMA_EUFCMARFC(A)), O_PRF_Default).main(false) @ &m : res] -
+     Pr[MKG_PRF.PRF(R_PRF_EUFCMARO(FL_XMSS_TW_RFC, R_EUFCMA_EUFCMARFC(A)), O_PRF_Default).main(true) @ &m : res] |
+  +
+  Pr[M_ETCR_RO(R_EUFCMARO_METCRRO(FL_XMSS_TW_RFC, R_EUFCMA_EUFCMARFC(A)), O_METCR, MCO).main() @ &m : res]
+  +
+  `|Pr[PRF_SK_PRF.PRF(R_PRF_FLXMSSTWESInlineNOPRF(R_EUFRMAFLXMSSTW_EUFRMAFLXMSSTWES(R_EUFRMAFLXMSSTWRFC_EUFRMAFLXMSSTW(R_EUFRMA_IEUFRMA(R_EUFCMARO_IEUFRMA(R_EUFCMA_EUFCMARFC(A)))))), PRF_SK_PRF.O_PRF_Default).main(false) @ &m : res] -
+    Pr[PRF_SK_PRF.PRF(R_PRF_FLXMSSTWESInlineNOPRF(R_EUFRMAFLXMSSTW_EUFRMAFLXMSSTWES(R_EUFRMAFLXMSSTWRFC_EUFRMAFLXMSSTW(R_EUFRMA_IEUFRMA(R_EUFCMARO_IEUFRMA(R_EUFCMA_EUFCMARFC(A)))))), PRF_SK_PRF.O_PRF_Default).main(true) @ &m : res]|
+  +
+  (w - 2)%r *
+  `|Pr[FC_UD.SM_DT_UD_C(R_SMDTUDC_Game23WOTSTWES(R_MEUFGCMAWOTSTWES_EUFRMAFLXMSSTWESNOPRF(R_EUFRMAFLXMSSTW_EUFRMAFLXMSSTWES(R_EUFRMAFLXMSSTWRFC_EUFRMAFLXMSSTW(R_EUFRMA_IEUFRMA(R_EUFCMARO_IEUFRMA(R_EUFCMA_EUFCMARFC(A))))))), FC_UD.O_SMDTUD_Default, FC.O_THFC_Default).main(false) @ &m : res] -
+    Pr[FC_UD.SM_DT_UD_C(R_SMDTUDC_Game23WOTSTWES(R_MEUFGCMAWOTSTWES_EUFRMAFLXMSSTWESNOPRF(R_EUFRMAFLXMSSTW_EUFRMAFLXMSSTWES(R_EUFRMAFLXMSSTWRFC_EUFRMAFLXMSSTW(R_EUFRMA_IEUFRMA(R_EUFCMARO_IEUFRMA(R_EUFCMA_EUFCMARFC(A))))))), FC_UD.O_SMDTUD_Default, FC.O_THFC_Default).main(true) @ &m : res]|
+  +
+  Pr[FC_TCR.SM_DT_TCR_C(R_SMDTTCRC_Game34WOTSTWES(R_MEUFGCMAWOTSTWES_EUFRMAFLXMSSTWESNOPRF(R_EUFRMAFLXMSSTW_EUFRMAFLXMSSTWES(R_EUFRMAFLXMSSTWRFC_EUFRMAFLXMSSTW(R_EUFRMA_IEUFRMA(R_EUFCMARO_IEUFRMA(R_EUFCMA_EUFCMARFC(A))))))), FC_TCR.O_SMDTTCR_Default, FC.O_THFC_Default).main() @ &m : res]
+  +
+  Pr[FC_PRE.SM_DT_PRE_C(R_SMDTPREC_Game4WOTSTWES(R_MEUFGCMAWOTSTWES_EUFRMAFLXMSSTWESNOPRF(R_EUFRMAFLXMSSTW_EUFRMAFLXMSSTWES(R_EUFRMAFLXMSSTWRFC_EUFRMAFLXMSSTW(R_EUFRMA_IEUFRMA(R_EUFCMARO_IEUFRMA(R_EUFCMA_EUFCMARFC(A))))))), FC_PRE.O_SMDTPRE_Default, FC.O_THFC_Default).main() @ &m : res]
+  +
+  Pr[PKCOC_TCR.SM_DT_TCR_C(R_SMDTTCRCPKCO_EUFRMAFLXMSSTWESNOPRF(R_EUFRMAFLXMSSTW_EUFRMAFLXMSSTWES(R_EUFRMAFLXMSSTWRFC_EUFRMAFLXMSSTW(R_EUFRMA_IEUFRMA(R_EUFCMARO_IEUFRMA(R_EUFCMA_EUFCMARFC(A)))))), PKCOC_TCR.O_SMDTTCR_Default, PKCOC.O_THFC_Default).main() @ &m : res]
+  +
+  Pr[TRHC_TCR.SM_DT_TCR_C(R_SMDTTCRCTRH_EUFRMAFLXMSSTWESNOPRF(R_EUFRMAFLXMSSTW_EUFRMAFLXMSSTWES(R_EUFRMAFLXMSSTWRFC_EUFRMAFLXMSSTW(R_EUFRMA_IEUFRMA(R_EUFCMARO_IEUFRMA(R_EUFCMA_EUFCMARFC(A)))))), TRHC_TCR.O_SMDTTCR_Default, TRHC.O_THFC_Default).main() @ &m : res]
+  +
+  qS%r * (qS + qH + 1)%r * mu1 dmkey witness
+  +
+  l%r * mu1 dmsgFLXMSSTW witness.
+proof.
+move: (EUFRMA_FLXMSSTWRFC (R_EUFRMA_IEUFRMA(R_EUFCMARO_IEUFRMA(R_EUFCMA_EUFCMARFC(A)))) _ &m) (EUFCMARO_XMSSTWRFC_METCRRO_EUFRMA &m); last first.
 have -> /#:
   Pr[FLXMSSTWRFC_EUFRMA.EUF_RMA(FL_XMSS_TW_RFC, R_EUFRMA_IEUFRMA(R_EUFCMARO_IEUFRMA(R_EUFCMA_EUFCMARFC(A)))).main() @ &m : res]
   =
