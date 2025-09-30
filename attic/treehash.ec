@@ -18,6 +18,17 @@ move=> n ge0_h ih [|x1 s1] [|x2 s2] //=.
 - by rewrite !ifF ~-1:/# /= &(ih).
 qed.
 
+lemma drop_zip ['a 'b] (k : int) (s1 : 'a list) (s2 : 'b list) :
+  drop k (zip s1 s2) = zip (drop k s1) (drop k s2).
+proof.
+elim/natind: k s1 s2.
+- by move=> n le0_n s1 s2; rewrite !drop_le0.
+move=> n ge0_h ih [|x1 s1] [|x2 s2] //=.
+- by rewrite zip0l.
+- by rewrite zip0r.
+- by rewrite !ifF ~-1:/# /= &(ih).
+qed.
+
 abbrev "_.[_]" ['a] (s : 'a list) (i : int) =
   nth witness s i.
 
@@ -382,7 +393,7 @@ lemma eqvredI (v : value) (i : int) (stk1_v : value list) (stk2 stk : stack) :
          /\ 0 <= k <= size stk1
          /\ stk' = (drop k stk1) ++ stk2
          /\ v' = foldl (fun v1 v2 => hash v2 v1) v (unzip1 (take k stk1)).
-proof.                (* FIXME: refactor (zip_drop in transitivity) *)
+proof.
 pose P (s1 s2 : stack) :=
   forall (v : value) (i : int) (stk1_v : value list) (stk2 : stack),
     let stk1 = zip stk1_v (range i (i + size stk1_v)) in
@@ -413,11 +424,9 @@ move=> stk1 h hred.
   - by rewrite size_take_condle // le_k.
   have ?: size (range i i') = k by rewrite size_range /#.
   have := ih2 v' i' (drop k stk1_v) stk2 _ _.
-  - rewrite s2E /= stk'E  (range_cat i') ~-1:/#.
-    rewrite -{1}[stk1_v](cat_take_drop k).
-    rewrite zip_cat 1:/# drop_cat_le size_zip ifT 1:/#.
-    rewrite drop_oversize 1:size_zip 1:/# /=.
-    by rewrite size_drop // ler_maxr /#.
+  - rewrite s2E /= stk'E  (range_cat i') ~-1:/#; congr.
+    rewrite drop_zip drop_cat_le size_range ifT 1:/#.
+    by congr; rewrite drop_oversize 1:/# /= size_drop /#.
   - move=> vi /h; rewrite !size_zip size_range.
     rewrite [i + _ - i]addrAC /= ler_maxr 1:size_ge0 minzz.
     rewrite size_range size_drop // [max _ (size _ - _)]ler_maxr 1:/#.
@@ -434,18 +443,14 @@ move=> stk1 h hred.
   - rewrite stk''E; congr; rewrite /stk1.
     have ->: i'' - i = k + k' by smt().
     rewrite [k + k']addrC -[drop (k' + k) _]drop_drop //.
-    rewrite eq_sym (range_cat i') ~-1:/#.
-    rewrite -{1}[stk1_v](cat_take_drop k) zip_cat 1:/#.
-    rewrite drop_cat_le ifT 1:size_zip 1:/#.
-    rewrite [drop k _]drop_oversize 1:#smt:(size_zip) /=.
-    by do 3! congr; rewrite size_drop // ler_maxr /#.
+    rewrite eq_sym (range_cat i') ~-1:/#; congr.
+    rewrite drop_zip drop_cat_le ifT 1:/#; congr.
+    by rewrite drop_oversize 1:/# /= size_drop /#.
   have ->: i'' - i = k + k' by smt().
   rewrite takeD // map_cat foldl_cat -v'E v''E; do 3! congr.
-  rewrite /stk1 eq_sym -{1}[stk1_v](cat_take_drop k).
-  rewrite (range_cat i') ~-1:/# zip_cat 1:/#.
-  rewrite drop_cat_le ifT 1:size_zip 1:/#.
-  rewrite [drop k _]drop_oversize 1:#smt:(size_zip) /=.
-  by rewrite size_drop // ler_maxr /#.
+  rewrite /stk1 eq_sym drop_zip; congr.
+  rewrite (range_cat i') ~-1:/# drop_cat_le ifT 1:/#.
+  by rewrite drop_oversize 1:/# size_drop //#.
 
 - move=> s v' v_ i_ @/P v i stk1_v stk2 stk1.
   case=> -[] ->> ->> eq_cat h_hl.
