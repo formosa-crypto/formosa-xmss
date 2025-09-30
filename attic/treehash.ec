@@ -354,6 +354,96 @@ lemma eqvredR (s : stack) (v1 v2 : value) (i : int) :
   eqvred ((v1, i) :: (v2, i) :: s) ((hash v1 v2, i + 1) :: s).  
 proof. smt(). qed.
 
+lemma eqvredI (v : value) (i : int) (stk1_v : value list) (stk2 stk : stack) :
+  let stk1 = zip stk1_v (range i (i + size stk1_v)) in
+
+     (forall (vi : _ * _), vi \in stk2 => (i + size stk1) + 1 < vi.`2)
+  => eqvred ((v, i) :: stk1 ++ stk2) stk
+  => exists v' i' stk',
+       let k = i' - i in
+            stk = (v', i') :: stk'
+         /\ 0 <= k <= size stk1
+         /\ stk' = (drop k stk1) ++ stk2
+         /\ v' = foldl hash v (unzip1 (take k stk1)).
+proof.                (* FIXME: refactor (zip_drop in transitivity) *)
+pose P (s1 s2 : stack) :=
+  forall (v : value) (i : int) (stk1_v : value list) (stk2 : stack),
+    let stk1 = zip stk1_v (range i (i + size stk1_v)) in
+
+       s1 = ((v, i) :: stk1 ++ stk2)
+    => (forall (vi : _ * _), vi \in stk2 => (i + size stk1) + 1 < vi.`2)
+    => exists v' i' stk',
+         let k = i' - i in (
+              s2 = (v', i') :: stk'
+           /\ 0 <= k <= size stk1
+           /\ stk' = (drop k stk1) ++ stk2
+           /\ v' = foldl hash v (unzip1 (take k stk1))
+         ).
+move=> stk1 h hred.
+(have hW := eqvredW P _ _ _ _ _ hred; last by smt());
+  move=> {v i stk1_v stk2 stk1 h hred}.
+- move=> s @/P => {P} v i stk1_v stk2 stk1 s1E h.
+  exists v i (stk1 ++ stk2) => /=; rewrite s1E /=.
+  by rewrite size_ge0 /= drop0 take0.
+
+- move=> s2 s1 s3 ih1 ih2 v i stk1_v stk2 stk1 s1E h.
+  have [v' i' stk'] := ih1 v i stk1_v stk2 s1E h.
+  (pose k := i' - i)  => -[# s2E ge0_k le_k stk'E v'E].
+  have {le_k}le_k: k <= size stk1_v.
+  - move: le_k; rewrite size_zip size_range addrAC /=.
+    by rewrite ler_maxr 1:&(size_ge0) /#.
+  have ?: size (take k stk1_v) = k.
+  - by rewrite size_take_condle // le_k.
+  have ?: size (range i i') = k by rewrite size_range /#.
+  have := ih2 v' i' (drop k stk1_v) stk2 _ _.
+  - rewrite s2E /= stk'E  (range_cat i') ~-1:/#.
+    rewrite -{1}[stk1_v](cat_take_drop k).
+    rewrite zip_cat 1:/# drop_cat_le size_zip ifT 1:/#.
+    rewrite drop_oversize 1:size_zip 1:/# /=.
+    by rewrite size_drop // ler_maxr /#.
+  - move=> vi /h; rewrite !size_zip size_range.
+    rewrite [i + _ - i]addrAC /= ler_maxr 1:size_ge0 minzz.
+    rewrite size_range size_drop // [max _ (size _ - _)]ler_maxr 1:/#.
+    by rewrite [i' + _ - i']addrAC /= ler_maxr 1:/# minzz /#.
+  case=> [v'' i'' stk'']; (pose k' := i'' - i') => /=.
+  move=> [# s3E ge0_k' le_k' stk''E v''E].
+  exists v'' i'' stk''; rewrite s3E /=.
+  have {le_k'}le_k': k' <= size stk1_v - k.
+  - move: le_k'; rewrite size_zip size_range addrAC /=.
+    rewrite size_drop // [max 0 (size _ - _)]ler_maxr 1:/#.
+    by rewrite ler_maxr 1:/# minzz.
+  rewrite {1}/stk1 size_zip size_range addrAC /=.
+  rewrite ler_maxr 1:/# minzz; (split; first smt()); split.
+  - rewrite stk''E; congr; rewrite /stk1.
+    have ->: i'' - i = k + k' by smt().
+    rewrite [k + k']addrC -[drop (k' + k) _]drop_drop //.
+    rewrite eq_sym (range_cat i') ~-1:/#.
+    rewrite -{1}[stk1_v](cat_take_drop k) zip_cat 1:/#.
+    rewrite drop_cat_le ifT 1:size_zip 1:/#.
+    rewrite [drop k _]drop_oversize 1:#smt:(size_zip) /=.
+    by do 3! congr; rewrite size_drop // ler_maxr /#.
+  have ->: i'' - i = k + k' by smt().
+  rewrite takeD // map_cat foldl_cat -v'E v''E; do 3! congr.
+  rewrite /stk1 eq_sym -{1}[stk1_v](cat_take_drop k).
+  rewrite (range_cat i') ~-1:/# zip_cat 1:/#.
+  rewrite drop_cat_le ifT 1:size_zip 1:/#.
+  rewrite [drop k _]drop_oversize 1:#smt:(size_zip) /=.
+  by rewrite size_drop // ler_maxr /#.
+
+- move=> s v_ v' i_ @/P v i stk1_v stk2 stk1.
+  case=> -[] ->> ->> eq_cat h_hl.
+  exists (hash v v') (i+1) s => /=.
+  have /eq_sym eq_stk1_v := head_behead stk1_v witness _.
+  - apply/negP => stk1_v_nil; have stk1_nil: stk1 = [].
+    - by rewrite /stk1 stk1_v_nil /= range_geq.
+    move: eq_cat; rewrite stk1_nil /=; smt().
+  have stk1E: stk1 = (head witness stk1_v, i) :: behead stk1.
+  - by rewrite /stk1 eq_stk1_v range_ltn 1:#smt:(size_ge0).
+  move: eq_cat; rewrite {1}stk1E => -[] [] ->> _ stk'E.
+  rewrite addrAC /= stk1E /= ler_addl size_ge0 /=.
+  by rewrite drop0 -stk'E take0.
+qed.
+
 module TreeHash = {
   proc th(leaves : value list) : value = {
     var index : int;
