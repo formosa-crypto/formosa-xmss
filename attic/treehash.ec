@@ -1,6 +1,23 @@
 require import AllCore List Ring IntDiv BitEncoding StdOrder.
 (*---*) import IntOrder BS2Int.
 
+lemma zip0l ['a 'b] s: zip<:'a, 'b> [] s = [].
+proof. by case: s. qed.
+
+lemma zip0r ['a 'b] s: zip<:'a, 'b> s [] = [].
+proof. by case: s. qed.
+
+lemma take_zip ['a 'b] (k : int) (s1 : 'a list) (s2 : 'b list) :
+  take k (zip s1 s2) = zip (take k s1) (take k s2).
+proof.
+elim/natind: k s1 s2.
+- by move=> n le0_n s1 s2; rewrite !take_le0.
+move=> n ge0_h ih [|x1 s1] [|x2 s2] //=.
+- by rewrite zip0l.
+- by rewrite zip0r.
+- by rewrite !ifF ~-1:/# /= &(ih).
+qed.
+
 abbrev "_.[_]" ['a] (s : 'a list) (i : int) =
   nth witness s i.
 
@@ -261,7 +278,7 @@ lemma stackrelS (leaves : value list) (idx : int) (stk : (value * int) list) :
      0 <= idx < 2^h
   => stackrel leaves idx stk
   => stackrel leaves (idx + 1) (
-          (foldl (fun acc v => hash v acc) leaves.[idx] (unzip1 (take k stk)), k)
+          (foldl (fun v1 v2 => hash v2 v1) leaves.[idx] (unzip1 (take k stk)), k)
        :: drop k stk
      ).
 proof.
@@ -333,13 +350,13 @@ op eqvred (s1 s2 : stack) =
   forall (P : stack -> stack -> bool),
      (forall s, P s s)
   => (forall s2 s1 s3, P s1 s2 => P s2 s3 => P s1 s3)
-  => (forall s v1 v2 i, P ((v1, i) :: (v2, i) :: s) ((hash v1 v2, i + 1) :: s))
+  => (forall s v1 v2 i, P ((v2, i) :: (v1, i) :: s) ((hash v1 v2, i + 1) :: s))
   => P s1 s2.
 
 lemma eqvredW (P : stack -> stack -> bool) :
      (forall s, P s s)
   => (forall s2 s1 s3, P s1 s2 => P s2 s3 => P s1 s3)
-  => (forall s v1 v2 i, P ((v1, i) :: (v2, i) :: s) ((hash v1 v2, i + 1) :: s))
+  => (forall s v1 v2 i, P ((v2, i) :: (v1, i) :: s) ((hash v1 v2, i + 1) :: s))
   => forall s1 s2, eqvred s1 s2 => P s1 s2.
 proof. by move=> 3? s1 s2 @/eqvred /(_ P); apply. qed.
 
@@ -351,33 +368,33 @@ lemma eqvred_trans (s2 s1 s3 : stack) :
 proof. smt(). qed.
 
 lemma eqvredR (s : stack) (v1 v2 : value) (i : int) :
-  eqvred ((v1, i) :: (v2, i) :: s) ((hash v1 v2, i + 1) :: s).  
+  eqvred ((v2, i) :: (v1, i) :: s) ((hash v1 v2, i + 1) :: s).  
 proof. smt(). qed.
 
 lemma eqvredI (v : value) (i : int) (stk1_v : value list) (stk2 stk : stack) :
   let stk1 = zip stk1_v (range i (i + size stk1_v)) in
 
-     (forall (vi : _ * _), vi \in stk2 => (i + size stk1) + 1 < vi.`2)
+     (forall (vi : _ * _), vi \in stk2 => (i + size stk1) < vi.`2)
   => eqvred ((v, i) :: stk1 ++ stk2) stk
   => exists v' i' stk',
        let k = i' - i in
             stk = (v', i') :: stk'
          /\ 0 <= k <= size stk1
          /\ stk' = (drop k stk1) ++ stk2
-         /\ v' = foldl hash v (unzip1 (take k stk1)).
+         /\ v' = foldl (fun v1 v2 => hash v2 v1) v (unzip1 (take k stk1)).
 proof.                (* FIXME: refactor (zip_drop in transitivity) *)
 pose P (s1 s2 : stack) :=
   forall (v : value) (i : int) (stk1_v : value list) (stk2 : stack),
     let stk1 = zip stk1_v (range i (i + size stk1_v)) in
 
        s1 = ((v, i) :: stk1 ++ stk2)
-    => (forall (vi : _ * _), vi \in stk2 => (i + size stk1) + 1 < vi.`2)
+    => (forall (vi : _ * _), vi \in stk2 => (i + size stk1) < vi.`2)
     => exists v' i' stk',
          let k = i' - i in (
               s2 = (v', i') :: stk'
            /\ 0 <= k <= size stk1
            /\ stk' = (drop k stk1) ++ stk2
-           /\ v' = foldl hash v (unzip1 (take k stk1))
+           /\ v' = foldl (fun v1 v2 => hash v2 v1) v (unzip1 (take k stk1))
          ).
 move=> stk1 h hred.
 (have hW := eqvredW P _ _ _ _ _ hred; last by smt());
@@ -430,9 +447,9 @@ move=> stk1 h hred.
   rewrite [drop k _]drop_oversize 1:#smt:(size_zip) /=.
   by rewrite size_drop // ler_maxr /#.
 
-- move=> s v_ v' i_ @/P v i stk1_v stk2 stk1.
+- move=> s v' v_ i_ @/P v i stk1_v stk2 stk1.
   case=> -[] ->> ->> eq_cat h_hl.
-  exists (hash v v') (i+1) s => /=.
+  exists (hash v' v) (i+1) s => /=.
   have /eq_sym eq_stk1_v := head_behead stk1_v witness _.
   - apply/negP => stk1_v_nil; have stk1_nil: stk1 = [].
     - by rewrite /stk1 stk1_v_nil /= range_geq.
@@ -458,7 +475,7 @@ module TreeHash = {
       while (stack <> [] /\ stack.[0].`2 = focus.`2) {
         top   <- stack.[0].`1;
         stack <- behead stack;
-        focus <- (hash focus.`1 top, focus.`2 + 1);
+        focus <- (hash top focus.`1, focus.`2 + 1);
       }
       stack <- focus :: stack;
       index <- index + 1;
@@ -501,15 +518,57 @@ while (
   /\ eqvred ((leaves.[index], 0) :: stk0) (focus :: stack)
 ); last first.
 - auto=> |> &hr 2? h *; split; first by apply: eqvred_refl.
-  move=> fcs0 stk1 *; split; first by smt().
+  move=> fcs0 stk1 hfin hred; split; first by smt().
   have := stackrelS leaves{hr} index{hr} stk0 // h.
   pose k := List.index _ _; pose v := foldl _ _ _.
   suff //: (v, k) :: drop k stk0 = fcs0 :: stk1.
-  admit.
+
+  have ?: 0 <= k by apply: index_ge0.
+  have take_k_stk0E: take k (unzip2 stk0) = range 0 k.
+  - case: (h) => <- _; rewrite int2bs_strike1 //.
+    rewrite ones_cat take_cat_le ifT.
+    - by rewrite size_ones -/k count_nseq /= ler_maxr.
+    by rewrite ones_nseq1 -/k take_oversize ?size_range //#.
+  have ?: k <= size stk0.
+  - rewrite -(size_map snd); case: (h) => <- _.
+    rewrite size_ones int2bs_strike1 // count_cat.
+    by rewrite count_nseq /= -/k ler_maxr // #smt:(count_ge0).
+  pose v0 := leaves{hr}.[index{hr}].
+  have := eqvredI v0 0 (take k (unzip1 stk0)) (drop k stk0) (fcs0 :: stk1).
+  (pose stk1_0 := zip _ _) => /=.
+  have stk1_0E: stk1_0 = take k stk0.
+  - rewrite /stk1_0 /= size_take_condle //.
+    rewrite ifT 1:size_map 1:/# eq_sym.
+    by rewrite -{1}[stk0]zip_unzip take_zip take_k_stk0E.
+  have sz_stk1_0: size stk1_0 = k.
+  - by rewrite stk1_0E size_take_condle // ifT.
+  move/(_ _ _).
+  - move=> vi /(map_f snd) /=; rewrite map_drop.
+    case: (h) => <- _; rewrite int2bs_strike1 //.
+    rewrite -/k ones_cat drop_cat_le ifT -1:drop_oversize /=;
+      ~-1: by rewrite ones_nseq1 /= size_range /#.
+    rewrite size_nseq ler_maxr 1:/# -cat1s ones_cat.
+    rewrite ones_seq1 /= -map_comp.
+    rewrite (_ : _ \o _ = (+) (k + 1)) 1:/#.
+    case/mapP=> i [hi ->]; rewrite sz_stk1_0.
+    by rewrite ltzE ler_addl; move/ge0_ones: hi.
+  - by rewrite stk1_0E cat_take_drop.
+  case=> v' i' stk' [# ->> ->> ge0_i' le_i'] stk'E v'E.
+  suff i'E: i' = k; first split.
+  - by rewrite v'E /v -/v0 i'E /= stk1_0E take_take.
+  - by rewrite stk'E stk1_0E i'E drop_take //= take0.
+  move: le_i'; rewrite sz_stk1_0 ler_eqVlt => -[] // lt_'i_k.
+  apply: contraR hfin => /= _; rewrite stk'E; split.
+  - rewrite -size_eq0 size_cat size_drop // sz_stk1_0.
+    by rewrite ler_maxr 1:/# #smt:(size_ge0).
+  - rewrite nth_cat size_drop // sz_stk1_0 ifT 1:/#.
+    rewrite nth_drop //= -(nth_map _ witness snd) 1:/#.
+    rewrite stk1_0E map_take take_k_stk0E.
+    by rewrite nth_range /#.
 
 auto=> |> &hr 2? _ h ? eqs; apply: (eqvred_trans _ _ _ h).
 have <- /= := head_behead stack{hr} witness //.
 case _: (head witness _) => v2 i2 /=.
 rewrite -nth0_head => /(congr1 snd) /=; rewrite eqs => <-.
-case: (focus{hr}) => v1 i1 /=; apply: eqvredR.
+by case: (focus{hr}) => v1 i1 /=; apply: eqvredR.
 qed.
