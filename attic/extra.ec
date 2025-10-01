@@ -2,34 +2,6 @@ require import AllCore List Ring IntDiv BitEncoding StdOrder.
 (*---*) import IntOrder BS2Int.
 
 (* All these results are in PRs. This file is going to be removed in a near future *)
-lemma zip0l ['a 'b] s: zip<:'a, 'b> [] s = [].
-proof. by case: s. qed.
-
-lemma zip0r ['a 'b] s: zip<:'a, 'b> s [] = [].
-proof. by case: s. qed.
-
-lemma take_zip ['a 'b] (k : int) (s1 : 'a list) (s2 : 'b list) :
-  take k (zip s1 s2) = zip (take k s1) (take k s2).
-proof.
-elim/natind: k s1 s2.
-- by move=> n le0_n s1 s2; rewrite !take_le0.
-move=> n ge0_h ih [|x1 s1] [|x2 s2] //=.
-- by rewrite zip0l.
-- by rewrite zip0r.
-- by rewrite !ifF ~-1:/# /= &(ih).
-qed.
-
-lemma drop_zip ['a 'b] (k : int) (s1 : 'a list) (s2 : 'b list) :
-  drop k (zip s1 s2) = zip (drop k s1) (drop k s2).
-proof.
-elim/natind: k s1 s2.
-- by move=> n le0_n s1 s2; rewrite !drop_le0.
-move=> n ge0_h ih [|x1 s1] [|x2 s2] //=.
-- by rewrite zip0l.
-- by rewrite zip0r.
-- by rewrite !ifF ~-1:/# /= &(ih).
-qed.
-
 lemma int2bs_strike1 (l n : int) :
   let k = index false (int2bs (1+l) n) in
 
