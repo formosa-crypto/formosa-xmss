@@ -2,8 +2,6 @@
 require import AllCore List Ring IntDiv BitEncoding StdOrder.
 (*---*) import IntOrder BS2Int.
 
-require import Extra.           (* TO BE REMOVED *)
-
 (* ==================================================================== *)
 abbrev "_.[_]" ['a] (s : 'a list) (i : int) =
   nth witness s i.
@@ -61,6 +59,7 @@ op ones (s : bool list) =
     (fun ib : _ * _ => if ib.`2 then Some ib.`1 else None)
     (zip (range 0 (size s)) s).
 
+(* -------------------------------------------------------------------- *)
 lemma size_ones (s : bool list) : size (ones s) = count ((=) true) s.
 proof.
 rewrite /ones pmap_map size_map size_filter.
@@ -125,20 +124,6 @@ by apply: eq_in_map => /= -[|i] /mem_filter @/predC1 /=.
 qed.
 
 (* -------------------------------------------------------------------- *)
-lemma sorted_range m n : sorted (<) (range m n).
-proof.
-case: (n <= m); first by move=> ?; rewrite range_geq.
-move/ltzNge => h; rewrite range_ltn 1:/# /=.
-pose m' := m + 1; have: m < m' by smt().
-rewrite (_ : n = m' + (n - m')) 1:#ring.
-pose n' := n - m'; have ge0_n': 0 <= n' by smt().
-move: (n') (ge0_n') (m) (m') => {m' n' m n h ge0_n'}.
-elim => [|n ge0_n ih] m m' lt_mm' /=; first by rewrite range_geq.
-rewrite addrA range_ltn 1:/# /= lt_mm' /=.
-by rewrite addrAC ih 1:/#.
-qed.
-
-(* -------------------------------------------------------------------- *)
 lemma ge0_ones (s : bool list) : forall x, x \in ones s => 0 <= x.
 proof.
 move=> x @/ones /pmapP[] [b y] [] /mem_zip /=.
@@ -187,7 +172,7 @@ qed.
 
 (* ==================================================================== *)
 op stackrel (leaves : value list) (idx : int) (stk : stack) =
-  let s = int2bs (1 + h) idx in
+  let s = int2bs (h + 1) idx in
 
      (ones s = map (fun (stk1 : stack1) => stk1.`2) stk)
   /\ (forall stk1, stk1 \in stk => stk1.`1 =
@@ -199,7 +184,7 @@ proof. by split => //=; rewrite int2bs0 ones_nseq0. qed.
 
 (* -------------------------------------------------------------------- *)
 lemma stackrelS (leaves : value list) (idx : int) (stk : stack) :
-  let k = index false (int2bs (1 + h) idx) in
+  let k = index false (int2bs (h + 1) idx) in
 
      0 <= idx < 2^h
   => stackrel leaves idx stk
@@ -209,22 +194,22 @@ lemma stackrelS (leaves : value list) (idx : int) (stk : stack) :
      ).
 proof.
 move=> k rg_idx [h1 h2]; have ? := ge0_h; have le_kh: k <= h.
-- have ->: h = size (int2bs (1 + h) idx) - 1 by rewrite size_int2bs /#.
+- have ->: h = size (int2bs (h + 1) idx) - 1 by rewrite size_int2bs /#.
   rewrite ler_subr_addr -ltzE index_mem &(nthP witness).
   exists h; rewrite size_int2bs; split; first smt().
   by rewrite nth_mkseq 1:/# /= pdiv_small.
 have ge0_k: 0 <= k by apply: index_ge0.
 have ?: k <= size stk.
 - rewrite -(size_map snd) -h1 size_ones.
-  rewrite int2bs_strike1 // count_cat count_nseq /=.
+  rewrite int2bs_strikeE // count_cat count_nseq /=.
   by rewrite ler_maxr 1:index_ge0; smt(count_ge0).
 split => /=.
-- rewrite map_drop -h1 int2bs_succ //= -/k ones_cat.
+- rewrite map_drop -h1 int2bs_strike_succE //= -/k ones_cat.
   rewrite ones_nseq0 size_nseq ler_maxr //=.
   rewrite -cat1s ones_cat /= ones_seq1 /= -map_comp.
   rewrite (_ : _ \o _ = (+) (k + 1)) 1:/#.
-  rewrite -drop_ones ?size_int2bs 1:/# [1+h]addrC; congr.
-  rewrite [h+1]addrC int2bs_strike1 // -/k.
+  rewrite -drop_ones ?size_int2bs 1:/#; congr.
+  rewrite int2bs_strikeE // -/k.
   rewrite take_cat size_nseq ifF 1:/# ler_maxr //.
   rewrite [k+1-k]addrAC /= take0 ones_cat size_cat size_map.
   by rewrite ones_seq1 /= ones_nseq1 size_range /#.
@@ -236,20 +221,20 @@ move=> stk1 [->/=|]; last first.
     rewrite -h1 &(le_nth_ones) 1,2:/# h1 size_map.
     by move: rgi; rewrite size_drop /#.
   move/mem_drop/h2 => ->; do 3! congr.
-  rewrite int2bs_strike1 // int2bs_succ // -/k.
+  rewrite int2bs_strikeE // int2bs_strike_succE // -/k.
   rewrite !drop_cat ?size_nseq !ifF ~-1:/#.
-  by rewrite !drop_cons !ifT ~-1:/# [1+h]addrC.
-rewrite (_ : false :: _ = drop k (int2bs (1+h) idx)).
-- rewrite int2bs_succ // eq_sym {1}int2bs_strike1 //= -/k.
+  by rewrite !drop_cons !ifT ~-1:/#.
+rewrite (_ : false :: _ = drop k (int2bs (h+1) idx)).
+- rewrite int2bs_strike_succE // eq_sym {1}int2bs_strikeE //= -/k.
   rewrite drop_cat_le size_nseq ifT 1:/#.
   rewrite drop_oversize ?size_nseq 1:/# /=.
   rewrite -cat1s catA cats1 drop_cat_le.
   rewrite size_rcons size_nseq ifT 1:/# /= eq_sym.
-  by rewrite drop_oversize ?(size_rcons, size_nseq) 1:/# [1+h]addrC.
+  by rewrite drop_oversize ?(size_rcons, size_nseq) 1:/#.
 move=> {stk1}; move: {1 2 4 5 6}k (ge0_k) (lezz k).
 elim=> [|k0 ge0_k0 ih] le_k0_k.
 - rewrite take0 /= reduce_tree_leaf drop0.
-  by rewrite [1+_]addrC int2bsK ?exprSr //#.
+  by rewrite int2bsK ?exprSr //#.
 rewrite takeD ~-1://# map_cat /= foldl_cat ih 1:/#.
 rewrite (drop_take1_nth witness) /=.
 - by split=> //#.
@@ -258,12 +243,12 @@ rewrite reduce_tree_node //; congr.
   - by apply: mem_nth => /#.
   suff ->: stk.[k0].`2 = k0 by rewrite bs2int_cons b2i0.
   rewrite -(nth_map _ witness snd) 1:/#.
-  rewrite -h1 int2bs_strike1 // ones_cat /= nth_cat ifT.
+  rewrite -h1 int2bs_strikeE // ones_cat /= nth_cat ifT.
   - by rewrite ones_nseq1 size_range /= -/k 1:/#.
   by rewrite ones_nseq1 nth_range -/k //#.
 - rewrite (drop_nth witness) 1:#smt:(size_int2bs).
   rewrite bs2int_cons [_+2*_]addrC; do 2! congr.
-  rewrite int2bs_strike1 // nth_cat ifT.
+  rewrite int2bs_strikeE // nth_cat ifT.
   - by rewrite size_nseq -/k /#.
   by rewrite nth_nseq 1:/#.
 qed.
@@ -429,7 +414,7 @@ while (
 - auto=> |>; rewrite stackrel0 expr_ge0 //=.
   move=> idx stk 3? [h1 h2]; have ->>: idx = 2^h by smt().
   have stk2E: unzip2 stk = [h].
-  - by move: h1; rewrite [1+h]addrC ones_pow2 //= eq_sym.
+  - by move: h1; rewrite ones_pow2 //= eq_sym.
   have ?: 0 < size stk by rewrite -(size_map snd) stk2E.
   have := h2 stk.[0] _; first by apply: mem_nth => /=.
   move=> ->; rewrite -(nth_map _ witness snd) //= stk2E /=.
@@ -455,12 +440,12 @@ while (
   pose v0 := leaves{hr}.[index{hr}].
   have := eqvredI_cmpl v0 k (take k stk0) (drop k stk0) fcs0 stk1.
   move/(_ _ _ _ _ _) => //.
-  - rewrite map_take; case: (h) => <- _; rewrite int2bs_strike1 //.
+  - rewrite map_take; case: (h) => <- _; rewrite int2bs_strikeE //.
     rewrite ones_cat take_cat_le ifT.
     - by rewrite size_ones -/k count_nseq /= ler_maxr.
     by rewrite ones_nseq1 -/k take_oversize ?size_range //#.
   - move=> vi /(map_f snd) /=; rewrite map_drop.
-    case: (h) => <- _; rewrite int2bs_strike1 //.
+    case: (h) => <- _; rewrite int2bs_strikeE //.
     rewrite -/k ones_cat drop_cat_le ifT -1:drop_oversize /=;
       ~-1: by rewrite ones_nseq1 /= size_range /#.
     rewrite size_nseq ler_maxr 1:/# -cat1s ones_cat.
