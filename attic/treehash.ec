@@ -1,42 +1,65 @@
+(* ==================================================================== *)
 require import AllCore List Ring IntDiv BitEncoding StdOrder.
 (*---*) import IntOrder BS2Int.
 
-lemma zip0l ['a 'b] s: zip<:'a, 'b> [] s = [].
-proof. by case: s. qed.
-
-lemma zip0r ['a 'b] s: zip<:'a, 'b> s [] = [].
-proof. by case: s. qed.
-
-lemma take_zip ['a 'b] (k : int) (s1 : 'a list) (s2 : 'b list) :
-  take k (zip s1 s2) = zip (take k s1) (take k s2).
-proof.
-elim/natind: k s1 s2.
-- by move=> n le0_n s1 s2; rewrite !take_le0.
-move=> n ge0_h ih [|x1 s1] [|x2 s2] //=.
-- by rewrite zip0l.
-- by rewrite zip0r.
-- by rewrite !ifF ~-1:/# /= &(ih).
-qed.
-
-lemma drop_zip ['a 'b] (k : int) (s1 : 'a list) (s2 : 'b list) :
-  drop k (zip s1 s2) = zip (drop k s1) (drop k s2).
-proof.
-elim/natind: k s1 s2.
-- by move=> n le0_n s1 s2; rewrite !drop_le0.
-move=> n ge0_h ih [|x1 s1] [|x2 s2] //=.
-- by rewrite zip0l.
-- by rewrite zip0r.
-- by rewrite !ifF ~-1:/# /= &(ih).
-qed.
-
+(* ==================================================================== *)
 abbrev "_.[_]" ['a] (s : 'a list) (i : int) =
   nth witness s i.
 
+(* ==================================================================== *)
+op h : { int | 0 <= h } as ge0_h.
+
+type value.
+
+op hash : value -> value -> value.
+
+op reduce_tree (leaves : value list) (lvl : int) (index : int) : value.
+
+axiom reduce_tree_leaf (leaves : value list) (index : int) :
+  reduce_tree leaves 0 index = leaves.[index].
+
+axiom reduce_tree_node (leaves : value list) (h : int) (index : int) : 0 <= h => 
+  reduce_tree leaves (h + 1) index =
+    hash (reduce_tree leaves h (2 * index)) (reduce_tree leaves h (2 * index + 1)).
+
+op reduce (leaves : value list) =
+  reduce_tree leaves h 0.
+
+(* -------------------------------------------------------------------- *)
+type stack1 = value * int.
+type stack  = stack1 list.
+
+(* -------------------------------------------------------------------- *)
+module TreeHash = {
+  proc th(leaves : value list) : value = {
+    var index : int;
+    var stack : stack;
+    var focus : stack1;
+    var top   : value;
+
+    stack <- [];
+    index <- 0;
+    while (index < 2^h) {
+      focus <- (leaves.[index], 0);
+      while (stack <> [] /\ stack.[0].`2 = focus.`2) {
+        top   <- stack.[0].`1;
+        stack <- behead stack;
+        focus <- (hash top focus.`1, focus.`2 + 1);
+      }
+      stack <- focus :: stack;
+      index <- index + 1;
+    }
+    return stack.[0].`1;
+  }  
+}.
+
+(* ==================================================================== *)
 op ones (s : bool list) =
   pmap
     (fun ib : _ * _ => if ib.`2 then Some ib.`1 else None)
     (zip (range 0 (size s)) s).
 
+(* -------------------------------------------------------------------- *)
 lemma size_ones (s : bool list) : size (ones s) = count ((=) true) s.
 proof.
 rewrite /ones pmap_map size_map size_filter.
@@ -48,27 +71,17 @@ rewrite eq_sym -{1}[s](map_nth_range witness).
 by rewrite count_map &(eq_count) /preim /= /#.
 qed.
 
-lemma subseq_ones (s : bool list) :
-  subseq (ones s) (range 0 (size s)).
-proof.
-apply/subseqP; exists s.
-- rewrite size_range /= ler_maxr /= 1:#smt:(size_ge0).
-rewrite /ones; elim/last_ind: s => /= [|s b ih].
-- by rewrite range_geq.
-rewrite size_rcons rangeSr 1:size_ge0.
-rewrite -!cats1 mask_cat ?size_range 1:#smt:(size_ge0) /=.
-rewrite zip_cat ?size_range 1:#smt:(size_ge0) /=.
-by rewrite pmap_cat ih /=; congr; case: b.
-qed.
-
+(* -------------------------------------------------------------------- *)
 lemma ones_nil : ones [] = [].
 proof. by rewrite /ones /= range_geq. qed.
 
+(* -------------------------------------------------------------------- *)
 lemma ones_seq1 (b : bool) : ones [b] = if b then [0] else [].
 proof.
 by rewrite /ones /= range_ltn // range_geq //=; case: b.
 qed.
 
+(* -------------------------------------------------------------------- *)
 lemma ones_nseq0 (n : int) : ones (nseq n false) = [].
 proof.
 rewrite /ones pmap_map eq_in_filter_pred0 //=.
@@ -76,6 +89,7 @@ case=> //= i /mapP[] [i' b] [] /mem_zip [] _.
 by rewrite mem_nseq => -[] _ <-.
 qed.
 
+(* -------------------------------------------------------------------- *)
 lemma ones_nseq1 (n : int) : ones (nseq n true) = range 0 n.
 proof.
 case: (n < 0).
@@ -90,6 +104,7 @@ rewrite -{3}[range 0 n]map_id &(eq_in_map).
 by move=> i /mem_range ? /=; rewrite nth_nseq //= nth_range.
 qed.
 
+(* -------------------------------------------------------------------- *)
 lemma ones_cat (s1 s2 : bool list) :
   ones (s1 ++ s2) = ones s1 ++ map ((+) (size s1)) (ones s2).
 proof.
@@ -108,32 +123,14 @@ rewrite -/r -/F (_ : preim _ _ = predC1 None).
 by apply: eq_in_map => /= -[|i] /mem_filter @/predC1 /=.
 qed.
 
-lemma sorted_range m n : sorted (<) (range m n).
-proof.
-case: (n <= m); first by move=> ?; rewrite range_geq.
-move/ltzNge => h; rewrite range_ltn 1:/# /=.
-pose m' := m + 1; have: m < m' by smt().
-rewrite (_ : n = m' + (n - m')) 1:#ring.
-pose n' := n - m'; have ge0_n': 0 <= n' by smt().
-move: (n') (ge0_n') (m) (m') => {m' n' m n h ge0_n'}.
-elim => [|n ge0_n ih] m m' lt_mm' /=; first by rewrite range_geq.
-rewrite addrA range_ltn 1:/# /= lt_mm' /=.
-by rewrite addrAC ih 1:/#.
-qed.
-
-lemma sorted_ones (s : bool list) : sorted (<) (ones s).
-proof.
-rewrite &(subseq_sorted _ _ _ _ (subseq_ones s)).
-- by apply: ltz_trans.
-- by apply: sorted_range.
-qed.
-
+(* -------------------------------------------------------------------- *)
 lemma ge0_ones (s : bool list) : forall x, x \in ones s => 0 <= x.
 proof.
 move=> x @/ones /pmapP[] [b y] [] /mem_zip /=.
 by case=> /mem_range ? _; case: y => //= _ -> /#.
 qed.
 
+(* -------------------------------------------------------------------- *)
 lemma le_nth_ones (k i : int) (s : bool list) :
   0 <= k => 0 <= i => k + i < size (ones s) => k <= (ones s).[k + i].
 proof.
@@ -150,6 +147,7 @@ rewrite (nth_map witness) 1:/#; case: (k = 0) => [->>|nz_k] /=.
 by have := ih (k - 1) i _ _ _; move=> //#.
 qed.
 
+(* -------------------------------------------------------------------- *)
 lemma drop_ones (n : int) (s : bool list) : 0 <= n <= size s =>
   let k = size (ones (take n s)) in
   drop k (ones s) = map ((+) n) (ones (drop n s)).
@@ -159,13 +157,7 @@ rewrite drop_cat_le -/k /= [drop k _]drop_oversize //=.
 by rewrite size_take_condle 1:/# ifT 1:/#.
 qed.
 
-lemma ones_nseq_false (k : int) : ones (nseq k false) = [].
-proof.
-rewrite /ones pmap_map eq_in_filter_pred0 //.
-move=> io /mapP[] [i b] [] /mem_zip [] _.
-by rewrite mem_nseq; case=> _ <- /= ->.
-qed.
-
+(* -------------------------------------------------------------------- *)
 lemma ones_pow2 (n : int) : 0 <= n =>
   ones (int2bs (n + 1) (2^n)) = [n].
 proof.
@@ -178,113 +170,21 @@ rewrite -cats1 pmap_cat /= {1}(_ : n = size (nseq n false)).
 - by rewrite -/(ones _) ones_nseq0.
 qed.
 
-lemma int2bs_strike1 (l n : int) :
-  let k = index false (int2bs (1+l) n) in
+(* ==================================================================== *)
+op stackrel (leaves : value list) (idx : int) (stk : stack) =
+  let s = int2bs (h + 1) idx in
 
-     0 <= l
-  => 0 <= n < 2^l
-  => int2bs (1+l) n = nseq k true ++ false :: drop (k+1) (int2bs (1+l) n).
-proof.
-move=> k ??; have ge0_k: 0 <= k by apply: index_ge0.
-have le_kl: k <= l.
-- have: (int2bs (l+1) n).[l] \in int2bs (l+1) n.
-  - by rewrite mem_nth size_int2bs /#.
-  rewrite {2}/int2bs nth_mkseq 1:/# /=.
-  by rewrite pdiv_small //= -index_mem size_int2bs /#.
-rewrite (int2bs_cat k) 1:/#; congr.
-- rewrite &(eq_from_nth witness) !(size_int2bs, size_nseq) //.
-  move=> i; rewrite ler_maxr // => rgi; rewrite nth_nseq //.
-  have := before_index witness false (int2bs (1+l) n) i //.
-  by rewrite !nth_mkseq ~-1:/# /= => /negbFE ->.
-rewrite drop_cat size_int2bs ifF 1:/# ler_maxr //.
-rewrite [k+1-k]addrAC /= int2bs_cons 1:/# /= drop0 /=.
-have := nth_index witness false (int2bs (1+l) n) _.
-- by rewrite -index_mem size_int2bs //#.
-by rewrite -/k nth_mkseq 1:/# /= => ->.
-qed.
-
-lemma int2bs_succ (l n : int) :
-  let k = index false (int2bs (1+l) n) in
-
-     0 <= l
-  => 0 <= n < 2^l
-  => int2bs (1+l) (n + 1)
-       = nseq k false ++ true :: drop (k + 1) (int2bs (l+1) n).
-proof.
-move=> k ??; have ge0_k: 0 <= k by apply: index_ge0.
-have le_kl: k <= l.
-- have: (int2bs (l+1) n).[l] \in int2bs (l+1) n.
-  - by rewrite mem_nth size_int2bs /#.
-  rewrite {2}/int2bs nth_mkseq 1:/# /=.
-  by rewrite pdiv_small //= -index_mem size_int2bs /#.
-have [q nE]: exists q, n = q * 2^k + (2^k - 1).
-- exists (n %/ (2^k)); rewrite {1}[n](divz_eq _ (2^k)); congr.
-  have := int2bsK l n // //.
-  rewrite (int2bs_cat k) // bs2int_cat size_int2bs ler_maxr //.
-  move/(congr1 (fun x => x %% 2^k)) => /=.
-  rewrite [2^k*_]mulrC modzMDr => <-; rewrite pmod_small.
-  - rewrite bs2int_ge0 /= (ltr_le_trans _ _ _ (bs2int_le2Xs _)).
-    by rewrite size_int2bs /#.
-  suff ->: int2bs k n = nseq k true by rewrite bs2int_nseq_true.
-  apply/(eq_from_nth witness); first by rewrite size_nseq size_int2bs.
-  move=> i; rewrite size_int2bs ler_maxr // => rgi.
-  rewrite nth_nseq //= nth_mkseq //=.
-  have := before_index witness false (int2bs (1+l) n) i rgi.
-  by rewrite nth_mkseq 1:/# /= => /negbFE ->.
-have oddq: !odd q.
-- rewrite oddPn (_ : q %% 2 = (n %/ 2^k) %% 2).
-  - rewrite nE divzMDl 1:expf_eq0 // pdiv_small //=.
-    by smt(expr_gt0).
-  have ->: (n %/ 2^k %% 2 = 0) = !(int2bs (1+l) n).[k].
-  - by rewrite nth_mkseq 1:/#.
-  by rewrite nth_index // -index_mem -/k size_int2bs /#.
-have ->: n + 1 = (q + 1) * 2^k by rewrite nE #ring.
-rewrite (int2bs_cat k) 1:/# mulzK 1:expf_eq0 //.
-rewrite -int2bs_mod modzMl int2bs0 addrAC int2bs_cons 1:/# /=.
-rewrite dvdzE -oddP oddS oddq /=; do 2! congr.
-rewrite (int2bs_cat (k+1) (l+1)) 1:/#.
-rewrite (_ : _ - (k+1) = l - k) 1:#ring.
-rewrite drop_cat_le size_int2bs ler_maxr 1:/# /=.
-rewrite drop_oversize ?size_int2bs 1:/# /=.
-rewrite (_ : 1 - k + l - 1 = l - k) 1:#ring; congr.
-rewrite exprSr // divz_mul 1:expr_ge0 // nE.
-rewrite divzMDl 1:expf_eq0 //.
-rewrite [_ %/ 2^k]pdiv_small /=; first smt(expr_gt0).
-by rewrite divzDl //= dvdzE -oddPn.
-qed.
-
-op h : int.
-
-axiom ge0_h : 0 <= h.
-
-type value.
-
-op hash : value -> value -> value.
-
-op reduce_tree (leaves : value list) (lvl : int) (index : int) : value.
-
-axiom reduce_tree_leaf (leaves : value list) (index : int) :
-  reduce_tree leaves 0 index = leaves.[index].
-
-axiom reduce_tree_node (leaves : value list) (h : int) (index : int) : 0 <= h => 
-  reduce_tree leaves (h + 1) index =
-    hash (reduce_tree leaves h (2 * index)) (reduce_tree leaves h (2 * index + 1)).
-
-op reduce (leaves : value list) =
-  reduce_tree leaves h 0.
-
-op stackrel (leaves : value list) (idx : int) (stk : (value * int) list) =
-  let s = int2bs (1 + h) idx in
-
-     (ones s = map (fun (stk1 : value * int) => stk1.`2) stk)
+     (ones s = map (fun (stk1 : stack1) => stk1.`2) stk)
   /\ (forall stk1, stk1 \in stk => stk1.`1 =
         reduce_tree leaves stk1.`2 (bs2int (false :: drop (stk1.`2 + 1) s))).
 
+(* -------------------------------------------------------------------- *)
 lemma stackrel0 (leaves : value list) : stackrel leaves 0 [].
 proof. by split => //=; rewrite int2bs0 ones_nseq0. qed.
 
-lemma stackrelS (leaves : value list) (idx : int) (stk : (value * int) list) :
-  let k = index false (int2bs (1 + h) idx) in
+(* -------------------------------------------------------------------- *)
+lemma stackrelS (leaves : value list) (idx : int) (stk : stack) :
+  let k = index false (int2bs (h + 1) idx) in
 
      0 <= idx < 2^h
   => stackrel leaves idx stk
@@ -294,22 +194,22 @@ lemma stackrelS (leaves : value list) (idx : int) (stk : (value * int) list) :
      ).
 proof.
 move=> k rg_idx [h1 h2]; have ? := ge0_h; have le_kh: k <= h.
-- have ->: h = size (int2bs (1 + h) idx) - 1 by rewrite size_int2bs /#.
+- have ->: h = size (int2bs (h + 1) idx) - 1 by rewrite size_int2bs /#.
   rewrite ler_subr_addr -ltzE index_mem &(nthP witness).
   exists h; rewrite size_int2bs; split; first smt().
   by rewrite nth_mkseq 1:/# /= pdiv_small.
 have ge0_k: 0 <= k by apply: index_ge0.
 have ?: k <= size stk.
 - rewrite -(size_map snd) -h1 size_ones.
-  rewrite int2bs_strike1 // count_cat count_nseq /=.
+  rewrite int2bs_strikeE // count_cat count_nseq /=.
   by rewrite ler_maxr 1:index_ge0; smt(count_ge0).
 split => /=.
-- rewrite map_drop -h1 int2bs_succ //= -/k ones_cat.
-  rewrite ones_nseq_false size_nseq ler_maxr //=.
+- rewrite map_drop -h1 int2bs_strike_succE //= -/k ones_cat.
+  rewrite ones_nseq0 size_nseq ler_maxr //=.
   rewrite -cat1s ones_cat /= ones_seq1 /= -map_comp.
   rewrite (_ : _ \o _ = (+) (k + 1)) 1:/#.
-  rewrite -drop_ones ?size_int2bs 1:/# [1+h]addrC; congr.
-  rewrite [h+1]addrC int2bs_strike1 // -/k.
+  rewrite -drop_ones ?size_int2bs 1:/#; congr.
+  rewrite int2bs_strikeE // -/k.
   rewrite take_cat size_nseq ifF 1:/# ler_maxr //.
   rewrite [k+1-k]addrAC /= take0 ones_cat size_cat size_map.
   by rewrite ones_seq1 /= ones_nseq1 size_range /#.
@@ -321,20 +221,20 @@ move=> stk1 [->/=|]; last first.
     rewrite -h1 &(le_nth_ones) 1,2:/# h1 size_map.
     by move: rgi; rewrite size_drop /#.
   move/mem_drop/h2 => ->; do 3! congr.
-  rewrite int2bs_strike1 // int2bs_succ // -/k.
+  rewrite int2bs_strikeE // int2bs_strike_succE // -/k.
   rewrite !drop_cat ?size_nseq !ifF ~-1:/#.
-  by rewrite !drop_cons !ifT ~-1:/# [1+h]addrC.
-rewrite (_ : false :: _ = drop k (int2bs (1+h) idx)).
-- rewrite int2bs_succ // eq_sym {1}int2bs_strike1 //= -/k.
+  by rewrite !drop_cons !ifT ~-1:/#.
+rewrite (_ : false :: _ = drop k (int2bs (h+1) idx)).
+- rewrite int2bs_strike_succE // eq_sym {1}int2bs_strikeE //= -/k.
   rewrite drop_cat_le size_nseq ifT 1:/#.
   rewrite drop_oversize ?size_nseq 1:/# /=.
   rewrite -cat1s catA cats1 drop_cat_le.
   rewrite size_rcons size_nseq ifT 1:/# /= eq_sym.
-  by rewrite drop_oversize ?(size_rcons, size_nseq) 1:/# [1+h]addrC.
+  by rewrite drop_oversize ?(size_rcons, size_nseq) 1:/#.
 move=> {stk1}; move: {1 2 4 5 6}k (ge0_k) (lezz k).
 elim=> [|k0 ge0_k0 ih] le_k0_k.
 - rewrite take0 /= reduce_tree_leaf drop0.
-  by rewrite [1+_]addrC int2bsK ?exprSr //#.
+  by rewrite int2bsK ?exprSr //#.
 rewrite takeD ~-1://# map_cat /= foldl_cat ih 1:/#.
 rewrite (drop_take1_nth witness) /=.
 - by split=> //#.
@@ -343,17 +243,17 @@ rewrite reduce_tree_node //; congr.
   - by apply: mem_nth => /#.
   suff ->: stk.[k0].`2 = k0 by rewrite bs2int_cons b2i0.
   rewrite -(nth_map _ witness snd) 1:/#.
-  rewrite -h1 int2bs_strike1 // ones_cat /= nth_cat ifT.
+  rewrite -h1 int2bs_strikeE // ones_cat /= nth_cat ifT.
   - by rewrite ones_nseq1 size_range /= -/k 1:/#.
   by rewrite ones_nseq1 nth_range -/k //#.
 - rewrite (drop_nth witness) 1:#smt:(size_int2bs).
   rewrite bs2int_cons [_+2*_]addrC; do 2! congr.
-  rewrite int2bs_strike1 // nth_cat ifT.
+  rewrite int2bs_strikeE // nth_cat ifT.
   - by rewrite size_nseq -/k /#.
   by rewrite nth_nseq 1:/#.
 qed.
 
-type stack = (value * int) list.
+(* ==================================================================== *)
 
 (* Use "real" inductive predicate *)
 (* Meanwhile, we use an impredicative encoding of eqvred *)
@@ -364,6 +264,7 @@ op eqvred (s1 s2 : stack) =
   => (forall s v1 v2 i, P ((v2, i) :: (v1, i) :: s) ((hash v1 v2, i + 1) :: s))
   => P s1 s2.
 
+(* -------------------------------------------------------------------- *)
 lemma eqvredW (P : stack -> stack -> bool) :
      (forall s, P s s)
   => (forall s2 s1 s3, P s1 s2 => P s2 s3 => P s1 s3)
@@ -371,17 +272,21 @@ lemma eqvredW (P : stack -> stack -> bool) :
   => forall s1 s2, eqvred s1 s2 => P s1 s2.
 proof. by move=> 3? s1 s2 @/eqvred /(_ P); apply. qed.
 
+(* -------------------------------------------------------------------- *)
 lemma eqvred_refl (s : stack) : eqvred s s.
 proof. smt(). qed.
 
+(* -------------------------------------------------------------------- *)
 lemma eqvred_trans (s2 s1 s3 : stack) :
   eqvred s1 s2 => eqvred s2 s3 => eqvred s1 s3.
 proof. smt(). qed.
 
+(* -------------------------------------------------------------------- *)
 lemma eqvredR (s : stack) (v1 v2 : value) (i : int) :
   eqvred ((v2, i) :: (v1, i) :: s) ((hash v1 v2, i + 1) :: s).  
 proof. smt(). qed.
 
+(* -------------------------------------------------------------------- *)
 lemma eqvredI (v : value) (i : int) (stk1_v : value list) (stk2 stk : stack) :
   let stk1 = zip stk1_v (range i (i + size stk1_v)) in
 
@@ -466,7 +371,8 @@ move=> stk1 h hred.
   by rewrite drop0 -stk'E take0.
 qed.
 
-lemma eqvredI_cmpl (v : value) (k : int) (stk1 stk2 : stack) (fcs : value * int) (stk : stack) :
+(* -------------------------------------------------------------------- *)
+lemma eqvredI_cmpl (v : value) (k : int) (stk1 stk2 : stack) (fcs : stack1) (stk : stack) :
      0 <= k
   => unzip2 stk1 = range 0 k
   => (forall (vi : _ * _), vi \in stk2 => k < vi.`2)
@@ -494,36 +400,10 @@ rewrite nth_drop //= -(nth_map _ witness snd) 1:/#.
 by rewrite stk1_sndE nth_range /#.
 qed.
 
-module TreeHash = {
-  proc th(leaves : value list) : value = {
-    var index : int;
-    var stack : (value * int) list;
-    var focus : value * int;
-    var top   : value;
-
-    stack <- [];
-    index <- 0;
-    while (index < 2^h) {
-      focus <- (leaves.[index], 0);
-      while (stack <> [] /\ stack.[0].`2 = focus.`2) {
-        top   <- stack.[0].`1;
-        stack <- behead stack;
-        focus <- (hash top focus.`1, focus.`2 + 1);
-      }
-      stack <- focus :: stack;
-      index <- index + 1;
-    }
-    return stack.[0].`1;
-  }  
-}.
-
-lemma L (_leaves : value list) :
+(* ==================================================================== *)
+lemma treehash_correct (_leaves : value list) :
      size _leaves = 2^h
-  => hoare[TreeHash.th :
-         leaves = _leaves
-       ==>
-         res = reduce _leaves
-     ].
+  => hoare[TreeHash.th : leaves = _leaves ==> res = reduce _leaves].
 proof.
 have ? := ge0_h; move=> *; proc; sp.
 
@@ -534,7 +414,7 @@ while (
 - auto=> |>; rewrite stackrel0 expr_ge0 //=.
   move=> idx stk 3? [h1 h2]; have ->>: idx = 2^h by smt().
   have stk2E: unzip2 stk = [h].
-  - by move: h1; rewrite [1+h]addrC ones_pow2 //= eq_sym.
+  - by move: h1; rewrite ones_pow2 //= eq_sym.
   have ?: 0 < size stk by rewrite -(size_map snd) stk2E.
   have := h2 stk.[0] _; first by apply: mem_nth => /=.
   move=> ->; rewrite -(nth_map _ witness snd) //= stk2E /=.
@@ -560,12 +440,12 @@ while (
   pose v0 := leaves{hr}.[index{hr}].
   have := eqvredI_cmpl v0 k (take k stk0) (drop k stk0) fcs0 stk1.
   move/(_ _ _ _ _ _) => //.
-  - rewrite map_take; case: (h) => <- _; rewrite int2bs_strike1 //.
+  - rewrite map_take; case: (h) => <- _; rewrite int2bs_strikeE //.
     rewrite ones_cat take_cat_le ifT.
     - by rewrite size_ones -/k count_nseq /= ler_maxr.
     by rewrite ones_nseq1 -/k take_oversize ?size_range //#.
   - move=> vi /(map_f snd) /=; rewrite map_drop.
-    case: (h) => <- _; rewrite int2bs_strike1 //.
+    case: (h) => <- _; rewrite int2bs_strikeE //.
     rewrite -/k ones_cat drop_cat_le ifT -1:drop_oversize /=;
       ~-1: by rewrite ones_nseq1 /= size_range /#.
     rewrite size_nseq ler_maxr 1:/# -cat1s ones_cat.
