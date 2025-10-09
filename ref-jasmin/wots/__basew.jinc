@@ -7,8 +7,11 @@ fn __base_w(
   reg ptr u8[INLEN] input
 ) -> reg ptr u32[OUTLEN]
 {
-    reg u64 in = 0 out = 0 bits = 0;
-    reg u8 consumed = 0 total = 0;
+    reg u64 in = 0;
+    reg u64 out = 0;
+    reg u64 bits = 0;
+    reg u8 consumed = 0;
+    reg u8 total = 0;
     reg u32 total_32;
 
     // for (consumed = 0; consumed < out_len; consumed++) 
