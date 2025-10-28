@@ -2162,6 +2162,10 @@ seq 1: (i = 0)=> //.
 + by hoare; conseq (: true)=> />.
 qed.
 
+phoare Eqv_WOTS_pkgen_p (ad : Address.adrs) (ss ps : seed) :
+  [WOTS.pkGen : arg = (ss, ps, ad) ==> res = WOTS_pkgen ss ps ad] = 1%r
+  by conseq Eqv_WOTS_pkgen_ll (Eqv_WOTS_pkgen ad ss ps).
+
 require Treehash. 
 
 (*
@@ -2230,7 +2234,123 @@ rewrite /reduce_tree /reduce_tree_st /=;congr;congr.
      (range _lstart (_lstart + 2^_sth))), {| TH.index = _lstart %/ 2^_sth; TH.level = _sth|})
   ==>
   ={res} ].
-  proc. sp.
+  proc => /=.
+  wp.
+  while (
+    pub_seed{1} = _ps
+ /\ sk_seed{1} = _ss
+ /\ s{1} = _lstart
+ /\ t{1} = _sth
+ /\ i{1} = index{2}
+ /\ (forall k, 0 <= k < 3 => address{1}.[k] = W32.zero)
+ /\ 0 <= _sth <= h 
+ /\ 0 <= _lstart <= 2 ^ h - 2 ^ _sth 
+ /\ 2 ^ _sth %| _lstart 
+ /\ pseed{2} = _ps 
+ /\ leaves{2} =
+  map
+    (fun (idx : int) =>
+       oget (NBytes.insub (BitsToBytes (DigestBlock.val (leafnode_from_idx _ss _ps (adr2ads zero_address) idx))))) (range _lstart (_lstart + 2 ^ _sth))
+ /\ root{2} = {| TH.level = _sth; TH.index = _lstart %/ 2 ^ _sth; |}
+ /\ to_uint offset{1} = size stack{2}
+ /\ size stack{1} = h + 1
+ /\ size heights{1} = h + 1
+ /\ (forall k, 0 <= k < size stack{2} =>
+        nth witness stack{1} k = (nth witness stack{2} (size stack{2} - 1 - k)).`1)
+ /\ (forall k, 0 <= k < size stack{2} =>
+    to_uint (nth witness heights{1} k) = (nth witness stack{2} (size stack{2} - 1 - k)).`2)
+ /\ 0 <= index{2} <= 2^_sth
+ /\ (index{2} = 2^_sth => size stack{2} = 1)
+ ); last  by auto => />;smt(expr_gt0 Array8.initiE size_nseq).
+  wp;conseq />;1:smt().
+  while (
+    pub_seed{1} = _ps
+ /\ sk_seed{1} = _ss
+ /\ s{1} = _lstart
+ /\ t{1} = _sth
+ /\ i{1} = index{2}
+ /\ (forall k, 0 <= k < 3 => address{1}.[k] = W32.zero)
+ /\ 0 <= _sth <= h 
+ /\ 0 <= _lstart <= 2 ^ h - 2 ^ _sth 
+ /\ 2 ^ _sth %| _lstart 
+ /\ pseed{2} = _ps 
+ /\ leaves{2} =
+  map
+    (fun (idx : int) =>
+       oget (NBytes.insub (BitsToBytes (DigestBlock.val (leafnode_from_idx _ss _ps (adr2ads zero_address) idx))))) (range _lstart (_lstart + 2 ^ _sth))
+ /\ root{2} = {| TH.level = _sth; TH.index = _lstart %/ 2 ^ _sth; |}
+ /\ to_uint offset{1} = size stack{2} + 1
+ /\ size stack{1} = h + 1
+ /\ size heights{1} = h + 1
+ /\ (forall k, 0 <= k < size stack{2} =>
+        nth witness stack{1} k = (nth witness stack{2} (size stack{2} - 1 - k)).`1)
+ /\ (forall k, 0 <= k < size stack{2} =>
+    to_uint (nth witness heights{1} k) = (nth witness stack{2} (size stack{2} - 1 - k)).`2)
+ /\ nth witness stack{1} (size stack{2}) = focus{2}.`1
+ /\ to_uint (nth witness heights{1} (size stack{2}) )= focus{2}.`2
+ /\ 0 <= index{2} <= 2^_sth
+ /\ (index{2} = 2^_sth => size stack{2} = 1)
+  ); last first.
+  (* THIS CONSEQ IS #pre + ASSUMPTION ON STACK SIZE *)
+  conseq (: 
+    pub_seed{1} = _ps
+ /\ sk_seed{1} = _ss
+ /\ s{1} = _lstart
+ /\ t{1} = _sth
+ /\ i{1} = index{2}
+ /\ (forall k, 0 <= k < 3 => address{1}.[k] = W32.zero)
+ /\ 0 <= _sth <= h 
+ /\ 0 <= _lstart <= 2 ^ h - 2 ^ _sth 
+ /\ 2 ^ _sth %| _lstart 
+ /\ pseed{2} = _ps 
+ /\ leaves{2} =
+  map
+    (fun (idx : int) =>
+       oget (NBytes.insub (BitsToBytes (DigestBlock.val (leafnode_from_idx _ss _ps (adr2ads zero_address) idx))))) (range _lstart (_lstart + 2 ^ _sth))
+ /\ root{2} = {| TH.level = _sth; TH.index = _lstart %/ 2 ^ _sth; |}
+ /\ to_uint offset{1} = size stack{2} 
+ /\ size stack{1} = h + 1
+ /\ size heights{1} = h + 1
+ /\ (forall k, 0 <= k < size stack{2} =>
+        nth witness stack{1} k = (nth witness stack{2} (size stack{2} - 1 - k)).`1)
+ /\ (forall k, 0 <= k < size stack{2} =>
+    to_uint (nth witness heights{1} k) = (nth witness stack{2} (size stack{2} - 1 - k)).`2)
+ /\ 0 <= index{2} <= 2^_sth
+ /\ (index{2} = 2^_sth => size stack{2} = 1)
+ /\ i{1} < 2 ^ t{1}
+ /\ index{2} < 2 ^ root{2}.`TH.level
+ 
+ /\ size stack{2} <= _sth ==> _).
+ + auto => /> *. (* THIS IS THE EXTRA TERM *) admit.
+  seq 2 0 : (#{/~address{1}}pre /\
+          address{1} = set_ots_addr (set_type zero_address 0) (s{1} + i{1})).
+  + auto => /> &1 &2 Had *.
+    rewrite /set_ots_addr /set_type /zero_address tP => k kb.
+    by smt(Array8.initiE get_setE).
+  wp;ecall{1} (Eqv_WOTS_pkgen_p address{1} sk_seed{1} pub_seed{1}).
+  auto => /> &1 &2 ?????????H?????;do split.
+  + admit.
+  + rewrite to_uintD_small /=;1:smt(h_max).
+  + by smt().
+  + by rewrite size_put.
+  + by rewrite size_put.
+  + by move => k kbl kbh;rewrite nth_put /#.
+  + move => k kbl kbh.
+    have -> : offset{1} + W64.one - W64.one = offset{1} by ring.
+    by rewrite nth_put /#.
+  + rewrite nth_put;1: smt(size_ge0).
+    rewrite ifT 1:/# /=. (* MISMATCH IN SEMANTICS !!! *)
+    rewrite (nth_map witness). rewrite size_range. smt(expr_gt0). 
+  + admit.
+  + admit.
+  + rewrite !uleE /=.
+    have -> : offset{1} + W64.one - W64.one = offset{1} by ring.
+    rewrite to_uintD_small /=;1:smt(h_max).
+    move => ?.
+    have -> : offset{1} + W64.one - W64.of_int 2 = offset{1} - W64.one by ring.
+    rewrite to_uintB /=; 1: by rewrite uleE /= /#.
+    move => Hh; split;1:smt().
+    rewrite -H 1:/#.
   admitted.
 
 phoare tree_hash_correct _ps _ss _lstart _sth :
