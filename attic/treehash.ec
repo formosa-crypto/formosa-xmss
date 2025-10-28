@@ -9,8 +9,6 @@ abbrev "_.[_]" ['a] (s : 'a list) (i : int) =
   nth witness s i.
 
 (* ==================================================================== *)
-op h : { int | 0 <= h } as ge0_h.
-
 type value.
 type pseed.
 
@@ -30,7 +28,7 @@ axiom reduce_tree_node (pseed : pseed) (leaves : value list) (h : int) (index : 
       (reduce_tree pseed leaves {| level = h; index = 2 * index     |})
       (reduce_tree pseed leaves {| level = h; index = 2 * index + 1 |}).
 
-op reduce (pseed : pseed) (leaves : value list) =
+op reduce (pseed : pseed) (h : int) (leaves : value list) =
   reduce_tree pseed leaves {| level = h; index = 0 |}.
 
 (* -------------------------------------------------------------------- *)
@@ -39,7 +37,7 @@ type stack  = stack1 list.
 
 (* -------------------------------------------------------------------- *)
 module TreeHash = {
-  proc th(pseed : pseed, leaves : value list) : value = {
+  proc th(pseed : pseed, leaves : value list, h : int, hoff : int) : value = {
     var index : int;
     var stack : stack;
     var focus : stack1;
@@ -53,7 +51,32 @@ module TreeHash = {
       while (stack <> [] /\ stack.[0].`2 = focus.`2) {
         top   <- stack.[0].`1;
         stack <- behead stack;
-        addr  <- {| level = focus.`2; index = index %/ (2^(focus.`2 + 1)) |};
+        addr  <- {| level = focus.`2; index = (hoff + index) %/ (2^(focus.`2 + 1)) |};
+        focus <- (hash pseed addr top focus.`1, focus.`2 + 1);
+      }
+      stack <- focus :: stack;
+      index <- index + 1;
+    }
+    return stack.[0].`1;
+  }  
+
+  proc subth(pseed : pseed, leaves : value list, root : haddress) : value = {
+    var index  : int;
+    var stack  : stack;
+    var focus  : stack1;
+    var top    : value;
+    var addr   : haddress;
+    var offset : int;
+
+    stack  <- [];
+    index  <- 0;
+    offset <- root.`index * 2^(root.`level);
+    while (index < 2^(root.`level)) {
+      focus <- (leaves.[offset + index], 0);
+      while (stack <> [] /\ stack.[0].`2 = focus.`2) {
+        top   <- stack.[0].`1;
+        stack <- behead stack;
+        addr  <- {| level = focus.`2; index = (offset + index) %/ (2^(focus.`2 + 1)) |};
         focus <- (hash pseed addr top focus.`1, focus.`2 + 1);
       }
       stack <- focus :: stack;
@@ -62,6 +85,39 @@ module TreeHash = {
     return stack.[0].`1;
   }  
 }.
+
+(* ==================================================================== *)
+lemma th_subth (_pseed : pseed) (_root : haddress) (_h : int) :
+  let offset = _root.`index * 2^(_root.`level) in
+
+     0 <= _root.`level <= _h
+  => 0 <= _root.`index <= 2^(_h - _root.`level)
+  => equiv[TreeHash.th ~ TreeHash.subth :
+          ={pseed}
+       /\ h{1} = _root.`level
+       /\ hoff{1} = offset
+       /\ root{2} = _root
+       /\ (forall i, 0 <= i < 2^(_root.`level)
+            => leaves{1}.[i] = leaves{2}.[offset + i])
+     ==>
+       ={res}
+    ].
+proof.
+move=> offset *; proc => /=.
+while (
+     ={stack, pseed, index}
+  /\ 0 <= index{1} <= 2^(_root.`level)
+  /\ h{1} = _root.`level
+  /\ hoff{1} = offset
+  /\ root{2} = _root
+  /\ offset{!2} = offset
+  /\ (forall i, 0 <= i < 2^(_root.`level)
+       => leaves{1}.[i] = leaves{2}.[offset + i])
+); last by auto=> |>; smt(expr_ge0).
+wp; while (={focus} /\ #pre); last first.
+- auto=> |>; last by smt().
+- by auto=> |>.
+qed.
 
 (* ==================================================================== *)
 lemma sum_pow2 (k : int) : 0 <= k =>
@@ -205,7 +261,6 @@ rewrite -cats1 pmap_cat /= {1}(_ : n = size (nseq n false)).
 - by rewrite -/(ones _) ones_nseq0.
 qed.
 
-
 (* ==================================================================== *)
 op revones (s : int list) : int =
   BIA.big predT (fun i => 2^i) s.
@@ -262,9 +317,9 @@ rewrite revones_cat; congr; last first.
 qed.
 
 (* -------------------------------------------------------------------- *)
-lemma revonesK (i : int) : 0 <= i < 2^h =>
+lemma revonesK (h i : int) : 0 <= h => 0 <= i < 2^h =>
   revones (ones (int2bs (h + 1) i)) = i.
-proof. by move=> ?; rewrite revones_ones int2bsK ?exprS // #smt:(ge0_h). qed.
+proof. by move=> ??; rewrite revones_ones int2bsK ?exprS //#. qed.
 
 (* -------------------------------------------------------------------- *)
 lemma dvdz_sum ['a] (f : 'a -> int) (s : 'a list) (v : int) :
@@ -288,7 +343,7 @@ by move=> x /h le_xi; apply: dvdz_exp2l => /#.
 qed.
 
 (* ==================================================================== *)
-op stackrel (pseed : pseed) (leaves : value list) (idx : int) (stk : stack) =
+op stackrel (h : int) (pseed : pseed) (leaves : value list) (idx : int) (stk : stack) =
   let s = int2bs (h + 1) idx in
 
      (ones s = map (fun (stk1 : stack1) => stk1.`2) stk)
@@ -300,16 +355,18 @@ op stackrel (pseed : pseed) (leaves : value list) (idx : int) (stk : stack) =
         reduce_tree pseed leaves addr).
 
 (* -------------------------------------------------------------------- *)
-lemma stackrel0 (pseed : pseed) (leaves : value list) : stackrel pseed leaves 0 [].
+lemma stackrel0 (h : int) (pseed : pseed) (leaves : value list) :
+  stackrel h pseed leaves 0 [].
 proof. by split => //=; rewrite int2bs0 ones_nseq0. qed.
 
 (* -------------------------------------------------------------------- *)
-lemma stackrelS (pseed : pseed) (leaves : value list) (idx : int) (stk : stack) :
+lemma stackrelS (h : int) (pseed : pseed) (leaves : value list) (idx : int) (stk : stack) :
   let k = index false (int2bs (h + 1) idx) in
 
-     0 <= idx < 2^h
-  => stackrel pseed leaves idx stk
-  => stackrel pseed leaves (idx + 1) (
+     0 <= h
+  => 0 <= idx < 2^h
+  => stackrel h pseed leaves idx stk
+  => stackrel h pseed leaves (idx + 1) (
           (foldl
             (fun v1 (v2 : value * int) =>
               let addr = {| level = v2.`2; index = idx %/ 2^(v2.`2 + 1); |} in
@@ -318,7 +375,7 @@ lemma stackrelS (pseed : pseed) (leaves : value list) (idx : int) (stk : stack) 
        :: drop k stk
      ).
 proof.
-move=> k rg_idx [h1 h2]; have ? := ge0_h; have le_kh: k <= h.
+move=> k ge0_h rg_idx [h1 h2]; have le_kh: k <= h.
 - have ->: h = size (int2bs (h + 1) idx) - 1 by rewrite size_int2bs /#.
   rewrite ler_subr_addr -ltzE index_mem &(nthP witness).
   exists h; rewrite size_int2bs; split; first smt().
@@ -389,58 +446,62 @@ qed.
 (* Use "real" inductive predicate *)
 (* Meanwhile, we use an impredicative encoding of eqvred *)
 
-op eqvred (pseed : pseed) (s1 s2 : stack) =
+op eqvred (h : int) (off : int) (pseed : pseed) (s1 s2 : stack) =
   forall (P : stack -> stack -> bool),
      (forall s, P s s)
   => (forall s2 s1 s3, P s1 s2 => P s2 s3 => P s1 s3)
   => (forall s v1 v2 i,
-        let addr = {| level = i; index = revones (unzip2 s) %/ 2^(i+1) |} in
+        let addr = {| level = i; index = (off + revones (unzip2 s)) %/ 2^(i+1) |} in
         P ((v2, i) :: (v1, i) :: s) ((hash pseed addr v1 v2, i + 1) :: s))
   => P s1 s2.
 
 (* -------------------------------------------------------------------- *)
-lemma eqvredW (pseed : pseed) (P : stack -> stack -> bool) :
+lemma eqvredW (h : int) (off : int) (pseed : pseed) (P : stack -> stack -> bool) :
      (forall s, P s s)
   => (forall s2 s1 s3, P s1 s2 => P s2 s3 => P s1 s3)
   => (forall s v1 v2 i,
-        let addr = {| level = i; index = revones (unzip2 s) %/ 2^(i+1) |} in
+        let addr = {| level = i; index = (off + revones (unzip2 s)) %/ 2^(i+1) |} in
         P ((v2, i) :: (v1, i) :: s) ((hash pseed addr v1 v2, i + 1) :: s))
-  => forall s1 s2, eqvred pseed s1 s2 => P s1 s2.
+  => forall s1 s2, eqvred h off pseed s1 s2 => P s1 s2.
 proof. by move=> 3? s1 s2 @/eqvred /(_ P); apply. qed.
 
 (* -------------------------------------------------------------------- *)
-lemma eqvred_refl (pseed : pseed) (s : stack) : eqvred pseed s s.
+lemma eqvred_refl (h : int) (off : int) (pseed : pseed) (s : stack) :
+  eqvred h off pseed s s.
 proof. smt(). qed.
 
 (* -------------------------------------------------------------------- *)
-lemma eqvred_trans (pseed : pseed) (s2 s1 s3 : stack) :
-  eqvred pseed s1 s2 => eqvred pseed s2 s3 => eqvred pseed s1 s3.
+lemma eqvred_trans (h : int) (off  int) (pseed : pseed) (s2 s1 s3 : stack) :
+  eqvred h off pseed s1 s2 => eqvred h off pseed s2 s3 => eqvred h off pseed s1 s3.
 proof. smt(). qed.
 
 (* -------------------------------------------------------------------- *)
-lemma eqvredR (pseed : pseed) (s : stack) (v1 v2 : value) (i : int) :
-  let addr = {| level = i; index = revones (unzip2 s) %/ 2^(i+1) |} in
-  eqvred pseed ((v2, i) :: (v1, i) :: s) ((hash pseed addr v1 v2, i + 1) :: s).  
+lemma eqvredR (h : int) (off : int) (pseed : pseed) (s : stack) (v1 v2 : value) (i : int) :
+  let addr = {| level = i; index = (off + revones (unzip2 s)) %/ 2^(i+1) |} in
+  eqvred h off pseed ((v2, i) :: (v1, i) :: s) ((hash pseed addr v1 v2, i + 1) :: s).  
 proof. smt(). qed.
 
 (* -------------------------------------------------------------------- *)
 lemma eqvredI
-  (pseed : pseed) (v : value) (i : int)
+  (h : int) (off : int) (pseed : pseed) (v : value) (i : int)
   (stk1_v : value list) (stk2 stk : stack)
 :
   let stk1 = zip stk1_v (range i (i + size stk1_v)) in
   let idx  = revones (unzip2 (stk1 ++ stk2)) in
 
-     0 <= i
+     0 <= h
+  => 0 <= off
+  => 2^h %| off
+  => 0 <= i
   => (forall l, l \in unzip2 stk2 => (i + size stk1) < l)
-  => eqvred pseed ((v, i) :: stk1 ++ stk2) stk
+  => eqvred h off pseed ((v, i) :: stk1 ++ stk2) stk
   => exists v' i' stk',
        let k = i' - i in
             stk = (v', i') :: stk'
          /\ 0 <= k <= size stk1
          /\ stk' = (drop k stk1) ++ stk2
          /\ v' = foldl (fun v1 (v2 : _ * _) =>
-              let addr = {| level = v2.`2; index = idx %/ 2^(v2.`2 + 1) |}  in
+              let addr = {| level = v2.`2; index = (off + idx) %/ 2^(v2.`2 + 1) |}  in
               hash pseed addr v2.`1 v1
             ) v (take k stk1).
 proof.
@@ -458,22 +519,22 @@ pose P (s1 s2 : stack) :=
            /\ 0 <= k <= size stk1
            /\ stk' = (drop k stk1) ++ stk2
            /\ v' = foldl (fun v1 (v2 : _ * _) =>
-                let addr = {| level = v2.`2; index = idx %/ 2^(v2.`2 + 1) |}  in
+                let addr = {| level = v2.`2; index = (off + idx) %/ 2^(v2.`2 + 1) |}  in
                 hash pseed addr v2.`1 v1
               ) v (take k stk1)
          ).
-move=> stk1 idx ge0_i h hred.
-(have hW := eqvredW pseed P _ _ _ _ _ hred; last first);
-  try (move=> {idx v i ge0_i stk1_v stk2 stk1 h hred}).
-- move: hW => /(_ v i stk1_v stk2 _ _ h) // [v' i' stk'] *.
+move=> stk1 idx ge0_i ge0_h ge0_off dvd_off hhole hred.
+(have hW := eqvredW h off pseed P _ _ _ _ _ hred; last first);
+  try (move=> {idx v i ge0_i ge0_h ge0_off dvd_off stk1_v stk2 stk1 hhole hred}).
+- move: hW => /(_ v i stk1_v stk2 _ _ hhole) // [v' i' stk'] *.
   by exists v' i' stk'.
 
-- move=> s @/P => {P} v i stk1_v stk2 stk1 idx ge0_i s1E h.
+- move=> s @/P => {P} v i stk1_v stk2 stk1 idx ge0_i s1E hhole.
   exists v i (stk1 ++ stk2) => /=; rewrite s1E /=.
   by rewrite size_ge0 /= drop0 take0.
 
-- move=> s2 s1 s3 ih1 ih2 v i stk1_v stk2 stk1 idx ge0_i s1E h.
-  have [v' i' stk'] := ih1 v i stk1_v stk2 ge0_i s1E h.
+- move=> s2 s1 s3 ih1 ih2 v i stk1_v stk2 stk1 idx ge0_i s1E hhole.
+  have [v' i' stk'] := ih1 v i stk1_v stk2 ge0_i s1E hhole.
   (pose k := i' - i)  => -[# s2E ge0_k le_k stk'E].
   rewrite -/stk1 -/idx => v'E; have {le_k}le_k: k <= size stk1_v.
   - move: le_k; rewrite size_zip size_range addrAC /=.
@@ -486,7 +547,7 @@ move=> stk1 idx ge0_i h hred.
   - rewrite s2E /= stk'E  (range_cat i') ~-1:/#; congr.
     rewrite drop_zip drop_cat_le size_range ifT 1:/#.
     by congr; rewrite drop_oversize 1:/# /= size_drop /#.
-  - move=> vi /h; rewrite !size_zip size_range.
+  - move=> vi /hhole; rewrite !size_zip size_range.
     rewrite [i + _ - i]addrAC /= ler_maxr 1:size_ge0 minzz.
     rewrite size_range size_drop // [max _ (size _ - _)]ler_maxr 1:/#.
     by rewrite [i' + _ - i']addrAC /= ler_maxr 1:/# minzz /#.
@@ -517,10 +578,12 @@ move=> stk1 idx ge0_i h hred.
   have ?: i' <= lvl < i''.
   - move: hmem; rewrite /stk1 drop_zip take_zip => /mem_zip[] _.
     by rewrite drop_range ~-1:/# take_range ~-1:/# mem_range /#.
+  rewrite ![(off+_) %/ _]divzDl; ~-1: admit.
+  congr.
   rewrite divzDr; first rewrite dvd_pow2_revones ~-1:/#.
-  - by move=> x /h @/stk1; rewrite size_zip size_range /#.
+  - by move=> x /hhole @/stk1; rewrite size_zip size_range /#.
   rewrite divzDr; first rewrite dvd_pow2_revones ~-1:/#.
-  - by move=> x /h @/stk1; rewrite size_zip size_range /#.
+  - by move=> x /hhole @/stk1; rewrite size_zip size_range /#.
   congr; rewrite map_drop (_ : unzip2 stk1 = range i (i + size stk1_v)).
   - by rewrite /stk1 unzip2_zip 1:#smt:(size_range).
   rewrite drop_range // !revones_range ~-1:/#.
