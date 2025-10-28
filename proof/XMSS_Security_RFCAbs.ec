@@ -2204,18 +2204,23 @@ realize reduce_tree_node.
  have {1}<- := cat_take_drop (2^h) ls.
  rewrite map_cat (list2treeS h).
  + smt(expr_ge0).
-   + rewrite size_map. admit.
-   + rewrite size_map. admit.
+   + rewrite size_map size_take;1:smt(expr_ge0).
+     rewrite Hls exprS //=;smt(expr_gt0).
+   + rewrite size_map size_drop;1:smt(expr_ge0).
+     rewrite Hls exprS //=;smt(expr_gt0).
  simplify.
- rewrite /trh /= ifF. admit.
-rewrite DigestBlock.insubdK. admit.
+ admitted. (* there is also something wrong here 
+rewrite /trh /= ifF;1: smt(ge4_n). 
+rewrite DigestBlock.insubdK.
++ rewrite /BytesToBits (size_flatten_ctt 8);1: smt(mapP W8.size_w2bits).
+  by rewrite size_map NBytes.valP. 
 rewrite BytesToBitsK.
 rewrite NBytes.valKd.
 congr.
 rewrite /reduce_tree /reduce_tree_st /=;congr;congr.
-+ admit.
-+ admit.
-  qed.
++ rewrite take_size_cat;1: by rewrite DigestBlock.valP //.
+  congr. smt().
+  qed.*)
   
  lemma tree_hash_correct_eq _ps _ss _lstart _sth :
  equiv [  XMSSRFCAbs.TreeHash.treehash ~ TH.TreeHash.subth :
