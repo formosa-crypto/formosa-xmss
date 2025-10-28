@@ -356,7 +356,7 @@ lemma adr2adsK (ad : Address.adrs) :
   valid_adrsidxs (adr2idxs ad) =>
   ads2adr (adr2ads ad) = ad.
 proof. smt(HAX.Adrs.insubdK adr2idxsK). qed.
-
+(* 
 (* Notes:
 - We have a full binary tree with  h+1 levels (height = h), so 2^h leaves
   (and 2^(h + 1) - 1 total nodes, i.e., leaves and inner nodes combined).
@@ -672,133 +672,6 @@ have -> : (size (lpath _lstart) - (size (lpath _lstart) - _sth)) = _sth by ring.
 rewrite -BS2Int.bs2int_div 1:/# /lpath revK BS2Int.int2bsK /= /#.
 qed.
 
-op WOTS_genSK ad ss ps =
-  let (a, sk) = iteri len
-    (fun i ask=>
-       let (ad, sk) = ask in
-       let ad = set_chain_addr ad i in
-       let sk_i = prf_keygen ss (ps, ad) in
-       let sk = put sk i sk_i in
-       (ad, sk))
-    ((set_key_and_mask (set_hash_addr ad 0) 0), nseq len witness)
-  in LenNBytes.insubd sk.
-
-op WOTS_pkgen ss ps ad =
-  let sk = WOTS_genSK ad ss ps in
-  let (a, pk) = iteri len
-    (fun i apk=>
-       let (ad, pk) = apk in
-       let ad = set_chain_addr ad i in
-       let sk_i = nth witness (LenNBytes.val sk) i in
-       let pk_i = chain sk_i 0 (w - 1) ps ad in
-       let pk = put pk i pk_i in
-       (ad, pk))
-    (ad, nseq len witness) in
-  LenNBytes.insubd pk.
-
-(* The leaf node corresponding to a leaf path
-   The semantics of this needs to be computed from wots using
-   operators and then proved equivalent to the imperative code. *)
-op wots_pk_val(ss ps : Params.nbytes, ad : SA.adrs, lidx : int) : len_nbytes =
-   WOTS_pkgen ss ps (ads2adr ad).
-
-op leafnode_from_idx(ss ps : Params.nbytes, ad : adrs, lidx : int) : dgstblock =
- let pk = wots_pk_val ss ps (set_kpidx (set_typeidx ad 0) lidx) lidx in
- bs2block (ltree ps (ads2adr (set_kpidx (set_typeidx ad 1) lidx)) pk).
-
-hoare Eqv_WOTS_genSK ad ss ps:
-  WOTS.pseudorandom_genSK:
-    arg = (ss, ps, ad)
-    ==> res = WOTS_genSK ad ss ps.
-proof.
-proc.
-while (0 <= i <= len
-    /\ sk_seed = ss
-    /\ seed = ps
-    /\   (address, sk)
-       = iteri i
-           (fun i ask=> let (ad, sk) = ask in
-              let ad = set_chain_addr ad i in
-              let sk_i = prf_keygen ss (ps, ad) in
-              let sk = put sk i sk_i in
-              (ad, sk))
-           (set_key_and_mask (set_hash_addr ad 0) 0, nseq len witness)).
-+ auto=> /> &0 ge0_i _ ih i_lt_len.
-  by rewrite iteriS // -ih //= /#.
-by auto=> />; rewrite ge0_len iteri0 //= /WOTS_genSK /#.
-qed.
-
-hoare Eqv_WOTS_pkgen  (ad : Address.adrs) (ss ps : seed) :
-  WOTS.pkGen : arg = (ss, ps, ad) ==> res = WOTS_pkgen ss ps ad.
-proof.
-proc.
-while (0 <= i <= len
-    /\ sk_seed = ss
-    /\ _seed = ps
-    /\ wots_skey = WOTS_genSK ad ss ps
-    /\ (address, pk) = iteri i
-         (fun i apk=>
-            let (ad, pk) = apk in
-            let ad = set_chain_addr ad i in
-            let sk_i = nth witness (LenNBytes.val wots_skey) i in
-            let pk_i = chain sk_i 0 (w - 1) ps ad in
-            let pk = put pk i pk_i in
-            (ad, pk))
-         (ad, nseq len witness)).
-+ wp; ecall (chain_eq sk_i 0 (w - 1) _seed address).
-  auto=> /> &0 ge0_i _ ih i_lt_len.
-  split; [smt(gt0_w)|].
-  by rewrite iteriS // -ih //= /#.
-ecall (Eqv_WOTS_genSK address sk_seed _seed).
-by auto=> />; rewrite ge0_len iteri0 //= /WOTS_pkgen /#.
-qed.
-
-phoare Chain_chain_ll: [ Chain.chain: 0 <= s < Params.w ==> true ] =1%r.
-proof.
-proc; sp; conseq (: 0 <= chain_count <= s ==> _)=> //.
-while (0 <= chain_count <= s) (s - chain_count) s 1%r=> //.
-+ smt().
-+ move=> ih'; sp; conseq ih'.
-  by move=> &0 /> /#.
-+ by auto=> /> &0 /#.
-by split=> [/#|z]; auto=> /> /#.
-qed.
-
-lemma Eqv_WOTS_pkgen_ll  :
- islossless WOTS.pkGen.
-proof.
-(** FIXME: Really? **)
-proc; sp.
-seq 1: (i = 0)=> //.
-+ conseq (: true)=> //.
-  call (: true)=> //.
-  sp; conseq (: size sk = Params.len /\ 0 <= i <= Params.len ==> _).
-  + by move=> &0 />; rewrite ge0_len size_nseq; smt(ge0_len).
-  while (0 <= i <= Params.len) (Params.len - i) Params.len 1%r=> //.
-  + smt(ge0_len).
-  + move=> ih; sp; conseq ih.
-    by move=> &0 />; smt(size_put).
-  + by auto=> /> &0 /#.
-  by split=> [/#|z]; auto=> /> /#.
-+ conseq (: 0 <= i <= Params.len ==> _)=> //.
-  + smt(ge0_len).
-  while (0 <= i <= Params.len) (Params.len - i) Params.len 1%r=> //.
-  + smt(ge0_len).
-  + move=> ih.
-    seq -1: (0 <= i <= Params.len)=> //.
-    + wp; call Chain_chain_ll.
-      by wp; auto=> />; smt(w_vals).
-    by hoare; wp; conseq (: true)=> //; 1:smt().
-  + wp; conseq (: true)=> //.
-    + smt().
-    call Chain_chain_ll.
-    by wp; auto=> />; smt(w_vals).
-  split=> [/#|z].
-  wp; call (: 0 <= s < Params.w ==> true).
-  + by conseq Chain_chain_ll.
-  by auto=> />; smt(w_vals).
-+ by hoare; conseq (: true)=> />.
-qed.
 
 (* list of all the leaves up to an index, exclusive *)
 op leaf_range(ss ps : Params.nbytes, ad : SA.adrs, start lidxo  : int) =
@@ -2159,6 +2032,245 @@ congr; congr.
 
 
 admitted.
+*)
+
+op WOTS_genSK ad ss ps =
+  let (a, sk) = iteri len
+    (fun i ask=>
+       let (ad, sk) = ask in
+       let ad = set_chain_addr ad i in
+       let sk_i = prf_keygen ss (ps, ad) in
+       let sk = put sk i sk_i in
+       (ad, sk))
+    ((set_key_and_mask (set_hash_addr ad 0) 0), nseq len witness)
+  in LenNBytes.insubd sk.
+
+op WOTS_pkgen ss ps ad =
+  let sk = WOTS_genSK ad ss ps in
+  let (a, pk) = iteri len
+    (fun i apk=>
+       let (ad, pk) = apk in
+       let ad = set_chain_addr ad i in
+       let sk_i = nth witness (LenNBytes.val sk) i in
+       let pk_i = chain sk_i 0 (w - 1) ps ad in
+       let pk = put pk i pk_i in
+       (ad, pk))
+    (ad, nseq len witness) in
+  LenNBytes.insubd pk.
+
+(* The leaf node corresponding to a leaf path
+   The semantics of this needs to be computed from wots using
+   operators and then proved equivalent to the imperative code. *)
+op wots_pk_val(ss ps : Params.nbytes, ad : SA.adrs, lidx : int) : len_nbytes =
+   WOTS_pkgen ss ps (ads2adr ad).
+
+op leafnode_from_idx(ss ps : Params.nbytes, ad : adrs, lidx : int) : dgstblock =
+ let pk = wots_pk_val ss ps (set_kpidx (set_typeidx ad 0) lidx) lidx in
+ bs2block (ltree ps (ads2adr (set_kpidx (set_typeidx ad 1) lidx)) pk).
+ 
+hoare Eqv_WOTS_genSK ad ss ps:
+  WOTS.pseudorandom_genSK:
+    arg = (ss, ps, ad)
+    ==> res = WOTS_genSK ad ss ps.
+proof.
+proc.
+while (0 <= i <= len
+    /\ sk_seed = ss
+    /\ seed = ps
+    /\   (address, sk)
+       = iteri i
+           (fun i ask=> let (ad, sk) = ask in
+              let ad = set_chain_addr ad i in
+              let sk_i = prf_keygen ss (ps, ad) in
+              let sk = put sk i sk_i in
+              (ad, sk))
+           (set_key_and_mask (set_hash_addr ad 0) 0, nseq len witness)).
++ auto=> /> &0 ge0_i _ ih i_lt_len.
+  by rewrite iteriS // -ih //= /#.
+by auto=> />; rewrite ge0_len iteri0 //= /WOTS_genSK /#.
+qed.
+
+hoare Eqv_WOTS_pkgen  (ad : Address.adrs) (ss ps : seed) :
+  WOTS.pkGen : arg = (ss, ps, ad) ==> res = WOTS_pkgen ss ps ad.
+proof.
+proc.
+while (0 <= i <= len
+    /\ sk_seed = ss
+    /\ _seed = ps
+    /\ wots_skey = WOTS_genSK ad ss ps
+    /\ (address, pk) = iteri i
+         (fun i apk=>
+            let (ad, pk) = apk in
+            let ad = set_chain_addr ad i in
+            let sk_i = nth witness (LenNBytes.val wots_skey) i in
+            let pk_i = chain sk_i 0 (w - 1) ps ad in
+            let pk = put pk i pk_i in
+            (ad, pk))
+         (ad, nseq len witness)).
++ wp; ecall (chain_eq sk_i 0 (w - 1) _seed address).
+  auto=> /> &0 ge0_i _ ih i_lt_len.
+  split; [smt(gt0_w)|].
+  by rewrite iteriS // -ih //= /#.
+ecall (Eqv_WOTS_genSK address sk_seed _seed).
+by auto=> />; rewrite ge0_len iteri0 //= /WOTS_pkgen /#.
+qed.
+
+phoare Chain_chain_ll: [ Chain.chain: 0 <= s < Params.w ==> true ] =1%r.
+proof.
+proc; sp; conseq (: 0 <= chain_count <= s ==> _)=> //.
+while (0 <= chain_count <= s) (s - chain_count) s 1%r=> //.
++ smt().
++ move=> ih'; sp; conseq ih'.
+  by move=> &0 /> /#.
++ by auto=> /> &0 /#.
+by split=> [/#|z]; auto=> /> /#.
+qed.
+
+lemma Eqv_WOTS_pkgen_ll  :
+ islossless WOTS.pkGen.
+proof.
+(** FIXME: Really? **)
+proc; sp.
+seq 1: (i = 0)=> //.
++ conseq (: true)=> //.
+  call (: true)=> //.
+  sp; conseq (: size sk = Params.len /\ 0 <= i <= Params.len ==> _).
+  + by move=> &0 />; rewrite ge0_len size_nseq; smt(ge0_len).
+  while (0 <= i <= Params.len) (Params.len - i) Params.len 1%r=> //.
+  + smt(ge0_len).
+  + move=> ih; sp; conseq ih.
+    by move=> &0 />; smt(size_put).
+  + by auto=> /> &0 /#.
+  by split=> [/#|z]; auto=> /> /#.
++ conseq (: 0 <= i <= Params.len ==> _)=> //.
+  + smt(ge0_len).
+  while (0 <= i <= Params.len) (Params.len - i) Params.len 1%r=> //.
+  + smt(ge0_len).
+  + move=> ih.
+    seq -1: (0 <= i <= Params.len)=> //.
+    + wp; call Chain_chain_ll.
+      by wp; auto=> />; smt(w_vals).
+    by hoare; wp; conseq (: true)=> //; 1:smt().
+  + wp; conseq (: true)=> //.
+    + smt().
+    call Chain_chain_ll.
+    by wp; auto=> />; smt(w_vals).
+  split=> [/#|z].
+  wp; call (: 0 <= s < Params.w ==> true).
+  + by conseq Chain_chain_ll.
+  by auto=> />; smt(w_vals).
++ by hoare; conseq (: true)=> />.
+qed.
+
+require Treehash. 
+
+(*
+type haddress = { level: int; index: int; }.
+*) 
+op hash(ps : nbytes, hadlvl hadidx : int, lv rv : Params.nbytes) : Params.nbytes =
+  let mad = idxs2adr (HAX.Adrs.val (set_thtbidx (set_typeidx (adr2ads zero_address) 2) (hadlvl+1) hadidx)) in
+  let mad0 = set_tree_height mad (get_tree_height mad - 1) in
+      (rand_hash ps mad0 lv rv).
+
+print Treehash.
+op reduce_tree_st(ps : nbytes, leaves : Params.nbytes list, hadlvl hadidx : int) : Params.nbytes =
+   let nb2db = fun (x0 : nbytes) => WTW.DigestBlock.insubd (BytesToBits (NBytes.val x0)) in
+   NBytes.insubd (BitsToBytes (DigestBlock.val
+         (val_bt_trh (list2tree (map nb2db leaves)) ps (set_typeidx (adr2ads zero_address) 2) hadlvl hadidx))).
+
+               
+clone Treehash as TH with
+        type value = Params.nbytes,
+        type pseed = seed,
+        op hash = fun (ps : nbytes) (had : haddress) (lv rv : Params.nbytes) =>
+                hash ps had.`level had.`index lv rv,
+        op reduce_tree = fun (ps : nbytes) (leaves : Params.nbytes list) (ha : haddress) =>
+           reduce_tree_st ps leaves ha.`level ha.`index
+        proof reduce_tree_leaf
+        proof reduce_tree_node.
+
+ realize reduce_tree_leaf.
+ move => ps ls idx.
+ rewrite /reduce_tree /reduce_tree_st /==> /=.
+ have Hls : exists _sth, 0<=_sth /\ size ls = 2^_sth by admit.
+ elim Hls => _sth Hls.
+ have @/list2tree_pred /= [?[??]]:= list2tree_spec_ok ls _sth _ _;1,2:smt().
+ admitted. (* there is something wrong here *)
+
+realize reduce_tree_node.
+ move => ps ls h idx h_ge0.
+ rewrite {1}/reduce_tree /= /reduce_tree_st /= /hash /=.
+ have Hls : size ls = 2^(h+1) by admit.
+ have {1}<- := cat_take_drop (2^h) ls.
+ rewrite map_cat (list2treeS h).
+ + smt(expr_ge0).
+   + rewrite size_map. admit.
+   + rewrite size_map. admit.
+ simplify.
+ rewrite /trh /= ifF. admit.
+rewrite DigestBlock.insubdK. admit.
+rewrite BytesToBitsK.
+rewrite NBytes.valKd.
+congr.
+rewrite /reduce_tree /reduce_tree_st /=;congr;congr.
++ admit.
++ admit.
+  qed.
+  
+ lemma tree_hash_correct_eq _ps _ss _lstart _sth :
+ equiv [  XMSSRFCAbs.TreeHash.treehash ~ TH.TreeHash.subth :
+   arg{1} = (_ps,_ss,_lstart,_sth, zero_address)
+  /\ 0 <= _sth <= h /\ 0 <= _lstart <= 2^h - 2^_sth  /\ 2^_sth %| _lstart /\
+  arg{2} = (_ps, (map (fun idx => oget (NBytes.insub (BitsToBytes (DigestBlock.val (leafnode_from_idx _ss _ps (adr2ads zero_address) idx)))))
+     (range _lstart (_lstart + 2^_sth))), {| TH.index = _lstart %/ 2^_sth; TH.level = _sth|})
+  ==>
+  ={res} ].
+  proc. sp.
+  admitted.
+
+phoare tree_hash_correct _ps _ss _lstart _sth :
+  [ TreeHash.treehash :
+      arg = (_ps,_ss,_lstart,_sth, zero_address)
+  /\ 0 <= _sth <= h /\ 0 <= _lstart <= 2^h - 2^_sth  /\ 2^_sth %| _lstart
+ ==>
+  DigestBlock.insubd (BytesToBits (NBytes.val res)) =
+    val_bt_trh (list2tree (map (leafnode_from_idx _ss _ps (adr2ads zero_address))
+     (range _lstart (_lstart + 2^_sth)))) _ps (set_typeidx (adr2ads zero_address) 2) _sth
+     (* (_lstart %/ 2^(_sth + 1))  ] = 1%r. *)
+     (_lstart %/ 2 ^ _sth)  ] = 1%r.
+proof.
+conseq  (tree_hash_correct_eq _ps _ss _lstart _sth) 
+ (TH.subtreehash_correct _ps
+   (map (fun idx => oget (NBytes.insub (BitsToBytes (DigestBlock.val (leafnode_from_idx _ss _ps (adr2ads zero_address) idx)))))
+     (range _lstart (_lstart + 2^_sth))) {| TH.index = _lstart %/ 2^_sth; TH.level = _sth|}).
++ move => &1 /> ?????.
+  exists (_ps,
+   map
+     (fun (idx : int) =>
+        oget (NBytes.insub (BitsToBytes (DigestBlock.val (leafnode_from_idx _ss _ps (adr2ads zero_address) idx)))))
+     (range _lstart (_lstart + 2 ^ _sth)), {| TH.level = _sth; TH.index = _lstart %/ 2 ^ _sth; |}) => /=.
+  by rewrite size_map size_range;smt(expr_ge0).
+move => &1 &2 H1 H2; rewrite H1 H2.
+rewrite /reduce_tree /reduce_tree_st /=.
+rewrite NBytes.insubdK. admit.
+rewrite BitsToBytesK. admit.
+rewrite DigestBlock.valKd.
+congr;congr.
+rewrite /adr2ads.
+rewrite -map_comp /(\o) /=.
+
+ conseq (: _ ==> true) (: _ ==> _);1,2:smt(); last first.
++ proc.
+  wp;while (true) (2^t - i).
+  + move => *; wp; while (true) (to_uint offset).
+    + move => *;inline *; auto => &hr;rewrite uleE /= => *.
+      rewrite W64.to_uintB => /=;1: by rewrite uleE /= /#.
+      by smt().
+  sp;wp;exlim sk_seed, pub_seed, address => ss ps ad.
+  call Eqv_WOTS_pkgen_ll.
+  + auto => /> &hr ? h o; rewrite uleE /=;split; smt(W64.to_uint_cmp).
+  by auto => /> /#.
+
 
 
 module WOTS_Encode = {
