@@ -803,7 +803,6 @@ qed.
 
 (* ==================================================================== *)
 lemma subtreehash_correct (_pseed : pseed) (_leaves : value list) (root : haddress) :
-  (* => 0 <= root.`index < 2^h %/ 2^root.`level *)
-  phoare[TreeHash.subth : arg = (_pseed, _leaves, root) /\ size _leaves = 2^root.`level ==>
+  phoare[TreeHash.subth : arg = (_pseed, _leaves, root) ==>
            res = reduce_tree _pseed _leaves root] = 1%r.
 admitted.
