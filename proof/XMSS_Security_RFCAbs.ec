@@ -564,6 +564,32 @@ congr;congr;congr.
   rewrite drop_drop;smt(expr_gt0).
 qed.
 
+lemma zeroidxsE:
+  adr2idxs zero_address = [0; 0; 0; 0].
+proof.
+rewrite /zero_address /adr2idxs.
+rewrite &(eq_from_nth witness) /=; 1: smt(size_rev size_map size_sub).
+move=> i ?; rewrite nth_rev 2:(nth_map witness) 3:nth_sub; 1..3:smt(size_rev size_map size_sub).
+by rewrite size_map size_sub 1:// initE /= ifT; smt(size_rev size_map size_sub to_uint0).
+qed.
+
+lemma zeroadsE:
+  adr2ads zero_address = HAX.Adrs.insubd [0; 0; 0; 0].
+proof. by rewrite /adr2ads zeroidxsE. qed.
+
+lemma zeroxadiP:
+  valid_xadrsidxs [0; 0; 0; 0].
+proof. by smt(val_w ge2_len expr_gt0). qed.
+
+
+lemma zeroadiP i j :
+  0 <= i < 3 =>
+  (0 <= i < 2 => 0 <= j < l) =>
+  (i = 2 => j = 0) =>
+  valid_adrsidxs [0; 0; j; i] by move => ???;
+rewrite valid_xadrsidxs_adrsidxs /= /valid_xadrsidxs /= /valid_xidxvals /= /predT /= /valid_xidxvalslp /= /valid_xidxvalslpch /= /valid_hidx /valid_chidx /valid_kpidx /valid_xidxvalslptrh
+/valid_xidxvalslppkco /valid_kpidx /valid_thidx /valid_tbidx  /nr_nodes/=; smt(w_vals gt2_len expr_gt0 ge0_h).
+
 lemma tree_hash_correct_eq _ps _ss _lstart _sth :
  equiv [  XMSSRFCAbs.TreeHash.treehash ~ TH.TreeHash.subth :
    arg{1} = (_ps,_ss,_lstart,_sth, zero_address)
@@ -609,6 +635,9 @@ lemma tree_hash_correct_eq _ps _ss _lstart _sth :
  /\ t{1} = _sth
  /\ i{1} = index{2}
  /\ (forall k, 0 <= k < 3 => address{1}.[k] = W32.zero)
+ /\ address{1}.[3] = W32.of_int 2
+ /\ address{1}.[4] = W32.zero
+ /\ address{1}.[7] = W32.zero
  /\ 0 <= _sth <= h 
  /\ 0 <= _lstart <= 2 ^ h - 2 ^ _sth 
  /\ 2 ^ _sth %| _lstart 
@@ -630,7 +659,7 @@ lemma tree_hash_correct_eq _ps _ss _lstart _sth :
  /\ to_uint (nth witness heights{1} (size stack{2}) )= focus{2}.`2
  /\ 0 <= index{2} <= 2^_sth
  /\ (index{2} = 2^_sth => size stack{2} = 1)
-  ); last first.
+  ); last first. 
   (* THIS CONSEQ IS #pre + ASSUMPTION ON STACK SIZE *)
   conseq (: 
     pub_seed{1} = _ps
@@ -686,8 +715,17 @@ lemma tree_hash_correct_eq _ps _ss _lstart _sth :
     + rewrite /BytesToBits (size_flatten_ctt 8);1: smt(mapP W8.size_w2bits).
       by rewrite size_map NBytes.valP. 
     rewrite BytesToBitsK NBytes.valK /=;congr.
-    + admit. (* FIXME: address magic *)
-    + rewrite /wots_pk_val;congr. admit. (* FIXME: address magic *)
+    + rewrite zeroadsE /set_typeidx /set_kpidx /= HAX.Adrs.insubdK /=;1:smt( zeroadiP).
+      rewrite /HAX.set_idx /= HAX.Adrs.insubdK /= /put /=;1: by smt(zeroadiP). 
+      rewrite nth_range /= 1:/# /= /ads2adr  HAX.Adrs.insubdK /= /=;1: by  smt( zeroadiP).
+      rewrite /idxs2adr /set_ltree_addr /set_type /set_ots_addr.
+      by rewrite tP => i ib;smt(Array8.get_setE Array8.initiE).
+    + rewrite /wots_pk_val;congr.
+      + rewrite zeroadsE /set_typeidx /set_kpidx /= HAX.Adrs.insubdK /=;1:smt( zeroadiP).
+      rewrite /HAX.set_idx /= HAX.Adrs.insubdK /= /put /=;1: by smt(zeroadiP). 
+      rewrite nth_range /= 1:/# /= /ads2adr  HAX.Adrs.insubdK /= /=;1: by  smt( zeroadiP).
+      rewrite /idxs2adr /set_ltree_addr /set_type /set_ots_addr.
+      by rewrite tP => i ib;smt(Array8.get_setE Array8.initiE).
       have -> : offset{1} + W64.one - W64.one = offset{1} by ring.
       rewrite nth_put;1: smt(W64.to_uint_cmp). 
       by rewrite ifT 1:/# /=. 
@@ -717,11 +755,11 @@ lemma tree_hash_correct_eq _ps _ss _lstart _sth :
     apply W32.to_uint_eq.
     have/= := H (size stack{2} - 1) _;smt().
   + move => _add _hs1 _of1 _st1 _fo2 _st2.
-    rewrite uleE /= => ???????????;do split;1..6:smt().
+    rewrite uleE /= => ??????????????;do split;1..6:smt().
     admit. (* if we exit the inner loop int last index,
               then the stack is empty on right-hand side *)
 
-auto => /> &1 &2; rewrite !uleE /= => ?????????H HH ??????HHH??.
+auto => /> &1 &2; rewrite !uleE /= => ?????????Ho??H HH ?Hh????HHH??.
 have ? : size stack{2} <= _sth by  admit. (* from the abstract proof *)
 + have -> : offset{1} - W64.one - W64.one = offset{1} - W64.of_int 2 by ring.
 have -> : to_uint (offset{1} - W64.of_int 2) = to_uint offset{1} - 2
@@ -744,7 +782,32 @@ do split.
   + rewrite nth_put 1:/#.
     rewrite ifT 1:/#.
     rewrite /TH.hash /hash /=; congr.
-    + admit. (* address magic *) 
+    + rewrite zeroadsE /set_typeidx /set_kpidx /set_thtbidx /=.
+      rewrite (HAX.Adrs.insubdK [0; 0; 0; 0]) /=;1: by smt(ge2_l  zeroadiP).
+      rewrite  HAX.Adrs.insubdK /= /put /=.
+      + have -> /= : forall x, size (HAX.Adrs.val x) = 4 by smt(HAX.Adrs.valP).
+        rewrite !take0 /= size_drop //.
+        have -> /= : forall x, size (HAX.Adrs.val x) = 4 by smt(HAX.Adrs.valP).
+        rewrite ifT 1:/# /= take0 /=.
+        rewrite HAX.Adrs.insubdK /=;1: by smt(zeroadiP).
+        rewrite /valid_adrsidxs /= /valid_xidxvalslp /=;right;right.
+        rewrite /valid_xidxvalslptrh /= /valid_tbidx /valid_thidx /nr_nodes.  admit. (* We need a bound on heights from the abstract proof *)
+      have -> /= : forall x, size (HAX.Adrs.val x) = 4 by smt(HAX.Adrs.valP).
+      rewrite take0 /= size_drop // drop_drop //.
+      have -> /= : forall x, size (HAX.Adrs.val x) = 4 by smt(HAX.Adrs.valP).
+      rewrite ifT 1:/# /= take0 /= /set_tree_index /set_tree_height tP => i ib.
+      rewrite HAX.Adrs.insubdK;1: by smt(ge2_l  zeroadiP).
+      case (0 <= i <5) => ? /=; 1: by smt(Array8.get_setE Array8.initiE).
+      case (i = 7) => ?; 1: by smt(Array8.get_setE Array8.initiE).
+      case (i = 6) => Hi.
+      + rewrite Hi /= /idxs2adr /= Ho /= to_uint_eq shr_div to_uint_truncateu8 /=.
+        have -> : 31 = 2^5 - 1 by auto.
+        rewrite and_mod // to_uintD_small /=. admit.  (* We need a bound on heights from the abstract proof *)
+        rewrite !of_uintK /= !(modz_small _ 4294967296) /=. admit. (* FIXME *) smt(). admit. (* FIXME *)
+        rewrite Hh. admit. (* we need a bound on heights that is strictly smaller than 32  from abstract proof *)
+      case (i = 5); last by smt().
+      move => -> /=; rewrite /get_tree_height /= /idxs2adr /= W32.of_uintK /=.
+      rewrite Ho /= to_uint_eq Hh /= of_uintK /=.  admit.  (* We need a bound on heights from the abstract proof *)
     +  by have := H (to_uint offset{1} - 2) _; smt(nth_change_dfl).
     have -> : to_uint offset{1} - 1 = size stack{2} by smt(). 
     rewrite (nth_change_dfl witness); last by smt().
@@ -2392,27 +2455,6 @@ proc; while (size leafl <= l
   by move=> @/pkWOTS_from_skWOTS //=.
 by auto=> />; rewrite range_geq //=; smt(ge1_d).
 qed.
-
-lemma zeroidxsE:
-  adr2idxs zero_address = [0; 0; 0; 0].
-proof.
-rewrite /zero_address /adr2idxs.
-rewrite &(eq_from_nth witness) /=; 1: smt(size_rev size_map size_sub).
-move=> i ?; rewrite nth_rev 2:(nth_map witness) 3:nth_sub; 1..3:smt(size_rev size_map size_sub).
-by rewrite size_map size_sub 1:// initE /= ifT; smt(size_rev size_map size_sub to_uint0).
-qed.
-
-lemma zeroadsE:
-  adr2ads zero_address = HAX.Adrs.insubd [0; 0; 0; 0].
-proof. by rewrite /adr2ads zeroidxsE. qed.
-
-lemma zeroxadiP:
-  valid_xadrsidxs [0; 0; 0; 0].
-proof. by smt(val_w ge2_len expr_gt0). qed.
-
-lemma zeroadiP:
-  valid_adrsidxs [0; 0; 0; 0].
-proof. by rewrite valid_xadrsidxs_adrsidxs zeroxadiP. qed.
 
 (* 
 phoare tree_hash_correct _ps _ss _lstart _sth :
