@@ -1,8 +1,14 @@
 #include "hash.h"
 
+#include <limits.h>
 #include <openssl/sha.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <string.h>
+
+#ifndef ULLONG_MAX
+#error "ULLONG_MAX not defined, required for overflow checks"
+#endif
 
 #include "fips202.h"
 #include "hash_address.h"
@@ -19,6 +25,21 @@
 extern void prf_jazz(uint8_t *, const uint8_t *, const uint8_t *);
 #endif
 
+#ifdef BENCH_SHA2
+#ifdef BENCH_JASMIN
+extern void sha256_32(unsigned char *out, const unsigned char *in);
+extern void sha256_64(unsigned char *out, const unsigned char *in);
+extern void sha256_in_ptr_jazz(unsigned char *out, const unsigned char *in,
+                               unsigned long long inlen);
+#endif
+
+// Include bench.h for cpucycles function
+#include "../bench/common/bench.h"
+
+static unsigned long long core_hash_call_count = 0;
+static unsigned long long core_hash_cycle_count = 0;
+#endif
+
 void addr_to_bytes(unsigned char *bytes, const uint32_t addr[8]) {
     int i;
     for (i = 0; i < 8; i++) {
@@ -29,6 +50,47 @@ void addr_to_bytes(unsigned char *bytes, const uint32_t addr[8]) {
 int core_hash(const xmss_params *params, unsigned char *out, const unsigned char *in,
               unsigned long long inlen) {
     unsigned char buf[64];
+
+#ifdef BENCH_SHA2
+    unsigned long long start_cycles, end_cycles, elapsed;
+
+    core_hash_call_count++;
+
+#ifdef BENCH_JASMIN
+    if (inlen == 32) {
+        start_cycles = cpucycles();
+        sha256_32(out, in);
+        end_cycles = cpucycles();
+    } else if (inlen == 64) {
+        start_cycles = cpucycles();
+        sha256_64(out, in);
+        end_cycles = cpucycles();
+    } else {
+        start_cycles = cpucycles();
+        sha256_in_ptr_jazz(out, in, inlen);
+        end_cycles = cpucycles();
+    }
+#else
+#ifdef BENCH_C
+    start_cycles = cpucycles();
+    SHA256(in, inlen, out);
+    end_cycles = cpucycles();
+#else
+#warning "BENCH_C or BENCH_JASMIN should be defined"
+#endif
+#endif
+
+    elapsed = end_cycles - start_cycles;
+
+    // Check for overflow before incrementing the cycle count
+    if (core_hash_cycle_count > ULLONG_MAX - elapsed) {
+        fprintf(stderr, "Warning: core_hash_cycle_count overflow detected, counter saturated\n");
+        core_hash_cycle_count = ULLONG_MAX;
+    } else {
+        core_hash_cycle_count += elapsed;
+    }
+
+#else
 
     if (params->n == 24 && params->func == XMSS_SHA2) {
         SHA256(in, inlen, buf);
@@ -48,8 +110,31 @@ int core_hash(const xmss_params *params, unsigned char *out, const unsigned char
     } else {
         return -1;
     }
+
+#endif
     return 0;
 }
+
+#ifdef BENCH_SHA2
+unsigned long long get_core_hash_call_count(void) { return core_hash_call_count; }
+
+void reset_core_hash_call_count(void) {
+    core_hash_call_count = 0;
+    core_hash_cycle_count = 0;
+}
+
+void print_core_hash_call_count(void) {
+    printf("core_hash called %llu times\n", core_hash_call_count);
+}
+
+unsigned long long get_core_hash_cycle_count(void) { return core_hash_cycle_count; }
+
+void reset_core_hash_cycle_count(void) { core_hash_cycle_count = 0; }
+
+void print_core_hash_cycle_count(void) {
+    printf("core_hash spent %llu cycles\n", core_hash_cycle_count);
+}
+#endif
 
 /*
  * Computes PRF(key, in), for a key of params->n bytes, and a 32-byte input.

@@ -29,4 +29,14 @@ int hash_message(const xmss_params *params, unsigned char *out, const unsigned c
                  const unsigned char *root, unsigned long long idx, unsigned char *m_with_prefix,
                  unsigned long long mlen);
 
+#ifdef BENCH_SHA2
+unsigned long long get_core_hash_call_count(void);
+void reset_core_hash_call_count(void);
+void print_core_hash_call_count(void);
+
+unsigned long long get_core_hash_cycle_count(void);
+void reset_core_hash_cycle_count(void);
+void print_core_hash_cycle_count(void);
+#endif
+
 #endif
