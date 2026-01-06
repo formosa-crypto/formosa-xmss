@@ -44,14 +44,14 @@ lemma verify_correctness (ptr_m           (* Apontador p mensagem *)
 
       valid_idx ((EncodeSignature (load_sig_mem Glob.mem{1} ptr_sm)).`sig_idx) /\
 
-      to_uint sm_len < XMSS_SIG_BYTES /\
-      0 <= to_uint sm_len - XMSS_SIG_BYTES < W64.max_uint /\
+      XMSS_SIG_BYTES < to_uint sm_len /\
+      0 <= to_uint sm_len  < W64.max_uint /\
 
       (* pointers are valid *)
       0 <= to_uint ptr_m < W64.max_uint /\
-      0 <= to_uint ptr_m + to_uint sm_len < W64.max_uint /\
+      0 <= to_uint ptr_m + to_uint sm_len  < W64.max_uint /\
 
-      0 <= to_uint ptr_sm + to_uint sm_len < W64.max_uint /\ (* nbao entendi *)
+      0 <= to_uint ptr_sm + to_uint sm_len < W64.max_uint /\ 
       0 <= to_uint ptr_sm < W64.max_uint /\
 
       0 <= to_uint ptr_mlen + 8 < W64.max_uint /\
@@ -59,6 +59,9 @@ lemma verify_correctness (ptr_m           (* Apontador p mensagem *)
 
       disjoint_ptr   (to_uint ptr_m) (to_uint sm_len)
                      (to_uint ptr_mlen) 8 /\ (* 1 W64 = 8 bytes *)
+
+      disjoint_ptr (to_uint ptr_sm) (to_uint sm_len)
+                   (to_uint ptr_m) (to_uint sm_len) /\ 
 
       disjoint_ptr   (to_uint ptr_sm) (to_uint sm_len)
                      (to_uint ptr_mlen) 8 /\ (* 1 W64 = 8 bytes *)
@@ -82,15 +85,16 @@ seq 9 0 : #pre; first by auto.
 swap {1} 8.
 swap {2} 3 -2.
 swap {2} 8 -7.
+swap {1} 26 -25.
 
-seq 1 2 : ( 
+seq 2 2 : ( 
   #pre /\ 
   to_list pub_root{1} = NBytes.val (pk{2}.`Types.pk_root) /\ 
   to_list pub_seed{1} = NBytes.val seed{2} /\
   to_list pub_seed{1} = sub pk{1} n n
 ).
     + auto => /> *; do split; apply (eq_from_nth witness); rewrite size_to_list ?NBytes.valP ?n_val // ?size_sub // => j?;
-      1,2: by rewrite get_to_list /EncodePkNoOID /= NBytes.insubdK ?size_sub ?n_val // nth_sub // /#.
+      1,2: by rewrite get_to_list /EncodePkNoOID /= NBytes.insubdK ?size_sub ?n_val // nth_sub // initiE 1:/# /=;smt(@W64). 
       rewrite get_to_list initiE // nth_sub /#.
 
 swap {1} 4 -2.
@@ -127,7 +131,7 @@ seq 4 0 : (
 (*                                                                                 *)
 (* ------------------------------------------------------------------------------- *)
  
-seq 17 13 : (
+seq 16 13 : (
   to_list root{1} = NBytes.val node{2} /\
   to_list pub_root{1} = NBytes.val root{2} /\
   0 <= to_uint mlen_ptr{1} < W64.max_uint /\
@@ -211,7 +215,7 @@ seq 1 0 : (
         #{/~t64{1} = smlen{1} - (of_int 4963)%W64}pre /\
         loadW64 Glob.mem{1} (to_uint mlen_ptr{1}) = smlen{1} - (of_int 4963)%W64
 ).
-- auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19 HM H20 H21 H22 H23 H24 H25*.
+- auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 ?H17 H18 H19 HM H20 H21 H22 H23 H24 H25*.
   rewrite load_store_W64 /XMSS_FULL_HEIGHT /=.
   rewrite /XMSS_FULL_HEIGHT /= in H1.
   have E :  disjoint_ptr (to_uint ptr_sm) (XMSS_SIG_BYTES) (to_uint ptr_mlen) 8 by smt().
@@ -222,7 +226,7 @@ seq 1 0 : (
       rewrite /disjoint_ptr /XMSS_SIG_BYTES in E.  
       smt(disjoint_ptr_ptr).
   do split; 1,2: by smt().
-    + rewrite H19; apply (eq_from_nth witness); rewrite !size_load_buf //; 1..3: by rewrite to_uintB ?of_uintK ?uleE /#.
+    + rewrite H19; apply (eq_from_nth witness); rewrite !size_load_buf //; 1..3: by rewrite to_uintB ?of_uintK ?uleE;smt(@W64). 
       rewrite /XMSS_SIG_BYTES. 
       have ->: to_uint (sm_len - (of_int 4963)%W64) = to_uint sm_len - XMSS_SIG_BYTES.
          * rewrite to_uintB; 1: by rewrite uleE /#.
@@ -253,7 +257,7 @@ seq 1 1 : (
     idx_sig{2} = s{2}.`sig_idx
 ).
 - ecall {1} (bytes_to_ull_ptr_correct Glob.mem{1} sm_ptr{1} idx_sig{2}).
-  auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17
+  auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 ?
              H18 H19 H20 H21 H22 H23 H24 H25 H26 H27 H28 *.
   split => [/# | H30 H31 H32 H33 result ->].
   rewrite /EncodeSignature => />.
@@ -271,7 +275,7 @@ seq 2 0 : (
   elim * => P0 P2 P4 Pmem.
   call {1} (memcpy_mem_mem Pmem P0 (W64.of_int 4963)  P2 (W64.of_int 4963) P4).
   auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 
-                   H16 H17 H18 H19 HM H20 H21 H22 H23 H24 H25 H26 H27 H28.
+                   H16 H17? H18 H19 HM H20 H21 H22 H23 H24 H25 H26 H27 H28.
   have E0 : to_uint (sm_len - (of_int 4963)%W64) = to_uint sm_len - 4963 by rewrite to_uintB; [rewrite uleE /# |]; rewrite of_uintK.
 
   (* adicionar offset ao apontador = remover offset da length *)

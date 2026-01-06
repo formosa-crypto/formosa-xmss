@@ -85,7 +85,7 @@ seq 2 2: (
 ); last by auto => /> *; smt(@DList).
 
 
-outline {1} [1-2] by { x1 <@ T.Program.Sample.sample(64); }.
+outline {1} [1..2] by { x1 <@ T.Program.Sample.sample(64); }.
 
 transitivity {1}
 { x1 <@ T.SampleX.samplecat(32,32); }
