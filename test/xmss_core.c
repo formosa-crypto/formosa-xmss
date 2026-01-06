@@ -14,6 +14,10 @@
 #include "wots.h"
 #include "xmss_commons.h"
 
+#ifdef BENCH_TREEHASH_KG
+#include "../bench/common/bench.h"
+#endif
+
 #ifdef TEST_PRF
 extern void prf_jazz(uint8_t *, const uint8_t *, const uint8_t *);
 #endif
@@ -45,6 +49,14 @@ extern int xmssmt_core_seed_keypair_jazz(uint8_t *pk, uint8_t *sk, const uint8_t
 #ifdef TEST_CORE_SIGN
 extern int xmssmt_core_sign_jazz(unsigned char *sk, unsigned char *sm, unsigned long long *smlen,
                                  const unsigned char *m, unsigned long long mlen);
+#endif
+
+#ifdef BENCH_TREEHASH_KG
+#ifdef BENCH_JASMIN
+extern void treehash_jazz(unsigned char *root, unsigned char *auth_path,
+                          const unsigned char *sk_seed, const unsigned char *pub_seed,
+                          uint32_t leaf_idx, const uint32_t subtree_addr[8]);
+#endif
 #endif
 
 /**
@@ -195,6 +207,32 @@ int xmssmt_core_seed_keypair(const xmss_params *params, unsigned char *pk, unsig
     treehash_jazz(pk, auth_path, sk, pk + params->n, 0, top_tree_addr);
 #else
     treehash(params, pk, auth_path, sk, pk + params->n, 0, top_tree_addr);
+#endif
+
+#ifdef BENCH_TREEHASH_KG
+    unsigned long long start_cycles, end_cycles;
+    FILE *fp;
+#ifdef BENCH_JASMIN
+    start_cycles = cpucycles();
+    treehash_jazz(pk, auth_path, sk, pk + params->n, 0, top_tree_addr);
+    end_cycles = cpucycles();
+    fp = fopen("results/treehash_kg_jasmin_cycles.txt", "a");
+#else
+#ifdef BENCH_C
+    start_cycles = cpucycles();
+    treehash(params, pk, auth_path, sk, pk + params->n, 0, top_tree_addr);
+    end_cycles = cpucycles();
+    fp = fopen("results/treehash_kg_c_cycles.txt", "a");
+#else
+#error "BENCH_TREEHASH_KG defined but neither BENCH_JASMIN nor BENCH_C defined"
+#endif
+#endif
+    if (fp != NULL) {
+        fprintf(fp, "%llu\n", end_cycles - start_cycles);
+        fclose(fp);
+    } else {
+        fprintf(stderr, "Failed to open file for treehash_kg cycles\n");
+    }
 #endif
 
     memcpy(sk + 2 * params->n, pk, params->n);

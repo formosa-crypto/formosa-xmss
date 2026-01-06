@@ -4,6 +4,11 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+/*
+ * memory allocation with 64-byte alignment
+ * The returned pointer is guaranteed to be divisible by 64
+ */
+
 static size_t alignedcalloc_step(size_t len) {
     size_t step;
     step = len + (63 & (-len));
