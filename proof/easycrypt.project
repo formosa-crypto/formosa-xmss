@@ -6,4 +6,3 @@ provers = CVC4@1.8
 provers = Alt-Ergo@2.5.2
 
 rdirs = .
-idirs = ../attic

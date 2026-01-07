@@ -21,14 +21,16 @@ op hash : pseed -> haddress -> value -> value -> value.
 op reduce_tree : pseed -> value list -> haddress -> value.
 
 axiom reduce_tree_leaf (pseed : pseed) (leaves : value list) (index : int) :
-  reduce_tree pseed leaves {| level = 0; index = index |} = leaves.[index].
+     0 <= index < 2^h
+  => reduce_tree pseed leaves {| level = 0; index = index |} = leaves.[index].
 
-axiom reduce_tree_node (pseed : pseed) (leaves : value list) (h : int) (index : int) :
-  0 <= h => 
-  reduce_tree pseed leaves {| level = h + 1; index = index |} =
-    hash pseed {| level = h; index = index |} 
-      (reduce_tree pseed leaves {| level = h; index = 2 * index     |})
-      (reduce_tree pseed leaves {| level = h; index = 2 * index + 1 |}).
+axiom reduce_tree_node (pseed : pseed) (leaves : value list) (lvl : int) (index : int) :
+     0 <= lvl < h
+  => 0 <= index < 2^(h - (lvl + 1))
+  => reduce_tree pseed leaves {| level = lvl + 1; index = index |} =
+       hash pseed {| level = lvl; index = index |} 
+         (reduce_tree pseed leaves {| level = lvl; index = 2 * index     |})
+         (reduce_tree pseed leaves {| level = lvl; index = 2 * index + 1 |}).
 
 op reduce (pseed : pseed) (leaves : value list) =
   reduce_tree pseed leaves {| level = h; index = 0 |}.
@@ -401,11 +403,33 @@ rewrite (_ : false :: _ = drop k (int2bs (root.`level+1) idx)).
 move=> {stk1}; move: {1 2 4 5 6 7}k (ge0_k) (lezz k).
 elim=> [|k0 ge0_k0 ih] le_k0_k.
 - rewrite take0 /= reduce_tree_leaf drop0.
-  by rewrite int2bsK ?exprSr //#.
+  - rewrite int2bsK ?exprSr ~-1:/#; split=> [|_]; first smt(expr_ge0).
+    case: okroot => rg_rt_lvl rg_rt_dx.
+    apply: (ltr_le_trans (
+      2 ^ root.`level * (2 ^ (h - root.`level) - 1) + 2 ^ root.`level)).
+    - by rewrite &(ler_lt_add) 2:/# ler_wpmul2l #smt:(expr_ge0).
+    by rewrite &(lerr_eq) mulrBr -exprD_nneg ~-1://# addrCA /= #ring.
+  by rewrite int2bsK ?exprS ~-1:/#.
 rewrite takeD ~-1://# /= foldl_cat ih 1:/#.
 rewrite (drop_take1_nth witness) /=.
 - by split=> //#.
-rewrite reduce_tree_node //; congr.
+rewrite reduce_tree_node //.
+- smt().
+- split=> [|_]; first by smt(expr_ge0 bs2int_ge0).
+  case: okroot=> ok_rt_lvl ok_rt_idx.
+  apply: (ltr_le_trans (
+      2 ^ (root.`level - (k0 + 1)) * (2 ^ (h - root.`level) - 1)
+    + 2 ^ (root.`level - (k0 + 1)))).
+  - rewrite &(ler_lt_add); first by rewrite ler_wpmul2l #smt:(expr_ge0).
+    rewrite -expz_div ~-1://# ltz_divRL; 1: by apply: expr_gt0.
+    - by rewrite dvdz_exp2l /#.
+    apply: (ler_lt_trans (bs2int (int2bs (root.`level + 1) idx))).
+    - rewrite [bs2int (int2bs _ _)](bs2int_take_drop (k0 + 1)) 1:/#.
+      rewrite [_ * 2^_]mulrC lez_addr 1:bs2int_ge0.
+      by rewrite int2bsK ?exprSr //#.
+  rewrite &(lerr_eq) mulrBr -exprD_nneg ~-1://# /=.
+  by rewrite (_ : _ + (h - _) = h - (k0 + 1)) #ring.
+congr.
 - move/(congr1 (fun s => nth witness s k0)): h1 => /=.
   rewrite (nth_map witness) 1:/# /= {1}int2bs_strikeE //=.
   move: (drop _ _) => s'; rewrite ones_cat /=.
@@ -882,4 +906,3 @@ lemma treehash_pcorrect (_pseed : pseed) (_leaves : value list) (_root : haddres
 proof.
 by move=> *; conseq treehash_ll (treehash_correct _pseed _leaves _root _ _).
 qed.
-
