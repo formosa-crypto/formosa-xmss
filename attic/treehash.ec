@@ -855,3 +855,31 @@ rewrite [_ * 2^_]mulrC -/(haddr2off _) !divzDl ~-1://.
 - by rewrite /haddr2off dvdz_mulr dvdz_exp2l /#.
 by rewrite -eqidx.
 qed.
+
+(* ==================================================================== *)
+lemma treehash_ll : islossless TreeHash.th.
+proof.
+proc.
+sp.
+while true (2^(root.`level) - idx).
+- move=> z; wp; while true (size stack).
+  - by move=> z'; auto=> &hr |> * /#.
+  - auto=> &hr |> *; split.
+    - by rewrite ler_eqVlt ltrNge size_ge0 /= size_eq0 /#.
+    - smt().
+- by auto=> &hr |> /#.
+qed.
+
+(* ==================================================================== *)
+lemma treehash_pcorrect (_pseed : pseed) (_leaves : value list) (_root : haddress) :
+     size _leaves = 2^h
+  => valid_haddress _root
+  => phoare[TreeHash.th :
+         arg = (_pseed, _leaves, _root)
+       ==>
+         res = reduce_tree _pseed _leaves _root
+     ] = 1%r.
+proof.
+by move=> *; conseq treehash_ll (treehash_correct _pseed _leaves _root _ _).
+qed.
+
