@@ -804,10 +804,12 @@ do split.
       case (i = 6) => Hi.
       + rewrite Hi /= /idxs2adr /= Ho /= to_uint_eq shr_div to_uint_truncateu8 /=.
         have -> : 31 = 2^5 - 1 by auto.
-        rewrite and_mod // to_uintD_small /=. admit.  (* We need a bound on heights from the abstract proof *)
-        rewrite !of_uintK /= !(modz_small _ 4294967296) /=. admit. (* FIXME *) smt(). admit. (* FIXME *)
-        rewrite Hh. admit. (* we need a bound on heights that is strictly smaller than 32  from abstract proof *)
-      case (i = 5); last by smt().
+        rewrite and_mod // to_uintD_small /=.
+        + rewrite Hh. admit.  (* We need a bound on heights from the abstract proof *)
+        rewrite !of_uintK /= !(modz_small _ 4294967296) /=;1..3: by smt(expr_gt0 gt_exprsbde h_max pow2_32).        
+        rewrite Hh. admit. (* we need a bound on heights that is strictly smaller than 31  from abstract proof *)
+        
+        case (i = 5); last by smt().
       move => -> /=; rewrite /get_tree_height /= /idxs2adr /= W32.of_uintK /=.
       rewrite Ho /= to_uint_eq Hh /= of_uintK /=.  admit.  (* We need a bound on heights from the abstract proof *)
     +  by have := H (to_uint offset{1} - 2) _; smt(nth_change_dfl).
@@ -894,7 +896,7 @@ by rewrite DigestBlock.valKd.
 
 + rewrite size_map size_range /=;smt(expr_gt0).
 + rewrite /TH.valid_haddress /=;do split; 1..3: smt(divz_ge0 expr_gt0).
-  admit. (* check with PY *)
+  smt(@IntDiv).
 qed.
 
 lemma tree_hash_correct _ps _ss _lstart _sth :
