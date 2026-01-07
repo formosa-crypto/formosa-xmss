@@ -504,7 +504,6 @@ op reduce_tree_st(ps : nbytes, leaves : Params.nbytes list, hadlvl hadidx : int)
    NBytes.insubd (BitsToBytes (DigestBlock.val
          (val_bt_trh (list2tree (map nb2db (take (2^hadlvl) (drop (hadidx*2^hadlvl) leaves)))) ps (set_typeidx (adr2ads zero_address) 2) hadlvl hadidx))).
 
-               
 clone Treehash as TH with
         op h <- h,
         type value = Params.nbytes,
@@ -517,9 +516,9 @@ clone Treehash as TH with
         proof reduce_tree_node.
 
  realize reduce_tree_leaf.
- move => ps ls idx.
+ move => ps ls idx ??.
  rewrite /reduce_tree /reduce_tree_st /==> /=.
- have Hidx : 0 <= idx < size ls by admit. (* FIXME: This needs to be added to the axiom *)
+ have Hidx : 0 <= idx < size ls by smt(). 
   pose ll := (take 1 (drop idx ls)).
   rewrite -(head_behead ll witness); 1: by rewrite -size_eq0;smt(size_take size_drop).
   have -> /= : behead ll = [] by smt(size_behead size_take size_drop).
@@ -533,10 +532,10 @@ clone Treehash as TH with
 qed.
   
 realize reduce_tree_node.
- move => ps ls h idx h_ge0.
+ move => ps ls h idx Hs h_ge0 Hz.
  rewrite {1}/reduce_tree /= /reduce_tree_st /= /hash /=.
- have Hidx : 0 <= idx by admit. (* FIXME: THIS NEEDS TO BE ADDED TO THE AXIOM *)
- have Hls : 2^(h+1) + idx * 2^(h+1) <= size ls by admit.  (* FIXME: THIS NEEDS TO BE ADDED TO THE AXIOM *)
+ have Hidx : 0 <= idx by smt().
+ have Hls : 2^(h+1) + idx * 2^(h+1) <= size ls by rewrite Hs; smt(@IntDiv).
  pose ll := (take (2 ^ (h + 1)) (drop (idx * 2 ^ (h + 1)) ls)).
  have Hll : size ll = 2^(h+1) by smt(expr_gt0 size_take size_drop). 
  have {1}<- := cat_take_drop (2^h) ll.
@@ -557,10 +556,12 @@ rewrite /reduce_tree /reduce_tree_st /=.
 congr;congr;congr.
 + rewrite take_size_cat;1: by rewrite DigestBlock.valP //.
   congr;congr;congr;congr.
-  by rewrite /ll exprS // take_take ifT;smt(expr_gt0).
+  rewrite /ll exprS //;1:smt(ge0_h).
+  rewrite take_take ifT;smt(expr_gt0).
 + rewrite drop_size_cat;1: by rewrite DigestBlock.valP //.
   congr;congr;congr;congr.
-  rewrite /ll exprS //= drop_take;1,2:smt(expr_gt0).
+  rewrite /ll exprS //=; 1:smt(ge0_h).
+  rewrite drop_take;1,2:smt(expr_gt0).
   congr;1: by ring.
   rewrite drop_drop;smt(expr_gt0).
 qed.
