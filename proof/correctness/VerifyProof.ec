@@ -275,13 +275,17 @@ seq 2 0 : (
   elim * => P0 P2 P4 Pmem.
   call {1} (memcpy_mem_mem Pmem P0 (W64.of_int 4963)  P2 (W64.of_int 4963) P4).
   auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 
-                   H16 H17? H18 H19 HM H20 H21 H22 H23 H24 H25 H26 H27 H28.
+                   H16 H17 HH H18 H19 HM H20 H21 H22 H23 H24 H25 H26 H27 H28.
   have E0 : to_uint (sm_len - (of_int 4963)%W64) = to_uint sm_len - 4963 by rewrite to_uintB; [rewrite uleE /# |]; rewrite of_uintK.
 
   (* adicionar offset ao apontador = remover offset da length *)
-  have E1 : disjoint_ptr (to_uint ptr_sm) (to_uint sm_len) (to_uint ptr_m + XMSS_SIG_BYTES) (to_uint sm_len - XMSS_SIG_BYTES) by smt(). 
-  rewrite H26 E0 /#. 
-
+  have E1 : disjoint_ptr (to_uint ptr_sm) (to_uint sm_len) (to_uint ptr_m + XMSS_SIG_BYTES) (to_uint sm_len - XMSS_SIG_BYTES). have := HH. rewrite /disjoint_ptr. move => H k1 Hk1 k2 Hk2.
+  have := H k1 Hk1 (k2+XMSS_SIG_BYTES) _. smt(). smt().
+  do split.  smt(). smt(). smt(). smt(). smt(). rewrite H26.
+  have := HH. rewrite /disjoint_ptr. move => H k1 Hk1 k2 Hk2.
+  have := H (k1+XMSS_SIG_BYTES) _ (k2+XMSS_SIG_BYTES) _. smt(). smt(). smt().
+  move => *; do split. admit. admit. admit.  admit. admit. admit. admit. 
+  
 seq 3 2 : (
   #pre /\ 
   to_list buf{1} = NBytes.val _R{2} /\
@@ -315,7 +319,7 @@ seq 0 0 : (
   load_buf Glob.mem{1} (m_ptr{1} + (of_int (4963 - 32 - 3 * 32 + 128))%W64) (to_uint bytes{1}) = Types.Msg_t.val m{2}
 ).
 - auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 
-  H16 H17 H18 H19 HM H20 H21 H22 H23 H24 H25 H26 H27 H28 H29
+  H16 ?H17 H18 H19 HM H20 H21 H22 H23 H24 H25 H26 H27 H28 H29
   H30 H31. 
   apply (eq_from_nth witness); rewrite !size_load_buf //; 1..3:smt(@W64 pow2_64).
   have ->: to_uint (sm_len - (of_int 4963)%W64) = to_uint sm_len - 4963 by rewrite to_uintB ?uleE of_uintK /#.
