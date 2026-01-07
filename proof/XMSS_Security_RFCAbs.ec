@@ -506,6 +506,7 @@ op reduce_tree_st(ps : nbytes, leaves : Params.nbytes list, hadlvl hadidx : int)
 
                
 clone Treehash as TH with
+        op h <- h,
         type value = Params.nbytes,
         type pseed = seed,
         op hash = fun (ps : nbytes) (had : haddress) (lv rv : Params.nbytes) =>
@@ -591,11 +592,11 @@ rewrite valid_xadrsidxs_adrsidxs /= /valid_xadrsidxs /= /valid_xidxvals /= /pred
 /valid_xidxvalslppkco /valid_kpidx /valid_thidx /valid_tbidx  /nr_nodes/=; smt(w_vals gt2_len expr_gt0 ge0_h).
 
 lemma tree_hash_correct_eq _ps _ss _lstart _sth :
- equiv [  XMSSRFCAbs.TreeHash.treehash ~ TH.TreeHash.subth :
+ equiv [  XMSSRFCAbs.TreeHash.treehash ~ TH.TreeHash.th :
    arg{1} = (_ps,_ss,_lstart,_sth, zero_address)
   /\ 0 <= _sth <= h /\ 0 <= _lstart <= 2^h - 2^_sth  /\ 2^_sth %| _lstart /\
   arg{2} = (_ps, (map (fun idx => oget (NBytes.insub (BitsToBytes (DigestBlock.val (leafnode_from_idx _ss _ps (adr2ads zero_address) idx)))))
-     (range 0 (_lstart + 2^_sth))), {| TH.index = _lstart %/ 2^_sth; TH.level = _sth|})
+     (range 0 (2^h))), {| TH.index = _lstart %/ 2^_sth; TH.level = _sth|})
   ==>
   ={res} ].
   proc => /=. 
@@ -605,7 +606,7 @@ lemma tree_hash_correct_eq _ps _ss _lstart _sth :
  /\ sk_seed{1} = _ss
  /\ s{1} = _lstart
  /\ t{1} = _sth
- /\ i{1} = index{2}
+ /\ i{1} = idx{2}
  /\ (forall k, 0 <= k < 3 => address{1}.[k] = W32.zero)
  /\ 0 <= _sth <= h 
  /\ 0 <= _lstart <= 2 ^ h - 2 ^ _sth 
@@ -614,7 +615,7 @@ lemma tree_hash_correct_eq _ps _ss _lstart _sth :
  /\ leaves{2} =
   map
     (fun (idx : int) =>
-       oget (NBytes.insub (BitsToBytes (DigestBlock.val (leafnode_from_idx _ss _ps (adr2ads zero_address) idx))))) (range 0 (_lstart + 2 ^ _sth))
+       oget (NBytes.insub (BitsToBytes (DigestBlock.val (leafnode_from_idx _ss _ps (adr2ads zero_address) idx))))) (range 0 (2^h))
  /\ root{2} = {| TH.level = _sth; TH.index = _lstart %/ 2 ^ _sth; |}
  /\ offset{2} = _lstart
  /\ to_uint offset{1} = size stack{2}
@@ -624,8 +625,8 @@ lemma tree_hash_correct_eq _ps _ss _lstart _sth :
         nth witness stack{1} k = (nth witness stack{2} (size stack{2} - 1 - k)).`1)
  /\ (forall k, 0 <= k < size stack{2} =>
     to_uint (nth witness heights{1} k) = (nth witness stack{2} (size stack{2} - 1 - k)).`2)
- /\ 0 <= index{2} <= 2^_sth
- /\ (index{2} = 2^_sth => size stack{2} = 1)
+ /\ 0 <= idx{2} <= 2^_sth
+ /\ (idx{2} = 2^_sth => size stack{2} = 1)
  ); last  by auto => />;smt(expr_gt0 Array8.initiE size_nseq).
   wp;conseq />;1:smt().
   while (
@@ -633,7 +634,7 @@ lemma tree_hash_correct_eq _ps _ss _lstart _sth :
  /\ sk_seed{1} = _ss
  /\ s{1} = _lstart
  /\ t{1} = _sth
- /\ i{1} = index{2}
+ /\ i{1} = idx{2}
  /\ (forall k, 0 <= k < 3 => address{1}.[k] = W32.zero)
  /\ address{1}.[3] = W32.of_int 2
  /\ address{1}.[4] = W32.zero
@@ -645,7 +646,7 @@ lemma tree_hash_correct_eq _ps _ss _lstart _sth :
  /\ leaves{2} =
   map
     (fun (idx : int) =>
-       oget (NBytes.insub (BitsToBytes (DigestBlock.val (leafnode_from_idx _ss _ps (adr2ads zero_address) idx))))) (range 0 (_lstart + 2 ^ _sth))
+       oget (NBytes.insub (BitsToBytes (DigestBlock.val (leafnode_from_idx _ss _ps (adr2ads zero_address) idx))))) (range 0 (2^h))
  /\ root{2} = {| TH.level = _sth; TH.index = _lstart %/ 2 ^ _sth; |}
  /\ offset{2} = _lstart
  /\ to_uint offset{1} = size stack{2} + 1
@@ -657,8 +658,8 @@ lemma tree_hash_correct_eq _ps _ss _lstart _sth :
     to_uint (nth witness heights{1} k) = (nth witness stack{2} (size stack{2} - 1 - k)).`2)
  /\ nth witness stack{1} (size stack{2}) = focus{2}.`1
  /\ to_uint (nth witness heights{1} (size stack{2}) )= focus{2}.`2
- /\ 0 <= index{2} <= 2^_sth
- /\ (index{2} = 2^_sth => size stack{2} = 1)
+ /\ 0 <= idx{2} <= 2^_sth
+ /\ (idx{2} = 2^_sth => size stack{2} = 1)
   ); last first. 
   (* THIS CONSEQ IS #pre + ASSUMPTION ON STACK SIZE *)
   conseq (: 
@@ -666,7 +667,7 @@ lemma tree_hash_correct_eq _ps _ss _lstart _sth :
  /\ sk_seed{1} = _ss
  /\ s{1} = _lstart
  /\ t{1} = _sth
- /\ i{1} = index{2}
+ /\ i{1} = idx{2}
  /\ (forall k, 0 <= k < 3 => address{1}.[k] = W32.zero)
  /\ 0 <= _sth <= h 
  /\ 0 <= _lstart <= 2 ^ h - 2 ^ _sth 
@@ -675,7 +676,7 @@ lemma tree_hash_correct_eq _ps _ss _lstart _sth :
  /\ leaves{2} =
   map
     (fun (idx : int) =>
-       oget (NBytes.insub (BitsToBytes (DigestBlock.val (leafnode_from_idx _ss _ps (adr2ads zero_address) idx))))) (range 0 (_lstart + 2 ^ _sth))
+       oget (NBytes.insub (BitsToBytes (DigestBlock.val (leafnode_from_idx _ss _ps (adr2ads zero_address) idx))))) (range 0 (2^h))
  /\ root{2} = {| TH.level = _sth; TH.index = _lstart %/ 2 ^ _sth; |}
  /\ offset{2} = _lstart
  /\ to_uint offset{1} = size stack{2} 
@@ -685,10 +686,10 @@ lemma tree_hash_correct_eq _ps _ss _lstart _sth :
         nth witness stack{1} k = (nth witness stack{2} (size stack{2} - 1 - k)).`1)
  /\ (forall k, 0 <= k < size stack{2} =>
     to_uint (nth witness heights{1} k) = (nth witness stack{2} (size stack{2} - 1 - k)).`2)
- /\ 0 <= index{2} <= 2^_sth
- /\ (index{2} = 2^_sth => size stack{2} = 1)
+ /\ 0 <= idx{2} <= 2^_sth
+ /\ (idx{2} = 2^_sth => size stack{2} = 1)
  /\ i{1} < 2 ^ t{1}
- /\ index{2} < 2 ^ root{2}.`TH.level
+ /\ idx{2} < 2 ^ root{2}.`TH.level
  
  /\ size stack{2} <= _sth ==> _).
  + auto => /> *. (* THIS IS A PARTIAL RESULT I NEED IN AN ASSERT FROM THE OTHER PROOF *) admit.
@@ -860,15 +861,15 @@ lemma tree_hash_correct_hyp _ps _ss _lstart _sth :
 proof.
 move => /> *.
 conseq  (tree_hash_correct_eq _ps _ss _lstart _sth) 
- (TH.subtreehash_correct _ps
+ (TH.treehash_pcorrect _ps
    (map (fun idx => oget (NBytes.insub (BitsToBytes (DigestBlock.val (leafnode_from_idx _ss _ps (adr2ads zero_address) idx)))))
-     (range 0 (_lstart + 2^_sth))) {| TH.index = _lstart %/ 2^_sth; TH.level = _sth|}).
+     (range 0 (2^h))) {| TH.index = _lstart %/ 2^_sth; TH.level = _sth|} _ _).
 + move => &1 />.
   exists (_ps,
    map
      (fun (idx : int) =>
         oget (NBytes.insub (BitsToBytes (DigestBlock.val (leafnode_from_idx _ss _ps (adr2ads zero_address) idx)))))
-     (range 0 (_lstart + 2 ^ _sth)), {| TH.level = _sth; TH.index = _lstart %/ 2 ^ _sth; |}) => //=.
+     (range 0 (2^h)), {| TH.level = _sth; TH.index = _lstart %/ 2 ^ _sth; |}) => //=.
 move => &1 &2 H1 H2; rewrite H1 H2.
 rewrite /reduce_tree /reduce_tree_st /=.
 rewrite NBytes.insubdK.
@@ -878,7 +879,7 @@ rewrite BitsToBytesK.
 rewrite DigestBlock.valKd.
 congr;congr.
 rewrite -map_drop -map_take -map_comp /(\o) /=.
-have -> : (take (2 ^ _sth) (drop (_lstart %/ 2 ^ _sth * 2 ^ _sth) (range 0 (_lstart + 2 ^ _sth)))) = (range _lstart (_lstart + 2 ^ _sth)).
+have -> : (take (2 ^ _sth) (drop (_lstart %/ 2 ^ _sth * 2 ^ _sth) (range 0 (2^h)))) = (range _lstart (_lstart + 2 ^ _sth)).
 + rewrite /range drop_iota; 1:smt(expr_gt0).
   rewrite take_iota;congr; smt(@IntDiv).
 apply eq_in_map => x;rewrite mem_range => ? /=.
@@ -889,6 +890,10 @@ have ->/= := NBytes.insubT (BitsToBytes (DigestBlock.val (leafnode_from_idx _ss 
 + by rewrite /BitsToBytes size_map size_chunk // DigestBlock.valP /#.
 rewrite BitsToBytesK; 1: by smt(DigestBlock.valP).
 by rewrite DigestBlock.valKd.
+
++ rewrite size_map size_range /=;smt(expr_gt0).
++ rewrite /TH.valid_haddress /=;do split; 1..3: smt(divz_ge0 expr_gt0).
+  admit. (* check with PY *)
 qed.
 
 lemma tree_hash_correct _ps _ss _lstart _sth :
@@ -2160,8 +2165,8 @@ while (map BaseW.val (EmsgWOTS.val em){1} = msg{2}
 + wp; sp.
   exlim sig_i{2}, msg_i{2}, (w - 1 - msg_i){2}, _seed{2}, address{2}=> x i s _s ad.
   call {2} (: arg = (x, i, s, _s, ad) /\ 0 <= s ==> res = chain x i s _s ad).
-  + conseq (: 0 <= s{!hr} ==> true) (chain_eq x i s _s ad)=> //.
-    by proc; while (chain_count <= s{!hr}) (s{!hr} - chain_count); auto=> /#.
+  + conseq (: 0 <= s{!2} ==> true) (chain_eq x i s _s ad)=> //.
+    by proc; while (chain_count <= s{!2}) (s{!2} - chain_count); auto=> /#.
   auto=> |> &1 &2 eq_sig val_ad size_pk ge0_size size_le_len inv pkWOTS_lt_len; split=> [|_].
   + rewrite (nth_map witness).
     + by rewrite size_ge0 EmsgWOTS.valP.
