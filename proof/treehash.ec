@@ -21,11 +21,13 @@ op hash : pseed -> haddress -> value -> value -> value.
 op reduce_tree : pseed -> value list -> haddress -> value.
 
 axiom reduce_tree_leaf (pseed : pseed) (leaves : value list) (index : int) :
-     0 <= index < 2^h
+     size leaves = 2^h
+  => 0 <= index < 2^h
   => reduce_tree pseed leaves {| level = 0; index = index |} = leaves.[index].
 
 axiom reduce_tree_node (pseed : pseed) (leaves : value list) (lvl : int) (index : int) :
-     0 <= lvl < h
+     size leaves = 2^h
+  => 0 <= lvl < h
   => 0 <= index < 2^(h - (lvl + 1))
   => reduce_tree pseed leaves {| level = lvl + 1; index = index |} =
        hash pseed {| level = lvl; index = index |} 
@@ -345,7 +347,8 @@ lemma stackrelS
 :
   let k = index false (int2bs (root.`level + 1) idx) in
 
-     0 <= idx < 2^(root.`level)
+     size leaves = 2^h
+  => 0 <= idx < 2^(root.`level)
   => valid_haddress root
   => stackrel root pseed leaves idx stk
   => stackrel root pseed leaves (idx + 1) (
@@ -360,7 +363,7 @@ lemma stackrelS
        :: drop k stk
      ).
 proof.
-have ? := ge0_h; move=> k rg_idx okroot [h1 h2]; have le_kh: k <= root.`level.
+have ? := ge0_h; move=> k szlves rg_idx okroot [h1 h2]; have le_kh: k <= root.`level.
 - have ->: root.`level = size (int2bs (root.`level + 1) idx) - 1.
   - by rewrite size_int2bs /#.
   rewrite ler_subr_addr -ltzE index_mem &(nthP witness).
@@ -402,7 +405,7 @@ rewrite (_ : false :: _ = drop k (int2bs (root.`level+1) idx)).
   by rewrite drop_oversize ?(size_rcons, size_nseq) 1:/#.
 move=> {stk1}; move: {1 2 4 5 6 7}k (ge0_k) (lezz k).
 elim=> [|k0 ge0_k0 ih] le_k0_k.
-- rewrite take0 /= reduce_tree_leaf drop0.
+- rewrite take0 /= reduce_tree_leaf // drop0.
   - rewrite int2bsK ?exprSr ~-1:/#; split=> [|_]; first smt(expr_ge0).
     case: okroot => rg_rt_lvl rg_rt_dx.
     apply: (ltr_le_trans (
@@ -695,6 +698,7 @@ while (
   /\ offset = root.`index * 2^root.`level
   /\ pseed = _pseed
   /\ root = _root
+  /\ leaves = _leaves
   /\ stackrel _root _pseed leaves idx stack
 ); last first.
 - auto=> |>; rewrite stackrel0 expr_ge0 //=.
@@ -715,6 +719,7 @@ while (
      0 <= idx < 2^(root.`level)
   /\ pseed = _pseed
   /\ root = _root
+  /\ leaves = _leaves
   /\ offset = root.`index * 2^root.`level
   /\ stackrel _root _pseed leaves idx stk0
   /\ subseq stack stk0
@@ -733,12 +738,12 @@ while (
     - rewrite expr0 /=; case: (h) => <- _; rewrite revonesK //#.
 
   move=> fcs0 stk1 hfin hsub hfcs hred hidx; split; first by smt().
-  have := stackrelS _root _pseed leaves{hr} idx{hr} stk0 // // h.
+  have := stackrelS _root _pseed _leaves idx{hr} stk0 // // // h.
   pose k := List.index _ _; pose v := foldl _ _ _.
   suff //: (v, k) :: drop k stk0 = fcs0 :: stk1.
 
   have ge0_k: 0 <= k by apply: index_ge0.
-  pose v0 := leaves{hr}.[haddr2off _root + idx{hr}].
+  pose v0 := _leaves.[haddr2off _root + idx{hr}].
   have := eqvredI_cmpl _root _pseed v0 k (take k stk0) (drop k stk0) fcs0 stk1 ge0_k.
   move/(_ _ _ _ _ _ _) => //.
   - rewrite map_take; case: (h) => <- _; rewrite int2bs_strikeE //.
@@ -810,7 +815,7 @@ split.
 rewrite andbC -andaE; split.
 - have /= :=
     eqvredI
-      _root _pseed leaves{hr}.[haddr2off _root + idx{hr}] 0
+      _root _pseed _leaves.[haddr2off _root + idx{hr}] 0
       (unzip1 (take k stk0)) (drop k stk0) (focus{hr} :: stack{hr})
       // // _ _ _.
   - rewrite /= size_map size_take_condle // ifT //.
