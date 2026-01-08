@@ -644,18 +644,19 @@ lemma tree_hash_correct_eq _ps _ss _lstart _sth :
      /\ (forall k, 0 <= k < size stack{2} =>
         to_uint (nth witness heights{1} k) = (nth witness stack{2} (size stack{2} - 1 - k)).`2)
      /\ 0 <= idx{2} <= 2^_sth
-     /\ (idx{2} = 2^_sth => size stack{2} = 1)
+(*      /\ (idx{2} = 2^_sth => size stack{2} = 1) *)
    ) (* Abstract tree-hash invariants *)
      /\
      (  offset{2} = root{2}.`TH.index * 2^root{2}.`TH.level
      /\ TH.stackrel root{2} pseed{2} leaves{2} idx{2} stack{2})
  ); last first.
- - auto=> &1 &2 pre; split; last first.
-   - move: pre => />; smt(expr_gt0 Array8.initiE size_nseq).
-   rewrite andbC; split; first smt().
-   split; first by move: pre => />; smt(expr_gt0 Array8.initiE size_nseq).
-   (* Abstract stackrel invariant *)
-   by rewrite TH.stackrel0.
+ - auto=> &1 &2 pre; split.
+   - move: pre => /> *;do split;1..7: smt(expr_gt0 Array8.initiE size_nseq).
+     rewrite int2bs0 /=; smt(@TH).
+     move =>  ad hs il ol stl idr str ?? [??]. 
+   have : size str  = 1; last by smt().
+   (* We are exiting the loop, so should follow *)
+   admit.
 
   wp.
   exlim stack{2} => stk0.
@@ -683,14 +684,13 @@ lemma tree_hash_correct_eq _ps _ss _lstart _sth :
     /\ to_uint offset{1} = size stack{2} + 1
     /\ size stack{1} = h + 1
     /\ size heights{1} = h + 1
-    /\ (forall k, 0 <= k < size stack{2} =>
+    /\ (forall k, 0 <= k < size stack{2}  =>
            nth witness stack{1} k = (nth witness stack{2} (size stack{2} - 1 - k)).`1)
-    /\ (forall k, 0 <= k < size stack{2} =>
+    /\ (forall k, 0 <= k < size stack{2}  =>
        to_uint (nth witness heights{1} k) = (nth witness stack{2} (size stack{2} - 1 - k)).`2)
     /\ nth witness stack{1} (size stack{2}) = focus{2}.`1
     /\ to_uint (nth witness heights{1} (size stack{2}) )= focus{2}.`2
     /\ 0 <= idx{2} <= 2^_sth
-    /\ (idx{2} = 2^_sth => size stack{2} = 1)
   ) (* Abstract tree-hash invariant *)
     /\ ath_inv root{2} pseed{2} focus{2} offset{2} idx{2} leaves{2} stack{2} stk0
   ); last first. 
@@ -721,29 +721,28 @@ lemma tree_hash_correct_eq _ps _ss _lstart _sth :
     /\ (forall k, 0 <= k < size stack{2} =>
        to_uint (nth witness heights{1} k) = (nth witness stack{2} (size stack{2} - 1 - k)).`2)
     /\ 0 <= idx{2} <= 2^_sth
-    /\ (idx{2} = 2^_sth => size stack{2} = 1)
     /\ i{1} < 2 ^ t{1}
     /\ idx{2} < 2 ^ root{2}.`TH.level
     /\ size stack{2} <= _sth
  ) ==> _).
- + auto => |> 17?; case=> + _ ? - /(congr1 List.size); rewrite size_map => <-.
-   admit.
+ + auto => |> &1 &2 14?;case=> + _ ? - /(congr1 List.size); rewrite size_map => <- /=. 
+   admit. (* follows from idx{2} < 2^_sth *)
   seq 2 0 : (#{/~address{1}}pre /\
           address{1} = set_ots_addr (set_type zero_address 0) (s{1} + i{1})).
   + auto => /> &1 &2 Had *.
     rewrite /set_ots_addr /set_type /zero_address tP => k kb.
     by smt(Array8.initiE get_setE).
   wp;ecall{1} (Eqv_WOTS_pkgen_p address{1} sk_seed{1} pub_seed{1}).
-  auto => |> &1 &2 ?????????H?????; split.
+  auto => |> &1 &2 ?????????H????; split.
   split; [rewrite andbC; split; last do split | do split].
-  - admit.
+  - admit. (* invariant preservation *)
   + move => k kb; rewrite /set_type /set_ltree_addr /set_ots_addr.
     by smt(Array8.initiE get_setE).
   + rewrite to_uintD_small /=;1:smt(h_max).
   + by smt().
   + by rewrite size_put.
   + by rewrite size_put.
-  + by move => k kbl kbh;rewrite nth_put /#.
+  + move => k kbl kbh; rewrite nth_put /#.
   + move => k kbl kbh.
     have -> : offset{1} + W64.one - W64.one = offset{1} by ring.
     by rewrite nth_put /#.
@@ -794,15 +793,11 @@ lemma tree_hash_correct_eq _ps _ss _lstart _sth :
     apply W32.to_uint_eq.
     have/= := H (size stack{2} - 1) _;smt().
   + move => _add _hs1 _of1 _st1 _fo2 _st2.
-    rewrite uleE /= => *; do split; 1..5:smt().
-    - admit.
-    - admit.
-    - admit.
-    - admit.
-           (* if we exit the inner loop int last index,
-              then the stack is empty on right-hand side *)
+    rewrite uleE /= => *; do split;1..6: smt(). 
+    - admit. (* preservation of inner loop inv on right-hand side? *)
+    - admit. (* preservation of inner loop inv on right-hand side? *)
 
-auto => |> &1 &2; rewrite !uleE /= => ?????????Ho??H HH ?Hh??? ath ? HHH??.
+auto => |> &1 &2; rewrite !uleE /= => ?????????Ho??H HH ?Hh?? ath ? HHH??.
 have ? : size stack{2} <= _sth by  admit. (* from the abstract proof *)
 + have -> : offset{1} - W64.one - W64.one = offset{1} - W64.of_int 2 by ring.
 have -> : to_uint (offset{1} - W64.of_int 2) = to_uint offset{1} - 2
@@ -810,7 +805,7 @@ have -> : to_uint (offset{1} - W64.of_int 2) = to_uint offset{1} - 2
 have -> : to_uint (offset{1} - W64.one) = to_uint offset{1} - 1
  by rewrite to_uintB /=;1: by rewrite uleE /= /#.
 split; [split; last first; last do split | do split].
-  + admit.
+  + admit. (* invariant preservation *)
   + by move => k kb; rewrite /set_type /set_ltree_addr /set_ots_addr; smt(Array8.initiE get_setE).
   + by smt().
   + by rewrite size_put.
@@ -835,7 +830,12 @@ split; [split; last first; last do split | do split].
         rewrite ifT 1:/# /= take0 /=.
         rewrite HAX.Adrs.insubdK /=;1: by smt(zeroadiP).
         rewrite /valid_adrsidxs /= /valid_xidxvalslp /=;right;right.
-        rewrite /valid_xidxvalslptrh /= /valid_tbidx /valid_thidx /nr_nodes.  admit. (* We need a bound on heights from the abstract proof *)
+        rewrite /valid_xidxvalslptrh /= /valid_tbidx /valid_thidx /nr_nodes.
+        + have ? : 0 <= focus{2}.`2 < _sth by    admit. (* We need a bound on heights from the abstract proof *)
+          split; last by smt().
+          split; 1: by smt(divz_ge0 expr_gt0).
+          move => *.
+          admit. (* to do, inequality *)
       have -> /= : forall x, size (HAX.Adrs.val x) = 4 by smt(HAX.Adrs.valP).
       rewrite take0 /= size_drop // drop_drop //.
       have -> /= : forall x, size (HAX.Adrs.val x) = 4 by smt(HAX.Adrs.valP).
@@ -849,10 +849,14 @@ split; [split; last first; last do split | do split].
         rewrite and_mod // to_uintD_small /=.
         + rewrite Hh. admit.  (* We need a bound on heights from the abstract proof *)
         rewrite !of_uintK /= !(modz_small _ 4294967296) /=;1..3: by smt(expr_gt0 gt_exprsbde h_max pow2_32).        
-        rewrite Hh. admit. (* we need a bound on heights that is strictly smaller than 31  from abstract proof *)        
-        case (i = 5); last by smt().
+        rewrite Hh.
+        have ? : 0 <= focus{2}.`2 < 31 by admit. (* we need a bound on heights that is strictly smaller than 31  from abstract proof *)
+        by smt().
+    case (i = 5); last by smt().
       move => -> /=; rewrite /get_tree_height /= /idxs2adr /= W32.of_uintK /=.
-      rewrite Ho /= to_uint_eq Hh /= of_uintK /=.  admit.  (* We need a bound on heights from the abstract proof *)
+      rewrite Ho /= to_uint_eq Hh /= of_uintK /=.
+        have ? : 0 <= focus{2}.`2  < 31 by admit. (* we need a bound on heights that is strictly smaller than 31  from abstract proof *)
+        by smt().
     +  by have := H (to_uint offset{1} - 2) _; smt(nth_change_dfl).
     have -> : to_uint offset{1} - 1 = size stack{2} by smt(). 
     rewrite (nth_change_dfl witness); last by smt().
@@ -860,8 +864,14 @@ split; [split; last first; last do split | do split].
   + rewrite nth_put 1:/# ifT 1:/#.
     rewrite to_uintD_small /=. admit. (* We need a bound on heights from the abstract proof *)
     by smt().
-  + admit. (* We need to know that if we are in the inner loop,
-              then index cannot yet be 2^sth? *)
+  + move => ? Heq.
+    split;1:smt().
+    have := Heq; rewrite nth_put 1: /# /= nth_put 1: /# /=.
+    have -> : to_uint (offset{1} - W64.one - W64.of_int 2) = to_uint offset{1} - 3 by smt(@W64 pow2_64).
+    rewrite ifF 1:/# to_uint_eq /= to_uintD_small /=.
+    + admit. (* we need range from inner inv *)
+    smt().
+    
   + move => ?.
     rewrite !nth_put 1,2:/# ifT 1:/#.
     rewrite ifF;1: smt(@W64).
@@ -869,29 +879,13 @@ split; [split; last first; last do split | do split].
         to_uint offset{1} - 3.
     + have -> : offset{1} - W64.one - W64.of_int 2 =
          offset{1} - W64.of_int 3 by ring.
-    by rewrite to_uintB /=;  1: by rewrite uleE /= /#.
-    have := HH (to_uint offset{1} - 3) _;1: smt().
+    by rewrite to_uintB /=; 1: by rewrite uleE /=;smt(@List).
+    have := HH (to_uint offset{1} - 3) _;1: smt(@List).
     have -> : size stack{2} - 1 - (to_uint offset{1} - 3) = 1 by smt().
-    rewrite nth_behead //= => <- <-.
-    split; 1: smt().
-    rewrite to_uintD_small /=. admit. (* We need a bound on heights from the abstract proof *)
+    rewrite nth_behead //= => <- Hf. 
+    split; 1: smt(@List).
+    rewrite to_uint_eq to_uintD_small /=. admit. (* We need a bound on heights from the abstract proof *)
     smt().    
-move => ??;split;1: by  smt(size_eq0 size_behead).
-have -> : to_uint (offset{1} - W64.one - W64.of_int 2) =
-     to_uint offset{1} - 3.
-+ have -> : offset{1} - W64.one - W64.of_int 2 =
-       offset{1} - W64.of_int 3 by ring.
-  by rewrite to_uintB /=; 1: by rewrite uleE /=;smt(size_eq0 size_behead).
-rewrite nth_put 1:/# ifT 1:/#  nth_put 1:/# ifF 1:/#.
-have := HH (to_uint offset{1} - 3) _;1: smt(size_eq0 size_behead).
-have -> : size stack{2} - 1 - (to_uint offset{1} - 3) = 1 by smt().
-have := HH (to_uint offset{1} - 2) _;1: smt(size_eq0 size_behead).
-have -> : size stack{2} - 1 - (to_uint offset{1} - 2) = 0 by smt().
-rewrite to_uint_eq.
-rewrite to_uintD_small /=.
-- rewrite HH 1:/# Ho (_ : _ - _ - _ = 0) 1:#ring.
-  admit. (* We need a bound on heights from the abstract proof *)
-smt().
 qed.
 
 lemma tree_hash_correct_hyp _ps _ss _lstart _sth :
