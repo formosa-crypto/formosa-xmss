@@ -653,10 +653,11 @@ lemma tree_hash_correct_eq _ps _ss _lstart _sth :
  - auto=> &1 &2 pre; split.
    - move: pre => /> *;do split;1..7: smt(expr_gt0 Array8.initiE size_nseq).
      rewrite int2bs0 /=; smt(@TH).
-     move =>  ad hs il ol stl idr str ?? [??]. 
+     move =>  ad hs il ol stl idr str ?? [?[? Sr]]. 
    have : size str  = 1; last by smt().
-   (* We are exiting the loop, so should follow *)
-   admit.
+   move : Sr; rewrite /stackrel /= => [# + ?].
+   have -> : idr = 2 ^ root{2}.`TH.level  by smt().
+   smt(@TH @List).
 
   wp.
   exlim stack{2} => stk0.
@@ -725,8 +726,8 @@ lemma tree_hash_correct_eq _ps _ss _lstart _sth :
     /\ idx{2} < 2 ^ root{2}.`TH.level
     /\ size stack{2} <= _sth
  ) ==> _).
- + auto => |> &1 &2 14?;case=> + _ ? - /(congr1 List.size); rewrite size_map => <- /=. 
-   admit. (* follows from idx{2} < 2^_sth *)
+ + auto => |> &1 &2 14?;case=> + _ ? - /(congr1 List.size); rewrite size_map => <- /=.
+   admit. (* @PY: do you have such a result? Should follow from idx{2} < 2^_sth *)
   seq 2 0 : (#{/~address{1}}pre /\
           address{1} = set_ots_addr (set_type zero_address 0) (s{1} + i{1})).
   + auto => /> &1 &2 Had *.
@@ -798,7 +799,8 @@ lemma tree_hash_correct_eq _ps _ss _lstart _sth :
     - admit. (* preservation of inner loop inv on right-hand side? *)
 
 auto => |> &1 &2; rewrite !uleE /= => ?????????Ho??H HH ?Hh?? ath ? HHH??.
-have ? : size stack{2} <= _sth by  admit. (* from the abstract proof *)
+have ? : size stack{2} <= _sth.
++ admit. (* from the abstract proof *)
 + have -> : offset{1} - W64.one - W64.one = offset{1} - W64.of_int 2 by ring.
 have -> : to_uint (offset{1} - W64.of_int 2) = to_uint offset{1} - 2
  by rewrite to_uintB /=;1: by rewrite uleE /= /#.
@@ -835,7 +837,10 @@ split; [split; last first; last do split | do split].
           split; last by smt().
           split; 1: by smt(divz_ge0 expr_gt0).
           move => *.
-          admit. (* to do, inequality *)
+          have ?  : idx{2} < 2^_sth. admit. (* from the abstract proof *)
+          have ? : _lstart + idx{2} < 2^h by smt().
+          rewrite exprD_subz // 1:/#.
+          admit. (* @PY: too tired to prove this, but should be true *)
       have -> /= : forall x, size (HAX.Adrs.val x) = 4 by smt(HAX.Adrs.valP).
       rewrite take0 /= size_drop // drop_drop //.
       have -> /= : forall x, size (HAX.Adrs.val x) = 4 by smt(HAX.Adrs.valP).
