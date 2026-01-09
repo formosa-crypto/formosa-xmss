@@ -313,7 +313,7 @@ This does
 seq 2 0 : (
   #pre /\
   load_buf Glob.mem{1} (m_ptr{1} + (of_int XMSS_SIG_BYTES)%W64) (to_uint smlen{1} - XMSS_SIG_BYTES) = Types.Msg_t.val m{2}
-); last by admit.
+).
 - sp.
   exists * m_ptr{1}, sm_ptr{1}, bytes{1}, Glob.mem{1}.
   elim * => P0 P2 P4 Pmem.
@@ -392,8 +392,6 @@ rewrite H36 //=.
         * smt(@W64 pow2_64). 
         * admit.
 
-
-
 seq 3 2 : (
   #pre /\ 
   to_list buf{1} = NBytes.val _R{2} /\
@@ -428,30 +426,35 @@ seq 0 0 : (
 ).
 - auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 
   H16 ?H17 H18 H19 HM H20 H21 H22 H23 H24 H25 H26 H27 H28 H29
-  H30 H31. 
+  H30 H31 *. 
+  rewrite -H29.
   apply (eq_from_nth witness); rewrite !size_load_buf //; 1..3:smt(@W64 pow2_64).
   have ->: to_uint (sm_len - (of_int 4963)%W64) = to_uint sm_len - 4963 by rewrite to_uintB ?uleE of_uintK /#.
+  smt(@W64 pow2_64).
   move => i?.
-  rewrite H19 !nth_load_buf //; first by rewrite to_uintB ?uleE of_uintK /#.
-  congr.
-  rewrite !to_uintD !of_uintK /= /XMSS_SIG_BYTES /#. 
+  rewrite !nth_load_buf //. smt(@W64 pow2_64).
  
 seq 1 1 : (
   #pre /\ 
   to_list root{1} = NBytes.val _M'{2}
-).
+); last by admit.
 - do 2! (inline {1} 1; wp; sp); exists * Glob.mem{1}, buf{1}, (init (fun (i_0 : int) => pk{1}.[0 + i_0]))%Array32, idx{1}, t64{1}, bytes{1}. 
   elim * => P0 P1 P2 P3 P4 P5.
   call {1} (hash_message_correct P0 P1 P2 P3 P4 P5) => [/# |]. 
   auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 
   H16 H17 H18 H19 HM H20 H21 H22 H23 H24 H25 H26 H27 H28 H29
-  H30 H31 H32.
-  do split; 1,3: by smt(@W64 pow2_64).
+  H30 H31 H32 *.
+ (
+  do split; 1,3: by smt(@W64 pow2_64)
+); 4,5: by admit.
    + rewrite to_uintB ?uleE of_uintK /= /#. 
    + smt().
    + apply three_nbytes_eq; apply (eq_from_nth witness); rewrite !ThreeNBytesBytes.valP ?n_val // => i?. 
      rewrite !ThreeNBytesBytes.insubdK ?size_cat ?size_toByte_32 // ?n_val ?size_to_list ?size_toByte_64 //= ?NBytes.valP ?n_val //=.
-     rewrite H30; do congr. 
+     rewrite H31; do congr. 
+
+(* FIQUEI AQUI *)
+
         * apply (eq_from_nth witness); rewrite NBytes.valP n_val ?size_to_list // => j?.
           rewrite get_to_list initiE //.
           have ->: _pk.[j] = nth witness (sub _pk 0 n) j by rewrite nth_sub /#. 
