@@ -74,7 +74,27 @@ module TreeHash = {
       idx   <- idx + 1;
     }
     return stack.[0].`1;
-  }  
+  }
+
+  proc th_abody(
+    pseed  : pseed,
+    leaves : value list,
+    root   : haddress,
+    offset : int,
+    idx    : int,
+    focus  : stack1,
+    stack  : stack
+  ) = {
+    var top    : value;
+    var addr   : haddress;
+
+    top   <- stack.[0].`1;
+    stack <- behead stack;
+    addr  <- {| level = focus.`2; index = (offset + idx) %/ (2^(focus.`2 + 1)) |};
+    focus <- (hash pseed addr top focus.`1, focus.`2 + 1);
+
+    return (top, addr, focus, stack);
+  }
 }.
 
 (* ==================================================================== *)
@@ -681,97 +701,58 @@ by rewrite stk1_sndE nth_range /#.
 qed.
 
 (* ==================================================================== *)
-lemma treehash_correct (_pseed : pseed) (_leaves : value list) (_root : haddress) :
-     size _leaves = 2^h
-  => valid_haddress _root
-  => hoare[TreeHash.th :
-         arg = (_pseed, _leaves, _root)
-       ==>
-         res = reduce_tree _pseed _leaves _root
-     ].
-proof.
-move=> *; have ? := ge0_h; have ?: 0 <= _root.`level by smt().
-
-proc; sp.
-while (
-     0 <= idx <= 2^(root.`level)
-  /\ offset = root.`index * 2^root.`level
-  /\ pseed = _pseed
-  /\ root = _root
-  /\ leaves = _leaves
-  /\ stackrel _root _pseed leaves idx stack
-); last first.
-- auto=> |>; rewrite stackrel0 expr_ge0 //=.
-  move=> idx stk 3? [h1 h2]; have ->>: idx = 2^(_root.`level) by smt().
-  have stk2E: unzip2 stk = [_root.`level].
-  - by move: h1; rewrite ones_pow2 //= eq_sym.
-  have ?: 0 < size stk by rewrite -(size_map snd) stk2E.
-  have := h2 stk.[0] _; first by apply: mem_nth => /=.
-  move=> ->; rewrite -(nth_map _ witness snd) //= stk2E /=.
-  rewrite int2bs_pow2 ?mem_range 1:/# /=.
-  rewrite nseq0 cats1 drop_oversize /=.
-  - by rewrite size_rcons size_nseq /#.
-  by rewrite /= -nseq1 bs2int_nseq_false expr0 /= /#.
-
-sp; wp => /=; exlim stack => stk0.
-
-while (
-     0 <= idx < 2^(root.`level)
-  /\ pseed = _pseed
-  /\ root = _root
-  /\ leaves = _leaves
-  /\ offset = root.`index * 2^root.`level
-  /\ stackrel _root _pseed leaves idx stk0
+op ath_inv
+  (root   : haddress)
+  (pseed  : pseed)
+  (focus  : stack1)
+  (offset : int)
+  (idx    : int)
+  (leaves : value list)
+  (stack  : stack)
+  (stk0   : stack)
+=
+     offset = root.`index * 2^root.`level
+  /\ stackrel root pseed leaves idx stk0
   /\ subseq stack stk0
   /\ (stack <> [] => focus.`2 <= (head witness stack).`2)
-  /\ eqvred _root _pseed ((leaves.[offset + idx], 0) :: stk0) (focus :: stack)
-  /\ idx %/ 2^focus.`2 = revones (unzip2 stack) %/ 2^focus.`2
-); last first.
-- auto=> |> &hr 2? h *; split.
-  - rewrite subseq_refl eqvred_refl /=; split=> [nt_stk0|].
-    - case: h => + _ - ^he /(congr1 (fun s => nth witness s 0)) /=.
-      rewrite (nth_map witness) /= -1:-nth0_head.
-      - by rewrite ltz_def size_ge0 /= size_eq0.
-      move=> <-; apply: (ge0_ones (int2bs (_root.`level + 1) idx{hr})).
-      move/(congr1 size): he; rewrite size_map => hsz.
-      by rewrite &(mem_nth) /= hsz ltz_def size_ge0 /= size_eq0.
-    - rewrite expr0 /=; case: (h) => <- _; rewrite revonesK //#.
+  /\ eqvred root pseed ((nth witness leaves (offset + idx), 0) :: stk0) (focus :: stack)
+  /\ idx %/ 2^focus.`2 = revones (unzip2 stack) %/ 2^focus.`2.
 
-  move=> fcs0 stk1 hfin hsub hfcs hred hidx; split; first by smt().
-  have := stackrelS _root _pseed _leaves idx{hr} stk0 // // // h.
-  pose k := List.index _ _; pose v := foldl _ _ _.
-  suff //: (v, k) :: drop k stk0 = fcs0 :: stk1.
+(* -------------------------------------------------------------------- *)
+lemma treehash_ath_body_correct
+    (_pseed  : pseed)
+    (_leaves : value list)
+    (_root   : haddress)
+    (_offset : int)
+    (_idx    : int)
+    (_focus  : stack1)
+    (_stack  : stack)
+    (stk0    : stack)
+  :
+     hoare[TreeHash.th_abody :
+          arg = (_pseed, _leaves, _root, _offset, _idx, _focus, _stack)
+       /\ size _leaves = 2^h
+       /\ valid_haddress _root
+       /\ 0 <= _idx < 2 ^ _root.`level
+       /\ _stack <> []
+       /\ _stack.[0].`2 = _focus.`2
+       /\ ath_inv _root _pseed _focus _offset _idx _leaves _stack stk0
+     ==>
+          let focus = res.`3 in
+          let stack = res.`4 in
+          ath_inv _root _pseed focus _offset _idx _leaves stack stk0
+          /\ (let top  = _stack.[0].`1 in
+              let addr = {| level = _focus.`2; index = (_offset + _idx) %/ (2^(_focus.`2 + 1)) |} in
+                 stack = behead _stack
+              /\ focus = (hash _pseed addr top _focus.`1, _focus.`2 + 1))
+     ].
+proof.
+have ? := ge0_h.
+proc; auto=> @/ath_inv &hr.
+auto=> |> 4? nzstk eqs hstk hsub hfcs h eqidx.
+have ?: 0 <= root{hr}.`level by smt().
 
-  have ge0_k: 0 <= k by apply: index_ge0.
-  pose v0 := _leaves.[haddr2off _root + idx{hr}].
-  have := eqvredI_cmpl _root _pseed v0 k (take k stk0) (drop k stk0) fcs0 stk1 ge0_k.
-  move/(_ _ _ _ _ _ _) => //.
-  - rewrite map_take; case: (h) => <- _; rewrite int2bs_strikeE //.
-    rewrite ones_cat take_cat_le ifT.
-    - by rewrite size_ones -/k count_nseq /= ler_maxr.
-    by rewrite ones_nseq1 -/k take_oversize ?size_range //#.
-  - pose bs := int2bs (_root.`level + 1) idx{hr}; have: false \in bs.
-    - apply/(nthP witness); exists (_root.`level).
-      rewrite /bs size_int2bs ler_maxr 1:/#; split; 1: smt().
-      by rewrite nth_mkseq 1:/# /= pdiv_small.
-    by rewrite -index_mem -/k; smt(size_int2bs).
-  - move=> l; rewrite map_drop; case: (h) => <- _; rewrite int2bs_strikeE //.
-    rewrite -/k ones_cat drop_cat_le ifT -1:drop_oversize /=;
-      ~-1: by rewrite ones_nseq1 /= size_range /#.
-    rewrite size_nseq ler_maxr 1:/# -cat1s ones_cat.
-    rewrite ones_seq1 /= -map_comp.
-    rewrite (_ : _ \o _ = (+) (k + 1)) 1:/#.
-    case/mapP=> i [hi ->]; rewrite ltzE ler_addl.
-    by move/ge0_ones: hi.
-  - smt().
-  - by rewrite -cat1s -catA cat_take_drop /v0 /haddr2off [2^_ * _]mulrC.
-  - move=> -> /= @/v; rewrite take_take /= cat_take_drop -/v0.
-    case: (h) => <- _; apply: eq_foldl => //=.
-    by move=> *; rewrite revonesK.
-
-auto=> |> &hr 2? /= hstk hsub hfcs h eqidx nzstk eqs.
-
-pose k := List.index false (int2bs (_root.`level + 1) idx{hr}).
+pose k := List.index false (int2bs (root{hr}.`level + 1) idx{hr}).
 have ge0_k: 0 <= k by apply: index_ge0.
 have le_k_stk0: k <= size stk0.
 - case: (hstk) => + _ - /(congr1 size); rewrite size_map => <-.
@@ -792,11 +773,11 @@ have stk0_k_sndE: take k (unzip2 stk0) = range 0 k.
 - case: (hstk) => + _ - <-; rewrite int2bs_strikeE // -/k.
   rewrite ones_cat ones_nseq1 take_cat_le ?size_range ifT 1://#.
   by rewrite take_oversize  // size_range /#.
-have le_stk_root: forall x, x \in stack{hr} => x.`2 < _root.`level.
+have le_stk_root: forall x, x \in stack{hr} => x.`2 < root{hr}.`level.
 - case=> v i /(subseq_mem _ _ _ hsub) /(map_f snd) /=; case: hstk => <- _.
   rewrite int2bsS // -cats1 ones_cat ones_seq1 pdiv_small /= 1:/# cats0.
-  move=> memi; have := le_size_ones (int2bs _root.`level idx{hr}).
-  by move/allP => /(_ _ memi) /=; rewrite size_int2bs /#.
+  move=> memi; have := le_size_ones (int2bs root{hr}.`level idx{hr}).
+  by move/allP => /(_ _ memi) /=; rewrite size_int2bs ler_maxr 1:/#.
 have ge0_stk: forall x, x \in stack{hr} => 0 <= x.`2.
 - case=> v i /(subseq_mem _ _ _ hsub) /(map_f snd) /=.
   by case: hstk => <- _; move/ge0_ones.
@@ -815,12 +796,12 @@ split.
 rewrite andbC -andaE; split.
 - have /= :=
     eqvredI
-      _root _pseed _leaves.[haddr2off _root + idx{hr}] 0
+      root{hr} pseed{hr} leaves{hr}.[haddr2off root{hr} + idx{hr}] 0
       (unzip1 (take k stk0)) (drop k stk0) (focus{hr} :: stack{hr})
       // // _ _ _.
   - rewrite /= size_map size_take_condle // ifT //.
-    pose bs := int2bs (_root.`level + 1) idx{hr}; have: false \in bs.
-    - apply/(nthP witness); exists (_root.`level).
+    pose bs := int2bs (root{hr}.`level + 1) idx{hr}; have: false \in bs.
+    - apply/(nthP witness); exists (root{hr}.`level).
       rewrite /bs size_int2bs ler_maxr 1:/#; split; 1: smt().
       by rewrite nth_mkseq 1:/# /= pdiv_small.
     by rewrite -index_mem -/k; smt(size_int2bs).
@@ -872,17 +853,149 @@ rewrite andbC -andaE; split.
   - by rewrite nth_range /#.
 
 move=> {eqidx} eqidx /=; apply: (eqvred_trans _ _ _ _ _ h).
-move: (hfcs nzstk); rewrite -nth0_head.
-case _: (focus{hr}) eqidx => {hfcs} v1 i1 /= E1 eqidx lei1.
-have ?: 0 <= i1 < _root.`level by smt().
+move: hfcs; rewrite -nth0_head.
+case _: (focus{hr}) eqidx => v1 i1 /= E1 eqidx lei1.
+have ?: 0 <= i1 < root{hr}.`level by smt().
 have <- /= := head_behead stack{hr} witness //.
 case _: (head witness _) => v2 i2 /=.
 rewrite -nth0_head => /(congr1 snd) /=; rewrite eqs E1 /= => <<-.
-have /= := eqvredR _root _pseed (behead stack{hr}) v2 v1 i1.
+have /= := eqvredR root{hr} pseed{hr} (behead stack{hr}) v2 v1 i1.
 rewrite [_ * 2^_]mulrC -/(haddr2off _) !divzDl ~-1://.
 - by rewrite /haddr2off dvdz_mulr dvdz_exp2l /#.
 - by rewrite /haddr2off dvdz_mulr dvdz_exp2l /#.
 by rewrite -eqidx.
+qed.
+
+(* -------------------------------------------------------------------- *)
+lemma treehash_ath_body_ll : islossless TreeHash.th_abody.
+proof. by proc; islossless. qed.
+
+(* -------------------------------------------------------------------- *)
+lemma treehash_ath_body_pcorrect
+    (_pseed  : pseed)
+    (_leaves : value list)
+    (_root   : haddress)
+    (_offset : int)
+    (_idx    : int)
+    (_focus  : stack1)
+    (_stack  : stack)
+    (stk0    : stack)
+  :
+     phoare[TreeHash.th_abody :
+          arg = (_pseed, _leaves, _root, _offset, _idx, _focus, _stack)
+       /\ size _leaves = 2^h
+       /\ valid_haddress _root
+       /\ 0 <= _idx < 2 ^ _root.`level
+       /\ _stack <> []
+       /\ _stack.[0].`2 = _focus.`2
+       /\ ath_inv _root _pseed _focus _offset _idx _leaves _stack stk0
+     ==>
+          let focus = res.`3 in
+          let stack = res.`4 in
+          ath_inv _root _pseed focus _offset _idx _leaves stack stk0
+          /\ (let top  = _stack.[0].`1 in
+              let addr = {| level = _focus.`2; index = (_offset + _idx) %/ (2^(_focus.`2 + 1)) |} in
+                 stack = behead _stack
+              /\ focus = (hash _pseed addr top _focus.`1, _focus.`2 + 1))
+     ] = 1%r.
+proof. move=> *.
+by conseq
+     treehash_ath_body_ll
+     (treehash_ath_body_correct _pseed _leaves _root _offset _idx _focus _stack stk0).
+qed.
+
+(* -------------------------------------------------------------------- *)
+lemma treehash_correct (_pseed : pseed) (_leaves : value list) (_root : haddress) :
+     size _leaves = 2^h
+  => valid_haddress _root
+  => hoare[TreeHash.th :
+         arg = (_pseed, _leaves, _root)
+       ==>
+         res = reduce_tree _pseed _leaves _root
+     ].
+proof.
+move=> 2?; have ? := ge0_h; have ?: 0 <= _root.`level by smt().
+
+proc; sp.
+while (
+     0 <= idx <= 2^(root.`level)
+  /\ offset = root.`index * 2^root.`level
+  /\ pseed = _pseed
+  /\ root = _root
+  /\ leaves = _leaves
+  /\ stackrel _root _pseed leaves idx stack
+); last first.
+- auto=> |>; rewrite stackrel0 expr_ge0 //=.
+  move=> idx stk 3? [h1 h2]; have ->>: idx = 2^(_root.`level) by smt().
+  have stk2E: unzip2 stk = [_root.`level].
+  - by move: h1; rewrite ones_pow2 //= eq_sym.
+  have ?: 0 < size stk by rewrite -(size_map snd) stk2E.
+  have := h2 stk.[0] _; first by apply: mem_nth => /=.
+  move=> ->; rewrite -(nth_map _ witness snd) //= stk2E /=.
+  rewrite int2bs_pow2 ?mem_range 1:/# /=.
+  rewrite nseq0 cats1 drop_oversize /=.
+  - by rewrite size_rcons size_nseq /#.
+  by rewrite /= -nseq1 bs2int_nseq_false expr0 /= /#.
+
+sp; wp => /=; exlim stack => stk0.
+
+while (
+     0 <= idx < 2^(root.`level)
+  /\ pseed = _pseed
+  /\ root = _root
+  /\ leaves = _leaves
+  /\ ath_inv _root _pseed focus offset idx _leaves stack stk0
+); last first.
+- auto=> @/ath_inv |> &hr 2? h * /=; split.
+  - rewrite subseq_refl eqvred_refl /=; split=> [nt_stk0|].
+    - case: h => + _ - ^he /(congr1 (fun s => nth witness s 0)) /=.
+      rewrite (nth_map witness) /= -1:-nth0_head.
+      - by rewrite ltz_def size_ge0 /= size_eq0.
+      move=> <-; apply: (ge0_ones (int2bs (_root.`level + 1) idx{hr})).
+      move/(congr1 size): he; rewrite size_map => hsz.
+      by rewrite &(mem_nth) /= hsz ltz_def size_ge0 /= size_eq0.
+    - rewrite expr0 /=; case: (h) => <- _; rewrite revonesK //#.
+
+  move=> fcs0 stk1 hfin hsub hfcs hred hidx; split; first by smt().
+  have := stackrelS _root _pseed _leaves idx{hr} stk0 // // // h.
+  pose k := List.index _ _; pose v := foldl _ _ _.
+  suff //: (v, k) :: drop k stk0 = fcs0 :: stk1.
+
+  have ge0_k: 0 <= k by apply: index_ge0.
+  pose v0 := _leaves.[haddr2off _root + idx{hr}].
+  have := eqvredI_cmpl _root _pseed v0 k (take k stk0) (drop k stk0) fcs0 stk1 ge0_k.
+  move/(_ _ _ _ _ _ _) => //.
+  - rewrite map_take; case: (h) => <- _; rewrite int2bs_strikeE //.
+    rewrite ones_cat take_cat_le ifT.
+    - by rewrite size_ones -/k count_nseq /= ler_maxr.
+    by rewrite ones_nseq1 -/k take_oversize ?size_range //#.
+  - pose bs := int2bs (_root.`level + 1) idx{hr}; have: false \in bs.
+    - apply/(nthP witness); exists (_root.`level).
+      rewrite /bs size_int2bs ler_maxr 1:/#; split; 1: smt().
+      by rewrite nth_mkseq 1:/# /= pdiv_small.
+    by rewrite -index_mem -/k; smt(size_int2bs).
+  - move=> l; rewrite map_drop; case: (h) => <- _; rewrite int2bs_strikeE //.
+    rewrite -/k ones_cat drop_cat_le ifT -1:drop_oversize /=;
+      ~-1: by rewrite ones_nseq1 /= size_range /#.
+    rewrite size_nseq ler_maxr 1:/# -cat1s ones_cat.
+    rewrite ones_seq1 /= -map_comp.
+    rewrite (_ : _ \o _ = (+) (k + 1)) 1:/#.
+    case/mapP=> i [hi ->]; rewrite ltzE ler_addl.
+    by move/ge0_ones: hi.
+  - smt().
+  - by rewrite -cat1s -catA cat_take_drop /v0 /haddr2off [2^_ * _]mulrC.
+  - move=> -> /= @/v; rewrite take_take /= cat_take_drop -/v0.
+    case: (h) => <- _; apply: eq_foldl => //=.
+    by move=> *; rewrite revonesK.
+
+proc change [1..4] : {
+  (top, addr, focus, stack) <@ TreeHash.th_abody(
+    pseed, leaves, root, offset, idx, focus, stack);
+}; first by inline {2} *; auto.
+
+exlim offset, idx, focus, stack => _offset _idx _focus _stack.
+call (treehash_ath_body_correct _pseed _leaves _root _offset _idx _focus _stack stk0).
+by auto.
 qed.
 
 (* ==================================================================== *)
