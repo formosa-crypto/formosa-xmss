@@ -22,6 +22,25 @@ require import RootFromSigProof.
 require import Array8 Array32 Array64 Array2144.
 require import WArray64.
 
+lemma load_buf_ext (mem : global_mem_t) (p1 p2 : W64.t) (l1 l2 : int) : 
+    0 <= l1 =>
+    0 <= l2 =>
+    l1 = l2 =>
+    to_uint p1 = to_uint p2 =>
+    load_buf mem p1 l1 = load_buf mem p2 l2.
+proof.
+move => Hl1 Hl2 Hlen Hptr.
+apply (eq_from_nth witness); rewrite !size_load_buf //=.
+move => i Hi.
+rewrite !nth_load_buf //= /#.
+qed.
+
+lemma disjoint_ptr_not_in_range (p1 l1 p2 l2 o lo : int) :
+    disjoint_ptr p1 l1 p2 l2 =>
+    0 <= o < l1 =>
+    0 <= lo <= l2 - lo =>
+    ! (p2 + lo <= p1 + o < p2 + lo + (l2 - lo)) by smt().
+
 lemma verify_correctness (ptr_m           (* Apontador p mensagem *) 
                           ptr_mlen        (* Apontador p tamanho mensagem *) 
                           ptr_sm          (* Apontador p signed message *) 
@@ -218,7 +237,8 @@ seq 1 0 : (
 - auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 ?H17 H18 H19 HM H20 H21 H22 H23 H24 H25*.
   rewrite load_store_W64 /XMSS_FULL_HEIGHT /=.
   rewrite /XMSS_FULL_HEIGHT /= in H1.
-  have E :  disjoint_ptr (to_uint ptr_sm) (XMSS_SIG_BYTES) (to_uint ptr_mlen) 8 by smt().
+  have E :  disjoint_ptr (to_uint ptr_sm) (XMSS_SIG_BYTES) 
+                         (to_uint ptr_mlen) 8 by smt().
   have ->: load_sig_mem (storeW64 Glob.mem{1} (to_uint ptr_mlen) (sm_len - (of_int 4963)%W64)) ptr_sm = load_sig_mem Glob.mem{1} ptr_sm.
     + apply (eq_from_nth witness); rewrite !size_load_buf // /XMSS_SIG_BYTES => i?.
       rewrite !nth_load_buf // storeW64E /stores => />.
@@ -266,26 +286,114 @@ seq 1 1 : (
 
 swap {2} [5..7] -3.
   
+(*
+hash_message function needs to hash a structured input of the form:
+
+toByte(X, 32) || R || root || index || M
+
+where:
+- toByte(X, 32) is padding
+- R is randomness from the signature (n bytes)
+- root is the public root (n bytes)
+- index is the signature index (n bytes)
+- M is the actual message
+
+Instead of allocating a new buffer and copying all this data together, the implementation uses a single buffer with this layout:
+
+[--- sig_bytes space ---][--- message ---]
+ ^                       ^
+ |                       |
+ prefix space            message starts here
+ (for padding + R +      
+  root + index)
+
+This does 
+
+ *)
 seq 2 0 : (
   #pre /\
   load_buf Glob.mem{1} (m_ptr{1} + (of_int XMSS_SIG_BYTES)%W64) (to_uint smlen{1} - XMSS_SIG_BYTES) = Types.Msg_t.val m{2}
-).
+); last by admit.
 - sp.
   exists * m_ptr{1}, sm_ptr{1}, bytes{1}, Glob.mem{1}.
   elim * => P0 P2 P4 Pmem.
   call {1} (memcpy_mem_mem Pmem P0 (W64.of_int 4963)  P2 (W64.of_int 4963) P4).
   auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 
                    H16 H17 HH H18 H19 HM H20 H21 H22 H23 H24 H25 H26 H27 H28.
+
   have E0 : to_uint (sm_len - (of_int 4963)%W64) = to_uint sm_len - 4963 by rewrite to_uintB; [rewrite uleE /# |]; rewrite of_uintK.
 
   (* adicionar offset ao apontador = remover offset da length *)
-  have E1 : disjoint_ptr (to_uint ptr_sm) (to_uint sm_len) (to_uint ptr_m + XMSS_SIG_BYTES) (to_uint sm_len - XMSS_SIG_BYTES). have := HH. rewrite /disjoint_ptr. move => H k1 Hk1 k2 Hk2.
-  have := H k1 Hk1 (k2+XMSS_SIG_BYTES) _. smt(). smt().
-  do split.  smt(). smt(). smt(). smt(). smt(). rewrite H26.
-  have := HH. rewrite /disjoint_ptr. move => H k1 Hk1 k2 Hk2.
-  have := H (k1+XMSS_SIG_BYTES) _ (k2+XMSS_SIG_BYTES) _. smt(). smt(). smt().
-  move => *; do split. admit. admit. admit.  admit. admit. admit. admit. 
-  
+  have E1 : disjoint_ptr (to_uint ptr_sm) (to_uint sm_len) (to_uint ptr_m + XMSS_SIG_BYTES) (to_uint sm_len - XMSS_SIG_BYTES).
+    + have := HH. 
+      rewrite /disjoint_ptr. 
+      move => H k1 Hk1 k2 Hk2.
+      have := H k1 Hk1 (k2 + XMSS_SIG_BYTES) _ ; smt().
+
+  have E :  disjoint_ptr (to_uint ptr_sm) (XMSS_SIG_BYTES) 
+                         (to_uint ptr_mlen) 8 by smt().
+
+  rewrite H26 E0.
+  have X: disjoint_ptr (to_uint ptr_sm + 4963) (to_uint sm_len - 4963)
+  (to_uint ptr_m + 4963) (to_uint sm_len - 4963) by smt(disjoint_ptr_offset).
+ 
+  do split; 1..6: by smt().
+
+  rewrite /XMSS_FULL_HEIGHT /= in H1.
+
+  rewrite /XMSS_FULL_HEIGHT /XMSS_INDEX_BYTES /=.
+  auto => /> H29 H30 H31 H32 H33 H34 memL H35 H36; do split.
+(*
+Hypothesis H36 tells us that memL and Pmem are identical except in the 
+interval [to_uint ptr_m + 4963, to_uint ptr_m + to_uint sm_len).
+*)
+ 
+    + smt(W32.to_uint_cmp). 
+    + move => ?.
+      suff ->: (EncodeSignature (load_sig_mem memL ptr_sm)).`sig_idx =
+               (EncodeSignature (load_sig_mem Pmem ptr_sm)).`sig_idx by apply H1.
+      congr; congr.
+      apply (eq_from_nth witness); rewrite !size_load_sig /XMSS_SIG_BYTES //= => b?.
+      rewrite /load_sig_mem !nth_load_buf 1,2:/# H36 //= 1:/#.
+      admit.
+    + rewrite H19.
+      apply (eq_from_nth witness); rewrite !size_load_buf /XMSS_SIG_BYTES//=; 1..3: by smt(W64.to_uint_cmp).
+      have ->: to_uint (sm_len - W64.of_int 4963) = to_uint sm_len - XMSS_SIG_BYTES by smt(@W64). 
+      move => b?.
+      rewrite !nth_load_buf //= H36 //=.
+      smt(@W64 pow2_64).
+      admit. (* o mesom que antes *)
+    + congr.
+      apply (eq_from_nth witness); rewrite !size_load_sig /XMSS_SIG_BYTES //= => b?.
+      rewrite /load_sig_mem !nth_load_buf 1,2:/# H36 //= 1:/#.
+      admit. (* o mesom que antes *)
+    + rewrite -H26.
+      suff mem_eq: forall i, 0 <= i < 8 =>
+                memL.[to_uint ptr_mlen + i] = Pmem.[to_uint ptr_mlen + i]; 
+                   last by smt(disjoint_ptr_ptr).
+      rewrite /loadW64 !pack8E !wordP => j Hj. 
+      rewrite !initiE //= !initiE //= /#.
+    + rewrite -H27.
+      suff mem_eq: forall i, 0 <= i < 3 =>
+                       memL.[to_uint ptr_sm + i] = Pmem.[to_uint ptr_sm + i].
+                * apply (eq_from_nth witness); rewrite !size_load_buf /XMSS_INDEX_BYTES //= => idx Hidx.
+                  rewrite !nth_load_buf //= /#. 
+      move => idx Hidx; rewrite H36 //= 1:/#. 
+      admit.
+    + rewrite H35 H19.
+      apply (eq_from_nth witness); rewrite !size_load_buf /XMSS_SIG_BYTES //=.
+        * smt(@W64 pow2_64).
+        * smt(@W64 pow2_64). 
+    move => j?.
+                  rewrite !nth_load_buf //=. 
+        * smt(@W64 pow2_64). 
+
+rewrite H36 //=.
+        * smt(@W64 pow2_64). 
+        * admit.
+
+
+
 seq 3 2 : (
   #pre /\ 
   to_list buf{1} = NBytes.val _R{2} /\
