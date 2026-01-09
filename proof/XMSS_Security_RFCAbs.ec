@@ -489,8 +489,6 @@ phoare Eqv_WOTS_pkgen_p (ad : Address.adrs) (ss ps : seed) :
   [WOTS.pkGen : arg = (ss, ps, ad) ==> res = WOTS_pkgen ss ps ad] = 1%r
   by conseq Eqv_WOTS_pkgen_ll (Eqv_WOTS_pkgen ad ss ps).
 
-require Treehash. 
-
 (*
 type haddress = { level: int; index: int; }.
 *) 
@@ -504,7 +502,9 @@ op reduce_tree_st(ps : nbytes, leaves : Params.nbytes list, hadlvl hadidx : int)
    NBytes.insubd (BitsToBytes (DigestBlock.val
          (val_bt_trh (list2tree (map nb2db (take (2^hadlvl) (drop (hadidx*2^hadlvl) leaves)))) ps (set_typeidx (adr2ads zero_address) 2) hadlvl hadidx))).
 
-clone Treehash as TH with
+require AbsTreeHash.
+
+clone AbsTreeHash as TH with
         op h <- h,
         type value = Params.nbytes,
         type pseed = seed,
