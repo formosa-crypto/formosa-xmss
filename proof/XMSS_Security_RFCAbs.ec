@@ -712,8 +712,19 @@ lemma tree_hash_correct_eq _ps _ss _lstart _sth :
     /\ focus{2} = (nth witness leaves{2} (offset{2} + idx{2}), 0)
     /\ TH.stackrel root{2} pseed{2} leaves{2} idx{2} stack{2}
  ) /\ TH.ath_inv root{2} pseed{2} focus{2} offset{2} idx{2} leaves{2} stack{2} stk0 ==> _).
- + auto => |> &1 &2 14?;case=> + _ ? - /(congr1 List.size); rewrite size_map => <- /=.
-   admit. (* @PY: do you have such a result? Should follow from idx{2} < 2^_sth *)
+ + auto => |> &1 &2 14?; pose lvs := List.map _ _; move=> stkrel *; split.
+   - case: (stkrel) => + _ - /(congr1 List.size); rewrite size_map => <- /=.
+     rewrite int2bsS 1:/# pdiv_small 1:/# /=.
+     rewrite -cats1 TH.ones_cat TH.ones_seq1 /= cats0.
+     by rewrite &(ler_trans _ _ _ (TH.size_ones_le _)) size_int2bs /#.
+   - rewrite /TH.ath_inv /= stkrel TH.eqvred_refl subseq_refl divzK //=.
+     case: (stkrel) => <- _; rewrite TH.revonesK ~-1://# /= => nt_stk0.
+     case: stkrel => + _ - ^he /(congr1 (fun s => nth witness s 0)) /=.
+     rewrite (nth_map witness) /= -1:-nth0_head.
+     - by rewrite ltz_def size_ge0 /= size_eq0.
+     move=> <-; apply: (TH.ge0_ones (int2bs (_sth + 1) idx{2})).
+     move/(congr1 List.size): he; rewrite size_map => hsz.
+     by rewrite &(mem_nth) /= hsz ltz_def size_ge0 /= size_eq0.
 
   seq 2 0 : (#{/~address{1}}pre /\
           address{1} = set_ots_addr (set_type zero_address 0) (s{1} + i{1})).
@@ -830,7 +841,9 @@ ecall {2} (TH.treehash_ath_body_pcorrect
 auto => |> &1 &2; pose lvs := map _ (range 0 (2^h)).
 rewrite !uleE /= => ?????????Ho??H HH ?Hh?? ath ? HHH??; split.
 - rewrite size_map size_range /= ler_maxr /= 1:#smt:(expr_ge0).
-  admit.
+  split; [smt() | split=> [|_]; first smt()].
+  by rewrite /_root /= ltz_divLR 1:#smt:(expr_ge0) -exprD_nneg //#.
+
 move=> _ ? [/= _focus _stack] ainv ->> ->>.
 
 have substk: subseq stack{2} stk0.
@@ -839,23 +852,19 @@ pose _root := {| TH.level = _sth; TH.index = _lstart %/ 2 ^ _sth; |}.
 have stkrel: TH.stackrel _root _ps lvs idx{2} stk0.
 - by case: ath => @/_root.
 have ltstk: forall lvl, lvl \in unzip2 stack{2} => 0 <= lvl < _sth.
-(*
-- move=> stk /(subseq_mem _ _ _ substk) /(map_f snd) /=.
+- move=> stk; move/(map_subseq snd): substk => /subseq_mem h /h => {h}.
   case: (stkrel) => <- _ ^ /TH.ge0_ones -> /=.
   rewrite int2bsS 1:/# pdiv_small 1:/# /=.
   rewrite -cats1 TH.ones_cat TH.ones_seq1 /= cats0.
   (pose s := int2bs _ _) => h; have := TH.le_size_ones s.
   move/List.allP => /(_ _ h) /= /ltr_le_trans; apply=> @/s.
   by rewrite size_int2bs ler_maxr 1:/#.
-*)
-- admit.
 have szstk: size stack{2} <= _sth.
-+ apply: (ler_trans (size stk0)).
-  - admit.
++ apply: (ler_trans (size stk0)); first by apply: TH.subseq_size.
   case: (stkrel) => + _ - /(congr1 List.size); rewrite size_map => <-.
   rewrite int2bsS 1:/# pdiv_small 1:/# /=.
   rewrite -cats1 TH.ones_cat TH.ones_seq1 /= cats0.
-  admit. (* from the abstract proof *)
+  by rewrite &(ler_trans _ _ _ (TH.size_ones_le _)) size_int2bs /#.
 have ?: 0 <= focus{2}.`2 < _sth.
 - rewrite &(ltstk) (_ : focus{2}.`2 = (nth witness stack{2} 0).`2) 1:/#.
   by rewrite &(map_f snd) mem_nth /= ltr_neqAle size_ge0 /= eq_sym size_eq0.
@@ -892,7 +901,8 @@ do split.
         rewrite HAX.Adrs.insubdK /=;1: by smt(zeroadiP).
         rewrite /valid_adrsidxs /= /valid_xidxvalslp /=;right;right.
         rewrite /valid_xidxvalslptrh /= /valid_tbidx /valid_thidx /nr_nodes.
-        + admit. (* @PY: too tired to prove this, but should be true *)
+        + split; [split=> [|_]; first smt(divz_ge0 expr_gt0) | smt()].
+          by rewrite ltz_divLR 1:#smt:(expr_gt0) -exprD_nneg /#.
       have -> /= : forall x, size (HAX.Adrs.val x) = 4 by smt(HAX.Adrs.valP).
       rewrite take0 /= size_drop // drop_drop //.
       have -> /= : forall x, size (HAX.Adrs.val x) = 4 by smt(HAX.Adrs.valP).

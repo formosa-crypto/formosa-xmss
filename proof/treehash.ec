@@ -122,6 +122,14 @@ move=> ?; rewrite (range_cat (i + k)) ~-1:/# take_cat_le.
 by rewrite size_range ifT 1:/# take_oversize // size_range /#.
 qed.
 
+(* -------------------------------------------------------------------- *)
+lemma subseq_size ['a] (s1 s2 : 'a list) :
+  subseq s1 s2 => size s1 <= size s2.
+proof.
+case/subseqP=> m [eq ->]; rewrite size_mask //.
+by rewrite &(lez_trans _ _ _ (count_size _ _)) eq.
+qed.
+
 (* ==================================================================== *)
 op ones (s : bool list) =
   pmap
@@ -139,6 +147,10 @@ rewrite count_map (_ : preim _ _ = (fun i => s.[i])) 1:/#.
 rewrite eq_sym -{1}[s](map_nth_range witness).
 by rewrite count_map &(eq_count) /preim /= /#.
 qed.
+
+(* -------------------------------------------------------------------- *)
+lemma size_ones_le (s : bool list) : size (ones s) <= size s.
+proof. by rewrite size_ones &(count_size). qed.
 
 (* -------------------------------------------------------------------- *)
 lemma ones_nil : ones [] = [].
