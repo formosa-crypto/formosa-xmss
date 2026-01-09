@@ -41,6 +41,20 @@ lemma disjoint_ptr_not_in_range (p1 l1 p2 l2 o lo : int) :
     0 <= lo <= l2 - lo =>
     ! (p2 + lo <= p1 + o < p2 + lo + (l2 - lo)) by smt().
 
+  lemma disjoint_ptr_subrange_excluded
+      (base1 base2 region_len : int) (offset1 lo hi : int) :
+      (forall k1 k2,
+        0 <= k1 < region_len =>
+        0 <= k2 < region_len =>
+        base1 + k1 <> base2 + k2) =>
+        0 <= offset1 < region_len =>
+        0 <= lo =>
+        hi <= region_len =>
+        ! (base2 + lo <= base1 + offset1 < base2 + hi).
+      proof.
+by admit.
+    qed.
+ 
 lemma verify_correctness (ptr_m           (* Apontador p mensagem *) 
                           ptr_mlen        (* Apontador p tamanho mensagem *) 
                           ptr_sm          (* Apontador p signed message *) 
@@ -437,39 +451,154 @@ seq 0 0 : (
 seq 1 1 : (
   #pre /\ 
   to_list root{1} = NBytes.val _M'{2}
-); last by admit.
+).
 - do 2! (inline {1} 1; wp; sp); exists * Glob.mem{1}, buf{1}, (init (fun (i_0 : int) => pk{1}.[0 + i_0]))%Array32, idx{1}, t64{1}, bytes{1}. 
   elim * => P0 P1 P2 P3 P4 P5.
   call {1} (hash_message_correct P0 P1 P2 P3 P4 P5) => [/# |]. 
   auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 
   H16 H17 H18 H19 HM H20 H21 H22 H23 H24 H25 H26 H27 H28 H29
-  H30 H31 H32 *.
+  H30 H31 H32 H33*.
  (
   do split; 1,3: by smt(@W64 pow2_64)
-); 4,5: by admit.
+).
    + rewrite to_uintB ?uleE of_uintK /= /#. 
    + smt().
    + apply three_nbytes_eq; apply (eq_from_nth witness); rewrite !ThreeNBytesBytes.valP ?n_val // => i?. 
      rewrite !ThreeNBytesBytes.insubdK ?size_cat ?size_toByte_32 // ?n_val ?size_to_list ?size_toByte_64 //= ?NBytes.valP ?n_val //=.
-     rewrite H31; do congr. 
+     rewrite H31.
+     case (0 <= i < n) => [H_first | ?].
+        * rewrite nth_cat !size_cat !NBytes.valP ifT 1:/#.
+          rewrite nth_cat !NBytes.valP ifT 1:/#.
+          rewrite nth_cat !size_cat !NBytes.valP size_to_list ifT 1:/#.
+          rewrite nth_cat !NBytes.valP ifT /#.
+       
+     case (n <= i < 2 * n) => [H_snd | H_trd].
+        * rewrite nth_cat !size_cat !NBytes.valP.
+          rewrite nth_cat !NBytes.valP ifT 1:/# ifF 1:/#.
+          rewrite nth_cat !size_cat !NBytes.valP size_to_list ifT 1:/#.
+          rewrite nth_cat !NBytes.valP ifF 1:/#.
+          rewrite get_to_list initiE //= 1:/#.
+          admit.
+        * rewrite nth_cat !size_cat !NBytes.valP.
+          rewrite nth_cat !NBytes.valP ifF 1:/#.
+          rewrite nth_cat !size_cat !NBytes.valP size_to_list ifF 1:/#.
+rewrite NBytes.insubdK.
+search toByte.
+rewrite size_toByte_32 1,2:/#.
+admit.
+   + rewrite -H33; congr; smt(@W64 pow2_64).
+   + rewrite /XMSS_FULL_HEIGHT /=; auto => /> H34 H35 H36 H37 H38 H39 resultL resultR
+     memL H40 H41 H42 *; do split.
+        * smt(W32.to_uint_cmp).
+        * move => Hx.
+          rewrite /XMSS_FULL_HEIGHT /= in H1.
+          have ?: to_uint (EncodeSignature (load_sig_mem P0 ptr_sm)).`sig_idx
+                              = 
+                  to_uint (EncodeSignature (load_sig_mem memL ptr_sm)).`sig_idx; last by smt().
+         congr; rewrite /EncodeSignature; auto => />.
+         congr.
+         rewrite /XMSS_INDEX_BYTES.
+         apply (eq_from_nth witness); rewrite !size_sub_list //= => idx Hidx.
+         rewrite !nth_sub_list //=.
+         rewrite /load_sig_mem !nth_load_buf 1,2:/#.
+         apply H42 => [/#|].
+         have: 
+              forall (k : int), 
+                   4835 <= k < 4963 => 
+                      0 <= k < to_uint sm_len =>
+                         to_uint ptr_sm + idx <> to_uint ptr_m + k
+         by move => k Hk_range Hk_bound; have := H18; rewrite /disjoint_ptr => Hdisj; smt().
+        smt().
+        *   suff ->: 
+                  load_buf memL (ptr_sm + W64.of_int XMSS_SIG_BYTES) 
+                                (to_uint (sm_len - W64.of_int XMSS_SIG_BYTES)) 
+                                =
+                  load_buf P0 (ptr_sm + W64.of_int XMSS_SIG_BYTES) 
+                              (to_uint (sm_len - W64.of_int XMSS_SIG_BYTES)) 
+            by apply HM. 
+            apply (eq_from_nth witness); rewrite !size_load_buf //=; 1..3: by smt(to_uint_cmp).
+            have ZZ: to_uint (sm_len - W64.of_int XMSS_SIG_BYTES) = 
+                     to_uint sm_len - XMSS_SIG_BYTES by smt(@W64).
 
-(* FIQUEI AQUI *)
+  rewrite !ZZ=> i Hi.
+  rewrite !nth_load_buf //=.
+  rewrite H42 //; [smt(@W64 pow2_64) | ].
 
-        * apply (eq_from_nth witness); rewrite NBytes.valP n_val ?size_to_list // => j?.
-          rewrite get_to_list initiE //.
-          have ->: _pk.[j] = nth witness (sub _pk 0 n) j by rewrite nth_sub /#. 
-          smt().
-        * apply (eq_from_nth witness); first by rewrite size_toByte_64 //= NBytes.valP n_val.
-          rewrite NBytes.valP n_val => j?.
-          rewrite toByte_32_64 //.
-          have ->: toByte_64 P3 32 = Bytes.W64toBytes_ext P3 32 by smt(Bytes.W64toBytes_ext_toByte_64). 
-          rewrite /W64toBytes_ext !nth_rev ?size_mkseq ?size_mkseq 1,2:/#.
-   + smt().
-   + move => H35 H36 H37 H38 H39 H40 resL resR memT H41 H42 H43.
-     have ->: load_sig_mem memT ptr_sm = load_sig_mem P0 ptr_sm
-              by  apply (eq_from_nth witness); rewrite !size_load_buf // => i?; rewrite !nth_load_buf // H43 // /#.
-     smt(). 
+  have: forall k, 4835 <= k < 4963 => 0 <= k < to_uint sm_len =>
+          to_uint ptr_sm + XMSS_SIG_BYTES + i <> to_uint ptr_m + k; last first.
+           - have Hsm_bound: 4963 <= to_uint sm_len by rewrite /XMSS_SIG_BYTES in H2; smt(). smt(@W64 pow2_64).
+    move=> k Hk_range Hk_bound.
+    have := H18; rewrite /disjoint_ptr.
+    move => ?; smt(disjoint_ptr_ptr).
+        *
+  suff ->: load_sig_mem P0 ptr_sm = load_sig_mem memL ptr_sm by trivial.
+  apply (eq_from_nth witness); rewrite !size_load_sig // => i Hi.
+  rewrite /load_sig_mem !nth_load_buf 1,2:/# H42 //; [smt(@W64 pow2_64) | ].
+  have: forall k, 4835 <= k < 4963 => 0 <= k < to_uint sm_len =>
+          to_uint ptr_sm + i <> to_uint ptr_m + k.
+    move=> k Hk_range Hk_bound.
+have := H18; rewrite /disjoint_ptr => Hdisj_full.
+    have Hi_bound: 0 <= i < to_uint sm_len by rewrite /XMSS_SIG_BYTES in Hi; smt().
+    have Hk_bound2: 0 <= k < to_uint sm_len by smt(). smt().
+
+  move=> Hdisj; rewrite H32.
+  have Hsm_bound: 4963 <= to_uint sm_len by rewrite /XMSS_SIG_BYTES in H2; smt().
+  smt().
  
+  * suff ->: loadW64 memL (to_uint ptr_mlen) = loadW64 P0 (to_uint ptr_mlen) by apply H27.
+  rewrite /loadW64 !pack8E !wordP => j Hj.
+  rewrite !initiE //= !initiE //= 1,2:/#.
+  rewrite H42 //; [smt(@W64 pow2_64) | ].
+  have: forall i, 0 <= i < 8 =>
+          forall k, 4835 <= k < 4963 => 0 <= k < to_uint sm_len =>
+          to_uint ptr_mlen + i <> to_uint ptr_m + k.
+    move=> i Hi k Hk_range Hk_bound.
+    have := H17; rewrite /disjoint_ptr => Hdisj_full.
+    have Hi_bound: 0 <= i < 8 by smt().
+    have Hk_bound2: 0 <= k < to_uint sm_len by smt().
+    smt().
+  move=> Hdisj; rewrite H32.
+  have Hsm_bound: 4963 <= to_uint sm_len by rewrite /XMSS_SIG_BYTES in H2; smt().
+  smt(disjoint_ptr_ptr).
+
+  *   suff ->: load_buf memL ptr_sm XMSS_INDEX_BYTES = load_buf P0 ptr_sm XMSS_INDEX_BYTES by apply H28.
+  apply (eq_from_nth witness); rewrite !size_load_buf /XMSS_INDEX_BYTES //= => i Hi.
+  rewrite !nth_load_buf //= -H42 //; [smt(@W64 pow2_64) | ].
+  have: forall k, 4835 <= k < 4963 => 0 <= k < to_uint sm_len =>
+          to_uint ptr_sm + i <> to_uint ptr_m + k by smt().
+  smt().
+
+* idtac.
+  suff ->: load_buf memL (ptr_m + W64.of_int XMSS_SIG_BYTES) (to_uint sm_len - XMSS_SIG_BYTES) =
+           load_buf P0 (ptr_m + W64.of_int XMSS_SIG_BYTES) (to_uint sm_len - XMSS_SIG_BYTES) by apply H30.
+  apply (eq_from_nth witness); rewrite !size_load_buf. 
+smt().
+smt().
+smt().
+smt().
+  move=> i Hi.
+  rewrite !nth_load_buf //=.
+  rewrite -H42 //; [smt(@W64 pow2_64) | ].
+  rewrite H32 /XMSS_SIG_BYTES.
+  have ->: to_uint (ptr_m + W64.of_int 4963) = to_uint ptr_m + 4963 by rewrite to_uintD_small; smt(@W64 pow2_64).
+  smt().
+
+*    suff ->: load_buf memL (ptr_m + W64.of_int 4963) (to_uint (sm_len - W64.of_int 4963)) =
+           load_buf P0 (ptr_m + W64.of_int 4963) (to_uint (sm_len - W64.of_int 4963)) by apply H33.
+apply (eq_from_nth witness); rewrite !size_load_buf. 
+smt().
+smt().
+smt().
+smt().
+  move=> i Hi.
+  rewrite !nth_load_buf //=.
+  rewrite -H42 //; [smt(@W64 pow2_64) | ].
+  rewrite H32 /XMSS_SIG_BYTES.
+  have ->: to_uint (ptr_m + W64.of_int 4963) = to_uint ptr_m + 4963 by rewrite to_uintD_small; smt(@W64 pow2_64).
+  smt().
+
+(* ======================= ============== *)
+
 seq 2 0 : (
     #{/~sm_offset{1} = W64.zero}
      {/~to_uint t64{1} = to_uint m_ptr{1} + 4963 - 32 - 3 * 32}pre /\
@@ -514,6 +643,7 @@ seq 28 6 : (
 
 sp.
 
+(* ESTOU AQUI *)
 seq 0 0 : (#pre /\ #post); first by auto => /> &1 &2 *; smt(@W64 pow2_64).  
  
 wp.
