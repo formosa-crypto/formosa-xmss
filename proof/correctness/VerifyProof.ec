@@ -104,9 +104,11 @@ seq 2 0 : (#pre /\ ots_addr{1} = zero_address).
       by apply zero_addr_setZero.
 
 swap {2} 3 -2.
+
 seq 0 1 : (#pre /\ address{2} = zero_address); first by auto.
 
 swap {1} 3 -1.
+
 seq 2 0 : (
   #pre /\ 
   ltree_addr{1}.[3] = W32.one /\
@@ -116,11 +118,11 @@ seq 2 0 : (
       ecall {1} (zero_addr_res addr{1}); auto => /> *.
       by rewrite get_setE //= ifF // zero_addr_i.
 
-seq 4 0 : (
+seq 5 0 : (
   #pre /\ 
   node_addr{1}.[3] = (of_int 2)%W32 /\
   (forall (k : int), 0 <= k < 8 => (k <> 3) => node_addr{1}.[k] = W32.zero) /\
-  t64{1} = smlen{1} /\
+  t64{1} = smlen{1} - W64.of_int 4963 /\
   sm_offset{1} = W64.zero
 ).
     + inline {1} 2; inline {1} 1; wp.
@@ -131,7 +133,7 @@ seq 4 0 : (
 (*                                                                                 *)
 (* ------------------------------------------------------------------------------- *)
  
-seq 16 13 : (
+seq 15 13 : (
   to_list root{1} = NBytes.val node{2} /\
   to_list pub_root{1} = NBytes.val root{2} /\
   0 <= to_uint mlen_ptr{1} < W64.max_uint /\
@@ -208,9 +210,6 @@ case (node{2} = root{2}).
 (* ------------------------------------------------------------------------------- *)
 (*                                                                                 *)
 (* ------------------------------------------------------------------------------- *)
-
-seq 1 0 : (#{/~t64{1} = smlen{1}}pre /\ t64{1} = smlen{1} - (of_int 4963)%W64); first by auto.
-
 seq 1 0 : (
         #{/~t64{1} = smlen{1} - (of_int 4963)%W64}pre /\
         loadW64 Glob.mem{1} (to_uint mlen_ptr{1}) = smlen{1} - (of_int 4963)%W64
@@ -294,7 +293,7 @@ This does
 seq 2 0 : (
   #pre /\
   load_buf Glob.mem{1} (m_ptr{1} + (of_int XMSS_SIG_BYTES)%W64) (to_uint smlen{1} - XMSS_SIG_BYTES) = Types.Msg_t.val m{2}
-).
+); last by admit.
 - sp.
   exists * m_ptr{1}, sm_ptr{1}, bytes{1}, Glob.mem{1}.
   elim * => P0 P2 P4 Pmem.
@@ -323,7 +322,8 @@ seq 2 0 : (
   rewrite /XMSS_FULL_HEIGHT /= in H1.
 
   rewrite /XMSS_FULL_HEIGHT /XMSS_INDEX_BYTES /=.
-  auto => /> H29 H30 H31 H32 H33 H34 memL H35 H36; do split.
+  auto => /> H29 H30 H31 H32 H33 H34 memL H35 H36.
+   do split; 3..: by admit.
 (*
 Hypothesis H36 tells us that memL and Pmem are identical except in the 
 interval [to_uint ptr_m + 4963, to_uint ptr_m + to_uint sm_len).
@@ -336,7 +336,18 @@ interval [to_uint ptr_m + 4963, to_uint ptr_m + to_uint sm_len).
       congr; congr.
       apply (eq_from_nth witness); rewrite !size_load_sig /XMSS_SIG_BYTES //= => b?.
       rewrite /load_sig_mem !nth_load_buf 1,2:/# H36 //= 1:/#.
-      admit.
+
+  have: forall k, 4963 <= k < to_uint sm_len =>
+          to_uint ptr_sm + b <> to_uint ptr_m + k.
+    move=> k Hk_range.
+    have := HH; rewrite /disjoint_ptr => Hdisj_full.
+    have Hb_bound: 0 <= b < to_uint sm_len by rewrite /XMSS_SIG_BYTES in H2; smt().
+    have Hk_bound: 0 <= k < to_uint sm_len by smt().
+    smt().
+    move=> ?.
+    have ?: 4963 <= to_uint sm_len by rewrite /XMSS_SIG_BYTES in H2; smt().
+    smt().
+
     + rewrite H19.
       apply (eq_from_nth witness); rewrite !size_load_buf /XMSS_SIG_BYTES//=; 1..3: by smt(W64.to_uint_cmp).
       have ->: to_uint (sm_len - W64.of_int 4963) = to_uint sm_len - XMSS_SIG_BYTES by smt(@W64). 
