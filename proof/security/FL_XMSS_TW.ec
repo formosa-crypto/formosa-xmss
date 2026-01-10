@@ -4010,7 +4010,7 @@ have ->:
   seq 21 22 : (={is_valid, is_fresh}); first by sim.
   by wp; skip.
 rewrite Pr[mu_split EUF_RMA_FLXMSSTWES_NOPRF_Conditions.valid_WOTSTWES] addrC.
-rewrite Pr[mu_split EUF_RMA_FLXMSSTWES_NOPRF_Conditions.coll_pkco] addrC -2!andbA.
+rewrite Pr[mu_split EUF_RMA_FLXMSSTWES_NOPRF_Conditions.coll_pkco] addrC.
 rewrite -addrA ler_add 2:ler_add.
 + apply (ler_trans Pr[M_EUF_GCMA_WOTSTWES(R_MEUFGCMAWOTSTWES_EUFRMAFLXMSSTWESNOPRF(A), O_MEUFGCMA_WOTSTWES_NOPRF, FC.O_THFC_Default).main() @ &m : res]); last by apply thm_defgcma_wotstw_noprf.
   have ->:
