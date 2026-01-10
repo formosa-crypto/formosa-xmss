@@ -6,6 +6,11 @@
 #include <stdlib.h>
 #include <time.h>
 
+// Check for __attribute__((cleanup)) support
+#if !defined(__GNUC__) && !defined(__clang__)
+#error "This code requires GCC or Clang for __attribute__((cleanup)) support"
+#endif
+
 // From https://github.com/formosa-crypto/formosa-mldsa/blob/main/bench/bench_jasmin.c
 static inline uint64_t cpucycles(void) {
     uint64_t result;
@@ -98,6 +103,17 @@ static uint64_t overhead_of_cpucycles_call(void) {
 }
 
 /*
+ * Cleanup function for automatic fclose using __attribute__((cleanup))
+ */
+void cleanup_fclose(FILE **fpp) {
+    if (fpp && *fpp) {
+        fclose(*fpp);
+    } else {
+        fprintf(stderr, "cleanup_fclose: invalid FILE pointer\n");
+    }
+}
+
+/*
  * This macro benchmarks a function call `N` times and writes the
  * raw clock cycle counts for each execution to a file.
  *
@@ -107,7 +123,7 @@ static uint64_t overhead_of_cpucycles_call(void) {
 
 #define BENCHMARK_N_TIMES(N, filename, func_call)                                            \
     do {                                                                                     \
-        FILE *fp = fopen(filename, "w");                                                     \
+        FILE *fp __attribute__((cleanup(cleanup_fclose))) = fopen(filename, "w");            \
         if (fp == NULL) {                                                                    \
             fprintf(stderr, "Failed to open file for benchmarking results: %s: ", filename); \
             perror("");                                                                      \
@@ -121,7 +137,6 @@ static uint64_t overhead_of_cpucycles_call(void) {
             end_cycles = cpucycles();                                                        \
             fprintf(fp, "%llu\n", end_cycles - start_cycles);                                \
         }                                                                                    \
-        fclose(fp);                                                                          \
         printf("Benchmark results for %d executions written to '%s'\n", (N), (filename));    \
     } while (0)
 
