@@ -874,6 +874,7 @@ have -> : to_uint (offset{1} - W64.of_int 2) = to_uint offset{1} - 2
  by rewrite to_uintB /=;1: by rewrite uleE /= /#.
 have -> : to_uint (offset{1} - W64.one) = to_uint offset{1} - 1
  by rewrite to_uintB /=;1: by rewrite uleE /= /#.
+
 do split.
   + move => k kb; rewrite /set_type /set_ltree_addr /set_ots_addr.
     move=> {ainv}; smt(Array8.initiE get_setE).
@@ -930,20 +931,20 @@ do split.
   + move => ? Heq.
     split;1:smt().
     have := Heq; rewrite nth_put 1: /# /= nth_put 1: /# /=.
-    have -> : to_uint (offset{1} - W64.one - W64.of_int 2) = to_uint offset{1} - 3 by smt(@W64 pow2_64).
+    have ->: to_uint (offset{1} - W64.one - W64.of_int 2) = to_uint offset{1} - 3.
+    - by rewrite -addrA -opprD -of_intD /= to_uintB 1:uleE //#.
     rewrite ifF 1:/# to_uint_eq /= to_uintD_small /= #smt:(h_max).
-  + move => ?.
-    rewrite !nth_put 1,2:/# ifT 1:/#.
-    rewrite ifF;1: smt(@W64).
-    have -> : to_uint (offset{1} - W64.one - W64.of_int 2) =
-        to_uint offset{1} - 3.
-    + have -> : offset{1} - W64.one - W64.of_int 2 =
-         offset{1} - W64.of_int 3 by ring.
-    by rewrite to_uintB /=; 1: by rewrite uleE /=;smt(@List).
-    have := HH (to_uint offset{1} - 3) _;1: smt(@List).
-    have -> : size stack{2} - 1 - (to_uint offset{1} - 3) = 1 by smt().
-    rewrite nth_behead //= => <- Hf. 
-    split; 1: smt(@List).
+  + move=> ?; have ?: 2 <= size stack{2}.
+    - have: behead stack{2} <> [] by assumption.
+      by case: (stack{2}) => // ? [] //= ?; smt(size_ge0).
+    have ?: 3 <= to_uint offset{1} by rewrite Ho /#.
+    rewrite !nth_put 1,2:/# ifT 1:/# ifF.
+    - by rewrite -addrA -opprD -of_intD /= to_uintB 1:uleE //#.
+    rewrite -[offset{1} - _ - _]addrA -opprD -of_intD /=.
+    rewrite to_uintB 1:uleE //=.
+    have := HH (to_uint offset{1} - 3) _; first smt().
+    rewrite Ho /= (_ : _ - _ - (_ - 2) = 1) 1:#ring.
+    rewrite nth_behead //= => <- Hf; split => //.
     by rewrite to_uint_eq to_uintD_small /= #smt:(h_max).
 qed.
 
