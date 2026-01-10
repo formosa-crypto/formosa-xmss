@@ -293,7 +293,7 @@ This does
 seq 2 0 : (
   #pre /\
   load_buf Glob.mem{1} (m_ptr{1} + (of_int XMSS_SIG_BYTES)%W64) (to_uint smlen{1} - XMSS_SIG_BYTES) = Types.Msg_t.val m{2}
-); last by admit.
+).
 - sp.
   exists * m_ptr{1}, sm_ptr{1}, bytes{1}, Glob.mem{1}.
   elim * => P0 P2 P4 Pmem.
@@ -323,7 +323,7 @@ seq 2 0 : (
 
   rewrite /XMSS_FULL_HEIGHT /XMSS_INDEX_BYTES /=.
   auto => /> H29 H30 H31 H32 H33 H34 memL H35 H36.
-   do split; 3..: by admit.
+   do split.
 (*
 Hypothesis H36 tells us that memL and Pmem are identical except in the 
 interval [to_uint ptr_m + 4963, to_uint ptr_m + to_uint sm_len).
@@ -352,26 +352,56 @@ interval [to_uint ptr_m + 4963, to_uint ptr_m + to_uint sm_len).
       apply (eq_from_nth witness); rewrite !size_load_buf /XMSS_SIG_BYTES//=; 1..3: by smt(W64.to_uint_cmp).
       have ->: to_uint (sm_len - W64.of_int 4963) = to_uint sm_len - XMSS_SIG_BYTES by smt(@W64). 
       move => b?.
-      rewrite !nth_load_buf //= H36 //=.
-      smt(@W64 pow2_64).
-      admit. (* o mesom que antes *)
+      rewrite !nth_load_buf //= H36 //=; first by      smt(@W64 pow2_64).
+  have: forall k, 0 <= k < to_uint sm_len - 4963 =>
+          to_uint ptr_sm + 4963 + b <> to_uint ptr_m + 4963 + k.
+    move=> k Hk_range.
+    have := H34; rewrite /disjoint_ptr => Hdisj_full.
+    have ?: 0 <= b < to_uint sm_len - 4963 by smt().
+    have ?: 0 <= k < to_uint sm_len - 4963 by smt().
+    smt().
+    move=> ?.
+    rewrite to_uintD_small; [smt(@W64 pow2_64) | ].
+    smt().
+
     + congr.
       apply (eq_from_nth witness); rewrite !size_load_sig /XMSS_SIG_BYTES //= => b?.
       rewrite /load_sig_mem !nth_load_buf 1,2:/# H36 //= 1:/#.
-      admit. (* o mesom que antes *)
+  have: forall k, 4963 <= k < to_uint sm_len =>
+          to_uint ptr_sm + b <> to_uint ptr_m + k.
+    move=> k Hk_range.
+    have := HH; rewrite /disjoint_ptr => Hdisj_full.
+    have ?: 0 <= b < to_uint sm_len by smt().
+    have ?: 0 <= k < to_uint sm_len by smt().
+    smt().
+  move=>?.
+  have ?: 4963 <= to_uint sm_len by smt().
+  smt().
+
     + rewrite -H26.
       suff mem_eq: forall i, 0 <= i < 8 =>
                 memL.[to_uint ptr_mlen + i] = Pmem.[to_uint ptr_mlen + i]; 
                    last by smt(disjoint_ptr_ptr).
       rewrite /loadW64 !pack8E !wordP => j Hj. 
       rewrite !initiE //= !initiE //= /#.
+
     + rewrite -H27.
       suff mem_eq: forall i, 0 <= i < 3 =>
                        memL.[to_uint ptr_sm + i] = Pmem.[to_uint ptr_sm + i].
                 * apply (eq_from_nth witness); rewrite !size_load_buf /XMSS_INDEX_BYTES //= => idx Hidx.
                   rewrite !nth_load_buf //= /#. 
       move => idx Hidx; rewrite H36 //= 1:/#. 
-      admit.
+
+  have: forall k, 4963 <= k < to_uint sm_len =>
+          to_uint ptr_sm + idx <> to_uint ptr_m + k.
+    move=> k Hk_range.
+    have := HH; rewrite /disjoint_ptr => Hdisj_full.
+    have Hidx_bound: 0 <= idx < to_uint sm_len by smt().
+    have Hk_bound: 0 <= k < to_uint sm_len by smt().
+    smt().
+  move=> ?. 
+  smt().
+
     + rewrite H35 H19.
       apply (eq_from_nth witness); rewrite !size_load_buf /XMSS_SIG_BYTES //=.
         * smt(@W64 pow2_64).
@@ -381,8 +411,16 @@ interval [to_uint ptr_m + 4963, to_uint ptr_m + to_uint sm_len).
         * smt(@W64 pow2_64). 
 
 rewrite H36 //=.
-        * smt(@W64 pow2_64). 
-        * admit.
+        * smt(@W64 pow2_64).  
+        * have: forall k, 0 <= k < to_uint sm_len - 4963 =>
+          to_uint ptr_sm + 4963 + j <> to_uint ptr_m + 4963 + k.
+    move=> k Hk_range.
+    have := H34; rewrite /disjoint_ptr => ?.
+    have Hj_bound: 0 <= j < to_uint sm_len - 4963 by smt().
+    have Hk_bound: 0 <= k < to_uint sm_len - 4963 by smt().
+    smt().
+    move=> Hdisj.
+    rewrite to_uintD_small; smt(@W64 pow2_64).
 
 seq 3 2 : (
   #pre /\ 
