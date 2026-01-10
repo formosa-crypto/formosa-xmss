@@ -22,6 +22,35 @@ require import RootFromSigProof.
 require import Array8 Array32 Array64 Array2144.
 require import WArray64.
 
+lemma toByte_W32_eq_toByte_64_W64 (x : W32.t) (y : W64.t) (n : int) :
+    to_uint x = to_uint y =>
+        0 < n <= 32 =>
+           toByte x n = toByte_64 y n.
+proof.
+move=> Heq Hn.
+apply (eq_from_nth witness).
++ rewrite size_toByte_32 1:/# size_toByte_64 /#.
+rewrite size_toByte_32 1:/# => i Hi.
+rewrite toByte_32_64 1:/#. 
+search toByte_64.
+rewrite -W64toBytes_ext_toByte_64.
+rewrite -W64toBytes_ext_toByte_64.
+rewrite /W64toBytes_ext.
+rewrite !nth_rev ?size_mkseq 1,2:/#.
+rewrite !nth_mkseq 1,2:/# /=.
+case: ( 0 <= max 0 n - (i + 1) < 8) => [Ha | Hb].
++ rewrite /unpack8 !initiE 1,2:/# /=.
+  rewrite !bits8E wordP => k? /=.
+  rewrite !initiE //=.
+  rewrite !get_to_uint. 
+  have ->: 0 <= (max 0 n - (i + 1)) * 8 + k < 64 = true by smt().
+  simplify.
+  rewrite to_uint_zeroextu64.
+  smt().
++ rewrite !get_out /#.
+qed.
+
+
 lemma verify_correctness (ptr_m           (* Apontador p mensagem *) 
                           ptr_mlen        (* Apontador p tamanho mensagem *) 
                           ptr_sm          (* Apontador p signed message *) 
@@ -91,7 +120,8 @@ seq 2 2 : (
   #pre /\ 
   to_list pub_root{1} = NBytes.val (pk{2}.`Types.pk_root) /\ 
   to_list pub_seed{1} = NBytes.val seed{2} /\
-  to_list pub_seed{1} = sub pk{1} n n
+  to_list pub_seed{1} = sub pk{1} n n /\
+  root{2} = pk{2}.`Types.pk_root (* faltava isto *) 
 ).
     + auto => /> *; do split; apply (eq_from_nth witness); rewrite size_to_list ?NBytes.valP ?n_val // ?size_sub // => j?;
       1,2: by rewrite get_to_list /EncodePkNoOID /= NBytes.insubdK ?size_sub ?n_val // nth_sub // initiE 1:/# /=;smt(@W64). 
@@ -463,7 +493,7 @@ seq 0 0 : (
   smt(@W64 pow2_64).
   move => i?.
   rewrite !nth_load_buf //. smt(@W64 pow2_64).
- 
+  
 seq 1 1 : (
   #pre /\ 
   to_list root{1} = NBytes.val _M'{2}
@@ -474,9 +504,9 @@ seq 1 1 : (
   auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 
   H16 H17 H18 H19 HM H20 H21 H22 H23 H24 H25 H26 H27 H28 H29
   H30 H31 H32 H33*.
- (
-  do split; 1,3: by smt(@W64 pow2_64)
-).
+
+  do split; 1,3: by smt(@W64 pow2_64).
+
    + rewrite to_uintB ?uleE of_uintK /= /#. 
    + smt().
    + apply three_nbytes_eq; apply (eq_from_nth witness); rewrite !ThreeNBytesBytes.valP ?n_val // => i?. 
@@ -487,23 +517,23 @@ seq 1 1 : (
           rewrite nth_cat !NBytes.valP ifT 1:/#.
           rewrite nth_cat !size_cat !NBytes.valP size_to_list ifT 1:/#.
           rewrite nth_cat !NBytes.valP ifT /#.
-       
      case (n <= i < 2 * n) => [H_snd | H_trd].
         * rewrite nth_cat !size_cat !NBytes.valP.
           rewrite nth_cat !NBytes.valP ifT 1:/# ifF 1:/#.
           rewrite nth_cat !size_cat !NBytes.valP size_to_list ifT 1:/#.
           rewrite nth_cat !NBytes.valP ifF 1:/#.
           rewrite get_to_list initiE //= 1:/#.
-          admit.
+          rewrite /EncodePkNoOID /= NBytes.insubdK ?size_sub 1,2:/# nth_sub /#.
         * rewrite nth_cat !size_cat !NBytes.valP.
           rewrite nth_cat !NBytes.valP ifF 1:/#.
           rewrite nth_cat !size_cat !NBytes.valP size_to_list ifF 1:/#.
-rewrite NBytes.insubdK.
-search toByte.
-rewrite size_toByte_32 1,2:/#.
-admit.
-   + rewrite -H33; congr; smt(@W64 pow2_64).
-   + rewrite /XMSS_FULL_HEIGHT /=; auto => /> H34 H35 H36 H37 H38 H39 resultL resultR
+          rewrite NBytes.insubdK. search toByte.
+              + rewrite size_toByte_32 /#.
+          smt(toByte_W32_eq_toByte_64_W64).
+
+   + rewrite -H33; congr; smt(@W64 pow2_64). 
+
+   + auto => /> H34 H35 H36 H37 H38 H39 resultL resultR
      memL H40 H41 H42 *; do split.
         * smt(W32.to_uint_cmp).
         * move => Hx.
@@ -650,8 +680,10 @@ seq 28 6 : (
 
   to_uint sm_offset{1} = 35 + j{2} * XMSS_REDUCED_SIG_BYTES /\
 
-  to_list root{1} = NBytes.val node{2}
+  to_list root{1} = NBytes.val node{2} /\
+root{2} = pk{2}.`Types.pk_root
 ); last first.
+
 
 (* ======================================================================================= *)
 (* A prova do ciclo while comeca aqui                                                      *)
@@ -663,13 +695,11 @@ seq 0 0 : (#pre /\ #post).
 - auto => /> &1 &2 j H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 ?H17 H18 H19 HM H20 H21 H22 H23 H24 H25 H26 H27 H28 H29 H30 H31 H32 H33 H34 
 H35 H36 H37.
 do split.
-* admit. (* NADA aqui fala no root{2} ==> devem faltar coisas nas hipoteses *)
 * smt(W64.to_uint_cmp).
 * move => ?.
   suff ->: loadW64 Glob.mem{1} (to_uint mlen_ptr{1}) = smlen{1} - W64.of_int 4963 by smt(@W64 pow2_64).
   by apply H24.
-
-
+  
 (* ESTOU AQUI *)
 while (
   1 <= j{2} <= d /\
@@ -700,13 +730,35 @@ while (
     0 <= to_uint ptr_sm + to_uint sm_len < 18446744073709551615 /\
     0 <= to_uint ptr_sm < 18446744073709551615 /\
     0 <= to_uint sm_len - XMSS_SIG_BYTES  < 18446744073709551615 /\
-    to_uint sm_len < XMSS_SIG_BYTES /\
+    XMSS_SIG_BYTES < to_uint sm_len /\
 
 
   to_uint sm_offset{1} = 35 + j{2} * XMSS_REDUCED_SIG_BYTES /\
 
+root{2} = pk{2}.`Types.pk_root /\
+
   #post
-); last by admit. 
+); last first.
+
+(** first subgoal of while **)
+
+auto => /> &1 &2 i H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 
+                   H15 H16 H17 H18 H19 HM H20 H21 H22 H23 H24 H25 H26 
+                   H27 H28 H29 H30 H31 H32 H33 H34 H35 H36 H37 H38 H39
+                   H40 *.
+do split; 1,4,5,7: by smt().
+- rewrite H20.
+  apply (eq_from_nth witness); first by rewrite NBytes.valP size_sub /#.
+  rewrite NBytes.valP => j?.
+  rewrite /EncodePkNoOID /= NBytes.insubdK ?size_sub //= /#.
+- apply (eq_from_nth witness); rewrite !size_sub // => j?.
+  have ->: nth witness (sub ots_addr{1} 0 3) j = 
+           nth witness (sub ots_addr{1} 0 4) j by rewrite !nth_sub /#.
+  rewrite H35 !nth_sub /#.
+- admit. (* preciso de saber que i=1 => Isto nao ta no contexto por alma de quem? *)
+
+
+(** second subgoal of while **)
 
 wp; conseq />.
 seq 2 1 : #pre; first by auto => /> &1 &2 *; rewrite andwC h_val d_val /(`<<`) /=; congr; smt(@W32 pow2_32).
@@ -777,9 +829,25 @@ seq 3 0 : (
 seq 1 1 : (
   #pre /\
   wots_pk{1} = DecodeWotsPk pk_ots{2}
-). 
-- wp; exists * root{1}, pub_seed{1}, ots_addr{1}, address0{2}; elim * => P1 P2 P3 P4; call (pk_from_sig_correct P1 P2 P3 P4); last by auto => /> &1 &2 /#.
-(do split; 3: by rewrite /log_w (: w = XMSS_WOTS_W) 1:/# /XMSS_WOTS_W /XMSS_WOTS_LOG_W) => /#.
+).
+- wp. 
+  exists * root{1}, pub_seed{1}, ots_addr{1}, address0{2}.
+  elim * => P1 P2 P3 P4.
+  call (pk_from_sig_correct P1 P2 P3 P4); first by smt().
+  auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 
+                   H15 H16 H17 H18 H19 HM H20 H21 H22 H23 H24 H25 H26 
+                   H27 H28 H29 H30 *.
+  do split.
+    + admit. (* nao ha info sobre no ctx sobre o que e o t64 *)
+    + admit.
+    + admit. (* nao ha info sobre o _M ==> FIXME: Adicionar num invariante qlqr q M = node{2} *)
+    + admit. (* nao ha info na mm *)
+    + admit. (* nao ha info na mm *)
+    + move => H31 H32 H33 H34 resL resR H35 H36 *.
+      do split.
+        * smt(sub_k).
+        * admit.
+        * admit.
 
 seq 0 0 : (
      #{/~to_uint t64{1} = to_uint sm_ptr{1} + 35}
@@ -802,10 +870,10 @@ seq 1 1 : (#pre /\ to_list leaf{1} = NBytes.val nodes0{2}).
   elim * => P0 P1 P2 P3.
   call (ltree_correct P0 P1 P2 P3) => [/#|]. 
   auto => /> &1 &2 *; smt(@NBytes).
-
+ 
 seq 0 2 : (#{/~sub ltree_addr{1} 0 5 = sub address0{2} 0 5}pre /\ sub node_addr{1} 0 5 = sub address0{2} 0 5).
 - inline {1}; auto => /> *; do split; apply (eq_from_nth witness); rewrite !size_sub // => i?; rewrite !nth_sub //= !get_setE //; smt(sub_k).
- 
+  
 seq 4 0 : (#pre /\ t64{1} = sm_ptr{1} + sm_offset{1}); first by auto.
 
 outline {2} [1-2] by { nodes0 <@ ComputeRoot.compute_root (_seed, nodes0, address0, idx_sig0, auth0); }; 
@@ -845,6 +913,7 @@ do split.
 (* ------------------------------------------------------------------------------- *)
   
 swap {2} 1 1.
+
 seq 3 1 : (#pre /\ i{1} = W32.zero /\ ={idx_leaf}).
 - auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19 HM H20 H21 H22 H23 H24 H25 H26 H27 H28 H29 H30 H31 H32 H33 *.
   rewrite andwC; congr; first by smt(@W32 pow2_32).
