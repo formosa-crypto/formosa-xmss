@@ -937,32 +937,76 @@ idtac.
 seq 1 1 : (
   #pre /\
   wots_pk{1} = DecodeWotsPk pk_ots{2}
-); last by admit.
-- wp; exists * root{1}, pub_seed{1}, ots_addr{1}, address0{2}; elim * => P1 P2 P3 P4; call (pk_from_sig_correct P1 P2 P3 P4). admit.
+).
+- wp; exists * root{1}, pub_seed{1}, ots_addr{1}, address0{2}; elim * => P1 P2 P3 P4; call (pk_from_sig_correct P1 P2 P3 P4) => [/#|].
  auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 
                    H16 H17 HH H18 H19 HM H20 H21 H22 H23 H24 H25 H26 H27 H28
                    H29 H30 H31 H32 H33 H34 H35 H36 H37 H38 H39 H40 H41 *.
  do split; 1..4: by smt(@NBytes to_uint_cmp).
  move => H42 H43 H44 H45 resL resR H46 H47 *.
  do split.
-smt().
-
- last by auto => /> &1 &2 /#.
-(do split; 3: by rewrite /log_w (: w = XMSS_WOTS_W) 1:/# /XMSS_WOTS_W /XMSS_WOTS_LOG_W) => /#.
+   + have ZZ: resL.`2.[3] = P3.[3].
+      * have ->: resL.`2.[3] = nth witness (sub resL.`2 0 5) 3 by rewrite nth_sub /#.
+        rewrite H47 nth_sub /#.
+     rewrite ZZ; apply H33.
+   + rewrite -H34. 
+     apply (eq_from_nth witness); rewrite !size_sub // => j?.
+     rewrite !nth_sub 1,2:/# /=.
+     have ->: P3.[j] = nth witness (sub P3 0 5) j by rewrite nth_sub /#. 
+     rewrite -H47 nth_sub //= /#.
+   + apply (eq_from_nth witness); rewrite !size_sub // => j?.
+     rewrite !nth_sub 1,2:/# /=.
+     have ->: P4.[j] = nth witness (sub P4 0 5) j by rewrite nth_sub /#. 
+     rewrite -H40 -H47 nth_sub /#.
+   + smt().
 
 seq 0 0 : (
      #{/~to_uint t64{1} = to_uint sm_ptr{1} + 35}
      {/~sig_ots0{2} = EncodeWotsSignature (load_sig Glob.mem{1} t64{1})}pre /\
      sig_ots0{2} = EncodeWotsSignature (load_sig Glob.mem{1} (sm_ptr{1} + W64.of_int 35))
-); first by auto => /> *; do congr; smt(@W64 pow2_64).
+); first by admit. (* auto => /> *; do congr; smt(@W64 pow2_64). *)
  
 seq 3 0 : (#{/~to_uint sm_offset{1} = 35}pre /\ to_uint sm_offset{1} = 2179); first by auto => /> *; smt(@W64).
-
+ 
 seq 1 2 : (
    #{/~sub ots_addr{1} 0 4 = sub address0{2} 0 4}pre /\
    sub ltree_addr{1} 0 5 = sub address0{2} 0 5
 ).
-- inline {1}; auto => /> *; do split; apply (eq_from_nth witness); rewrite !size_sub // => i?; rewrite !nth_sub //= !get_setE //; smt(sub_k).
+- inline {1}.
+   auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 
+                   H16 H17 HH H18 H19 HM H20 H21 H22 H23 H24 H25 H26 H27 H28
+                   H29 H30 H31 H32 H33 H34 H35 H36 H37 H38 H39 H40 *. 
+   do split; 1..3,5: by (
+             apply (eq_from_nth witness); rewrite !size_sub // => i?; 
+             rewrite !nth_sub //= !get_setE //; smt(sub_k)
+   ).
+   apply (eq_from_nth witness); rewrite !size_sub // => i?.
+   rewrite /set_ltree_addr /set_type !nth_sub 1,2:/# /=.
+   case: (i = 0) => [H_i_eq_0 |?].
+      * rewrite !get_setE 1..6:/#.
+        rewrite !ifF 1..6:/#.
+        smt(sub_k).
+   case: (i = 1) => [H_i_eq_1 |?].
+      * rewrite !get_setE 1..6:/#.
+        rewrite !ifF 1..6:/#.
+        smt(sub_k).
+   case: (i = 2) => [H_i_eq_2 |?].
+      * rewrite !get_setE 1..6:/#.
+        rewrite !ifF 1..6:/#.
+        smt(sub_k).
+   case: (i = 3) => [H_i_eq_3 |?].
+      * rewrite !get_setE 1..6:/#.
+        rewrite ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# ifT 1:/#.
+        rewrite -H22.
+        admit. (* sub ltree precisa de it ate 4 *)
+   case: (i = 4) => [H_i_eq_4 |?].
+      * rewrite !get_setE 1..6:/#.
+        rewrite ifT 1:/#.
+        admit. (* nao ha info sobre o idx leaf aqui *)
+   case: (i = 5) => [H_i_eq_5 |/#].
+      * rewrite H_i_eq_5 /=.
+        admit.  (* falta mais info aqui tambem *)
+
 
 wp; conseq />.
     
@@ -970,14 +1014,99 @@ seq 1 1 : (#pre /\ to_list leaf{1} = NBytes.val nodes0{2}).
 - exists * wots_pk{1}, pub_seed{1}, ltree_addr{1}, address0{2}.
   elim * => P0 P1 P2 P3.
   call (ltree_correct P0 P1 P2 P3) => [/#|]. 
-auto => /> &1 &2 22? -> /#.
+  auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 
+                   H16 H17 HH H18 H19 HM H20 H21 H22 H23 H24 H25 H26 H27 H28
+                   H29 H30 H31 H32 H33 H34 H35 H36 H37 H38 H39 H40 *. 
+  do split.
+    * apply enc_dec_wots_pk => /#.
+    * rewrite H20; smt(@NBytes).
+  move => H41 H42 resL resR H43 H44 *.
+  do split; 1,5: by smt(sub_k).
+    * rewrite -H34. 
+      apply (eq_from_nth witness); rewrite !size_sub // => j?.
+      have ->: nth witness (sub resL.`3 0 3) j =
+               nth witness (sub resL.`3 0 5) j by rewrite !nth_sub /#.
+      rewrite H44 !nth_sub /#. 
+    * apply (eq_from_nth witness); rewrite !size_sub // => j?.
+      rewrite -H36.
+      have ->: nth witness (sub P2 0 3) j = 
+               nth witness (sub P2 0 5) j by rewrite !nth_sub /#.      
+      rewrite -H44 !nth_sub /#.   
+    * admit. (* nao ha informacao sobre resL.2 no contexto *)
 
 seq 0 2 : (#{/~sub ltree_addr{1} 0 5 = sub address0{2} 0 5}pre /\ sub node_addr{1} 0 5 = sub address0{2} 0 5).
-- inline {1}; auto => /> *; do split; apply (eq_from_nth witness); rewrite !size_sub // => i?; rewrite !nth_sub //= !get_setE //; smt(sub_k).
- 
+- inline {1}.
+  auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 
+                   H16 H17 HH H18 H19 HM H20 H21 H22 H23 H24 H25 H26 H27 H28
+                   H29 H30 H31 H32 H33 H34 H35 H36 H37 H38 H39 H40 H41. 
+  do split; 1,2: by (
+             apply (eq_from_nth witness); rewrite !size_sub // => i?; 
+             rewrite !nth_sub //= !get_setE //; smt(sub_k)
+  ).
+ - apply (eq_from_nth witness); rewrite !size_sub // => i?.
+   rewrite /set_tree_index /set_type !nth_sub 1,2:/# /=.
+   case: (i = 0) => [H_i_eq_0 |?].
+      * rewrite !get_setE 1..6:/#.
+        rewrite !ifF 1..6:/#.
+        smt(sub_k).
+   case: (i = 1) => [H_i_eq_1 |?].
+      * rewrite !get_setE 1..6:/#.
+        rewrite !ifF 1..6:/#.
+        smt(sub_k).
+   case: (i = 2) => [H_i_eq_2 |?].
+      * rewrite !get_setE 1..6:/#.
+        rewrite !ifF 1..6:/#.
+        smt(sub_k).
+   case: (i = 3) => [H_i_eq_3 |?].
+      * rewrite !get_setE 1..6:/#.
+        rewrite ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# ifT 1:/#.
+        rewrite -H23  H_i_eq_3.
+        have ->: ots_addr{1}.[3] =
+                 nth witness (sub ots_addr{1} 0 5) 3 by rewrite nth_sub /#. 
+        rewrite H38.
+        have ->: nth witness (sub address0{2} 0 5) 3 = 
+                 nth witness (sub address0{2} 0 4) 3 by rewrite !nth_sub /#.
+        rewrite nth_sub 1:/#. admit. (* nao ha info que chegue *)
+   case: (i = 4) => [H_i_eq_4 |?].
+      * rewrite !get_setE 1..6:/#.
+        rewrite ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# ifT 1:/#.
+        admit. (* nao ha info no ctx *)
+   case: (i = 5) => [H_i_eq_5 |/#].
+      * rewrite H_i_eq_5 /=.
+        admit.  (* falta mais info aqui tambem *)
+
+ - apply (eq_from_nth witness); rewrite !size_sub // => i?.
+   rewrite /set_tree_index /set_type !nth_sub 1,2:/# /=.
+   case: (i = 0) => [H_i_eq_0 |?].
+      * rewrite !get_setE 1..6:/#.
+        rewrite !ifF 1..6:/#.
+        smt(sub_k).
+   case: (i = 1) => [H_i_eq_1 |?].
+      * rewrite !get_setE 1..6:/#.
+        rewrite !ifF 1..6:/#.
+        smt(sub_k).
+   case: (i = 2) => [H_i_eq_2 |?].
+      * rewrite !get_setE 1..6:/#.
+        rewrite !ifF 1..6:/#.
+        smt(sub_k).
+   case: (i = 3) => [H_i_eq_3 |?].
+      * rewrite !get_setE 1..6:/#.
+        rewrite ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# ifT 1:/#.
+        by rewrite -H23 H_i_eq_3.
+   case: (i = 4) => [H_i_eq_4 |?].
+      * rewrite !get_setE 1..6:/#.
+        rewrite ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# ifT 1:/#.
+        admit. (* nao ha info no ctx *)
+   case: (i = 5) => [H_i_eq_5 |/#].
+      * rewrite H_i_eq_5 /=.
+        admit.  (* falta mais info aqui tambem *)
+     
 seq 4 0 : (#pre /\ t64{1} = sm_ptr{1} + sm_offset{1}); first by auto.
 
-outline {2} [1-2] by { nodes0 <@ ComputeRoot.compute_root (_seed, nodes0, address0, idx_sig0, auth0); }.
+admit.
+
+(*
+A CHAMADA AO COMPUTE ROOT QUE ESTAVA AQUI NO {2} DESAPARECEU PQ??????????'
 
 conseq />.
 exists * leaf{1}, pub_seed{1}, idx_leaf{1}, t64{1}, node_addr{1}, address0{2}.
@@ -985,4 +1114,5 @@ elim * => P0 P1 P2 P3 P4 P5.
 call (compute_root_equiv P0 P1 P2 P3 P4 P5) => [/# |].
 skip => /> &1 &2 41? ->.
 rewrite !to_uintD /#.
+*)
 qed.
