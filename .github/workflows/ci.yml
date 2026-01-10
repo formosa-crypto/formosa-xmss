@@ -26,7 +26,7 @@ jobs:
 
       - name: Build and save Docker image
         run: |
-          docker build -t jasmin-xmss:${{ github.sha }} .
+          docker build --build-arg EASYCRYPT_RELEASE= --build-arg OCAML_RELEASE=5.3.0 -t jasmin-xmss:${{ github.sha }} .
           docker save jasmin-xmss:${{ github.sha }} | gzip > image.tar.gz
 
       - name: Upload Docker image artifact
@@ -122,6 +122,25 @@ jobs:
       # - name: Test verify
       #   run: docker run --rm jasmin-xmss:${{ github.sha }} make -C test/xmss/ test_verify
 
+  check_security:
+    needs: build_image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Download Docker image
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image
+
+      - name: Load Docker image
+        run: |
+          gunzip -c image.tar.gz | docker load
+
+      - name: Check security
+        run: docker run --rm jasmin-xmss:${{ github.sha }} make -C proof/ check_spec_equivs
+
   check_spec_equivs:
     needs: build_image
     runs-on: ubuntu-latest
@@ -144,7 +163,7 @@ jobs:
       - name: Check spec equivalences
         run: docker run --rm jasmin-xmss:${{ github.sha }} make -C proof/ check_spec_equivs
 
-  check_correctness_proof_latest_release:
+  check_correctness_proof:
     needs: build_image
     runs-on: ubuntu-latest
     steps:
@@ -210,4 +229,3 @@ jobs:
 
       - name: Build
         run: docker run --rm jasmin-xmss:${{ github.sha }} make -C test/xmss/ check_valgrind CI=1
-    
