@@ -3553,7 +3553,7 @@ seq 2 1 : (   #pre
     move => apr jr; split => [/# | /lezNgt gehj eqhszap ? lehj apdef].
     rewrite AuthPath.insubdK 1:// ?NBytes.valKd /RFC.skr2sko /=.
     rewrite -/(adr2ads zero_address) XAddress.insubdK /valid_xadrs.
-    + by rewrite zeroadsE 1:HAX.Adrs.insubdK 1:zeroadiP 1:zeroxadiP.
+    + by rewrite zeroadsE 1:HAX.Adrs.insubdK 1:zeroadiP 1,3:// 2:zeroxadiP; 1:smt(ge2_l).
     rewrite &(eq_from_nth witness) ?size_rev ?size_map ?DBHL.valP 1:eq_sym 1://.
     move=> i rng_i; rewrite apdef 1:/# nth_rev ?DBHL.valP 1://.
     rewrite /cons_ap_trh /RFC.skr2sko /= DBHL.insubdK /= 1:&(szcnsh); 1: smt(ge1_h).
@@ -3696,9 +3696,11 @@ seq 1 1 : (   #pre
     by rewrite initE rngi /=.
     rewrite size_rcons /set_chidx /set_kpidx /set_idx.
     move: zeroadsE => @/adr2ads ->.
-    rewrite XAddress.insubdK /valid_xadrs HAX.Adrs.insubdK 1:zeroadiP 1:zeroxadiP.
+    rewrite XAddress.insubdK /valid_xadrs HAX.Adrs.insubdK 1:zeroadiP 1,3:// 2:zeroxadiP; 1:smt(ge2_l).
     by rewrite HAX.Adrs.insubdK 1:zeroadiP /put /=; smt(w_vals gt2_len Index.valP).
-    congr. rewrite HAX.Adrs.insubdK 1:zeroadiP /put /= ifF 1:/#.
+    congr.
+    rewrite HAX.Adrs.insubdK 1:zeroadiP 1,3://; 1:smt(ge2_l).
+    rewrite /put /= ifF 1:/#.
     rewrite /set_hash_addr /set_chain_addr /set_ots_addr ?setE /=.
     + rewrite /adr2idxs &(eq_from_nth witness) 1:size_rev 1:size_map 1:size_sub 1,2:// /=.
       move => j rngj.
@@ -3720,7 +3722,7 @@ seq 1 1 : (   #pre
     rewrite DigestBlock.valKd; congr.
     rewrite /set_chain_addr /set_ots_addr ?setE /=.
     rewrite /adr2ads /set_kpidx zeroidxsE /set_idx.
-    rewrite XAddress.insubdK /valid_xadrs ?HAX.Adrs.insubdK ?zeroadiP ?zeroxadiP.
+    rewrite XAddress.insubdK /valid_xadrs ?HAX.Adrs.insubdK ?zeroadiP ?zeroxadiP //; 1,2:smt(ge2_l).
     rewrite /put /= /set_chidx /set_idx HAX.Adrs.insubdK.
     + rewrite /valid_adrsidxs /= /valid_xidxvalslp /valid_xidxvalslpch /=; left; smt(w_vals gt2_len Index.valP).
     congr.
@@ -3759,8 +3761,8 @@ seq 1 1 : (   #pre
     (* Use user reduction? *)
     rewrite (iotaS _ 3) // (iotaS _ 2) // (iotaS _ 1) // (iota1) //= /rev /=.
     (* This is probably simplifiable---copy-pasted without thought from old proof *)
-    rewrite /RFC.skr2sko XAddress.insubdK /valid_xadrs ?HAX.Adrs.insubdK ?zeroidxsE ?zeroadiP ?zeroxadiP /=.
-    rewrite /set_typeidx HAX.Adrs.insubdK 1:valid_xadrsidxs_adrsidxs 1:zeroxadiP /put /=.
+    rewrite /RFC.skr2sko XAddress.insubdK /valid_xadrs ?HAX.Adrs.insubdK ?zeroidxsE ?zeroadiP ?zeroxadiP 1,3://; 1:smt(ge2_l).
+    rewrite /= /set_typeidx HAX.Adrs.insubdK 1:valid_xadrsidxs_adrsidxs 1:zeroxadiP /put /=.
     rewrite /set_kpidx /set_idx HAX.Adrs.insubdK 1:valid_xadrsidxs_adrsidxs 1:zeroxadiP /put /=.
     rewrite to_uint_small /=; 1:smt(Index.valP ge1_h h_max pow2_32 gt_exprsbde).
     split; 1: smt(Index.valP ge1_h h_max pow2_32 gt_exprsbde w_vals gt2_len).
@@ -3774,8 +3776,8 @@ seq 1 1 : (   #pre
   rewrite /len1 NBytes.valP -log2w_eq -fromint_div; 1: smt(logw_vals).
   by rewrite from_int_ceil mulrC divMr; smt(logw_vals).
   rewrite /RFC.skr2sko /= zeroidxsE XAddress.insubdK.
-  + by rewrite /valid_xadrs HAX.Adrs.insubdK 1:zeroadiP zeroxadiP.
-  by rewrite /set_typeidx /set_kpidx HAX.Adrs.insubdK /put /= 1:zeroadiP.
+  + rewrite /valid_xadrs HAX.Adrs.insubdK 1:zeroadiP 1,3:// 2:zeroxadiP; 1:smt(ge2_l).
+  by rewrite /set_typeidx /set_kpidx HAX.Adrs.insubdK /put /= 1:zeroadiP 1,3://; 1:smt(ge2_l).
   rewrite /set_ots_addr /set_type /set_chain_addr /set_ots_addr.
   rewrite ?setE &(ext_eq) => i rngi; rewrite ?initE rngi /=.
   case (i = 6) => [// | ns].
@@ -3785,9 +3787,9 @@ seq 1 1 : (   #pre
   case (i = 7) => [// | nfs /=].
   smt(initE).
   rewrite /RFC.skr2sko /= zeroidxsE XAddress.insubdK.
-  + by rewrite /valid_xadrs HAX.Adrs.insubdK 1:zeroadiP zeroxadiP.
-  rewrite /set_typeidx /set_kpidx HAX.Adrs.insubdK /put /= 1:zeroadiP.
-  rewrite /set_chidx /set_idx ?HAX.Adrs.insubdK /put /= 1,3:zeroadiP.
+  + by rewrite /valid_xadrs HAX.Adrs.insubdK 1:zeroadiP 1,3:// 2:zeroxadiP; 1:smt(ge2_l).
+  rewrite /set_typeidx /set_kpidx HAX.Adrs.insubdK /put /= 1:zeroadiP 1,3://; 1:smt(ge2_l).
+  rewrite /set_chidx /set_idx ?HAX.Adrs.insubdK /put /= 1,3:zeroadiP 1,3,5,7://; 1,3:smt(ge2_l).
   rewrite /valid_adrsidxs /= /valid_xidxvalslp /valid_xidxvalslpch /=; left.
   smt(val_w ge2_len Index.valP).
   rewrite /adr2ads /set_type /set_ots_addr /adr2idxs ?setE /=; congr.
@@ -3896,9 +3898,9 @@ sp; seq 1 1 : (   #pre
 + call pkFromSig_eq; auto=> /> &1 &2 ->.
   move=> eqpk1 eqpkoid idx_sig_lt_l -> eqsig eqauth eqcm eqpkr @/RFC.pkr2pko.
   rewrite /= zeroidxsE XAddress.insubdK.
-  + by rewrite /valid_xadrs HAX.Adrs.insubdK 1:zeroadiP zeroxadiP.
-  rewrite /set_typeidx /set_kpidx HAX.Adrs.insubdK /put /= 1:zeroadiP.
-  rewrite /set_idx ?HAX.Adrs.insubdK /put 1:zeroadiP /=.
+  + by rewrite /valid_xadrs HAX.Adrs.insubdK 1:zeroadiP 1,3:// 2:zeroxadiP; 1:smt(ge2_l).
+  rewrite /set_typeidx /set_kpidx HAX.Adrs.insubdK /put /= 1:zeroadiP 1,3://; 1:smt(ge2_l).
+  rewrite /set_idx ?HAX.Adrs.insubdK /put 1:zeroadiP 1,3:// /=; 1:smt(ge2_l).
   + by rewrite /valid_adrsidxs /= /valid_xidxvalslp /valid_xidxvalslpch /=; left; smt(w_vals ge2_len W32.to_uint_cmp).
   split; 2: smt(w_vals ge2_len W32.to_uint_cmp).
   rewrite /ads2adr /set_type /set_ots_addr HAX.Adrs.insubdK.
@@ -3929,8 +3931,21 @@ while{2} (BytesToBits (NBytes.val nodes0{2})
           /\ 0 <= k{2} <= h)
          (h - k{2}).
 + move => _ z.
-  proc change 2 : (! odd (to_uint idx_sig0 %/ 2 ^ k)).
-  + move=> &2; rewrite oddPn.
+  proc change 2 : {
+    if (! odd (to_uint idx_sig0 %/ 2 ^ k)) {
+      index <- get_tree_index address0;
+      address0 <- set_tree_index address0 (index %/ 2);
+      auth_k <- nth witness (AuthPath.val auth0) k;
+      nodes1 <- rand_hash _seed0 address0 nodes0 auth_k;
+    } else {
+      index <- get_tree_index address0;
+      address0 <- set_tree_index address0 ((index - 1) %/ 2);
+      auth_k <- nth witness (AuthPath.val auth0) k;
+      nodes1 <- rand_hash _seed0 address0 auth_k nodes0;
+    }
+  }.
+  + if=> // />; 2,3: by auto.
+    move=> &2; rewrite oddPn.
     by rewrite flrdv_intdiv; smt(W32.to_uint_cmp expr_gt0).
   auto => &2 /> eqnds ad0get ad0tidx ltl ge0k _ lthk; split => parity.
   + do ? split; 4..: smt(); last first.
@@ -4161,7 +4176,7 @@ congr.
 + by congr; smt(size_map AuthPath.valP).
 + rewrite /bs2block; do ? congr.
   rewrite zeroidxsE XAddress.insubdK.
-  + by rewrite /valid_xadrs HAX.Adrs.insubdK 1:zeroadiP zeroxadiP.
+  + by rewrite /valid_xadrs HAX.Adrs.insubdK 1:zeroadiP 1,3:// 2:zeroxadiP; 1:smt(ge2_l).
   rewrite /set_typeidx (HAX.Adrs.insubdK [0;0;0;0]) 1:valid_xadrsidxs_adrsidxs 1:zeroxadiP /put /=.
   rewrite /set_kpidx /set_idx (HAX.Adrs.insubdK [0;0;0;1]).
   rewrite /valid_adrsidxs /= /valid_xidxvalslp /valid_xidxvalslppkco /=; right; left.
@@ -4203,8 +4218,9 @@ congr.
   move=> ->; rewrite map_id.
   by rewrite /chn chfltn_id.
 + rewrite zeroidxsE /set_type /set_typeidx.
-  rewrite XAddress.insubdK /valid_xadrs 1:HAX.Adrs.insubdK 1:zeroadiP 1:zeroxadiP.
-  rewrite HAX.Adrs.insubdK 1:zeroadiP ?setE /put /= /adr2ads /adr2idxs; congr.
+  rewrite XAddress.insubdK /valid_xadrs 1:HAX.Adrs.insubdK 1:zeroadiP 1,3:// 2:zeroxadiP /=; 1:smt(ge2_l).
+  rewrite HAX.Adrs.insubdK 1:zeroadiP 1,3://; 1:smt(ge2_l).
+  rewrite ?setE /put /= /adr2ads /adr2idxs; congr.
   apply (eq_from_nth witness); 1: smt(size_rev size_map size_sub).
   move=> i /= rngi.
   rewrite nth_rev; 1: smt(size_rev size_map size_sub).
