@@ -154,8 +154,8 @@ lemma compute_root_equiv (_l _pub_seed : W8.t Array32.t, _idx : W32.t, path_ptr 
       arg{2}.`4 = _idx /\
       arg{2}.`5 = EncodeAuthPath (load_buf Glob.mem{1} path_ptr XMSS_AUTH_PATH_BYTES) /\
 
-      0 <= to_uint path_ptr + XMSS_AUTH_PATH_BYTES  < W32.max_uint /\
-      0 <= to_uint path_ptr < W32.max_uint /\
+      0 <= to_uint path_ptr + XMSS_AUTH_PATH_BYTES  < W64.max_uint /\
+      0 <= to_uint path_ptr < W64.max_uint /\
 
       sub a1 0 5 = sub a2 0 5 /\
       get_tree_index a2 = to_uint _idx /\
@@ -176,11 +176,11 @@ seq 6 0 : (
   idx_sig0{2} = leaf_idx0{1} /\
   auth0{2} = EncodeAuthPath (load_buf Glob.mem{1} auth_path_ptr0{1} XMSS_AUTH_PATH_BYTES) /\
   sub a1 0 5 = sub a2 0 5 /\
-  0 <= to_uint auth_path_ptr0{1} + XMSS_AUTH_PATH_BYTES  < W32.max_uint /\
-  0 <= to_uint auth_path_ptr0{1} < W32.max_uint  /\
+  0 <= to_uint auth_path_ptr0{1} + XMSS_AUTH_PATH_BYTES  < W64.max_uint /\
+  0 <= to_uint auth_path_ptr0{1} < W64.max_uint  /\
   auth_path_ptr0{1} = path_ptr /\
-  0 <= to_uint path_ptr + XMSS_AUTH_PATH_BYTES < W32.max_uint /\
-  0 <= to_uint path_ptr < W32.max_uint /\
+  0 <= to_uint path_ptr + XMSS_AUTH_PATH_BYTES < W64.max_uint /\
+  0 <= to_uint path_ptr < W64.max_uint /\
   get_tree_index a2 = to_uint _idx /\
   0 <= to_uint _idx < 2^XMSS_FULL_HEIGHT /\
   idx_sig0{2} = _idx /\
@@ -198,10 +198,10 @@ seq 8 0 : (
   auth0{2} =
   EncodeAuthPath (load_buf Glob.mem{1} _auth_path_ptr{1} XMSS_AUTH_PATH_BYTES) /\
   sub a1 0 5 = sub a2 0 5 /\
-  0 <= to_uint _auth_path_ptr{1} + XMSS_AUTH_PATH_BYTES  < W32.max_uint /\
-  0 <= to_uint _auth_path_ptr{1}  < W32.max_uint /\
-  0 <= to_uint path_ptr + XMSS_AUTH_PATH_BYTES < W32.max_uint /\
-  0 <= to_uint path_ptr < W32.max_uint /\
+  0 <= to_uint _auth_path_ptr{1} + XMSS_AUTH_PATH_BYTES  < W64.max_uint /\
+  0 <= to_uint _auth_path_ptr{1}  < W64.max_uint /\
+  0 <= to_uint path_ptr + XMSS_AUTH_PATH_BYTES < W64.max_uint /\
+  0 <= to_uint path_ptr < W64.max_uint /\
   _auth_path_ptr{1} = path_ptr /\
   get_tree_index a2 = to_uint _idx /\
   0 <= to_uint _idx < 2^XMSS_FULL_HEIGHT /\
@@ -217,10 +217,10 @@ while (
   _seed{2} = NBytes.insubd (to_list pub_seed1{1}) /\
   auth0{2} = EncodeAuthPath (load_buf Glob.mem{1} _auth_path_ptr{1} XMSS_AUTH_PATH_BYTES) /\
 
-  0 <= to_uint _auth_path_ptr{1} + XMSS_AUTH_PATH_BYTES  < W32.max_uint /\
-  0 <= to_uint _auth_path_ptr{1}  < W32.max_uint /\
-  0 <= to_uint path_ptr + XMSS_AUTH_PATH_BYTES < W32.max_uint /\
-  0 <= to_uint path_ptr < W32.max_uint /\
+  0 <= to_uint _auth_path_ptr{1} + XMSS_AUTH_PATH_BYTES  < W64.max_uint /\
+  0 <= to_uint _auth_path_ptr{1}  < W64.max_uint /\
+  0 <= to_uint path_ptr + XMSS_AUTH_PATH_BYTES < W64.max_uint /\
+  0 <= to_uint path_ptr < W64.max_uint /\
 
   _auth_path_ptr{1} = path_ptr /\
 
