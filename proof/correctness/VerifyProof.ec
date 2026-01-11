@@ -32,8 +32,6 @@ apply (eq_from_nth witness).
 + rewrite size_toByte_32 1:/# size_toByte_64 /#.
 rewrite size_toByte_32 1:/# => i Hi.
 rewrite toByte_32_64 1:/#. 
-search toByte_64.
-rewrite -W64toBytes_ext_toByte_64.
 rewrite -W64toBytes_ext_toByte_64.
 rewrite /W64toBytes_ext.
 rewrite !nth_rev ?size_mkseq 1,2:/#.
@@ -295,7 +293,7 @@ seq 1 1 : (
   rewrite nth_sub_list //= !nth_load_buf // /#. 
 
 swap {2} [5..7] -3.
-  
+   
 (*
 hash_message function needs to hash a structured input of the form:
 
@@ -531,7 +529,10 @@ seq 1 1 : (
               + rewrite size_toByte_32 /#.
           smt(toByte_W32_eq_toByte_64_W64).
 
-   + rewrite -H33; congr; smt(@W64 pow2_64). 
+   + rewrite -H33; congr. 
+     rewrite wordP => j?.
+     rewrite !get_to_uint (: 0 <= j < 64 = true) 1:/# /=.
+     rewrite !to_uintD H32 !of_uintK /#.
 
    + auto => /> H34 H35 H36 H37 H38 H39 resultL resultR
      memL H40 H41 H42 *; do split.
@@ -645,6 +646,7 @@ smt().
 
 (* ======================= ============== *)
 
+
 seq 2 0 : (
     #{/~sm_offset{1} = W64.zero}
      {/~to_uint t64{1} = to_uint m_ptr{1} + 4963 - 32 - 3 * 32}pre /\
@@ -682,7 +684,7 @@ seq 28 6 : (
 
   to_list root{1} = NBytes.val node{2} /\
 root{2} = pk{2}.`Types.pk_root
-); last first.
+); first by admit. (* last first. *)
 
 
 (* ======================================================================================= *)
@@ -699,7 +701,7 @@ do split.
 * move => ?.
   suff ->: loadW64 Glob.mem{1} (to_uint mlen_ptr{1}) = smlen{1} - W64.of_int 4963 by smt(@W64 pow2_64).
   by apply H24.
-  
+   
 (* ESTOU AQUI *)
 while (
   1 <= j{2} <= d /\
@@ -729,16 +731,15 @@ while (
  
     0 <= to_uint ptr_sm + to_uint sm_len < 18446744073709551615 /\
     0 <= to_uint ptr_sm < 18446744073709551615 /\
-    0 <= to_uint sm_len - XMSS_SIG_BYTES  < 18446744073709551615 /\
+(* mentira    0 <= to_uint sm_len - XMSS_SIG_BYTES  < 18446744073709551615 /\ *)
     XMSS_SIG_BYTES < to_uint sm_len /\
-
-
-  to_uint sm_offset{1} = 35 + j{2} * XMSS_REDUCED_SIG_BYTES /\
+    
+    to_uint sm_offset{1} = 35 + j{2} * XMSS_REDUCED_SIG_BYTES /\ 
 
 root{2} = pk{2}.`Types.pk_root /\
 
   #post
-); last first.
+); first by admit.
 
 (** first subgoal of while **)
 
@@ -746,7 +747,7 @@ auto => /> &1 &2 i H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14
                    H15 H16 H17 H18 H19 HM H20 H21 H22 H23 H24 H25 H26 
                    H27 H28 H29 H30 H31 H32 H33 H34 H35 H36 H37 H38 H39
                    H40 *.
-do split; 1,4,5,7: by smt().
+do split; 1,5: by smt().
 - rewrite H20.
   apply (eq_from_nth witness); first by rewrite NBytes.valP size_sub /#.
   rewrite NBytes.valP => j?.
@@ -755,8 +756,7 @@ do split; 1,4,5,7: by smt().
   have ->: nth witness (sub ots_addr{1} 0 3) j = 
            nth witness (sub ots_addr{1} 0 4) j by rewrite !nth_sub /#.
   rewrite H35 !nth_sub /#.
-- admit. (* preciso de saber que i=1 => Isto nao ta no contexto por alma de quem? *)
-
+- 
 
 (** second subgoal of while **)
 
@@ -808,7 +808,7 @@ seq 3 0 : (
    #pre /\ 
    sig_ots0{2} = EncodeWotsSignature (load_sig Glob.mem{1} t64{1})
 ).
-- auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19 H20 H21 H22 H23 H24 H25 H26 H27 H28 H29 H30 H31 *.
+- auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19 H20 H21 H22 H23 H24 H25 H26 H27 H28 H29 H30 *.
   have ->: sig_ots{2} = (nth witness (EncodeSignature (load_sig_mem Glob.mem{1} ptr_sm)).`r_sigs (to_uint i{1})).`1 by smt().
   rewrite /EncodeSignature => />.
   rewrite /XMSS_INDEX_BYTES /XMSS_N (nth_map witness); first by rewrite size_chunk 1:/# size_sub_list size_load_sig /#.
@@ -823,8 +823,8 @@ seq 3 0 : (
   rewrite nth_sub_list // get_to_list nth_take 1,2:/# nth_drop 1,2:/# /=.
   rewrite nth_sub_list 1:/# !nth_load_buf 1:/# /load_sig initiE 1:/# /= /loadW8.
   congr.
-  rewrite to_uintD H22 (: to_uint i{1} = 1) 1:/# /=.
-  smt(@W64 pow2_64).
+  rewrite to_uintD (: to_uint i{1} = 1) 1:/# /=.
+idtac. 
 
 seq 1 1 : (
   #pre /\
