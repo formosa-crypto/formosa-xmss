@@ -671,7 +671,9 @@ seq 28 6 : (
   ={idx_leaf} /\
   to_uint idx{1} = to_uint idx_tree{2} /\
   to_list root{1} = NBytes.val node{2} /\
+
   i{1} = W32.zero /\
+
   sub ots_addr{1} 0 4 = sub address{2} 0 4 /\
   sub ltree_addr{1} 0 3 = sub address{2} 0 3 /\
   sub node_addr{1} 0 3 = sub address{2} 0 3 /\
@@ -679,7 +681,7 @@ seq 28 6 : (
   valid_idx (EncodeSignature (load_sig_mem Glob.mem{1} ptr_sm)).`sig_idx /\
   s{2} = EncodeSignature (load_sig_mem Glob.mem{1} ptr_sm) /\
 
-  to_uint sm_offset{1} = 35 + j{2} * XMSS_REDUCED_SIG_BYTES /\
+  to_uint sm_offset{1} = 35 + XMSS_REDUCED_SIG_BYTES /\
 
   to_list root{1} = NBytes.val node{2} /\
 root{2} = pk{2}.`Types.pk_root
@@ -694,12 +696,12 @@ sp.
 
 seq 0 0 : (#pre /\ #post).
 - auto => /> &1 &2 j H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 ?H17 H18 H19 HM H20 H21 H22 H23 H24 H25 H26 H27 H28 H29 H30 H31 H32 H33 H34 
-H35 H36 H37.
+H35 H36 *.
 do split.
 * smt(W64.to_uint_cmp).
 * move => ?.
   suff ->: loadW64 Glob.mem{1} (to_uint mlen_ptr{1}) = smlen{1} - W64.of_int 4963 by smt(@W64 pow2_64).
-  by apply H24.
+  by apply H23.
    
 (* ESTOU AQUI *)
 while (
@@ -734,28 +736,29 @@ while (
     XMSS_SIG_BYTES < to_uint sm_len /\
     
 (* O -1 E VERDADE??????? *)
-    to_uint sm_offset{1} = 35 + ( (j{2} - 1) * XMSS_REDUCED_SIG_BYTES ) /\ 
+    to_uint sm_offset{1} = 35 + ( ( j{2} ) * XMSS_REDUCED_SIG_BYTES ) /\ 
  
 root{2} = pk{2}.`Types.pk_root /\
 
   #post
-); last first.
+); last first. 
 
 (** first subgoal of while **)
 
 auto => /> &1 &2 i H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 
                    H15 H16 H17 H18 H19 HM H20 H21 H22 H23 H24 H25 H26 
                    H27 H28 H29 H30 H31 H32 H33 H34 H35 H36 H37 H38 H39
-                   H40 *.
-do split; 1,4: by smt().
-- rewrite H20.
+                   *.
+do split; last by smt().
+- smt().
+- rewrite HM.
   apply (eq_from_nth witness); first by rewrite NBytes.valP size_sub /#.
   rewrite NBytes.valP => j?.
   rewrite /EncodePkNoOID /= NBytes.insubdK ?size_sub //= /#.
 - apply (eq_from_nth witness); rewrite !size_sub // => j?.
   have ->: nth witness (sub ots_addr{1} 0 3) j = 
            nth witness (sub ots_addr{1} 0 4) j by rewrite !nth_sub /#.
-  rewrite H35 !nth_sub /#.
+  rewrite H34 !nth_sub /#.
 
 (** second subgoal of while **)
 
@@ -806,25 +809,28 @@ seq 1 8 : (
 seq 3 0 : (
    #pre /\ 
    sig_ots0{2} = EncodeWotsSignature (load_sig Glob.mem{1} t64{1})
-).
-- auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19 H20 H21 H22 H23 H24 H25 H26 H27 H28 H29 H30 *.
+); last by admit. 
+- auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19 H20 H21 H22 H23 H24 H25 H26 H27 H28 H29 *. 
+  
   have ->: sig_ots{2} = (nth witness (EncodeSignature (load_sig_mem Glob.mem{1} ptr_sm)).`r_sigs (to_uint i{1})).`1 by smt().
+
   rewrite /EncodeSignature => />.
   rewrite /XMSS_INDEX_BYTES /XMSS_N (nth_map witness); first by rewrite size_chunk 1:/# size_sub_list size_load_sig /#.
   rewrite size_load_sig /XMSS_SIG_BYTES /=.
   rewrite nth_chunk 1:/# ?size_sub_list ?size_load_sig 1,2:/#.
   rewrite /EncodeReducedSignature => />.      
-  apply len_n_bytes_eq; apply (eq_from_nth witness); rewrite !LenNBytes.valP // => j?.
-  rewrite /EncodeWotsSignatureList /EncodeWotsSignature !LenNBytes.insubdK; 1,2: by rewrite /P size_map size_chunk 1:/# ?size_sub_list ?size_to_list /#.
+  apply len_n_bytes_eq; apply (eq_from_nth witness); rewrite !LenNBytes.valP // => j?. 
+  rewrite /EncodeWotsSignatureList /EncodeWotsSignature !LenNBytes.insubdK; 1,2: by rewrite /P size_map size_chunk 1:/# ?size_sub_list ?size_to_list /#. 
   congr; congr; congr.
   apply (eq_from_nth witness); first by rewrite size_to_list size_sub_list /#.
   rewrite size_sub_list 1:/# => k?.
   rewrite nth_sub_list // get_to_list nth_take 1,2:/# nth_drop 1,2:/# /=.
   rewrite nth_sub_list 1:/# !nth_load_buf 1:/# /load_sig initiE 1:/# /= /loadW8.
   congr.
-  rewrite to_uintD (: to_uint i{1} = 1) 1:/# /=.
-idtac. 
+  rewrite to_uintD (: to_uint i{1} = 1) 1:/# /= H20.
+  smt().
 
+(* ATE AQUI TA TUDO A FUNCIONAR DIREITO *)
 seq 1 1 : (
   #pre /\
   wots_pk{1} = DecodeWotsPk pk_ots{2}
