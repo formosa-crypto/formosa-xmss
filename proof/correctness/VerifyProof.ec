@@ -656,7 +656,7 @@ unroll {1} 2; rcondt {1} 2; first by auto.
    
 conseq />.
  
-seq 28 6 : (
+seq 28 7 : (
   #{/~ots_addr{1} = zero_address}
    {/~address{2} = zero_address}
    {/~(forall (k : int),
@@ -684,7 +684,7 @@ seq 28 6 : (
   to_uint sm_offset{1} = 35 + XMSS_REDUCED_SIG_BYTES /\
 
   to_list root{1} = NBytes.val node{2} /\
-root{2} = pk{2}.`Types.pk_root
+root{2} = pk{2}.`Types.pk_root 
 ); first by admit. (* last first. *)
 
 
@@ -702,7 +702,7 @@ do split.
 * move => ?.
   suff ->: loadW64 Glob.mem{1} (to_uint mlen_ptr{1}) = smlen{1} - W64.of_int 4963 by smt(@W64 pow2_64).
   by apply H23.
-   
+    
 (* ESTOU AQUI *)
 while (
   1 <= j{2} <= d /\
@@ -739,9 +739,13 @@ while (
     to_uint sm_offset{1} = 35 + ( ( j{2} ) * XMSS_REDUCED_SIG_BYTES ) /\ 
  
 root{2} = pk{2}.`Types.pk_root /\
+   to_list root{1} = NBytes.val node{2} /\
+  _M'{2} = node{2} /\
+
+node{2} = seed{2} (* ??????? *) /\ 
 
   #post
-); last first. 
+); last first.
 
 (** first subgoal of while **)
 
@@ -751,6 +755,8 @@ auto => /> &1 &2 i H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14
                    *.
 do split; last by smt().
 - smt().
+- smt().
+- smt().
 - rewrite HM.
   apply (eq_from_nth witness); first by rewrite NBytes.valP size_sub /#.
   rewrite NBytes.valP => j?.
@@ -759,10 +765,14 @@ do split; last by smt().
   have ->: nth witness (sub ots_addr{1} 0 3) j = 
            nth witness (sub ots_addr{1} 0 4) j by rewrite !nth_sub /#.
   rewrite H34 !nth_sub /#.
+- smt().
+- smt().
+- smt().
 
 (** second subgoal of while **)
 
-wp; conseq />.
+wp. (* conseq />. *)
+
 seq 2 1 : #pre; first by auto => /> &1 &2 *; rewrite andwC h_val d_val /(`<<`) /=; congr; smt(@W32 pow2_32).
 
 seq 1 1 : #pre.
@@ -790,7 +800,7 @@ seq 3 1 : #pre.
 
 inline {2} 1.
 
-conseq />.
+(* conseq />. *)
    
 seq 1 8 : (
   #pre /\
@@ -808,8 +818,9 @@ seq 1 8 : (
 
 seq 3 0 : (
    #pre /\ 
-   sig_ots0{2} = EncodeWotsSignature (load_sig Glob.mem{1} t64{1})
-); last by admit. 
+   sig_ots0{2} = EncodeWotsSignature (load_sig Glob.mem{1} t64{1}) /\
+   t64{1} = sm_ptr{1} + sm_offset{1}
+). 
 - auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19 H20 H21 H22 H23 H24 H25 H26 H27 H28 H29 *. 
   
   have ->: sig_ots{2} = (nth witness (EncodeSignature (load_sig_mem Glob.mem{1} ptr_sm)).`r_sigs (to_uint i{1})).`1 by smt().
@@ -841,18 +852,27 @@ seq 1 1 : (
   call (pk_from_sig_correct P1 P2 P3 P4); first by smt().
   auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 
                    H15 H16 H17 H18 H19 HM H20 H21 H22 H23 H24 H25 H26 
-                   H27 H28 H29 H30 *.
+                   H27 H28 *.
   do split.
-    + admit. (* nao ha info sobre no ctx sobre o que e o t64 *)
-    + admit.
-    + admit. (* nao ha info sobre o _M ==> FIXME: Adicionar num invariante qlqr q M = node{2} *)
+    + smt(@W64).
+    + smt(@W64). 
+    + rewrite H20; smt(@NBytes).
+    + smt(@NBytes).
     + admit. (* nao ha info na mm *)
-    + admit. (* nao ha info na mm *)
-    + move => H31 H32 H33 H34 resL resR H35 H36 *.
+    + move => H31 H32 H33 H34 HH resL resR H35 H36 *.
       do split.
         * smt(sub_k).
-        * admit.
-        * admit.
+
+        * apply (eq_from_nth witness); rewrite !size_sub //= => j?.
+          rewrite -H10 !nth_sub //=.
+          smt(sub_k).
+
+        * apply (eq_from_nth witness); rewrite !size_sub //= => j?.
+          have ->: nth witness (sub P4 0 4) j = 
+                   nth witness (sub P4 0 5) j by rewrite !nth_sub /#. 
+          rewrite -HH -H36.
+          by rewrite !nth_sub /#.
+          
 
 seq 0 0 : (
      #{/~to_uint t64{1} = to_uint sm_ptr{1} + 35}
