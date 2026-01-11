@@ -654,7 +654,7 @@ seq 2 0 : (
 unroll {1} 2; rcondt {1} 2; first by auto.
    
 conseq />.
-
+ 
 seq 28 6 : (
   #{/~ots_addr{1} = zero_address}
    {/~address{2} = zero_address}
@@ -740,7 +740,11 @@ seq 3 1 : (
 
    sub ots_addr{1} 0 4 = sub address{2} 0 4 /\
    sub ltree_addr{1} 0 3 = sub address{2} 0 3 /\
-   sub node_addr{1} 0 3 = sub address{2} 0 3
+   sub node_addr{1} 0 3 = sub address{2} 0 3 /\
+     ltree_addr{1}.[4] = W32.zero /\
+   address{2}.[4] = W32.zero /\
+   node_addr{1}.[4] = W32.zero /\
+   node_addr{1}.[4] = W32.zero
 ).
 - inline {1}.
   rewrite /set_tree_addr.
@@ -774,6 +778,9 @@ seq 3 1 : (
             congr.
             rewrite to_uint_shr of_uintK /#. 
        smt(zero_addr_i).
+     + smt().
+     + smt().
+     + smt().
 
 inline {2} 1.
 conseq />.
@@ -789,11 +796,14 @@ seq 0 7 : (
   
    sub ots_addr{1} 0 4 = sub address0{2} 0 4 /\
    sub ltree_addr{1} 0 3 = sub address0{2} 0 3 /\
-  sub node_addr{1} 0 3 = sub address0{2} 0 3 
+  sub node_addr{1} 0 3 = sub address0{2} 0 3 /\
+     ltree_addr{1}.[4] = W32.zero /\
+   address{2}.[4] = W32.zero
+
 ).
 - auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 
                    H16 H17 HH H18 H19 HM H20 H21 H22 H23 H24 H25 H26 H27 H28
-                   H29 H30 H31 H32 H33 H34 H35 H36.
+                   H29 H30 H31 H32 H33 H34 H35 H36 *.
   do split; by apply (eq_from_nth witness); rewrite !size_sub // => i?; rewrite !nth_sub // !get_setE //; smt(sub_k).
       
 
@@ -802,6 +812,7 @@ seq 1 1 : (
     sub ots_addr{1} 0 5 = sub address0{2} 0 5 /\
     ots_addr{1}.[4] = idx_leaf{2}
 ).
+
 - inline {1}; auto => /> *; do split; apply (eq_from_nth witness); rewrite !size_sub // => i?; rewrite !nth_sub // !get_setE //; smt(sub_k).
 
 seq 3 0 : (
@@ -820,7 +831,7 @@ seq 1 1 : (
 - wp; exists * root{1}, pub_seed{1}, ots_addr{1}, address0{2}; elim * => P1 P2 P3 P4; call (pk_from_sig_correct P1 P2 P3 P4) => [/#|].
  auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 
                    H16 H17 HH H18 H19 HM H20 H21 H22 H23 H24 H25 H26 H27 H28
-                   H29 H30 H31 H32 H33 H34 H35 H36 H37 H38 H39 H40 H41 *.
+                   H29 H30 H31 H32 H33 H34 H35 H36 H37 H38 H39 H40 H41 ?HZ *.
  do split.
    * smt().
    * smt().
@@ -835,7 +846,6 @@ rewrite /EncodeReducedSignature /=.
 rewrite (nth_map witness).
 + rewrite size_chunk 1:/# size_sub_list /#.
 auto => />.
-
 rewrite /EncodeWotsSignatureList /EncodeWotsSignature; congr.
 congr.
 apply (eq_from_nth witness).
@@ -859,7 +869,7 @@ rewrite initiE 1:/# /=.
 smt().
 
    * rewrite H20; smt(@NBytes).
-   * move => H42 H43 H44 H45 HZ resL resR H46 H47 *.
+   * move => H42 H43 H44 H45 HZz resL resR H46 H47*.
  do split.
    + have ZZ: resL.`2.[3] = P3.[3].
       * have ->: resL.`2.[3] = nth witness (sub resL.`2 0 5) 3 by rewrite nth_sub /#.
@@ -873,7 +883,8 @@ smt().
    + apply (eq_from_nth witness); rewrite !size_sub // => j?.
      rewrite !nth_sub 1,2:/# /=.
      have ->: P4.[j] = nth witness (sub P4 0 5) j by rewrite nth_sub /#. 
-     rewrite -H40 -H47 nth_sub /#.
+
+     rewrite -HZ -H47 nth_sub /#.
    + smt().
    + smt(sub_k).
  
@@ -887,21 +898,71 @@ seq 3 0 : (
                    H29 H30 H31 H32 H33 H34 H35 H36 H37 H38 H39 H40 *.
   rewrite !to_uintD of_uintK.
   rewrite H30; ring.
- 
+
 seq 1 2 : (
-   #{/~sub ots_addr{1} 0 4 = sub address0{2} 0 4}pre /\
-   sub ltree_addr{1} 0 5 = sub address0{2} 0 5
+   #{/~sub ots_addr{1} 0 4 = sub address0{2} 0 4}
+    {/~sub ots_addr{1} 0 5 = sub address0{2} 0 5}
+    {/~ltree_addr{1}.[4] = W32.zero}pre /\
+    sub ltree_addr{1} 0 5 = sub address0{2} 0 5 /\
+ltree_addr{1}.[4] = idx_leaf{1}
 ).
 - inline {1}.
    auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 
                    H16 H17 HH H18 H19 HM H20 H21 H22 H23 H24 H25 H26 H27 H28
+                   H29 H30 H31 H32 H33 H34 H35 H36 H37 H38 H39 H40 H41 H42 H43 *. 
+   do split.
+
+     * apply (eq_from_nth witness); rewrite !size_sub // => i?; 
+       rewrite !nth_sub //= !get_setE //; smt(sub_k).
+     * apply (eq_from_nth witness); rewrite !size_sub // => i?; 
+       rewrite !nth_sub //= !get_setE //; smt(sub_k).
+     * apply (eq_from_nth witness); rewrite !size_sub // => i?; 
+       rewrite !nth_sub //= !get_setE //; smt(sub_k).
+     * apply (eq_from_nth witness); rewrite !size_sub // => i?; 
+       rewrite !nth_sub //= !get_setE //; smt(sub_k).
+
+wp; conseq />.
+    
+seq 1 1 : (#pre /\ to_list leaf{1} = NBytes.val nodes0{2}).
+- exists * wots_pk{1}, pub_seed{1}, ltree_addr{1}, address0{2}.
+  elim * => P0 P1 P2 P3.
+  call (ltree_correct P0 P1 P2 P3) => [/#|]. 
+  auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 
+                   H16 H17 HH H18 H19 HM H20 H21 H22 H23 H24 H25 H26 H27 H28
                    H29 H30 H31 H32 H33 H34 H35 H36 H37 H38 H39 H40 *. 
-   do split; 1..3,5: by (
+  do split.
+    * apply enc_dec_wots_pk => /#.
+    * rewrite H20; smt(@NBytes).
+  move => H41 H42 resL resR H43 H44 *.
+  do split; 1,5: by smt(sub_k).
+    * rewrite -H34. 
+      apply (eq_from_nth witness); rewrite !size_sub // => j?.
+      have ->: nth witness (sub resL.`3 0 3) j =
+               nth witness (sub resL.`3 0 5) j by rewrite !nth_sub /#.
+      rewrite H44 !nth_sub /#. 
+    * apply (eq_from_nth witness); rewrite !size_sub // => j?.
+      rewrite -H38.
+      have ->: nth witness (sub P2 0 3) j = 
+               nth witness (sub P2 0 5) j by rewrite !nth_sub /#.      
+      rewrite -H44 !nth_sub /#.   
+    * admit. (* nao ha informacao sobre resL.2 no contexto *)
+    * have ->: resL.`3.[4] = nth witness (sub resL.`3 0 5) 4 by rewrite nth_sub.
+      rewrite H44 nth_sub /#.
+
+seq 0 2 : (
+    #{/~sub ltree_addr{1} 0 5 = sub address0{2} 0 5}pre /\ 
+     sub node_addr{1} 0 5 = sub address0{2} 0 5
+).
+- inline {1}.
+  auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 
+                   H16 H17 HH H18 H19 HM H20 H21 H22 H23 H24 H25 H26 H27 H28
+                   H29 H30 H31 H32 H33 H34 H35 H36 H37 H38 H39 H40 H41 *. 
+  do split; 1,2: by (
              apply (eq_from_nth witness); rewrite !size_sub // => i?; 
              rewrite !nth_sub //= !get_setE //; smt(sub_k)
-   ).
-   apply (eq_from_nth witness); rewrite !size_sub // => i?.
-   rewrite /set_ltree_addr /set_type !nth_sub 1,2:/# /=.
+  ).
+ - apply (eq_from_nth witness); rewrite !size_sub // => i?.
+   rewrite /set_tree_index /set_type !nth_sub 1,2:/# /=.
    case: (i = 0) => [H_i_eq_0 |?].
       * rewrite !get_setE 1..6:/#.
         rewrite !ifF 1..6:/#.
@@ -917,10 +978,10 @@ seq 1 2 : (
    case: (i = 3) => [H_i_eq_3 |?].
       * rewrite !get_setE 1..6:/#.
         rewrite ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# ifT 1:/#.
-        rewrite -H22.
-        rewrite H_i_eq_3 H32.
-        admit. (* sub ltree precisa de it ate 4 *)
+        by rewrite -H23  H_i_eq_3.
    case: (i = 4) => [H_i_eq_4 |?].
       * rewrite !get_setE 1..6:/#.
-        rewrite ifT /#.
+        rewrite ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# ifT 1:/#.
+        rewrite H_i_eq_4 /#.
    case: (i = 5) => /#.
+      
