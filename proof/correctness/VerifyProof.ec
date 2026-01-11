@@ -615,8 +615,7 @@ have := H18; rewrite /disjoint_ptr => Hdisj_full.
           to_uint ptr_sm + i <> to_uint ptr_m + k by smt().
   smt().
 
-* idtac.
-  suff ->: load_buf memL (ptr_m + W64.of_int XMSS_SIG_BYTES) (to_uint sm_len - XMSS_SIG_BYTES) =
+* suff ->: load_buf memL (ptr_m + W64.of_int XMSS_SIG_BYTES) (to_uint sm_len - XMSS_SIG_BYTES) =
            load_buf P0 (ptr_m + W64.of_int XMSS_SIG_BYTES) (to_uint sm_len - XMSS_SIG_BYTES) by apply H30.
   apply (eq_from_nth witness); rewrite !size_load_buf. 
 smt().
@@ -702,7 +701,7 @@ do split.
 * move => ?.
   suff ->: loadW64 Glob.mem{1} (to_uint mlen_ptr{1}) = smlen{1} - W64.of_int 4963 by smt(@W64 pow2_64).
   by apply H23.
-    
+     
 (* ESTOU AQUI *)
 while (
   1 <= j{2} <= d /\
@@ -721,7 +720,7 @@ while (
   ltree_addr{1}.[3] = W32.one /\
   node_addr{1}.[3] = (of_int 2)%W32 /\
 
-  sub ots_addr{1} 0 3 = sub address{2} 0 3 /\
+  sub ots_addr{1} 0 4 = sub address{2} 0 4 /\
   sub ltree_addr{1} 0 3 = sub address{2} 0 3 /\
   sub node_addr{1} 0 3 = sub address{2} 0 3 /\
 
@@ -761,10 +760,6 @@ do split; last by smt().
   apply (eq_from_nth witness); first by rewrite NBytes.valP size_sub /#.
   rewrite NBytes.valP => j?.
   rewrite /EncodePkNoOID /= NBytes.insubdK ?size_sub //= /#.
-- apply (eq_from_nth witness); rewrite !size_sub // => j?.
-  have ->: nth witness (sub ots_addr{1} 0 3) j = 
-           nth witness (sub ots_addr{1} 0 4) j by rewrite !nth_sub /#.
-  rewrite H34 !nth_sub /#.
 - smt().
 - smt().
 - smt().
@@ -783,6 +778,8 @@ seq 0 1 : (#pre /\ (sig_ots{2}, auth{2}) = nth witness s{2}.`r_sigs j{2}); first
 seq 3 1 : #pre.
 - inline {1}; auto => /> &1 &2 *; do split; apply (eq_from_nth witness); rewrite !size_sub // => k?; rewrite !nth_sub // !get_setE //=; smt(sub_k).
 
+print set_tree_addr.
+
 seq 3 1 : #pre.
 - inline {1}; auto => /> *; rewrite /set_tree_addr; do split; apply (eq_from_nth witness); rewrite !size_sub // => i?; rewrite !nth_sub // !get_setE //=.
    + case (i = 1) => [-> /= | ?].
@@ -800,8 +797,11 @@ seq 3 1 : #pre.
 
 inline {2} 1.
 
+print set_ots_addr.
+print sub.
+
 (* conseq />. *)
-   
+
 seq 1 8 : (
   #pre /\
 
@@ -811,7 +811,7 @@ seq 1 8 : (
    M{2} = _M'{2} /\
    _seed{2} = node{2} /\
   
-   sub ots_addr{1} 0 4 = sub address0{2} 0 4 /\
+   sub ots_addr{1} 0 5 = sub address0{2} 0 5 /\
    sub ltree_addr{1} 0 3 = sub address0{2} 0 3 /\
    sub node_addr{1} 0 3 = sub address0{2} 0 3
 ); first by inline {1}; auto => /> *; do split; apply (eq_from_nth witness); rewrite !size_sub // => i?; rewrite !nth_sub // !get_setE //; smt(sub_k).
@@ -841,7 +841,6 @@ seq 3 0 : (
   rewrite to_uintD (: to_uint i{1} = 1) 1:/# /= H20.
   smt().
 
-(* ATE AQUI TA TUDO A FUNCIONAR DIREITO *)
 seq 1 1 : (
   #pre /\
   wots_pk{1} = DecodeWotsPk pk_ots{2}
@@ -853,32 +852,33 @@ seq 1 1 : (
   auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 
                    H15 H16 H17 H18 H19 HM H20 H21 H22 H23 H24 H25 H26 
                    H27 H28 *.
+
+print pk_from_sig_correct.
+
   do split.
     + smt(@W64).
     + smt(@W64). 
     + rewrite H20; smt(@NBytes).
     + smt(@NBytes).
-    + admit. (* nao ha info na mm *)
-    + move => H31 H32 H33 H34 HH resL resR H35 H36 *.
+    + move => H31 H32 H33 H34  resL resR H35 *.
       do split.
         * smt(sub_k).
-
         * apply (eq_from_nth witness); rewrite !size_sub //= => j?.
           rewrite -H10 !nth_sub //=.
           smt(sub_k).
-
-        * apply (eq_from_nth witness); rewrite !size_sub //= => j?.
-          have ->: nth witness (sub P4 0 4) j = 
-                   nth witness (sub P4 0 5) j by rewrite !nth_sub /#. 
-          rewrite -HH -H36.
-          by rewrite !nth_sub /#.
+        * smt().
           
-
 seq 0 0 : (
      #{/~to_uint t64{1} = to_uint sm_ptr{1} + 35}
      {/~sig_ots0{2} = EncodeWotsSignature (load_sig Glob.mem{1} t64{1})}pre /\
      sig_ots0{2} = EncodeWotsSignature (load_sig Glob.mem{1} (sm_ptr{1} + W64.of_int 35))
-); first by auto => /> *; do congr; smt(@W64 pow2_64).
+); last by admit.
+- auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 
+                   H15 H16 H17 H18 H19 HM H20 H21 H22 H23 H24 H25 H26 
+                   H27 H28 *.
+  do congr.
+
+*; do congr; smt(@W64 pow2_64).
 
 seq 3 0 : (#{/~to_uint sm_offset{1} = 35}pre /\ to_uint sm_offset{1} = 2179); first by auto => /> *; smt(@W64).
 
