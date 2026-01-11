@@ -654,7 +654,10 @@ seq 2 0 : (
 unroll {1} 2; rcondt {1} 2; first by auto.
    
 conseq />.
- 
+
+print XMSS_SIG_BYTES.
+print XMSS_REDUCED_SIG_BYTES.
+
 seq 28 7 : (
   #{/~ots_addr{1} = zero_address}
    {/~address{2} = zero_address}
@@ -663,7 +666,7 @@ seq 28 7 : (
    {/~(forall (k : int),
       0 <= k && k < 8 => k <> 3 => node_addr{1}.[k] = W32.zero)}
    {/~ to_list root{1} = NBytes.val _M'{2}}pre /\
-  to_uint sm_offset{1} = 35 /\
+(*  to_uint sm_offset{1} = 35 /\ *)
   ots_addr{1}.[3] = W32.zero /\
   ltree_addr{1}.[3] = W32.one /\
   node_addr{1}.[3] = (of_int 2)%W32 /\
@@ -743,6 +746,8 @@ root{2} = pk{2}.`Types.pk_root /\
 
 node{2} = seed{2} (* ??????? *) /\ 
 
+  node_addr{1}.[4] = W32.zero /\
+
   #post
 ); last first.
 
@@ -760,6 +765,7 @@ do split; last by smt().
   apply (eq_from_nth witness); first by rewrite NBytes.valP size_sub /#.
   rewrite NBytes.valP => j?.
   rewrite /EncodePkNoOID /= NBytes.insubdK ?size_sub //= /#.
+- smt().
 - smt().
 - smt().
 - smt().
@@ -867,23 +873,28 @@ print pk_from_sig_correct.
           rewrite -H10 !nth_sub //=.
           smt(sub_k).
         * smt().
-          
+           
 seq 0 0 : (
-     #{/~to_uint t64{1} = to_uint sm_ptr{1} + 35}
+     #{/~t64{1} = sm_ptr{1} + sm_offset{1}}
      {/~sig_ots0{2} = EncodeWotsSignature (load_sig Glob.mem{1} t64{1})}pre /\
-     sig_ots0{2} = EncodeWotsSignature (load_sig Glob.mem{1} (sm_ptr{1} + W64.of_int 35))
-); last by admit.
-- auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 
-                   H15 H16 H17 H18 H19 HM H20 H21 H22 H23 H24 H25 H26 
-                   H27 H28 *.
-  do congr.
+     sig_ots0{2} = EncodeWotsSignature (load_sig Glob.mem{1} (sm_ptr{1} + sm_offset{1}))
+); first by auto.
 
-*; do congr; smt(@W64 pow2_64).
-
-seq 3 0 : (#{/~to_uint sm_offset{1} = 35}pre /\ to_uint sm_offset{1} = 2179); first by auto => /> *; smt(@W64).
+ 
+seq 3 0 : (
+  #{/~to_uint sm_offset{1} = 35 + j{2} * XMSS_REDUCED_SIG_BYTES}
+   {/~sig_ots0{2} = EncodeWotsSignature (load_sig Glob.mem{1} (sm_ptr{1} + sm_offset{1}))}pre /\
+   to_uint sm_offset{1} = 35 + XMSS_REDUCED_SIG_BYTES + 2144 /\
+sig_ots0{2} = 
+    EncodeWotsSignature (load_sig Glob.mem{1} (sm_ptr{1} + W64.of_int (35 + XMSS_REDUCED_SIG_BYTES)))
+).
+- auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19 H20 H21 H22 H23 H24 H25 H26 H27 H28 H29 *.
+ split.
+  * rewrite to_uintD H20 (: to_uint i{1} = 1) 1:/# /= /#.
+  * do congr; smt(@W64).
 
 seq 1 2 : (
-   #{/~sub ots_addr{1} 0 4 = sub address0{2} 0 4}pre /\
+   #{/~sub ots_addr{1} 0 5 = sub address0{2} 0 5}pre /\
    sub ltree_addr{1} 0 5 = sub address0{2} 0 5
 ).
 - inline {1}; auto => /> *; do split; apply (eq_from_nth witness); rewrite !size_sub // => i?; rewrite !nth_sub //= !get_setE //; smt(sub_k).
@@ -894,11 +905,52 @@ seq 1 1 : (#pre /\ to_list leaf{1} = NBytes.val nodes0{2}).
 - exists * wots_pk{1}, pub_seed{1}, ltree_addr{1}, address0{2}.
   elim * => P0 P1 P2 P3.
   call (ltree_correct P0 P1 P2 P3) => [/#|]. 
-  auto => /> &1 &2 *; smt(@NBytes).
- 
-seq 0 2 : (#{/~sub ltree_addr{1} 0 5 = sub address0{2} 0 5}pre /\ sub node_addr{1} 0 5 = sub address0{2} 0 5).
-- inline {1}; auto => /> *; do split; apply (eq_from_nth witness); rewrite !size_sub // => i?; rewrite !nth_sub //= !get_setE //; smt(sub_k).
-  
+  auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 
+                 H16 H17 H18 H19 H20 H21 H22 H23 H24 H25 H26 H27 H28 H29 HH *.
+  do split.
+    + smt(enc_dec_wots_pk).
+    + rewrite H5; smt(@NBytes).
+    + move => H30 H31 resL resR H32 H33 *.
+      do split.
+        * smt(sub_k).
+
+        * apply (eq_from_nth witness); rewrite !size_sub //= => j?.
+          rewrite -H11.
+          have ->: nth witness (sub P2 0 3) j = 
+                   nth witness (sub P2 0 5) j by rewrite !nth_sub /#.
+          rewrite -H33 !nth_sub /#.
+
+        * apply (eq_from_nth witness); rewrite !size_sub //= => j?. 
+          have ->: nth witness (sub P3 0 3) j = 
+                   nth witness (sub P3 0 5) j by rewrite !nth_sub /#.
+          rewrite -HH -H33 !nth_sub /#.
+
+        * admit. (* nao ha info resL.`2 em lado nenhum ==> ltree_correct nao nos da isto *)
+        * rewrite H33 /#.
+    
+seq 0 2 : (
+    #{/~sub ltree_addr{1} 0 5 = sub address0{2} 0 5}pre /\ 
+    sub node_addr{1} 0 5 = sub address0{2} 0 5
+).
+- auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 
+                 H16 H17 H18 H19 H20 H21 H22 H23 H24 H25 H26 H27 H28 H29 *.
+  do split; (apply (eq_from_nth witness); rewrite !size_sub //= => j?).
+    * rewrite /set_tree_index /set_type H27.
+      rewrite !nth_sub //= !get_setE //= !ifF /#.
+    * rewrite /set_tree_index /set_type H28.
+      rewrite !nth_sub //= !get_setE //= !ifF /#.
+print set_tree_index.
+print set_type.
+
+    * rewrite /set_tree_index /set_type.
+      rewrite !nth_sub //= !get_setE //=.
+      rewrite ifF 1:/#.
+      rewrite ifF 1:/#.
+      rewrite ifF 1:/#.
+      rewrite ifF 1:/#.
+      case: (j = 3) => [-> /= /# | ?].
+      case: (j = 4) => [->/= /#|?]; last by smt(sub_k). 
+
 seq 4 0 : (#pre /\ t64{1} = sm_ptr{1} + sm_offset{1}); first by auto.
 
 outline {2} [1-2] by { nodes0 <@ ComputeRoot.compute_root (_seed, nodes0, address0, idx_sig0, auth0); }; 
@@ -908,10 +960,12 @@ exists * leaf{1}, pub_seed{1}, idx_leaf{1}, t64{1}, node_addr{1}, address0{2}.
 elim * => P0 P1 P2 P3 P4 P5.
 call (compute_root_equiv P0 P1 P2 P3 P4 P5) => [/# |].
 skip => /> &1 &2.
-move => H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19 H20 H21 H22 H23 H24 H25 H26 H27 H28 H29 H30 H31 H32 H33.
-do split.
+move => H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19 H20 H21 H22 H23 H24 H25 H26 H27 H28 H29 H30 *.
+do split; 4..: by admit.
 - smt(@NBytes).
 - smt(@NBytes).
+- rewrite /EncodeAuthPath.
+  
 - have ->: auth{2} = (nth witness (EncodeSignature (load_sig_mem Glob.mem{1} ptr_sm)).`r_sigs (to_uint i{1})).`2 by smt().
   rewrite /EncodeSignature => />.
   rewrite (nth_map witness); first by rewrite size_chunk 1:/# size_sub_list size_load_sig /#.
@@ -920,7 +974,8 @@ do split.
   congr.
   apply (eq_from_nth witness); first by rewrite size_sub_list 1:/# size_load_buf /#.
   rewrite size_sub_list 1:/# => k?.
-  rewrite nth_sub_list // nth_take 1,2:/# nth_drop 1,2:/# nth_sub_list /#.
+  rewrite nth_sub_list // nth_take 1,2:/# nth_drop 1,2:/# nth_sub_list 1:/#.
+
 - smt(@W64 pow2_64).
 - smt(@W64 pow2_64).
 - smt(@W64 pow2_64).
