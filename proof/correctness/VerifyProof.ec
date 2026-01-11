@@ -733,12 +733,13 @@ while (
 (* mentira    0 <= to_uint sm_len - XMSS_SIG_BYTES  < 18446744073709551615 /\ *)
     XMSS_SIG_BYTES < to_uint sm_len /\
     
-    to_uint sm_offset{1} = 35 + j{2} * XMSS_REDUCED_SIG_BYTES /\ 
-
+(* O -1 E VERDADE??????? *)
+    to_uint sm_offset{1} = 35 + ( (j{2} - 1) * XMSS_REDUCED_SIG_BYTES ) /\ 
+ 
 root{2} = pk{2}.`Types.pk_root /\
 
   #post
-); first by admit.
+); last first.
 
 (** first subgoal of while **)
 
@@ -746,7 +747,7 @@ auto => /> &1 &2 i H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14
                    H15 H16 H17 H18 H19 HM H20 H21 H22 H23 H24 H25 H26 
                    H27 H28 H29 H30 H31 H32 H33 H34 H35 H36 H37 H38 H39
                    H40 *.
-do split; 1,5: by smt().
+do split; 1,4: by smt().
 - rewrite H20.
   apply (eq_from_nth witness); first by rewrite NBytes.valP size_sub /#.
   rewrite NBytes.valP => j?.
@@ -755,7 +756,6 @@ do split; 1,5: by smt().
   have ->: nth witness (sub ots_addr{1} 0 3) j = 
            nth witness (sub ots_addr{1} 0 4) j by rewrite !nth_sub /#.
   rewrite H35 !nth_sub /#.
-- 
 
 (** second subgoal of while **)
 
@@ -1233,4 +1233,3 @@ skip => /> &1 &2 41? ->.
 rewrite !to_uintD /#.
 *)
 qed.
-   
