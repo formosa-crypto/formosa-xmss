@@ -454,9 +454,12 @@ have len_eq: to_uint sm_len - 4963 = to_uint (loadW64 Pmem (to_uint ptr_mlen)).
       rewrite !nth_load_buf //= H39 //=.
         * smt(@W64 pow2_64).
           have ?: 0 <= i < to_uint (loadW64 Pmem (to_uint ptr_mlen)) by smt().
-rewrite -len_eq. 
-  have ->: to_uint (ptr_sm + W64.of_int 4963) = to_uint ptr_sm + 4963 by smt(@W64 pow2_64).
-        admit. (* should work ?? *)
+
+          move : H37 Hi; rewrite /disjoint_ptr -len_eq => H Hi.
+          rewrite to_uintD_small /=;1: by smt(@W64 pow2_64).
+             have -> :  to_uint ptr_m + 4963 + (to_uint sm_len - 4963) = to_uint ptr_m + to_uint sm_len by ring. 
+          have ? : forall j, 0 <= j < to_uint sm_len - 4963 =>
+             to_uint ptr_m + 4963 + j <> to_uint ptr_sm + 4963 + i; by smt().
 
       
 seq 3 2 : (
@@ -685,8 +688,9 @@ seq 3 1 : (
   split.
 smt(W32.to_uint_cmp).
   move => Ha.
-  print of_uintK.
-  admit.
+  rewrite /(`<<`) /=; have -> : 1023 = (2^10 - 1) by auto.
+  rewrite W32.andwC and_mod //= of_uintK /=.
+  by smt(W32.to_uint_cmp).
 
  
 seq 1 1 : (
