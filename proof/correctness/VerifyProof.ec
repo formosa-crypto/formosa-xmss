@@ -912,8 +912,11 @@ do split; apply (eq_from_nth witness); rewrite !size_sub // => i?; rewrite !nth_
    smt(sub_k).
 
 wp; conseq />.
-
-seq 1 1 : (#pre /\ to_list leaf{1} = NBytes.val nodes0{2}).
+ 
+seq 1 1 : (
+    #{/~wots_pk{1} = DecodeWotsPk pk_ots{2}}pre /\ 
+    to_list leaf{1} = NBytes.val nodes0{2}
+).
 - exists * wots_pk{1}, pub_seed{1}, ltree_addr{1}, address0{2}.
   elim * => P0 P1 P2 P3.
   call (ltree_correct P0 P1 P2 P3) => [/#|]. 
@@ -934,7 +937,6 @@ H30 H31 H32 H33 H34 H35 H36 H37 H38 H39 H40 H41 H42 H43 H44 H45 H46 H47*.
       rewrite !nth_sub 1,2:/# /=.
       have ->: resL.`3.[j] = nth witness (sub resL.`3 0 5) j by rewrite nth_sub /#.
       rewrite H50 nth_sub /#.
-     * admit. (* not enough info ==> need to change ltree_correct  *)
      * by rewrite H50 /#.
 
 seq 0 2 : (
@@ -1035,8 +1037,20 @@ do split.
       rewrite H61 nth_sub /#.
     + by rewrite H61 H50.
 
-
 (* TODO: loop; move the proof here when all the subgoals are proved *)
 
+seq 4 1 : (
+  #{/~t64{1} = sm_ptr{1} + sm_offset{1}}
+   {/~to_uint sm_offset{1} = 2179}
+   {/~i{1} = W32.zero}pre /\
+   to_uint sm_offset{1} = 2179 + 320 /\
+   to_uint i{1} = j{2} /\
+   j{2} = 1 
+).
+- auto => /> &1 &2 *; smt(@W64 pow2_64).
+
+
 admit.
+
+
 qed.
