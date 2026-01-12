@@ -565,7 +565,7 @@ seq 1 1 : (
             by apply HM. 
             apply (eq_from_nth witness); rewrite !size_load_buf //=; 1..3: by smt(to_uint_cmp).
             have ZZ: to_uint (sm_len - W64.of_int XMSS_SIG_BYTES) = 
-                     to_uint sm_len - XMSS_SIG_BYTES by smt(@W64).
+                     to_uint sm_len - XMSS_SIG_BYTES by smt(@W64). (* FIXME: este smt as vezes falha, corrigir depois TODO: *)
 
   rewrite !ZZ=> i Hi.
   rewrite !nth_load_buf //=.
@@ -692,7 +692,12 @@ conseq />.
 
 swap {2} 1 1.
 
-seq 3 1 : (#pre /\ i{1} = W32.zero /\ ={idx_leaf}).
+seq 3 1 : (
+    #pre /\ 
+    i{1} = W32.zero /\ 
+  ={idx_leaf} /\
+ idx_leaf{2} = idx_sig{2} `&` W32.of_int (2 ^ (h %/ d) - 1)
+).
 - auto => /> &1 &2 *.
   rewrite andwC; congr; first by smt(@W32 pow2_32).
   by rewrite h_val d_val /(`<<`).
@@ -784,7 +789,7 @@ seq 3 1 : (
 
 inline {2} 1.
 conseq />.
-  
+   
 seq 0 7 : (
   #pre /\
 
@@ -810,7 +815,7 @@ seq 0 7 : (
 seq 1 1 : (
     #pre /\ 
     sub ots_addr{1} 0 5 = sub address0{2} 0 5 /\
-    ots_addr{1}.[4] = idx_leaf{2}
+    ots_addr{1}.[4] = idx_leaf{2} 
 ).
 
 - inline {1}; auto => /> *; do split; apply (eq_from_nth witness); rewrite !size_sub // => i?; rewrite !nth_sub // !get_setE //; smt(sub_k).
@@ -948,7 +953,7 @@ seq 1 1 : (#pre /\ to_list leaf{1} = NBytes.val nodes0{2}).
     * admit. (* nao ha informacao sobre resL.2 no contexto *)
     * have ->: resL.`3.[4] = nth witness (sub resL.`3 0 5) 4 by rewrite nth_sub.
       rewrite H44 nth_sub /#.
-
+ 
 seq 0 2 : (
     #{/~sub ltree_addr{1} 0 5 = sub address0{2} 0 5}pre /\ 
      sub node_addr{1} 0 5 = sub address0{2} 0 5
@@ -984,4 +989,85 @@ seq 0 2 : (
         rewrite ifF 1:/# ifF 1:/# ifF 1:/# ifF 1:/# ifT 1:/#.
         rewrite H_i_eq_4 /#.
    case: (i = 5) => /#.
-      
+
+seq 4 0 : (#pre /\ t64{1} = sm_ptr{1} + sm_offset{1}); first by auto.
+
+outline {2} [1-2] by { nodes0 <@ ComputeRoot.compute_root (_seed, nodes0, address0, idx_sig0, auth0); }.
+
+conseq />.
+exists * leaf{1}, pub_seed{1}, idx_leaf{1}, t64{1}, node_addr{1}, address0{2}.
+elim * => P0 P1 P2 P3 P4 P5.
+call (compute_root_equiv P0 P1 P2 P3 P4 P5) => [/# |].
+skip => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 
+                   H16 H17 HH H18 H19 HM H20 H21 H22 H23 H24 H25 H26 H27 H28
+                   H29 H30 H31 H32 H33 H34 H35 H36 H37 H38 H39 H40 H41 H42 H43 H44 *.
+do split.
+  - rewrite H20 ; smt(@NBytes).
+  - rewrite H43 ; smt(@NBytes).
+  - rewrite /EncodeAuthPath /XMSS_AUTH_PATH_BYTES.
+    have ->: auth{2} =  EncodeAuthPath
+   (sub_list
+      (nth witness
+         (chunk reduced_sig_bytes
+            (sub_list (load_sig_mem Glob.mem{1} ptr_sm)
+               (XMSS_INDEX_BYTES + XMSS_N)
+               (size (load_sig_mem Glob.mem{1} ptr_sm) -
+                (XMSS_INDEX_BYTES + XMSS_N)))) 0) wots_sig_bytes
+      auth_path_bytes).
+        have := H31.
+        rewrite /EncodeSignature /=  (nth_map witness).
+            * rewrite size_chunk 1:/# size_sub_list size_load_sig /#.
+        rewrite /EncodeReducedSignature.
+        rewrite /EncodeWotsSignature. move => /#.
+
+    rewrite /EncodeAuthPath.
+    congr; congr.
+    apply (eq_from_nth witness).
+        * rewrite !size_chunk 1,2:/# size_load_buf ?size_sub_list ?size_load_buf /#.
+    rewrite size_chunk 1:/# size_sub_list 1:/# /auth_path_bytes h_val d_val n_val /=. 
+    move => j?.
+    rewrite nth_chunk 1:/#; first by rewrite size_sub_list /#.
+    rewrite nth_chunk 1:/#; first by rewrite size_sub_list size_load_sig /#.   
+    rewrite nth_chunk 1:/#; first by rewrite size_load_buf /#.   
+    congr.
+    congr.
+    rewrite size_load_sig /XMSS_INDEX_BYTES /XMSS_N /XMSS_REDUCED_SIG_BYTES.
+    rewrite /XMSS_SIG_BYTES /XMSS_WOTS_SIG_BYTES /=.
+    apply (eq_from_nth witness).
+       * rewrite size_sub_list 1:/# size_load_buf /#.
+    rewrite size_sub_list 1:/# => k?.
+    rewrite nth_sub_list 1:/# nth_take 1,2:/# nth_drop 1,2:/#.
+    rewrite nth_sub_list 1:/# !nth_load_buf 1,2:/# /=.
+    congr.
+    smt(@W64 pow2_64).
+
+  - smt(@W64 pow2_64).
+
+  - move=>?.
+    have ?: to_uint sm_offset{1} = 2179 by apply H41.
+    have ?: to_uint (ptr_sm + sm_offset{1}) =
+                to_uint ptr_sm + to_uint sm_offset{1} by rewrite to_uintD_small /#.
+    rewrite to_uintD_small 1:/#.
+    smt().
+
+  - smt(@W64).
+  - smt(@W64).
+ 
+  - admit. (* to_uint P5.[6] = to_uint ots_addr{1}.[4] *) 
+
+  - smt(W32.to_uint_cmp).
+
+  - rewrite /XMSS_FULL_HEIGHT /= => ?.
+    rewrite h_val d_val /= (: 1023 = 2^10 - 1) 1:/#.
+    rewrite and_mod 1:/# of_uintK /#.
+
+  - move => H45 H46 H47 H48 H49 H50 H51 H52 H53 H54 resL resR H55 H56 *.
+    do split.
+      * smt(sub_k).
+      * admit.
+      * rewrite -H23.
+        have ->: P4.[3] = nth witness (sub P4 0 5) 3 by rewrite nth_sub.
+        rewrite -H56 nth_sub /#.
+      * rewrite -H35.
+        apply (eq_from_nth witness); rewrite !size_sub //= => j?.
+        rewrite !nth_sub; smt(sub_k).
