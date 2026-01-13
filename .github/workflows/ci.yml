@@ -63,7 +63,7 @@ jobs:
           gunzip -c image.tar.gz | docker load
 
       - name: Compile ${{ matrix.test_dir }}
-        run: docker run --rm jasmin-xmss:${{ github.sha }} make -C ${{ matrix.test_dir }} asm
+        run: docker run --rm jasmin-xmss:${{ github.sha }} make EC_JOBS=4 -C ${{ matrix.test_dir }} asm
 
   run_tests:
     needs: build_image
@@ -122,48 +122,7 @@ jobs:
       # - name: Test verify
       #   run: docker run --rm jasmin-xmss:${{ github.sha }} make -C test/xmss/ test_verify
 
-  check_security:
-    needs: build_image
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v4
-
-      - name: Download Docker image
-        uses: actions/download-artifact@v4
-        with:
-          name: docker-image
-
-      - name: Load Docker image
-        run: |
-          gunzip -c image.tar.gz | docker load
-
-      - name: Check security
-        run: docker run --rm jasmin-xmss:${{ github.sha }} make -C proof/ check_spec_equivs
-
-  check_spec_equivs:
-    needs: build_image
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v4
-
-      - name: Download Docker image
-        uses: actions/download-artifact@v4
-        with:
-          name: docker-image
-
-      - name: Load Docker image
-        run: |
-          gunzip -c image.tar.gz | docker load
-
-      - name: Check single/multi tree proof
-        run: docker run --rm jasmin-xmss:${{ github.sha }} make -C proof/ check_spec_extra
-
-      - name: Check spec equivalences
-        run: docker run --rm jasmin-xmss:${{ github.sha }} make -C proof/ check_spec_equivs
-
-  check_correctness_proof:
+  check_proofs:
     needs: build_image
     runs-on: ubuntu-latest
     steps:
@@ -180,7 +139,7 @@ jobs:
           gunzip -c image.tar.gz | docker load
 
       - name: Check correctness proofs
-        run: docker run --rm jasmin-xmss:${{ github.sha }} make -C proof/ extract check_correctness
+        run: docker run --rm jasmin-xmss:${{ github.sha }} make -C proof/ extract check_all
 
   checkCT:
     needs: build_image

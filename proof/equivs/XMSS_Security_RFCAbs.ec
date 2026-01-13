@@ -1171,7 +1171,7 @@ rewrite (: 0 <= j < 8) 2:/= 2:(: (W8.of_int (w - 1)).[j]) /=; 1:smt(logw_vals).
 rewrite nth_take 1,2:/# nth_drop 2:/#; 1: smt(logw_vals).
 rewrite /w2bits nth_mkseq 2:/=; 1:smt(logw_vals).
 rewrite (nth_change_dfl witness W8.zero).
-+ admit.
++ by split; [|move=> _; rewrite ltz_divLR]; smt().
 by congr; smt(logw_vals).
 qed.
 

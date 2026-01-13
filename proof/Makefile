@@ -2,7 +2,8 @@
 
 # --------------------------------------------------------------------
 EASYCRYPT   ?= easycrypt
-EC_FLAGS    ?= -jobs 1
+EC_JOBS     ?= 1
+EC_FLAGS    ?= -jobs $(EC_JOBS)
 ECRUNTEST   ?= $(EASYCRYPT) runtest $(EC_FLAGS)
 J2EC        ?= jasmin2ec
 J2EC_FLAGS  ?= --array-model=old
