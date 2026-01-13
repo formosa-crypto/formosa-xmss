@@ -105,7 +105,7 @@ static uint64_t overhead_of_cpucycles_call(void) {
 /*
  * Cleanup function for automatic fclose using __attribute__((cleanup))
  */
-void cleanup_fclose(FILE **fpp) {
+static inline void cleanup_fclose(FILE **fpp) {
     if (fpp && *fpp) {
         fclose(*fpp);
     } else {

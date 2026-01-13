@@ -1,1 +1,29 @@
-../test/sha256/test_sha256.jazz
+from XMSS require "sha256/sha256_in_ptr/sha256_in_ptr.jinc"
+
+namespace SHA_2_32 {
+  param int INLEN = 32;
+  from XMSS require "sha256/sha256_array/sha256_array.jinc"
+}
+
+namespace SHA_2_64 {
+  param int INLEN = 64;
+  from XMSS require "sha256/sha256_array/sha256_array.jinc"
+}
+
+export 
+fn sha256_in_ptr_jazz(reg ptr u8[32] out, reg u64 in inlen) -> reg ptr u8[32] {
+  out = __sha256_in_ptr(out, in, inlen); 
+  return out;
+}
+
+export 
+fn sha256_32(reg ptr u8[32] out in) -> reg ptr u8[32] {
+  out = SHA_2_32::__sha256(out, in);
+  return out;
+}
+
+export 
+fn sha256_64(reg ptr u8[32] out, reg ptr u8[64] in) -> reg ptr u8[32] {
+  out = SHA_2_64::__sha256(out, in);
+  return out;
+}

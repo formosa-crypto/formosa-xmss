@@ -22,7 +22,7 @@ JPP_TARGETS := jpp_processed/sha256.jpp jpp_processed/xmss.jpp
 
 # --------------------------------------------------------------------------------------------------
 
-all: symlinks bin/bench_sha256_jasmin bin/bench_wots bin/bench_xmss bin/bench_xmss_impl_c bin/bench_xmss_impl_jasmin
+all: symlinks bin/bench_sha256_jasmin bin/bench_wots bin/bench_xmss_jasmin bin/bench_xmss_impl_c bin/bench_xmss_impl_jasmin
 run: results/ bin/bench_sha256_jasmin.out bin/bench_xmss.out bin/bench_xmss_impl_c.out bin/bench_xmss_impl_jasmin.out 
 
 process: ${JPP_TARGETS}
@@ -32,7 +32,7 @@ process: ${JPP_TARGETS}
 SYMLINK_RULE = ln -sf $< $@
 
 .PHONY: symlinks clean
-symlinks: xmss.jazz sha256.jazz wots.jazz
+symlinks: xmss.jazz wots.jazz
 
 # --------------------------------------------------------------------------------------------------
 # Setup
@@ -76,9 +76,6 @@ params.jinc: ../ref-jasmin/params/params-xmssmt-sha2_20_2_256.jinc
 	$(SYMLINK_RULE)
 
 xmss.jazz: ../ref-jasmin/xmss.jazz
-	$(SYMLINK_RULE)
-
-sha256.jazz: ../test/sha256/test_sha256.jazz
 	$(SYMLINK_RULE)
 
 wots.jazz: ../test/wots/test_wots.jazz
