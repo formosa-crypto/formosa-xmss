@@ -574,7 +574,8 @@ seq 1 1 : (
             by apply HM. 
             apply (eq_from_nth witness); rewrite !size_load_buf //=; 1..3: by smt(to_uint_cmp).
             have ZZ: to_uint (sm_len - W64.of_int XMSS_SIG_BYTES) = 
-                     to_uint sm_len - XMSS_SIG_BYTES by smt(@W64). (* FIXME: este smt as vezes falha, corrigir depois TODO: *)
+                     to_uint sm_len - XMSS_SIG_BYTES.
+            - by rewrite to_uintB ?uleE to_uint_small //#.
 
   rewrite !ZZ=> i Hi.
   rewrite !nth_load_buf //=.
