@@ -211,7 +211,7 @@ module XMSS_MT_PRF = {
          address <- set_layer_addr address j;
          address <- set_tree_addr address (W32.to_uint idx_tree);
        
-         node <@ RootFromSig.rootFromSig(idx_leaf, sig_ots, auth, _M', node, address);
+         node <@ RootFromSig.rootFromSig(idx_leaf, sig_ots, auth, node, seed, address);
 
          j <- j + 1;
        }
