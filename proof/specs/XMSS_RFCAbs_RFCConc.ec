@@ -16,8 +16,6 @@ clone import XMSS_Security_RFCAbs as XMSSSecToAbs with
   op XMSSRFCAbs.ltree <- ltree
 proof *.
 
-realize TH.ge0_h. admit. qed.
-
 import XMSSRFCAbs.
 
 

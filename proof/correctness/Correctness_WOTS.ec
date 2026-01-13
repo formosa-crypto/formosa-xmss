@@ -219,7 +219,7 @@ while (
   0 <= to_uint csum{1} <= (i{2} * (w - 1) * 2^8) /\
   i{2} = to_uint i{1} /\ 
   0 <= i{2} <= len1 /\
-  m{2} = map (W32.to_uint) (to_list msg{1}) /\
+  m{2} = map (W32.to_uint) (to_list msg) /\
   0 <= checksum{2} <= i{2} * (w - 1)
 ); last by auto => /> /#.
     + auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6.
@@ -311,7 +311,7 @@ seq 0 0 : (#pre /\ forall (k : int), 0 <= k < 32 => buf{1}.[k] = pub_seed{1}.[k]
       by rewrite H6 get_to_list.
 
 while (
-  len{2} = 67 /\
+  len = 67 /\
   size sk{2} = len /\ 
   i{2} = to_uint i{1} /\ 0 <= i{2} <= 67 /\ 
   NBytes.val sk_seed{2} = to_list inseed{1} /\

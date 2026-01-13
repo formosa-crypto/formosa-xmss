@@ -513,7 +513,10 @@ clone AbsTreeHash as TH with
         op reduce_tree = fun (ps : nbytes) (leaves : Params.nbytes list) (ha : haddress) =>
            reduce_tree_st ps leaves ha.`level ha.`index
         proof reduce_tree_leaf
-        proof reduce_tree_node.
+        proof reduce_tree_node
+        proof ge0_h.
+
+ realize ge0_h. by apply: ge0_h. qed.
 
  realize reduce_tree_leaf.
  move => ps ls idx ??.
@@ -1168,7 +1171,7 @@ rewrite (: 0 <= j < 8) 2:/= 2:(: (W8.of_int (w - 1)).[j]) /=; 1:smt(logw_vals).
 rewrite nth_take 1,2:/# nth_drop 2:/#; 1: smt(logw_vals).
 rewrite /w2bits nth_mkseq 2:/=; 1:smt(logw_vals).
 rewrite (nth_change_dfl witness W8.zero).
-+ smt(@IntDiv).
++ admit.
 by congr; smt(logw_vals).
 qed.
 

@@ -76,7 +76,7 @@ lemma sign_correct (_sk : xmss_sk, _sm_ptr _smlen_ptr _m_ptr _mlen : W64.t) :
                    (to_uint _m_ptr) (to_uint _mlen) /\
 
       disjoint_ptr (to_uint _sm_ptr) (XMSS_SIG_BYTES + to_uint _mlen) 
-                   (to_uint _smlen_ptr{1}) 8 /\ (* 1 W64 = 8 bytes *)
+                   (to_uint _smlen_ptr) 8 /\ (* 1 W64 = 8 bytes *)
 
       disjoint_ptr (to_uint _smlen_ptr) 8
                    (to_uint _m_ptr) (to_uint _mlen) /\
