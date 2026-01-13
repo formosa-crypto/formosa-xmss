@@ -1,4 +1,4 @@
-name: CI (compile jasmin code & run tests & run XMSS/XMSS^MT equivalence proof & run correctness proof)
+name: CI (compile jasmin code & run tests & run EasyCrypt proofs)
 
 on:
   push:
@@ -63,7 +63,7 @@ jobs:
           gunzip -c image.tar.gz | docker load
 
       - name: Compile ${{ matrix.test_dir }}
-        run: docker run --rm jasmin-xmss:${{ github.sha }} make EC_JOBS=4 -C ${{ matrix.test_dir }} asm
+        run: docker run --rm jasmin-xmss:${{ github.sha }} make -C ${{ matrix.test_dir }} asm
 
   run_tests:
     needs: build_image
@@ -139,7 +139,7 @@ jobs:
           gunzip -c image.tar.gz | docker load
 
       - name: Check correctness proofs
-        run: docker run --rm jasmin-xmss:${{ github.sha }} make -C proof/ extract check_all
+        run: docker run --rm jasmin-xmss:${{ github.sha }} make EC_JOBS=4 -C proof/ extract check_all
 
   checkCT:
     needs: build_image
