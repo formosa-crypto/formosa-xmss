@@ -1,9 +1,9 @@
 This currently runs with the following tool versions:
 
-EasyCrypt (security) version: r2025.03
-EasyCrypt (correctness) version: r2025.03
+EasyCrypt (security) version: f8fab1dc5541a84b416df172522809efe8419c37
+EasyCrypt (correctness) version: f8fab1dc5541a84b416df172522809efe8419c37
 
-Jasmin & ECLib: release-2025.02
+Jasmin & ECLib: release-2025.06
 
 # Working with Docker
 

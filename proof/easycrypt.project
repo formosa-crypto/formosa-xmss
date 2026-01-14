@@ -1,9 +1,9 @@
 [general]
 timeout = 3
 
-provers = Z3@4.12.4
+provers = Z3@4.13
 provers = CVC4@1.8
-provers = Alt-Ergo@2.5.2
+provers = Alt-Ergo@2.5
 
 rdirs = .
 idirs = Jasmin:/Users/strub/Projects/jasmin/eclib

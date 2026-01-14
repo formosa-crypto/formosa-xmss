@@ -1,11 +1,11 @@
-FROM debian:bookworm-slim
+FROM debian:trixie-slim
 
 ARG USER="xmss-user"
 ARG DEBIAN_FRONTEND=noninteractive
 
-ARG EASYCRYPT_RELEASE=r2025.03
+ARG EASYCRYPT_RELEASE=f8fab1dc5541a84b416df172522809efe8419c37
 ARG JASMIN_RELEASE=release-2025.06
-ARG OCAML_RELEASE=ocaml.4.14.2
+ARG OCAML_RELEASE=ocaml.5.4.0
 
 SHELL ["/bin/bash", "-c"]
 
@@ -13,6 +13,11 @@ RUN apt-get --quiet --assume-yes update && \
     apt-get --quiet --assume-yes upgrade && \
     apt-get --quiet --assume-yes install apt-utils && \
     apt-get --quiet --assume-yes install wget sudo build-essential && \
+    apt-get --quiet --assume-yes clean
+
+RUN dpkg --add-architecture amd64 && \
+    apt-get --quiet --assume-yes update && \
+    apt-get --quiet --assume-yes install libc6:amd64 libstdc++6:amd64 && \
     apt-get --quiet --assume-yes clean
 
 # Install opam system packages
@@ -29,11 +34,13 @@ WORKDIR /home/$USER
 ENV PATH="/home/${USER}/bin:$PATH"
 
 # Install nix
+COPY --chown=root:root --chmod=0755 docker-parts/nix.conf /etc/nix/nix.conf
 RUN sh <(wget -O - https://nixos.org/nix/install)
 
 # Install opam
 ENV OPAMYES=true
 ENV OPAMJOBS=2
+ENV OPAMVERBOSE=1
 
 RUN opam init --disable-sandboxing --compiler=${OCAML_RELEASE} --auto-setup && \
     opam clean
