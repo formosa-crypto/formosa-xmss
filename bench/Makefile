@@ -5,7 +5,7 @@ CC     ?= clang
 CFLAGS ?= -fno-omit-frame-pointer -g -O0
 LDFLAGS ?= -lcrypto
 
-JASMINC  := /nix/store/bcmvw624ggng7la1jqk9i8brrsra6w3j-jasmin-compiler-2025.06.1-bin/bin/jasminc
+JASMINC  := jasminc
 JFLAGS   := -nowarning -g ${JADDFLAGS}
 JINCLUDE := -I XMSS="../ref-jasmin/" -I Stdlib="../ref-jasmin/stdlib"
 
