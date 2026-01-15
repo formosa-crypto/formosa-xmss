@@ -5,3 +5,5 @@ jpp_processed/
 
 jpp
 *.tmp
+
+obj/

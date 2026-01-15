@@ -12,8 +12,8 @@
 #include "xmss_core.h"
 
 #ifndef TIMINGS
-#warning "TIMINGS not defined, defaulting to 1000"
-#define TIMINGS 1000
+#warning "TIMINGS not defined, defaulting to 10000"
+#define TIMINGS 10000
 #endif
 
 #ifndef IMPL
@@ -77,7 +77,15 @@ void bench_keygen(const xmss_params *params) {
     BENCHMARK_N_TIMES(TIMINGS, "results/bench_keygen_c.txt", xmssmt_keypair(pk, sk, OID));
 #else
 #ifdef BENCH_JASMIN
-    BENCHMARK_N_TIMES(TIMINGS, "results/bench_keygen_jasmin.txt", xmssmt_keypair_jazz(pk, sk));
+    #ifdef ZERO_LOOP
+        BENCHMARK_N_TIMES(TIMINGS, "results/bench_keygen_jasmin_zero_loop.txt", xmssmt_keypair_jazz(pk, sk));
+    #else
+        #ifdef ZERO_UNROLL
+            BENCHMARK_N_TIMES(TIMINGS, "results/bench_keygen_jasmin_zero_unroll.txt", xmssmt_keypair_jazz(pk, sk));
+        #else 
+            BENCHMARK_N_TIMES(TIMINGS, "results/bench_keygen_jasmin.txt", xmssmt_keypair_jazz(pk, sk));
+        #endif
+    #endif 
 #else
 #error "Either BENCH_JASMIN or BENCH_C must be defined"
 #endif
@@ -108,8 +116,18 @@ void bench_sign(const xmss_params *params) {
     BENCHMARK_N_TIMES(TIMINGS, "results/bench_sign_c.txt", xmssmt_sign(sk, sm, &smlen, m, mlen));
 #else
 #ifdef BENCH_JASMIN
-    BENCHMARK_N_TIMES(TIMINGS, "results/bench_sign_jasmin.txt",
-                      xmssmt_sign_jazz(sk, sm, &smlen, m, mlen));
+    #ifdef ZERO_LOOP
+        BENCHMARK_N_TIMES(TIMINGS, "results/bench_sign_jasmin_zero_loop.txt",
+                          xmssmt_sign_jazz(sk, sm, &smlen, m, mlen));
+    #else
+        #ifdef ZERO_UNROLL
+            BENCHMARK_N_TIMES(TIMINGS, "results/bench_sign_jasmin_zero_unroll.txt",
+                              xmssmt_sign_jazz(sk, sm, &smlen, m, mlen));
+        #else
+            BENCHMARK_N_TIMES(TIMINGS, "results/bench_sign_jasmin.txt",
+                              xmssmt_sign_jazz(sk, sm, &smlen, m, mlen));
+        #endif
+    #endif
 #else
 #error "Either BENCH_JASMIN or BENCH_C must be defined"
 #endif
@@ -144,8 +162,18 @@ void bench_verify(const xmss_params *params) {
                       xmssmt_sign_open(mout, &mout_len, sm, smlen, pk));
 #else
 #ifdef BENCH_JASMIN
-    BENCHMARK_N_TIMES(TIMINGS, "results/bench_verify_jasmin.txt",
-                      xmssmt_sign_open_jazz(mout, &mout_len, sm, smlen, pk));
+    #ifdef ZERO_LOOP
+        BENCHMARK_N_TIMES(TIMINGS, "results/bench_verify_jasmin_zero_loop.txt",
+                          xmssmt_sign_open_jazz(mout, &mout_len, sm, smlen, pk));
+    #else
+        #ifdef ZERO_UNROLL
+            BENCHMARK_N_TIMES(TIMINGS, "results/bench_verify_jasmin_zero_unroll.txt",
+                              xmssmt_sign_open_jazz(mout, &mout_len, sm, smlen, pk));
+        #else
+            BENCHMARK_N_TIMES(TIMINGS, "results/bench_verify_jasmin.txt",
+                              xmssmt_sign_open_jazz(mout, &mout_len, sm, smlen, pk));
+        #endif
+    #endif
 #else
 #error "Either BENCH_JASMIN or BENCH_C must be defined"
 #endif

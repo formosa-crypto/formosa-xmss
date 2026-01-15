@@ -2,7 +2,7 @@
 
 # --------------------------------------------------------------------------------------------------
 CC     ?= clang
-CFLAGS ?= -fno-omit-frame-pointer -g -O0
+CFLAGS ?= -fno-omit-frame-pointer -g
 LDFLAGS ?= -lcrypto
 
 JASMINC  := jasminc
@@ -22,7 +22,7 @@ JPP_TARGETS := jpp_processed/sha256.jpp jpp_processed/xmss.jpp
 
 # --------------------------------------------------------------------------------------------------
 
-all: symlinks bin/bench_sha256_jasmin bin/bench_wots bin/bench_xmss_jasmin bin/bench_xmss_impl_c bin/bench_xmss_impl_jasmin
+all: symlinks bin/bench_sha256_jasmin bin/bench_wots bin/bench_sha2_in_xmss_jasmin bin/bench_xmss_impl_c bin/bench_xmss_impl_jasmin
 run: results/ bin/bench_sha256_jasmin.out bin/bench_xmss.out bin/bench_xmss_impl_c.out bin/bench_xmss_impl_jasmin.out 
 
 process: ${JPP_TARGETS}
@@ -38,7 +38,7 @@ symlinks: xmss.jazz wots.jazz
 # Setup
 # --------------------------------------------------------------------------------------------------
 
-asm/ bin/ results/ jpp_processed/: 
+asm/ bin/ results/ obj/ jpp_processed/: 
 	mkdir -p $@
 
 jpp:
@@ -67,6 +67,16 @@ asm/xmss.s: xmss.jazz params.jinc | asm/
 	$(JASMINC) $(JINCLUDE) $(JFLAGS) -o $@ $<.tmp
 	-$(RM) $<.tmp
 
+asm/xmss_loop.s: xmss.jazz params.jinc | asm/
+	{ echo "require \"params.jinc\"" ; cat $< ; } > $<.tmp
+	$(JASMINC) $(JINCLUDE) $(JFLAGS) -stack-zero loop -stack-zero-size u64 -o $@ $<.tmp
+	-$(RM) $<.tmp
+
+asm/xmss_unroll.s: xmss.jazz params.jinc | asm/
+	{ echo "require \"params.jinc\"" ; cat $< ; } > $<.tmp
+	$(JASMINC) $(JINCLUDE) $(JFLAGS) -stack-zero unrolled -stack-zero-size u64 -o $@ $<.tmp
+	-$(RM) $<.tmp
+
 asm/treehash.s: treehash.jazz params.jinc | asm/
 	{ echo "require \"params.jinc\"" ; cat $< ; } > $<.tmp
 	$(JASMINC) $(JINCLUDE) $(JFLAGS) -o $@ $<.tmp
@@ -86,34 +96,55 @@ treehash.jazz: ../test/treehash/test_treehash.jazz
 
 # --------------------------------------------------------------------------------------------------
 
-bin/bench_sha256_jasmin: bench_sha256_jasmin.c asm/sha256.s | bin/ asm/
+bin/bench_sha256_jasmin: bench_sha256_jasmin.c asm/sha256.s | bin/ asm/ results/
 	$(CC) $(CFLAGS) -I common -o $@ $^ $(COMMON) $(LDFLAGS)
 
-bin/bench_wots: bench_wots.c asm/wots.s | bin/ asm/
+bin/bench_wots: bench_wots.c asm/wots.s | bin/ asm/ results/
 	$(CC) $(CFLAGS) -DBENCH_SHA2 -I common -I ../test -I ../test/common $(C_SOURCES) -o $@ $^ $(COMMON) $(LDFLAGS)
 
-bin/bench_xmss_c: bench_xmss.c | bin/ asm/
+bin/bench_sha2_in_xmss_c: bench_xmss.c | bin/ asm/ results/
 	$(CC) $(CFLAGS) -DBENCH_SHA2 -DBENCH_C -I common -I ../test -I ../test/common $(C_SOURCES) -o $@ $^ $(COMMON) $(LDFLAGS)
 
-bin/bench_xmss_jasmin: bench_xmss.c asm/xmss.s asm/sha256.s | bin/ asm/
+bin/bench_sha2_in_xmss_jasmin: bench_xmss.c asm/xmss.s asm/sha256.s | bin/ asm/ results/
 	$(CC) $(CFLAGS) -DBENCH_SHA2 -DBENCH_JASMIN -I common -I ../test -I ../test/common $(C_SOURCES) -o $@ $^ $(COMMON) $(LDFLAGS)
 
-bin/bench_xmss_impl_c: bench_xmss_impl.c | bin/ asm/
+bin/bench_xmss_impl_c: bench_xmss_impl.c | bin/ asm/ results/
 	$(CC) $(CFLAGS) -DBENCH_C -I common -I ../test -I ../test/common $(C_SOURCES) -o $@ $^ $(COMMON) $(LDFLAGS)
 
-bin/bench_xmss_impl_jasmin: bench_xmss_impl.c asm/xmss.s asm/sha256.s | bin/ asm/
+bin/bench_xmss_impl_jasmin: bench_xmss_impl.c asm/xmss.s asm/sha256.s | bin/ asm/ results/
 	$(CC) $(CFLAGS) -DBENCH_JASMIN -I common -I ../test -I ../test/common $(C_SOURCES) -o $@ $^ $(COMMON) $(LDFLAGS)
 
-bin/bench_treehash_treesig_c: bench_treehash_treesig.c asm/treehash.s | bin/ asm/
+bin/bench_xmss_impl_jasmin_zero_loop: bench_xmss_impl.c asm/xmss_loop.s asm/sha256.s | bin/ asm/ results/
+	$(CC) $(CFLAGS) -DBENCH_JASMIN -DZERO_LOOP -I common -I ../test -I ../test/common $(C_SOURCES) -o $@ $^ $(COMMON) $(LDFLAGS)
+
+bin/bench_xmss_impl_jasmin_zero_unroll: bench_xmss_impl.c asm/xmss_unroll.s asm/sha256.s | bin/ asm/ results/
+	$(CC) $(CFLAGS) -DBENCH_JASMIN -DZERO_UNROLL -I common -I ../test -I ../test/common $(C_SOURCES) -o $@ $^ $(COMMON) $(LDFLAGS)
+
+bin/bench_treehash_c: bench_treehash.c asm/treehash.s | bin/ asm/ results/
 	$(CC) $(CFLAGS) -DBENCH_C -DBENCH_TREEHASH_KG -I common -I ../test -I ../test/common $(C_SOURCES) -o $@ $^ $(COMMON) $(LDFLAGS)
 
-bin/bench_treehash_treesig_jasmin: bench_treehash_treesig.c asm/treehash.s | bin/ asm/
+bin/bench_treehash_jasmin: bench_treehash.c asm/treehash.s | bin/ asm/ results/
 	$(CC) $(CFLAGS) -DBENCH_JASMIN -DBENCH_TREEHASH_KG -I common -I ../test -I ../test/common $(C_SOURCES) -o $@ $^ $(COMMON) $(LDFLAGS)
+
+# --------------------------------------------------------------------------------------------------
+
+objects: obj/xmss.o obj/xmss_loop.o obj/xmss_unroll.o
+
+show_code_size: objects
+	@echo "Object sizes:"
+	@for f in obj/*.o ; do \
+	  echo -n "$$f: " ; \
+	  size -A $$f ; \
+	done
+
+obj/%.o: asm/%.s | obj/
+	$(CC) $(CFLAGS) -c -o $@ $<
 
 # --------------------------------------------------------------------------------------------------
 
 bin/%.out: bin/%
 	@./$<
+
 
 clean:
 	-$(RM) -r asm/ bin/ *.tmp

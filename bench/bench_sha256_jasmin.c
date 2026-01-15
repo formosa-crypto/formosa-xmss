@@ -9,8 +9,8 @@
 #include "macros.h"
 
 #ifndef TIMINGS
-#warning "TIMINGS not defined, defaulting to 1000"
-#define TIMINGS 1000
+#warning "TIMINGS not defined, defaulting to 10000"
+#define TIMINGS 10000
 #endif
 
 #ifndef INLEN
