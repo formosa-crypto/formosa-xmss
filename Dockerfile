@@ -12,7 +12,7 @@ SHELL ["/bin/bash", "-c"]
 RUN apt-get --quiet --assume-yes update && \
     apt-get --quiet --assume-yes upgrade && \
     apt-get --quiet --assume-yes install apt-utils && \
-    apt-get --quiet --assume-yes install wget sudo build-essential && \
+    apt-get --quiet --assume-yes install wget sudo build-essential valgrind && \
     apt-get --quiet --assume-yes clean
 
 RUN dpkg --add-architecture amd64 && \

@@ -44,7 +44,7 @@ where `{subdir}` is one of:
  - `hash_address`: runs the tests for operations on addresses
  - `wots`: runs the tests for WOTS+
  - `treehash`: runs the tests for Treehash (Jasmin implementation)
- - `treehash_new`: runs the tests for a C implementation of Treehash matching the RFC
+ - `new_treehash`: runs the tests for a C implementation of Treehash matching the RFC
  - `xmss`: runs the tests for XMSS
 
 ## Running Valgrind on the implementation
