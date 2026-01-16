@@ -4,14 +4,17 @@ This project currently uses the following tool versions:
 
  - EasyCrypt: f8fab1dc5541a84b416df172522809efe8419c37
  - Jasmin & ECLib: release-2025.06
+ - A recent C compiler (for building the test)
+ - Valgrind (for running the valgrind test)
 
 # Working with Docker
 
 We provide a Docker image that includes all required dependencies.
+The docker can be built under Linux-x64 or MacOS-Silicon.
+
 To build it, run:
 
     make docker
-
 
 This command creates a ready-to-use Docker image and copies the
 contents of this archive into the container.
@@ -30,6 +33,8 @@ To check the proofs, run:
     make -C proof
 
 # Running the test-suite / valgrind memory checker / bench
+
+All the tests must be ran on an x64 architecture.
 
 ## Running the test-suite
 
