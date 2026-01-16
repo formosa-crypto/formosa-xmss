@@ -29,6 +29,8 @@ To check the proofs, run:
 
     make -C proof
 
+# Running the test-suite / valgrind memory checker / bench
+
 ## Running the test-suite
 
 To run the tests, run:
