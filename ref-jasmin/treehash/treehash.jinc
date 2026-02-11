@@ -56,14 +56,12 @@ fn __treehash(
 {
     stack u8[(XMSS_TREE_HEIGHT + 1) * XMSS_N] _stack;   
     stack u32[(XMSS_TREE_HEIGHT + 1)] heights;
-    stack u32[8] ots_addr ltree_addr node_addr;
     stack u8[XMSS_N] buf;
     stack u8[2 * XMSS_N] buf2;
 
     reg u32 i upper_bound t32 u tree_idx;
     reg u64 t64;
     reg u64 offset = 0;
-    reg u8 val;
     
     reg u8 cond;
 
@@ -245,7 +243,6 @@ fn __build_auth_path(
     reg u64 j k;
     reg u32 j32 k32;
     reg u64 subarray_start_index;
-    reg ptr u8[XMSS_N] node;
 
     () = #spill(i, auth_path, sk_seed, pub_seed, addr);
 

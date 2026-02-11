@@ -29,7 +29,7 @@ fn gen_chain_inplace_jazz(
     reg ptr u8[XMSS_N] pub_seed
 ) -> reg ptr u8[XMSS_N], reg ptr u32[8]
 {
-    out, addr = __gen_chain_inplace_(out, 0, steps, pub_seed, addr);
+    out, addr = __gen_chain_inplace_(out, start, steps, pub_seed, addr);
     return out, addr;
 }
 

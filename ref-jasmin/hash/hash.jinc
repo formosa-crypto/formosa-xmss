@@ -171,7 +171,7 @@ fn __hash_message(
     buf = bytes_pad::ull_to_bytes(buf, XMSS_HASH_PADDING_HASH);
 
     offset = 0;
-    m_with_prefix_ptr = memcpy_u8pu8_plen::_x_memcpy_u8pu8(m_with_prefix_ptr, 0, buf);
+    m_with_prefix_ptr = memcpy_u8pu8_plen::_x_memcpy_u8pu8(m_with_prefix_ptr, offset, buf);
 
     // memcpy(m_with_prefix + params->padding_len, R, params->n);
     offset = XMSS_PADDING_LEN;
