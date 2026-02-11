@@ -7,9 +7,9 @@ fn __memset_zero_u8(reg ptr u8[XMSS_INDEX_BYTES] a) -> reg ptr u8[XMSS_INDEX_BYT
 
     // Obs: This if statement is resolved at compile time
     if (XMSS_INDEX_BYTES == 4) {
-        a[u32 0] = 0;
+        a[:u32 0] = 0;
     } else if (XMSS_INDEX_BYTES == 8) {
-        a[u64 0] = 0;
+        a[:u64 0] = 0;
     } else {
         i = 0;
         while (i < XMSS_INDEX_BYTES) { a[i] = 0; i += 1; }
@@ -25,7 +25,7 @@ fn __memset_u8_ptr(reg u64 _ptr inlen, reg u8 value) {
     i = 0;
     
     while (i < inlen) {
-        (u8) [_ptr + i] = value;
+         [:u8 _ptr + i] = value;
         i += 1;
     }
 }

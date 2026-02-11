@@ -145,7 +145,7 @@ fn __xmssmt_core_sign(
 
     // *smlen = params->sig_bytes + mlen;
     t64 = mlen; t64 += XMSS_SIG_BYTES;
-    (u64) [smlen_ptr] = t64;
+     [:u64 smlen_ptr] = t64;
 
     () = #spill(mlen, sk, sm_ptr);
 

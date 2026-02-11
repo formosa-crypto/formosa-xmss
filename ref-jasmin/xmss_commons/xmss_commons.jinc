@@ -373,16 +373,16 @@ fn __set_result (
         res = -1;
 
         // memset(m, 0, *mlen);
-        #declassify bytes =  (u64) [mlen_ptr];
+        #declassify bytes =  [:u64 mlen_ptr];
         __memset_u8_ptr(m_ptr, bytes, 0);
 
         // *mlen = 0;
-        (u64) [mlen_ptr] = 0;
+        [:u64 mlen_ptr] = 0;
     } else {
         res = 0;
 
         // memcpy(m, sm, *mlen);
-        #declassify bytes =  (u64) [mlen_ptr];
+        #declassify bytes =  [:u64 mlen_ptr];
         offset_in = sm_offset;
         _x__memcpy_u8pu8p(m_ptr, 0, sm_ptr, offset_in, bytes);
     }
@@ -430,14 +430,14 @@ fn __xmssmt_core_sign_open(
 
     // *mlen = smlen - params->sig_bytes;
     t64 = smlen; t64 -= XMSS_SIG_BYTES; // TODO: Reuse this value 
-    (u64) [mlen_ptr] = t64;
+    [:u64 mlen_ptr] = t64;
 
     // idx = bytes_to_ull(sm, params->index_bytes);
     idx = __bytes_to_ull_ptr(sm_ptr);
     () = #spill(idx);
 
     // memcpy(m + params->sig_bytes, sm + params->sig_bytes, *mlen);
-    #declassify bytes = (u64) [mlen_ptr];
+    #declassify bytes = [:u64 mlen_ptr];
     _x__memcpy_u8pu8p(m_ptr, XMSS_SIG_BYTES, sm_ptr, XMSS_SIG_BYTES, bytes);
 
     // hash_message(params, mhash, sm + params->index_bytes, pk, idx,
@@ -451,7 +451,7 @@ fn __xmssmt_core_sign_open(
     t64 = m_ptr;
     t64 += XMSS_SIG_BYTES - XMSS_PADDING_LEN - (3 * XMSS_N);
 
-    #declassify bytes = (u64) [mlen_ptr];
+    #declassify bytes = [:u64 mlen_ptr];
     
     // NOTE: We use root instead of mhash because mhash is just a pointer to root
     #declassify root = __hash_message_(root, buf, pk[0 : XMSS_N], idx, t64, bytes);
