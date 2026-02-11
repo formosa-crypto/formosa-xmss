@@ -219,7 +219,7 @@ fn __new_compute_root(
             // offset = k * XMSS_N
             offset = k;
 
-            #inline if XMSS_N == 32 { offset <<= 5; } else { offset *= XMSS_N; } 
+            #[inline] if XMSS_N == 32 { offset <<= 5; } else { offset *= XMSS_N; }
 
             _ptr = _auth_path_ptr; _ptr += offset;
             thash_in[XMSS_N : XMSS_N] = _x_memcpy_u8u8p(thash_in[XMSS_N : XMSS_N], _ptr);
@@ -229,7 +229,7 @@ fn __new_compute_root(
             () = #unspill(_auth_path_ptr);
             
             offset = k;
-            #inline if XMSS_N == 32 { offset <<= 5; } else { offset *= XMSS_N; } 
+            #[inline] if XMSS_N == 32 { offset <<= 5; } else { offset *= XMSS_N; }
             
             _ptr = _auth_path_ptr; _ptr += offset;
             thash_in[0 : XMSS_N] = _x_memcpy_u8u8p(thash_in[0 : XMSS_N], _ptr);

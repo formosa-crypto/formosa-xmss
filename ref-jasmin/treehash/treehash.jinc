@@ -21,7 +21,7 @@ param int FALSE = 0;
 // Isto assume q valor de offset e publico (neste caso e')
 inline
 fn __treehash_cond(reg ptr u32[XMSS_TREE_HEIGHT + 1] heights, 
-                   #public reg u64 offset) -> reg u8 {
+                   reg u64 offset) -> reg u8 {
     reg bool c1 c2;
     reg u8 bc1 res;
     reg u32 a b;
@@ -105,7 +105,7 @@ fn __treehash(
         
         t64 = offset; 
         // if n = 32 (true for the implementation, a shift should be faster)
-        #inline if (XMSS_N == 32) {
+        #[inline] if (XMSS_N == 32) {
             t64 <<= 5;
         } else {
             t64 *= XMSS_N;
@@ -140,7 +140,7 @@ fn __treehash(
             () = #unspill(offset);
             
             t64 = offset; t64 -= 2; 
-            #inline if (XMSS_N == 32) {
+            #[inline] if (XMSS_N == 32) {
 	            t64 <<= 5;
             } else {
 	            t64 *= XMSS_N;
@@ -259,7 +259,7 @@ fn __build_auth_path(
 
         () = #unspill(auth_path, j);
 
-        #inline if (XMSS_N == 32) { // this if is resolved at compile time
+        #[inline] if (XMSS_N == 32) { // this if is resolved at compile time
             subarray_start_index = j;
             subarray_start_index <<= 5;
         } else {
