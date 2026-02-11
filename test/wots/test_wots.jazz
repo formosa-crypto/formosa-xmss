@@ -68,17 +68,7 @@ fn wots_sign_jazz(
     reg ptr u8[XMSS_N] pub_seed
 ) -> reg ptr u8[XMSS_WOTS_LEN * XMSS_N], reg ptr u32[8]
 {
-    sig = sig;
-    msg = msg;
-    seed = seed;
-    pub_seed = pub_seed;
-    addr = addr;
-
     sig, addr = __wots_sign(sig, msg, seed, pub_seed, addr);
-
-    sig = sig;
-    addr = addr;
-
     return sig, addr;
 }  
 
@@ -91,16 +81,6 @@ fn wots_pk_from_sig_jazz(
     reg ptr u8[XMSS_N] pub_seed
 ) -> reg ptr u8[XMSS_WOTS_LEN * XMSS_N], reg ptr u32[8] 
 {
-    pk = pk;
-    addr = addr;
-    sig_ptr = sig_ptr;
-    msg = msg;
-    pub_seed = pub_seed;
-
     pk, addr = __wots_pk_from_sig(pk, sig_ptr, msg, pub_seed, addr);
-
-    pk =  pk;
-    addr = addr;
-
     return pk, addr;
 }
