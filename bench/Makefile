@@ -6,7 +6,7 @@ CFLAGS ?= -fno-omit-frame-pointer -g
 LDFLAGS ?= -lcrypto
 
 JASMINC  := jasminc
-JFLAGS   := -nowarning -g ${JADDFLAGS}
+JFLAGS   := -g ${JADDFLAGS}
 JINCLUDE := -I XMSS="../ref-jasmin/" -I Stdlib="../ref-jasmin/stdlib"
 
 # This uses key:value but jasmin uses key=value

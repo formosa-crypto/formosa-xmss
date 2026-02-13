@@ -219,7 +219,7 @@ fn __new_compute_root(
             // offset = k * XMSS_N
             offset = k;
 
-            #inline if XMSS_N == 32 { offset <<= 5; } else { offset *= XMSS_N; } 
+            #[inline] if XMSS_N == 32 { offset <<= 5; } else { offset *= XMSS_N; }
 
             _ptr = _auth_path_ptr; _ptr += offset;
             thash_in[XMSS_N : XMSS_N] = _x_memcpy_u8u8p(thash_in[XMSS_N : XMSS_N], _ptr);
@@ -229,7 +229,7 @@ fn __new_compute_root(
             () = #unspill(_auth_path_ptr);
             
             offset = k;
-            #inline if XMSS_N == 32 { offset <<= 5; } else { offset *= XMSS_N; } 
+            #[inline] if XMSS_N == 32 { offset <<= 5; } else { offset *= XMSS_N; }
             
             _ptr = _auth_path_ptr; _ptr += offset;
             thash_in[0 : XMSS_N] = _x_memcpy_u8u8p(thash_in[0 : XMSS_N], _ptr);
@@ -373,16 +373,18 @@ fn __set_result (
         res = -1;
 
         // memset(m, 0, *mlen);
-        #declassify bytes =  (u64) [mlen_ptr];
+        bytes = [:u64 mlen_ptr];
+        () = #declassify(bytes);
         __memset_u8_ptr(m_ptr, bytes, 0);
 
         // *mlen = 0;
-        (u64) [mlen_ptr] = 0;
+        [:u64 mlen_ptr] = 0;
     } else {
         res = 0;
 
         // memcpy(m, sm, *mlen);
-        #declassify bytes =  (u64) [mlen_ptr];
+        bytes = [:u64 mlen_ptr];
+        () = #declassify(bytes);
         offset_in = sm_offset;
         _x__memcpy_u8pu8p(m_ptr, 0, sm_ptr, offset_in, bytes);
     }
@@ -430,14 +432,15 @@ fn __xmssmt_core_sign_open(
 
     // *mlen = smlen - params->sig_bytes;
     t64 = smlen; t64 -= XMSS_SIG_BYTES; // TODO: Reuse this value 
-    (u64) [mlen_ptr] = t64;
+    [:u64 mlen_ptr] = t64;
 
     // idx = bytes_to_ull(sm, params->index_bytes);
     idx = __bytes_to_ull_ptr(sm_ptr);
     () = #spill(idx);
 
     // memcpy(m + params->sig_bytes, sm + params->sig_bytes, *mlen);
-    #declassify bytes = (u64) [mlen_ptr];
+    bytes = [:u64 mlen_ptr];
+    () = #declassify(bytes);
     _x__memcpy_u8pu8p(m_ptr, XMSS_SIG_BYTES, sm_ptr, XMSS_SIG_BYTES, bytes);
 
     // hash_message(params, mhash, sm + params->index_bytes, pk, idx,
@@ -451,10 +454,12 @@ fn __xmssmt_core_sign_open(
     t64 = m_ptr;
     t64 += XMSS_SIG_BYTES - XMSS_PADDING_LEN - (3 * XMSS_N);
 
-    #declassify bytes = (u64) [mlen_ptr];
+    bytes = [:u64 mlen_ptr];
+    () = #declassify(bytes);
     
     // NOTE: We use root instead of mhash because mhash is just a pointer to root
-    #declassify root = __hash_message_(root, buf, pk[0 : XMSS_N], idx, t64, bytes);
+    root = __hash_message_(root, buf, pk[0 : XMSS_N], idx, t64, bytes);
+    () = #declassify(root);
 
     // sm += params->index_bytes + params->n;
     t64 = XMSS_INDEX_BYTES + XMSS_N;
@@ -493,7 +498,7 @@ fn __xmssmt_core_sign_open(
         // wots_pk_from_sig(params, wots_pk, sm, root, pub_seed, ots_addr);
         () = #unspill(sm_ptr, pub_seed);
         t64 = sm_ptr; t64 += sm_offset;
-        #declassify root = root;
+        () = #declassify(root);
         wots_pk, ots_addr = __wots_pk_from_sig(wots_pk, t64, root, pub_seed, ots_addr);
 
         // sm += params->wots_sig_bytes;
@@ -512,8 +517,8 @@ fn __xmssmt_core_sign_open(
         // compute_root(params, root, leaf, idx_leaf, sm, pub_seed, node_addr);
         () = #unspill(idx_leaf, sm_ptr, pub_seed);
         t64 = sm_ptr; t64 += sm_offset;
-        #declassify idx_leaf = idx_leaf;
-        #declassify root = root;
+        () = #declassify(idx_leaf);
+        () = #declassify(root);
         root, node_addr = __new_compute_root_(root, leaf, idx_leaf, t64, pub_seed, node_addr);   
 
         // sm += params->tree_height * params->n;
@@ -527,7 +532,8 @@ fn __xmssmt_core_sign_open(
 
     () = #unspill(pk);
     pub_root = pk[0 : XMSS_N];
-    #declassify are_equal = __memcmp(root, pub_root);
+    are_equal = __memcmp(root, pub_root);
+    () = #declassify(are_equal);
 
     () = #unspill(mlen_ptr, m_ptr, sm_ptr);
     res = __set_result(are_equal, m_ptr, mlen_ptr, sm_ptr, sm_offset);

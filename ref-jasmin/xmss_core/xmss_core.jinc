@@ -13,7 +13,6 @@ fn __xmssmt_core_seed_keypair(
     reg ptr u8[3 * XMSS_N] seed
 ) -> reg ptr u8[XMSS_PK_BYTES], reg ptr u8[XMSS_SK_BYTES]
 {
-    stack u8[XMSS_TREE_HEIGHT * XMSS_N] auth_path;
     stack u32[8] top_tree_addr;
     stack u8[XMSS_N] root;
 
@@ -120,13 +119,12 @@ fn __xmssmt_core_sign(
     reg u32 idx_leaf layer_addr; 
     reg u64 r t64 idx idx_tree subarray_start_index;
 
-    reg ptr u8[XMSS_N] sk_seed sk_prf pub_root pub_seed node;
+    reg ptr u8[XMSS_N] sk_seed sk_prf pub_root pub_seed;
     reg ptr u8[XMSS_INDEX_BYTES] idx_bytes;
 
     stack u8[XMSS_N] buf mhash root;
     stack u8[32] index_bytes;
     stack u32[8] ots_addr;
-    stack u8[XMSS_REDUCED_SIG_BYTES] reduced_sig; // WOTS signature || Authentication path 
 
     stack u8[XMSS_SIG_BYTES] signature;
 
@@ -145,7 +143,7 @@ fn __xmssmt_core_sign(
 
     // *smlen = params->sig_bytes + mlen;
     t64 = mlen; t64 += XMSS_SIG_BYTES;
-    (u64) [smlen_ptr] = t64;
+     [:u64 smlen_ptr] = t64;
 
     () = #spill(mlen, sk, sm_ptr);
 
@@ -208,7 +206,8 @@ fn __xmssmt_core_sign(
         t64 = sm_ptr; t64 += XMSS_SIG_BYTES - XMSS_PADDING_LEN - 3*XMSS_N;
 
         // The hash of the message is public
-        #declassify mhash = __hash_message_(mhash, signature[XMSS_INDEX_BYTES : XMSS_N], pub_root, idx, t64, mlen); 
+        mhash = __hash_message_(mhash, signature[XMSS_INDEX_BYTES : XMSS_N], pub_root, idx, t64, mlen);
+        () = #declassify(mhash);
 
         ots_addr = __set_type(ots_addr, XMSS_ADDR_TYPE_OTS);
         ots_addr = __set_layer_addr(ots_addr, 0);

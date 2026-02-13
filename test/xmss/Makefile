@@ -9,7 +9,7 @@ LDLIBS   = -lcrypto
 JASMIN   ?= jasminc 
 JAZZCT   ?= jasmin-ct
 JAZZCTFLAGS ?= --infer
-JFLAGS   ?= -nowarning -g ${JADDFLAGS} # -g so its easier to debug when using valgrind
+JFLAGS   ?= -g ${JADDFLAGS} # -g so its easier to debug when using valgrind
 JINCLUDE ?= -I XMSS="../../ref-jasmin/" -I Stdlib="../../ref-jasmin/stdlib"
 
 JASMINPATH := JASMINPATH="XMSS=../../ref-jasmin/:Stdlib=../../ref-jasmin/stdlib"

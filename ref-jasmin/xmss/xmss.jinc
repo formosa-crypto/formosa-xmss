@@ -16,8 +16,8 @@ fn  __xmss_keypair(
     oid = XMSS_OID;
     oid = #BSWAP_32(oid);
     
-    pk[u32 0] = oid;
-    sk[u32 0] = oid;
+    pk[:u32 0] = oid;
+    sk[:u32 0] = oid;
 
     pk[XMSS_OID_LEN : XMSS_PK_BYTES], sk[XMSS_OID_LEN : XMSS_SK_BYTES] = 
         __xmssmt_core_keypair_(pk[XMSS_OID_LEN : XMSS_PK_BYTES], sk[XMSS_OID_LEN : XMSS_SK_BYTES]);
@@ -37,8 +37,8 @@ fn  __xmssmt_keypair(
     oid = XMSS_OID;
     oid = #BSWAP_32(oid);
     
-    pk[u32 0] = oid;
-    sk[u32 0] = oid;
+    pk[:u32 0] = oid;
+    sk[:u32 0] = oid;
 
     pk[XMSS_OID_LEN : XMSS_PK_BYTES], sk[XMSS_OID_LEN : XMSS_SK_BYTES] = 
         __xmssmt_core_keypair_(pk[XMSS_OID_LEN : XMSS_PK_BYTES], sk[XMSS_OID_LEN : XMSS_SK_BYTES]);

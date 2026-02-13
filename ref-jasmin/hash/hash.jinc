@@ -54,7 +54,7 @@ fn __prf(
     // In this case, the else branch is dead code (the if is resolved at compile time)
     // and the hash_plen_n_32 namespace will not be in the assembly
     // It will be the in the extracted easycrypt though, so the proofs need to be updated
-    #inline if (XMSS_N == 32) { 
+    #[inline] if (XMSS_N == 32) {
         out = hash_plen_2n::__sha256(out, buf);
     } else {
         out = hash_plen_n_32::__sha256(out, buf);
@@ -119,7 +119,7 @@ fn __prf_keygen(
     // In this case, the else branch is dead code (the if is resolved at compile time)
     // and the hash_plen_2n_32 namespace will not be in the assembly
     // It will be the in the extracted easycrypt though, so the proofs need to be updated
-    #inline if (XMSS_N == 32) {
+    #[inline] if (XMSS_N == 32) {
         out = hash_plen_3n::__sha256(out, buf); 
     } else {
         out = hash_plen_2n_32::__sha256(out, buf); 
@@ -171,7 +171,7 @@ fn __hash_message(
     buf = bytes_pad::ull_to_bytes(buf, XMSS_HASH_PADDING_HASH);
 
     offset = 0;
-    m_with_prefix_ptr = memcpy_u8pu8_plen::_x_memcpy_u8pu8(m_with_prefix_ptr, 0, buf);
+    m_with_prefix_ptr = memcpy_u8pu8_plen::_x_memcpy_u8pu8(m_with_prefix_ptr, offset, buf);
 
     // memcpy(m_with_prefix + params->padding_len, R, params->n);
     offset = XMSS_PADDING_LEN;

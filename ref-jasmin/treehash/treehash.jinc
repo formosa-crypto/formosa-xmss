@@ -21,7 +21,7 @@ param int FALSE = 0;
 // Isto assume q valor de offset e publico (neste caso e')
 inline
 fn __treehash_cond(reg ptr u32[XMSS_TREE_HEIGHT + 1] heights, 
-                   #public reg u64 offset) -> reg u8 {
+                   reg u64 offset) -> reg u8 {
     reg bool c1 c2;
     reg u8 bc1 res;
     reg u32 a b;
@@ -56,14 +56,12 @@ fn __treehash(
 {
     stack u8[(XMSS_TREE_HEIGHT + 1) * XMSS_N] _stack;   
     stack u32[(XMSS_TREE_HEIGHT + 1)] heights;
-    stack u32[8] ots_addr ltree_addr node_addr;
     stack u8[XMSS_N] buf;
     stack u8[2 * XMSS_N] buf2;
 
     reg u32 i upper_bound t32 u tree_idx;
     reg u64 t64;
     reg u64 offset = 0;
-    reg u8 val;
     
     reg u8 cond;
 
@@ -107,7 +105,7 @@ fn __treehash(
         
         t64 = offset; 
         // if n = 32 (true for the implementation, a shift should be faster)
-        #inline if (XMSS_N == 32) {
+        #[inline] if (XMSS_N == 32) {
             t64 <<= 5;
         } else {
             t64 *= XMSS_N;
@@ -142,7 +140,7 @@ fn __treehash(
             () = #unspill(offset);
             
             t64 = offset; t64 -= 2; 
-            #inline if (XMSS_N == 32) {
+            #[inline] if (XMSS_N == 32) {
 	            t64 <<= 5;
             } else {
 	            t64 *= XMSS_N;
@@ -245,7 +243,6 @@ fn __build_auth_path(
     reg u64 j k;
     reg u32 j32 k32;
     reg u64 subarray_start_index;
-    reg ptr u8[XMSS_N] node;
 
     () = #spill(i, auth_path, sk_seed, pub_seed, addr);
 
@@ -262,7 +259,7 @@ fn __build_auth_path(
 
         () = #unspill(auth_path, j);
 
-        #inline if (XMSS_N == 32) { // this if is resolved at compile time
+        #[inline] if (XMSS_N == 32) { // this if is resolved at compile time
             subarray_start_index = j;
             subarray_start_index <<= 5;
         } else {

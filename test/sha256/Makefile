@@ -8,7 +8,7 @@ CFLAGS   ?= -Wall -g -O3 -Wextra -Wpedantic
 LDLIBS   = -lcrypto
 
 JASMIN   ?= jasminc
-JFLAGS   ?= -nowarning ${JADDFLAGS}
+JFLAGS   ?= ${JADDFLAGS}
 JINCLUDE ?= -I XMSS="../../ref-jasmin/"
 
 # --------------------------------------------------------------------------------------------------

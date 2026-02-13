@@ -806,7 +806,7 @@ seq 0 7 : (
 seq 1 1 : (#pre /\ sub ots_addr{1} 0 5 = sub address0{2} 0 5).
 - inline {1}; auto => /> *; do split; apply (eq_from_nth witness); rewrite !size_sub // => i?; rewrite !nth_sub // !get_setE //; smt(sub_k).
 
-seq 3 0 : (
+seq 2 0 : (
     #pre /\ 
    to_uint t64{1} = to_uint sm_ptr{1} + 35 /\
    sig_ots0{2} = EncodeWotsSignature (load_sig Glob.mem{1} t64{1})
@@ -955,7 +955,7 @@ H30 H31 H32 H33 H34 H35 H36 H37 H38 H39 H40 H41 H42 H43 H44 H45 H46*.
       rewrite !ifF 1..4:/#.
       smt(sub_k).
  
-seq 4 0 : (
+seq 2 0 : (
     #pre /\ 
     t64{1} = sm_ptr{1} + sm_offset{1} 
 ); first by auto.
@@ -1228,8 +1228,8 @@ do split; (apply (eq_from_nth witness); rewrite !size_sub //= => k?).
 - rewrite !nth_sub 1,2:/# !get_setE 1..6:/# /=. 
   rewrite !ifF 1..6:/#.  
   smt(sub_k).
-   
-seq 4 1 : (
+
+seq 3 1 : (
   #pre /\ 
   wots_pk{1} = DecodeWotsPk pk_ots0{2}
 ).
