@@ -438,7 +438,7 @@ rewrite (_ : false :: _ = drop k (int2bs (root.`level+1) idx)).
 move=> {stk1}; move: {1 2 4 5 6 7}k (ge0_k) (lezz k).
 elim=> [|k0 ge0_k0 ih] le_k0_k.
 - rewrite take0 /= reduce_tree_leaf // drop0.
-  - rewrite int2bsK ?exprSr ~-1:/#; split=> [|_]; first smt(expr_ge0).
+  - rewrite int2bsK ?exprSr ~-1:/#; split=> [|_]; first by clear h1 h2; smt(expr_ge0).
     case: okroot => rg_rt_lvl rg_rt_dx.
     apply: (ltr_le_trans (
       2 ^ root.`level * (2 ^ (h - root.`level) - 1) + 2 ^ root.`level)).
@@ -450,7 +450,7 @@ rewrite (drop_take1_nth witness) /=.
 - by split=> //#.
 rewrite reduce_tree_node //.
 - smt().
-- split=> [|_]; first by smt(expr_ge0 bs2int_ge0).
+- split=> [|_]; first by clear h1 h2 ih; smt(expr_ge0 bs2int_ge0).
   case: okroot=> ok_rt_lvl ok_rt_idx.
   apply: (ltr_le_trans (
       2 ^ (root.`level - (k0 + 1)) * (2 ^ (h - root.`level) - 1)
@@ -663,7 +663,8 @@ move=> stk1 idx ge0_i okoff oklvl hhole hred.
     rewrite /stk1 range_ltn /=.
     - by rewrite eq_stk1_v #smt:(size_ge0).
     rewrite {1}eq_stk1_v -cat1s -[i :: _]cat1s zip_cat //=.
-    rewrite unzip2_zip 1:(size_range, size_behead) 1:#smt:(size_ge0).
+    rewrite unzip2_zip 1:(size_range, size_behead).
+    + clear P h_hl; smt(size_ge0).
     by rewrite mem_range #smt:(size_ge0).
   rewrite [2^i %/ _]pdiv_small // expr_ge0 //= exprS #smt:(expr_gt0).
 qed.

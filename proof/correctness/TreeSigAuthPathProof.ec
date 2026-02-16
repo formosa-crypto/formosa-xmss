@@ -134,24 +134,15 @@ rewrite -onew_one_64 1:/# W64_oneE /#.
 qed.
 
 lemma xor1_odd_64 (x : W64.t) :
-    0 <= to_uint x <= W64.max_uint => 
-    to_uint x %% 2 <> 0 => 
+    to_uint x %% 2 <> 0 =>
     (x `^` W64.one) = x - W64.one.
 proof.
-move => /= ??.
-have E0: W64.one.[0] by rewrite /W64.one bits2wE initiE //= /int2bs nth_mkseq.
-rewrite wordP => i?.
-rewrite xorwE.
-case (i = 0) => [-> | ?]; [rewrite E0 |] => /=. 
-  + rewrite !get_to_uint (: (0 <= 0 && 0 < 32)) 1:/# /=.
-    rewrite to_uintB 2:/# uleE /#.
-rewrite/(^^) /=.
-rewrite -onew_one_64 1:/# W64_oneE 1:/# /=.
-rewrite !get_to_uint (: (0 <= i && i < 64)) 1:/# /=.
-rewrite to_uintB /=; first by rewrite uleE /#.
-have ->: 2^i = 2 * 2^(i - 1) by rewrite -exprS 1:/#. 
-rewrite !divzMr 1?IntOrder.expr_ge0 ~-1://; 1,2: smt(@IntDiv).
-smt(@IntDiv).
+move => hodd.
+rewrite -subw_xorw; last done.
+rewrite wordP => i hi.
+rewrite andwE nth_one /= hi.
+case: (i = 0); last done.
+by move => ->; rewrite get_to_uint /= hodd.
 qed.
 
 lemma build_auth_path_correct (_pub_seed _sk_seed : W8.t Array32.t, _idx : W32.t, a1 a2 : adrs) :
@@ -275,7 +266,7 @@ seq 1 1 : (
   have E1 : 0 <= to_uint idx{2} < 1048576 by smt().
   have E2 : 0 <= to_uint (idx{2} `>>` (of_int (to_uint j{1}))%W8) < 1048576 by rewrite to_uint_shr of_uintK //= 1:/#; smt(@IntDiv).
   have := E2; rewrite to_uint_shr of_uintK 1:/# (: (to_uint j{1} %% W8.modulus) = to_uint j{1}) 1:/# => T.
-  case (to_uint X %% 2 = 0) => [Heven | Hodd]; [rewrite xor1_even // 1:/# xor1_even_64 1,2:/# | rewrite xor1_odd // 1:/# xor1_odd_64 1,2:/#].
+  case (to_uint X %% 2 = 0) => [Heven | Hodd]; [rewrite xor1_even // 1:/# xor1_even_64 1,2:/# | rewrite xor1_odd // 1:/# xor1_odd_64 1:/#].
         * have := Heven; rewrite /X  to_uint_shr of_uintK 1:/# (: (to_uint j{1} %% W8.modulus) = to_uint j{1}) 1:/# => Teven.
           rewrite !to_uintD !to_uint_shr !of_uintK 1:/# (: (to_uint j{1} %% W8.modulus) = to_uint j{1}) 1:/# /=; do split => [| /# | /#]. 
           have ->: (to_uint idx{2} %/ 2 ^ to_uint j{1} + 1) %% 4294967296 = (to_uint idx{2} %/ 2 ^ to_uint j{1} + 1) by smt(). 

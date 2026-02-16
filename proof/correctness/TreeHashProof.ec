@@ -421,7 +421,7 @@ swap {1} 2 -1.
 seq 1 2 : (
     #{/~sub ots_addr{1} 0 3 = sub address{2} 0 3}pre /\ sub ots_addr{1} 0 5 = sub address{2} 0 5
 ).
-    + inline {1}; auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19 H20 H21 *. 
+    + inline {1}; auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19 H20 H21 H22.
       rewrite /set_ots_addr /set_type.
       do split; (
          apply (eq_from_nth witness); [by rewrite !size_sub | rewrite size_sub // => j?];
@@ -434,7 +434,7 @@ seq 1 2 : (
            have ->: node_addr{1}.[j] = nth witness (sub node_addr{1} 0 3) j by rewrite nth_sub.
            by rewrite H13 nth_sub.
          * case (j = 4) => ?.
-              - smt(@W32 pow2_32).
+              - by rewrite -H22 to_uintK.
               - do 3! (rewrite ifF 1:/#).
                 case (j = 3) => [/# |?].
                 have ->: ots_addr{1}.[j] = nth witness (sub ots_addr{1} 0 3) j by rewrite nth_sub /#.

@@ -18,9 +18,7 @@ require import XMSS_IMPL.
 lemma in_nth ['a] (x : 'a list) (P : 'a -> bool) :
     (forall (x0 : 'a ), x0 \in x => P x0) <=>
     forall (k : int), 0 <= k < size x => P (nth witness x k).
-proof.
-split ; smt(@List). (* Without the split, smt doesnt work *)
-qed.
+proof. by rewrite -allP all_nthP. qed.
 
 lemma zero_addr_res (address : adrs) :
     phoare[M(Syscall)._zero_address : true ==> res = zero_addr] = 1%r.

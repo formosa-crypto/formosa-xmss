@@ -17,19 +17,19 @@ type wots_keypair = wots_pk * wots_sk.
 subtype wots_keys as WOTSKeys = { l : wots_sk list | size l = 2^h }.
 realize inhabited.
 proof.
-exists (nseq (2^h) witness); rewrite size_nseq; smt(@IntDiv).
+by exists (nseq (2^h) witness); rewrite size_nseq lez_maxr 2://; apply: StdOrder.IntOrder.expr_ge0.
 qed.
 
 subtype wots_ots_keys as OTSKeys = { l : wots_sk list | size l = 2^h }.
 realize inhabited.
 proof.
-by exists (nseq (2^h) witness); rewrite size_nseq; smt(ge0_h @IntDiv).
+by exists (nseq (2^h) witness); rewrite size_nseq lez_maxr 2://; apply: StdOrder.IntOrder.expr_ge0.
 qed.
 
 subtype auth_path as AuthPath = { l : nbytes list | size l = h }.
 realize inhabited.
 proof.
-by (exists (nseq h witness);smt(size_nseq ge0_h)).
+by exists (nseq h witness); rewrite size_nseq lez_maxr 2:// ge0_h.
 qed.
 
 type xmss_sk = { idx : W32.t ;

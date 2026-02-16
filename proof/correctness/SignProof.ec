@@ -160,10 +160,11 @@ seq 3 0 : (
     + auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19 H20.
       do split; last by rewrite load_store_W64.
          - rewrite H0; apply (eq_from_nth witness); first by rewrite !size_load_buf // /#.
-           rewrite size_load_buf 1:/# => j?.
+           rewrite size_load_buf 1:/# => j Hj.
            rewrite !nth_load_buf //.
            rewrite /storeW64 storesE => />.
-           rewrite !get_setE !bits8E !ifF 1..7,9:/#.
+           rewrite !get_setE !bits8E !ifF eq_sym; 1..7: exact: H17.
+           + exact: (H17 0 _ j Hj).
            smt(disjoint_ptr_ptr).
 
          - rewrite -H20; apply (eq_from_nth witness); first rewrite !size_load_buf // /#.

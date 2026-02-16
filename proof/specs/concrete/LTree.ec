@@ -207,11 +207,11 @@ move=> gt1_len; rewrite eqz_leq; split.
   have: log2 len%r <= log2 (ceil (len%r / 2%r))%r + 1%r; 2:smt(@Real).
   rewrite -(RealExp.logK 2%r 1%r) // -logM.
   + smt(@Real).
-  + smt(@RealExp).
+  + by rewrite rpow1.
   apply: log_mono=> //.
   + smt().
-  + smt(@Real @RealExp).
-  + smt(@Real @RealExp).
+  + rewrite rpow1 1://; smt(@Real).
+  + rewrite rpow1 1://; smt(@Real).
 pose k := ceil (log2 len%r).
 have:= (rexpr_hmono_ltr 2%r (k%r - 1%r) (log2 len%r) _ _)=> //.
 + smt(@Real @RealExp).
