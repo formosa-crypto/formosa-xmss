@@ -264,10 +264,11 @@ seq 1 0 : (
   have E :  disjoint_ptr (to_uint ptr_sm) (XMSS_SIG_BYTES) 
                          (to_uint ptr_mlen) 8 by smt().
   have ->: load_sig_mem (storeW64 Glob.mem{1} (to_uint ptr_mlen) (sm_len - (of_int 4963)%W64)) ptr_sm = load_sig_mem Glob.mem{1} ptr_sm.
-    + apply (eq_from_nth witness); rewrite !size_load_buf // /XMSS_SIG_BYTES => i?.
+    + apply (eq_from_nth witness); rewrite !size_load_buf // /XMSS_SIG_BYTES => i Hi.
       rewrite !nth_load_buf // storeW64E /stores => />.
-      rewrite !bits8E !get_setE !ifF 1..7:/# //. 
-      rewrite /disjoint_ptr /XMSS_SIG_BYTES in E.  
+      rewrite !bits8E !get_setE !ifF; 1..7: exact: E.
+      + exact: (E i Hi 0).
+      rewrite /disjoint_ptr /XMSS_SIG_BYTES in E.
       smt(disjoint_ptr_ptr).
   do split; 1,2: by smt().
     + rewrite H19; apply (eq_from_nth witness); rewrite !size_load_buf //; 1..3: by rewrite to_uintB ?of_uintK ?uleE;smt(@W64). 
@@ -278,12 +279,15 @@ seq 1 0 : (
       rewrite /XMSS_SIG_BYTES => j?.
       rewrite /XMSS_SIG_BYTES in E.
       have E1: disjoint_ptr (to_uint ptr_sm+XMSS_SIG_BYTES) (to_uint sm_len-XMSS_SIG_BYTES) 
-               (to_uint ptr_mlen) 8 by smt(disjoint_ptr_offset).
+               (to_uint ptr_mlen) 8.
+      + exact: disjoint_ptr_offset.
       rewrite !nth_load_buf // storeW64E /stores => />.
       rewrite !bits8E !get_setE. 
       have ->: to_uint (ptr_sm + (of_int 4963)%W64) = 
                to_uint ptr_sm + XMSS_SIG_BYTES by rewrite /XMSS_SIG_BYTES to_uintD_small /#.
-      rewrite !ifF 1..7:/#; smt(disjoint_ptr_ptr).
+      rewrite !ifF; 1..7: exact: E1.
+      + exact: (E1 _ _ 0).
+      smt(disjoint_ptr_ptr).
 
 seq 0 0 : (
     #pre /\
@@ -366,7 +370,7 @@ have E0 : to_uint (sm_len - (of_int 4963)%W64) = to_uint sm_len - 4963 by rewrit
     * smt(W64.to_uint_cmp).
     * rewrite H27 E0.
       have X: disjoint_ptr (to_uint ptr_sm + 4963) (to_uint sm_len - 4963)
-         (to_uint ptr_m + 4963) (to_uint sm_len - 4963) by smt(disjoint_ptr_offset).
+         (to_uint ptr_m + 4963) (to_uint sm_len - 4963) by exact:(disjoint_ptr_offset).
       smt().
     * auto => /> H32 H33 H34 H35 H36 H37 memL H38 H39 *.
       do split.
@@ -562,8 +566,8 @@ seq 1 1 : (
               forall (k : int), 
                    4835 <= k < 4963 => 
                       0 <= k < to_uint sm_len =>
-                         to_uint ptr_sm + idx <> to_uint ptr_m + k
-         by move => k Hk_range Hk_bound; have := H18; rewrite /disjoint_ptr => Hdisj; smt().
+                         to_uint ptr_sm + idx <> to_uint ptr_m + k.
+         by move => k Hk_range Hk_bound; apply: H18; first smt().
         smt().
         *   suff ->: 
                   load_buf memL (ptr_sm + W64.of_int XMSS_SIG_BYTES) 
@@ -594,9 +598,7 @@ seq 1 1 : (
   have: forall k, 4835 <= k < 4963 => 0 <= k < to_uint sm_len =>
           to_uint ptr_sm + i <> to_uint ptr_m + k.
     move=> k Hk_range Hk_bound.
-have := H18; rewrite /disjoint_ptr => Hdisj_full.
-    have Hi_bound: 0 <= i < to_uint sm_len by rewrite /XMSS_SIG_BYTES in Hi; smt().
-    have Hk_bound2: 0 <= k < to_uint sm_len by smt(). smt().
+apply: H18; smt().
 
   move=> Hdisj; rewrite H35.
   have Hsm_bound: 4963 <= to_uint sm_len by rewrite /XMSS_SIG_BYTES in H2; smt().
@@ -622,7 +624,8 @@ have := H18; rewrite /disjoint_ptr => Hdisj_full.
   apply (eq_from_nth witness); rewrite !size_load_buf /XMSS_INDEX_BYTES //= => i Hi.
   rewrite !nth_load_buf //= -H44 //; [smt(@W64 pow2_64) | ].
   have: forall k, 4835 <= k < 4963 => 0 <= k < to_uint sm_len =>
-          to_uint ptr_sm + i <> to_uint ptr_m + k by smt().
+          to_uint ptr_sm + i <> to_uint ptr_m + k.
+  + by move => k ? Hk; apply: H18; first smt().
   smt().
 
 * suff ->: load_buf memL (ptr_m + W64.of_int XMSS_SIG_BYTES) (to_uint sm_len - XMSS_SIG_BYTES) =
@@ -872,12 +875,12 @@ seq 0 0 : (
 - auto => /> &1 &2 H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15
 H16 H17 H18 H19 H20 H21 H22 H23 H24 H25 H26 H27 H28 H29
 H30 H31 H32 H33 H34 H35 H36 H37 H38 H39 H40 H41 H42 H43
-H44 H45 H46 ? H47 H48 *. 
+H44 H45 H46 ? H47 H48 ? H49.
 congr.
 congr.
 rewrite wordP => k?.
 rewrite !get_to_uint (: 0 <= k < 64) 1:/# /=.
-rewrite to_uintD_small of_uintK /#.
+by rewrite to_uintD_small of_uintK 1:/# -H49.
 
 seq 3 0 : (#{/~to_uint sm_offset{1} = 35}pre /\ to_uint sm_offset{1} = 2179); first by auto => /> *; smt(@W64).
  
@@ -1119,9 +1122,8 @@ seq 2 1: #pre.
   rewrite(: 1023 = 2^10 - 1) 1:/# and_mod 1:/#. 
   rewrite -H4.
   rewrite /(`<<`) /=.
-  rewrite W32.andwC (: 1023 = 2^10 -1) 1:/# and_mod //= of_uintK /=.
-  smt(@W32 pow2_32).
-  smt(W32.to_uint_cmp).
+  by rewrite W32.andwC (: 1023 = 2^10 -1) 1:/# and_mod //= of_uintK /= modz_dvd.
+  clear; smt(W32.to_uint_cmp).
   move => ?.
   rewrite /XMSS_FULL_HEIGHT.
   rewrite /(`<<`) /=.
