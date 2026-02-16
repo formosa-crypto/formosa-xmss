@@ -2,8 +2,8 @@
 
 This project currently uses the following tool versions:
 
- - EasyCrypt: f8fab1dc5541a84b416df172522809efe8419c37
- - Jasmin & ECLib: release-2025.06
+ - EasyCrypt: `release` (this follow the latest release)
+ - Jasmin & ECLib: `release-2025.06`
  - A recent C compiler (for building the test)
  - Valgrind (for running the valgrind test)
 
