@@ -56,7 +56,7 @@ equiv sample_samplecat :
     ==>
     ={res}.
 proof.
-bypr (res{1}) (res{2}) => /> &1 &2 l Hn1 Hn2 ->.
+bypr (res{1}) (res{2}) => /> &1 &2 l Hn1 Hn2.
 rewrite pr_Sample.
 case: (size l = n1{2} + n2{2}) => El; last first.
   + rewrite dlist1E 1:/# ifF 1:/#.
