@@ -1,0 +1,3 @@
+from XMSS require "params/params-xmssmt-sha2_20_2_256.jinc"
+
+require "./test_hash.jazz"
