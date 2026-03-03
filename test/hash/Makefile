@@ -23,7 +23,7 @@ test: bin/test_xmssmt-sha2_20_2_256
 run: bin/test_xmssmt-sha2_20_2_256.out
 
 checkCT: test_hash-sha2_20_2_256.jazz test_hash.jazz
-	$(JASMINPATH) $(JAZZCT) $(JAZZCTFLAGS) $< >/dev/null 2>&1 || { echo "Jasmin CT check failed"; exit 1; }
+	$(JASMINPATH) $(JAZZCT) $(JAZZCTFLAGS) $<
 
 # --------------------------------------------------------------------------------------------------
 
