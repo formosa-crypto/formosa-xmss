@@ -21,11 +21,8 @@ asm: bin/test_xmssmt-sha2_20_2_256.s
 test: bin/test_xmssmt-sha2_20_2_256
 run: bin/test_xmssmt-sha2_20_2_256.out
 
-checkCT: test_wots.jazz
-	echo "from XMSS require \"params/params-xmssmt-sha2_20_2_256.jinc\"" > tmp
-	cat $< >> tmp
-	$(JASMINPATH) $(JAZZCT) $(JAZZCTFLAGS) tmp >/dev/null 2>&1 || { rm tmp ; echo "Jasmin CT check failed"; exit 1; }
-	rm tmp
+checkCT: test_wots-sha2_20_2_256.jazz test_wots.jazz
+	$(JASMINPATH) $(JAZZCT) $(JAZZCTFLAGS) $< >/dev/null 2>&1 || { echo "Jasmin CT check failed"; exit 1; }
 
 # --------------------------------------------------------------------------------------------------
 
@@ -37,11 +34,8 @@ TEST_FLAGS := -DTEST_EXPAND_SEED -DTEST_WOTS_CHECKSUM -DTEST_GEN_CHAIN -DTEST_GE
 # --------------------------------------------------------------------------------------------------
 
 .PRECIOUS: bin/test_xmssmt-sha2_20_2_256.s
-bin/test_xmssmt-sha2_20_2_256.s: test_wots.jazz | bin/
-	echo "from XMSS require \"params/params-xmssmt-sha2_20_2_256.jinc\"" > tmp
-	cat $< >> tmp
-	$(JASMIN) $(JINCLUDE) $(JFLAGS) -o $@ tmp # || rm tmp # remove the file even when compilation fails
-	# rm tmp
+bin/test_xmssmt-sha2_20_2_256.s: test_wots-sha2_20_2_256.jazz test_wots.jazz | bin/
+	$(JASMIN) $(JINCLUDE) $(JFLAGS) -o $@ $<
 
 bin/test_xmssmt-sha2_20_2_256: bin/test_xmssmt-sha2_20_2_256.s
 	$(CC) $(CFLAGS) -o $@ -I../common -I../ -DIMPL=XMSSMT-SHA2_20/2_256 $(TEST_FLAGS) \

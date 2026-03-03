@@ -39,11 +39,8 @@ asm: bin/test_xmssmt-sha2_20_2_256.s
 test: $(BIN)
 run: $(OUT)
 
-checkCT: test_xmss.jazz
-	echo "from XMSS require \"params/params-xmssmt-sha2_20_2_256.jinc\"" > tmp
-	cat $< >> tmp
-	$(JASMINPATH) $(JAZZCT) $(JAZZCTFLAGS) tmp # >/dev/null 2>&1 #  || { rm tmp ; echo "Jasmin CT check failed"; exit 1; }
-	-$(RM) tmp
+checkCT: test_xmss-sha2_20_2_256.jazz test_xmss.jazz
+	$(JASMINPATH) $(JAZZCT) $(JAZZCTFLAGS) $<
 
 # --------------------------------------------------------------------------------------------------
 
@@ -52,30 +49,18 @@ SOURCES := ../common/notrandombytes.c ../common/print.c
 
 # --------------------------------------------------------------------------------------------------
 
-bin/test_xmssmt-sha2_20_2_256.s: test_xmss.jazz | bin/
-	echo "from XMSS require \"params/params-xmssmt-sha2_20_2_256.jinc\"" > tmp
-	cat $< >> tmp
-	$(JASMIN) $(JINCLUDE) $(JFLAGS) -o $@ tmp || rm tmp # remove the file even when compilation fails
-	-$(RM) tmp
+bin/test_xmssmt-sha2_20_2_256.s: test_xmss-sha2_20_2_256.jazz test_xmss.jazz | bin/
+	$(JASMIN) $(JINCLUDE) $(JFLAGS) -o $@ $<
 
-bin/test_xmssmt-sha2_20_2_256_kg.s: test_xmss_kg.jazz | bin/
-	echo "from XMSS require \"params/params-xmssmt-sha2_20_2_256.jinc\"" > tmp
-	cat $< >> tmp
-	$(JASMIN) $(JINCLUDE) $(JFLAGS) -o $@ tmp || rm tmp # remove the file even when compilation fails
-	-$(RM) tmp
+bin/test_xmssmt-sha2_20_2_256_kg.s: test_xmss-sha2_20_2_256.jazz test_xmss.jazz | bin/
+	$(JASMIN) $(JINCLUDE) $(JFLAGS) -slice xmssmt_keypair_jazz -o $@ $<
 
-bin/test_xmssmt-sha2_20_2_256_sign.s: test_xmss_sign.jazz | bin/
-	echo "from XMSS require \"params/params-xmssmt-sha2_20_2_256.jinc\"" > tmp
-	cat $< >> tmp
-	$(JASMIN) $(JINCLUDE) $(JFLAGS) -o $@ tmp || rm tmp # remove the file even when compilation fails
-	-$(RM) tmp
+bin/test_xmssmt-sha2_20_2_256_sign.s: test_xmss-sha2_20_2_256.jazz test_xmss.jazz | bin/
+	$(JASMIN) $(JINCLUDE) $(JFLAGS) -slice xmssmt_sign_jazz -o $@ $<
 
-bin/test_xmssmt-sha2_20_2_256_verify.s: test_xmss_verify.jazz | bin/
-	echo "from XMSS require \"params/params-xmssmt-sha2_20_2_256.jinc\"" > tmp
-	cat $< >> tmp
-	$(JASMIN) $(JINCLUDE) $(JFLAGS) -o $@ tmp || rm tmp # remove the file even when compilation fails
-	-$(RM) tmp
-	
+bin/test_xmssmt-sha2_20_2_256_verify.s: test_xmss-sha2_20_2_256.jazz test_xmss.jazz | bin/
+	$(JASMIN) $(JINCLUDE) $(JFLAGS) -slice xmssmt_sign_open_jazz -o $@ $<
+
 # --------------------------------------------------------------------------------------------------
 
 bin/test_xmssmt-sha2_20_2_256_valgrind: bin/test_xmssmt-sha2_20_2_256.s
