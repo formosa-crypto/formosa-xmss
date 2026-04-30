@@ -16,8 +16,10 @@ To build it, run:
 
     make docker
 
-This command creates a ready-to-use Docker image and copies the
-contents of this archive into the container.
+This command creates a ready-to-use Docker image and copies the contents of this
+archive into the container. The corresponding Docker image at the time of
+submission for artifact evaluation (April 30, 2026) is also archived as
+`ghcr.io/formosa-crypto/formosa-xmss:tches-aec`.
 
 To enter the Docker container, run:
 
