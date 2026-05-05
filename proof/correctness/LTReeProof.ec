@@ -181,7 +181,7 @@ proc => /=.
 seq 4 0 : #pre; first by auto.
 seq 1 5 : #post; last by auto.
 
-swap 2 -1.
+swap {2} 2 -1.
 
 seq 0 1 : (
   pks{2} = LenNBytes.val (EncodeWotsPk wots_pk{1}) /\
