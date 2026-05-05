@@ -1,8 +1,8 @@
 [general]
 timeout = 3
 
-provers = Z3@4.13
-provers = CVC4@1.8
-provers = Alt-Ergo@2.5
+provers = Z3@4.16
+provers = CVC5
+provers = Alt-Ergo@2.6
 
 rdirs = .
