@@ -3503,7 +3503,7 @@ swap{1} ^m1<- -2.
 swap{1} [^sk0<- .. ^ad<-] -3.
 swap{2} [^sk0<- .. ^pub_seed<-] -2.
 sp.
-wp 17 20 => />;1:smt().
+wp=> />;1:smt().
 elim*=> skt.
 seq 1 1 : (#pre /\ cm{1} = bs2block _M'{2}).
 + inline{2} *.
