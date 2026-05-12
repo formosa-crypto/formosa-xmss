@@ -104,11 +104,7 @@ fn __prf_keygen(
     buf[0:XMSS_PADDING_LEN] = padding_buf;
 
     // memcpy(buf + params->padding_len, key, params->n);
-    if XMSS_N == 32 {
-        buf[XMSS_PADDING_LEN : 32] = copy_nbytes(buf[XMSS_PADDING_LEN : 32], key);
-    } else {
-        buf[XMSS_PADDING_LEN : 32] = #copy_8(key);
-    }
+    buf[XMSS_PADDING_LEN : XMSS_N] = copy_nbytes(buf[XMSS_PADDING_LEN : XMSS_N], key);
 
     // memcpy(buf + params->padding_len + params->n, in, params->n + 32);
     buf[XMSS_PADDING_LEN + XMSS_N : XMSS_N + 32] = #copy(in);
