@@ -69,9 +69,11 @@ fn __treehash(
 
     () = #spill(root, offset, start_index, sk_seed, pub_seed);
 
-    stack u32[8] ots_addr = #copy(subtree_addr);
-    stack u32[8] ltree_addr = #copy(subtree_addr);
-    stack u32[8] node_addr = #copy(subtree_addr);
+    reg u256 a = subtree_addr[#unaligned:u256 0];
+    stack u32[8] ots_addr, ltree_addr, node_addr;
+    ots_addr[:u256 0] = a;
+    ltree_addr[:u256 0] = a;
+    node_addr[:u256 0] = a;
 
     // set_type(ots_addr, XMSS_ADDR_TYPE_OTS);
     // set_type(ltree_addr, XMSS_ADDR_TYPE_LTREE);

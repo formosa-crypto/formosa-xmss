@@ -164,7 +164,7 @@ proc => /=.
 have E0 : 2 ^ h = 1048576 by rewrite h_val /#.
 seq 7 0 : #pre; first by auto. 
  
-seq 4 3 : (
+seq 5 3 : (
   #pre /\
   offset{1} = W64.zero /\
   ={offset} /\
@@ -185,26 +185,26 @@ seq 4 3 : (
     + auto => /> *. 
       do split; try (apply (eq_from_nth witness); rewrite !size_sub // => j?; rewrite !nth_sub //= initiE //= 1:/#).
          * rewrite get32E pack4E wordP => i?.
-           rewrite initiE //= initiE 1:/# /= /init64 initiE 1:/# /= /copy_64 initiE 1:/# /=.
-           rewrite get64E pack8E bits8iE 1:/# initiE 1:/# /= initiE 1:/# //= /init32 initiE 1:/# /= bits8iE /#.
+           rewrite initiE //= initiE 1:/# /= /set256_direct initiE 1:/# /= ifT 1:/#.
+           rewrite bits8iE 1:/# /get256_direct pack32E initiE 1:/# /= initiE 1:/# /= /init32 initiE 1:/# /= bits8iE /#.
          * rewrite get32E pack4E wordP => i?.
-           rewrite initiE //= initiE 1:/# /= /init64 initiE 1:/# /= /copy_64 initiE 1:/# /=.
-           rewrite get64E pack8E bits8iE 1:/# initiE 1:/# /= initiE 1:/# //= /init32 initiE 1:/# /= bits8iE /#.
+           rewrite initiE //= initiE 1:/# /= /set256_direct initiE 1:/# /= ifT 1:/#.
+           rewrite bits8iE 1:/# /get256_direct pack32E initiE 1:/# /= initiE 1:/# /= /init32 initiE 1:/# /= bits8iE /#.
          * rewrite get32E pack4E wordP => i?.
-           rewrite initiE //= initiE 1:/# /= /init64 initiE 1:/# /= /copy_64 initiE 1:/# /=.
-           rewrite get64E pack8E bits8iE 1:/# initiE 1:/# /= initiE 1:/# //= /init32 initiE 1:/# /= bits8iE /#.
+           rewrite initiE //= initiE 1:/# /= /set256_direct initiE 1:/# /= ifT 1:/#.
+           rewrite bits8iE 1:/# /get256_direct pack32E initiE 1:/# /= initiE 1:/# /= /init32 initiE 1:/# /= bits8iE /#.
          * rewrite get32E pack4E wordP => i?.
-           rewrite initiE //= initiE 1:/# /= /init64 initiE 1:/# /= /copy_64 initiE 1:/# /=.
-           rewrite get64E pack8E bits8iE 1:/# initiE 1:/# /= initiE 1:/# //= /init32 initiE 1:/# /= bits8iE /#.
+           rewrite initiE //= initiE 1:/# /= /set256_direct initiE 1:/# /= ifT 1:/#.
+           rewrite bits8iE 1:/# /get256_direct pack32E initiE 1:/# /= initiE 1:/# /= /init32 initiE 1:/# /= bits8iE /#.
          * rewrite get32E pack4E wordP => i?.
-           rewrite initiE //= initiE 1:/# /= /init64 initiE 1:/# /= /copy_64 initiE 1:/# /=.
-           rewrite get64E pack8E bits8iE 1:/# initiE 1:/# /= initiE 1:/# //= /init32 initiE 1:/# /= bits8iE /#.
+           rewrite initiE //= initiE 1:/# /= /set256_direct initiE 1:/# /= ifT 1:/#.
+           rewrite bits8iE 1:/# /get256_direct pack32E initiE 1:/# /= initiE 1:/# /= /init32 initiE 1:/# /= bits8iE /#.
          * rewrite get32E pack4E wordP => i?.
-           rewrite initiE //= initiE 1:/# /= /init64 initiE 1:/# /= /copy_64 initiE 1:/# /=.
-           rewrite get64E pack8E bits8iE 1:/# initiE 1:/# /= initiE 1:/# //= /init32 initiE 1:/# /= bits8iE /#.
+           rewrite initiE //= initiE 1:/# /= /set256_direct initiE 1:/# /= ifT 1:/#.
+           rewrite bits8iE 1:/# /get256_direct pack32E initiE 1:/# /= initiE 1:/# /= /init32 initiE 1:/# /= bits8iE /#.
          * rewrite get32E pack4E wordP => i?.
-           rewrite initiE //= initiE 1:/# /= /init64 initiE 1:/# /= /copy_64 initiE 1:/# /=.
-           rewrite get64E pack8E bits8iE 1:/# initiE 1:/# /= initiE 1:/# //= /init32 initiE 1:/# /= bits8iE /#.
+           rewrite initiE //= initiE 1:/# /= /set256_direct initiE 1:/# /= ifT 1:/#.
+           rewrite bits8iE 1:/# /get256_direct pack32E initiE 1:/# /= initiE 1:/# /= /init32 initiE 1:/# /= bits8iE /#.
          * by rewrite size_nseq h_val d_val /=.
          * by rewrite size_nseq h_val d_val /=.
          * by rewrite !size_nseq h_val d_val /=.
