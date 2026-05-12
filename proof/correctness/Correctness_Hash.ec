@@ -66,7 +66,7 @@ lemma prf_correctness (a b : W8.t Array32.t) :
 proof.
 rewrite /XMSS_N /XMSS_HASH_PADDING_PRF /XMSS_PADDING_LEN => [#] n_val pval plen.
 proc => /=.
-seq 8 2 : (buf{2} = to_list buf{1});last by rcondt {1} 1 => //; ecall {1} (hash_96 buf{1}); auto => /> /#.
+seq 9 2 : (buf{2} = to_list buf{1});last by rcondt {1} 1 => //; ecall {1} (hash_96 buf{1}); auto => /> /#.
 seq 3 0 : #pre; 1:auto. 
   
 seq 1 1 : (#pre /\ padding{2} = to_list padding_buf{1}).
@@ -107,20 +107,19 @@ auto => /> &1 &2 H0 H1 H2 *; apply (eq_from_nth witness); rewrite !size_cat !siz
 case (0 <= j < 32).
     + move => ?.
       rewrite nth_cat size_cat !size_to_list NBytes.valP ifT 1:/# nth_cat !size_to_list ifT 1:/# get_to_list. 
-      by rewrite -H2 // initiE //= ifF 1:/# initiE //= ifF 1:/#.
+      rewrite -H2 // initiE //= ifF 1:/#.
+      rewrite /WArray96.WArray96.get8 WArray96.WArray96.initE ifT // initiE //= ifF /#.
 
 case (32 <= j < 64).
     + move => ?_.
       rewrite nth_cat size_cat !size_to_list NBytes.valP n_val //= ifT 1:/#.
       rewrite nth_cat size_to_list ifF 1:/#.
-      by rewrite H0 get_to_list initiE //= ifF 1:/# initiE //= ifT 1:/# /copy_8. 
+      rewrite H0 get_to_list initiE //= ifF 1:/#.
+      by rewrite /WArray96.WArray96.get8 WArray96.WArray96.initE ifT // initiE //= ifT.
 move => ??.
 rewrite nth_cat size_cat !size_to_list NBytes.valP ifF 1:/# H1 get_to_list initiE //= ifT 1:/# //=.
-rewrite initiE 1:/# /get8 /init64 /= /copy_64 initiE 1:/# /=.
-rewrite initiE 1:/# /=.
 rewrite bits8E wordP => i?.
-rewrite initiE //=.
-rewrite/init8 get64E pack8E //= initiE 1:/# /= initiE 1:/# /= initiE /#.
+rewrite initiE //= /get256_direct /pack32_t initiE 1:/# /= initiE 1:/# /= initE ifT /#.
 qed.
 
 lemma prf_keygen_correctness (a : W8.t Array64.t, b : W8.t Array32.t) :
