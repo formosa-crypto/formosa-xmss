@@ -1393,7 +1393,7 @@ split => [ | _].
 rewrite 2!mulr_suml /= ler_sum_seq => q @/predT /= qin.
 rewrite size_flatten sumzE 2!big_map /(\o) /= /predT -/predT /=.
 rewrite {2}(: len = size (iota_ 0 len)) 2:-count_predT; first by smt(size_iota ge2_len).
-rewrite -(Ring.IntID.mul1r (count _ _)) -big_constz mulr_suml ler_sum_seq => i /mem_iota /= rng_i _.
+rewrite -(Ring.IntID.mul1r (count _ _)) -big_constz mulr_suml ler_sum_seq => i /mem_iota /= rng_i.
 by case (BaseW.val (encode_msgWOTS q.`2).[i] <> 0); smt(size_map size_iota BaseW.valP).
 qed.
 
