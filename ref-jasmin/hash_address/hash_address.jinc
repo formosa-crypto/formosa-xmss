@@ -49,7 +49,7 @@ inline
 fn __copy_subtree_addr(reg ptr u32[8] out, reg ptr u32[8] in) -> reg ptr u32[8] {
     // out[0] = in[0];
     // out[1] = in[1];
-    out[:u64 0] = in[:u64 0];
+    out[#unaligned:u64 0] = in[#unaligned:u64 0];
     
     out[2] = in[2];
     return out;
