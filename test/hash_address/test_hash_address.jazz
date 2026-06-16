@@ -1,5 +1,6 @@
 from XMSS require "hash_address/hash_address.jinc"
 
+#[required_alignment = { addr = u32 }]
 export
 fn set_layer_addr_jazz(
     reg ptr u32[8] addr, 
@@ -10,6 +11,7 @@ fn set_layer_addr_jazz(
     return addr;
 }
 
+#[required_alignment = { addr = u32 }]
 export
 fn set_tree_addr_jazz(
     reg ptr u32[8] addr, 
@@ -20,6 +22,7 @@ fn set_tree_addr_jazz(
     return addr;
 }
 
+#[required_alignment = { addr = u32 }]
 export
 fn set_type_jazz(
     reg ptr u32[8] addr, 
@@ -30,6 +33,7 @@ fn set_type_jazz(
     return addr;
 }
 
+#[required_alignment = { addr = u32 }]
 export
 fn set_key_and_mask_jazz(
     reg ptr u32[8] addr, 
@@ -40,6 +44,7 @@ fn set_key_and_mask_jazz(
     return addr;
 }
 
+#[required_alignment = { in = u64, out = u64 }]
 export
 fn copy_subtree_addr_jazz(reg ptr u32[8] out in) -> reg ptr u32[8]
 {
@@ -47,6 +52,7 @@ fn copy_subtree_addr_jazz(reg ptr u32[8] out in) -> reg ptr u32[8]
     return out;
 }
 
+#[required_alignment = { addr = u32 }]
 export
 fn set_ots_addr_jazz(
     reg ptr u32[8] addr, 
@@ -57,6 +63,7 @@ fn set_ots_addr_jazz(
     return addr;
 }
 
+#[required_alignment = { addr = u32 }]
 export
 fn set_chain_addr_jazz(
     reg ptr u32[8] addr, 
@@ -67,6 +74,7 @@ fn set_chain_addr_jazz(
     return addr;
 }
 
+#[required_alignment = { addr = u32 }]
 export
 fn set_hash_addr_jazz(
     reg ptr u32[8] addr, 
@@ -77,6 +85,7 @@ fn set_hash_addr_jazz(
     return addr;
 }
 
+#[required_alignment = { addr = u32 }]
 export
 fn set_ltree_addr_jazz(
     reg ptr u32[8] addr, 
@@ -87,6 +96,7 @@ fn set_ltree_addr_jazz(
     return addr;
 }
 
+#[required_alignment = { addr = u32 }]
 export
 fn set_tree_height_jazz(
     reg ptr u32[8] addr, 
@@ -97,6 +107,7 @@ fn set_tree_height_jazz(
     return addr;
 }
 
+#[required_alignment = { addr = u32 }]
 export
 fn set_tree_index_jazz(
     reg ptr u32[8] addr, 

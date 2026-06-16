@@ -21,6 +21,7 @@ fn build_auth_path_jazz(
     return auth_path;
 }
 
+#[required_alignment = { addr = u32 }]
 export
 fn treesig_jazz(
     reg ptr u8[XMSS_WOTS_SIG_BYTES + (XMSS_TREE_HEIGHT * XMSS_N)] sig,  // wots signature + auth_path

@@ -1,5 +1,6 @@
 from XMSS require "wots/wots.jinc"
 
+#[required_alignment = { addr = u32 }]
 export
 fn expand_seed_jazz(
     reg ptr u8[XMSS_WOTS_LEN * XMSS_N] outseeds,
@@ -11,6 +12,7 @@ fn expand_seed_jazz(
     return outseeds, addr;
 }
 
+#[required_alignment = { csum_base_w = u32, msg_base_w = u32 }]
 export
 fn wots_checksum_jazz(
     reg ptr u32[XMSS_WOTS_LEN2] csum_base_w,
@@ -21,6 +23,7 @@ fn wots_checksum_jazz(
     return csum_base_w;
 }
 
+#[required_alignment = { addr = u32 }]
 export
 fn gen_chain_inplace_jazz(
     reg ptr u8[XMSS_N] out,
@@ -33,6 +36,7 @@ fn gen_chain_inplace_jazz(
     return out, addr;
 }
 
+#[required_alignment = { addr = u32 }]
 export
 fn gen_chain_jazz(
     reg ptr u8[XMSS_N] out,
@@ -47,6 +51,7 @@ fn gen_chain_jazz(
     return out, addr;
 } 
 
+#[required_alignment = { addr = u32 }]
 export
 fn wots_pkgen_jazz(
     reg ptr u8[XMSS_WOTS_LEN * XMSS_N] pk,
@@ -59,6 +64,7 @@ fn wots_pkgen_jazz(
     return pk, addr;
 } 
 
+#[required_alignment = { addr = u32 }]
 export
 fn wots_sign_jazz(
     reg ptr u8[XMSS_WOTS_LEN * XMSS_N] sig,
@@ -72,6 +78,7 @@ fn wots_sign_jazz(
     return sig, addr;
 }  
 
+#[required_alignment = { addr = u32 }]
 export
 fn wots_pk_from_sig_jazz(
     reg ptr u8[XMSS_WOTS_LEN * XMSS_N] pk,
