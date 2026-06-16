@@ -16,7 +16,7 @@ fn __addr_to_bytes(
     while (i < 8) {
         subarray_start_index = i; subarray_start_index <<= 2; // subarray_start_index = i * 4
         buf = addr_as_bytes[subarray_start_index : 4];
-        buf = __u32_to_bytes(buf, addr[i]);
+        buf = __u32_to_bytes(buf, addr[#unaligned i]);
         addr_as_bytes[subarray_start_index : 4] = buf;
         i += 1;
     }
