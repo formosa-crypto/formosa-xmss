@@ -83,7 +83,6 @@ clone import WOTS_TW as WTW with
     + rewrite -lt_fromint -fromintXn 1:#smt:(ge1_len2) -rpow_int 1:#smt:(val_w).
       have <- := rpowK w%r ((w - 1) * len1)%r _ _ _; first 3 by smt(val_w ge1_len1).
       apply: rexpr_hmono_ltr; first by smt(val_w).
-      split=> [|_]; first by rewrite log_ge0 #smt:(val_w ge1_len1).
       rewrite /len2; pose l1w1 := len1 * (w - 1).
       have ->: log2 l1w1%r / log2 w%r = log w%r l1w1%r; last by smt(floor_bound).
       by rewrite /log2 /log; field; first 2 by smt(ln_eq0 val_w).
