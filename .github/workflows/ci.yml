@@ -3,7 +3,8 @@ name: CI (compile jasmin code & run tests & run EasyCrypt proofs)
 on:
   push:
     branches:
-      - '**'
+      - 'main'
+      - 'release'
   pull_request:
     branches:
       - main
@@ -24,9 +25,24 @@ jobs:
         id: tag
         run: echo "image-tag=jasmin-xmss:${{ github.sha }}" >> "$GITHUB_OUTPUT"
 
+      - name: Pick EasyCrypt version
+        shell: bash
+        run: |
+          REF="{{ github.head_ref || github.ref_name }}"
+          case "$REF" in
+            merge-*)
+              echo "EC_BRANCH=${REF#merge-}" >> $GITHUB_ENV
+              ;;
+            release)
+              echo "EC_BRANCH=release" >> $GITHUB_ENV
+              ;;
+            *      )
+              echo "EC_BRANCH=main" >> $GITHUB_ENV
+              ;;
+          esac
       - name: Build and save Docker image
         run: |
-          docker build -t jasmin-xmss:${{ github.sha }} .
+          docker build --build-arg EASYCRYPT_RELEASE=$EC_BRANCH -t jasmin-xmss:${{ github.sha }} .
           docker save jasmin-xmss:${{ github.sha }} | gzip > image.tar.gz
 
       - name: Upload Docker image artifact
