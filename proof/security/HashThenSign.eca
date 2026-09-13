@@ -1898,7 +1898,8 @@ theory WithPRF.
   congr; last first.
   + byphoare => //.
     hoare.
-    - move=> _ _; byphoare => //.
+    - move=> _; split; 1: by rewrite Pr[mu_ge0].
+      move=> _; byphoare => //.
       hoare.
       proc; inline *.
       wp; call (: true); wp => /=.

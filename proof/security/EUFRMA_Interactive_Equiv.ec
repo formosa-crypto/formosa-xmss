@@ -771,8 +771,9 @@ seq 6: (!I_EUF_RMA0.bad) 1%r (n_eufrma%r * d) 0%r _ (q <= n_eufrma => q = size O
   + move=> /ltzNge lt0_n; rcondf 1; 1:by auto=> /#.
     by hoare=> // /> &0; move: (p witness); smt(ge0_mu ge0_neufrma).
   move=> ge0_n.
-  conseq (: _: <= ((n_eufrma - q)%r * d))=> />.
-  + move=> &0 ->> /(_ _)=> [/#|] -> _.
+  conseq (: _: <= (n%r * d))=> />.
+  + move=> &0; split; 1: by move: (p witness); smt(ge0_mu ge0_neufrma).
+    move=> ->> /(_ _)=> [/#|] -> _.
     by move: (p witness); smt(ge0_mu ge0_neufrma size_ge0).
   elim: n ge0_n.
   + rcondf 1; 1:by auto=> /#.
