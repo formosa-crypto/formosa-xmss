@@ -27,6 +27,7 @@ lemma p_max_ge0 (d : pT) : 0%r <= p_max d.
 proof. have := (p_maxE d witness); smt(mu_bounded). qed.
 
 const p_max_bound : real.
+axiom ge0_p_max_bound : 0%r <= p_max_bound.
 
 clone import ROM as ROM_ with
   type in_t <- from,
@@ -620,6 +621,7 @@ move=> hi; fel 4 (b2i (Bad.i < Bad.cr)) (fun x => query_ctr%r * p_max_bound) 1 B
     apply: Mu_mem.mu_mem_le_fsize.
     + by move=> x hx /=; apply: ler_trans hmax; apply: (p_maxE p{hr} x).
     by apply ler_wpmul2r; smt(p_max_ge0). 
+  + by move=> &hr; smt(ge0_queryctr ge0_p_max_bound).
   by rcondt ^if; auto; conseq (: false).
 + move=> c;proc.
   rcondt ^if; 1: by auto.
@@ -655,6 +657,7 @@ move=> hi; fel 4 (b2i (Bad.i < Bad.cr)) (fun x => query_ctr%r * p_max_bound) 1 B
     apply: Mu_mem.mu_mem_le_fsize.
     + by move=> x hx /=; apply: ler_trans hmax; apply (p_maxE p{hr} x).
     by apply ler_wpmul2r; smt(p_max_ge0). 
+  + by move=> &hr; smt(ge0_queryctr ge0_p_max_bound).
   by rcondt ^if; auto; conseq (: false).
 + move=> c;proc.
   rcondt ^if; 1: by auto.
