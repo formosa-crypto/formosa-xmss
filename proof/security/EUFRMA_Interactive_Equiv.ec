@@ -786,6 +786,7 @@ seq 6: (!I_EUF_RMA0.bad) 1%r (n_eufrma%r * d) 0%r _ (q <= n_eufrma => q = size O
   + inline *; rcondt 1; 1:by auto=> /#.
     wp; rnd (pred1 m'); auto=> />.
     by move=> &0 _ _ _; exact: p.
+    by move: (p witness); smt(ge0_mu).
   + by conseq ih.
   + smt().
 by sp; hoare=> /=; conseq (: true)=> //.
