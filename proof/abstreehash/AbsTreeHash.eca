@@ -166,7 +166,7 @@ qed.
 lemma ones_nseq0 (n : int) : ones (nseq n false) = [].
 proof.
 rewrite /ones pmap_map eq_in_filter_pred0 //=.
-case=> //= i /mapP[] [i' b] [] /mem_zip [] _.
+case=> //= i; rewrite -negP=> /mapP [] [] i' b [] /mem_zip [] _.
 by rewrite mem_nseq => -[] _ <-.
 qed.
 
@@ -176,7 +176,7 @@ proof.
 case: (n < 0).
 - by move=> ?; rewrite range_geq -1:nseq0_le //#.
 move/lezNgt => ge0_n; rewrite /ones pmap_map eq_in_filter_predT //=.
-- case=> //= /mapP[] [i' b] [] /mem_zip [] _.
+- case=> //=; rewrite -negP=> /mapP[] [i' b] [] /mem_zip [] _.
   by rewrite mem_nseq => -[] _ <-.
 rewrite -map_comp /(\o) (map_zip_nth witness witness).
 - by rewrite !(size_range, size_nseq) /#.
