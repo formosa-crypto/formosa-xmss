@@ -28,7 +28,7 @@ jobs:
       - name: Pick EasyCrypt version
         shell: bash
         run: |
-          REF="{{ github.head_ref || github.ref_name }}"
+          REF="${{ github.head_ref || github.ref_name }}"
           case "$REF" in
             merge-*)
               echo "EC_BRANCH=${REF#merge-}" >> $GITHUB_ENV
