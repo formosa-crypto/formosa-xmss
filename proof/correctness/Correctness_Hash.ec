@@ -138,7 +138,7 @@ lemma prf_keygen_correctness (a : W8.t Array64.t, b : W8.t Array32.t) :
 proof.
 rewrite /XMSS_N /XMSS_HASH_PADDING_PRF_KEYGEN /XMSS_PADDING_LEN => [#] n_val pval plen.
 proc => //=.
-seq 7 2 : (buf{2} = to_list buf{1}); last by rcondt {1} 1 => // ; ecall {1} (hash_128 buf{1}); auto => /> /#.
+seq 8 2 : (buf{2} = to_list buf{1}); last by rcondt {1} 1 => // ; ecall {1} (hash_128 buf{1}); auto => /> /#.
 
 seq 3 0 : #pre; 1:auto.
 
@@ -175,8 +175,6 @@ seq 1 0 : (
          * move => k??.
            rewrite initiE 1:/# => />. 
            by rewrite ifT.
-
-rcondt{1} 1 => //.
 
 seq 1 0 : (#pre /\ aux{1} = key{1}); first by ecall {1} (copy_nbytes_eq key{1}); auto.
 
